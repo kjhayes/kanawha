@@ -1,0 +1,8 @@
+
+config PCI_PORT_CAM
+    bool "Port Configuration Access"
+    depends on PORT_IO && PCI
+    default n
+    help
+      Assume a PCI domain exists which can be accessed using the ports 0xCF8 and 0xCFC
+

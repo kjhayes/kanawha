@@ -1,0 +1,13 @@
+
+config DEFAULT_SCHEDULER
+    string "Default Scheduler"
+    default "rr_sched"
+    help
+      Name of the default scheduler to assign at boot (or "" if no default scheduler should be assigned)
+
+config ROUND_ROBIN_SCHED
+    tristate "Round Robin Scheduler (rr_sched)"
+    default y
+    help
+      Round Robin Scheduler "rr_sched"
+

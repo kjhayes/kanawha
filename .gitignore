@@ -1,0 +1,9 @@
+
+build/**/*
+compile_commands.json
+.cache/
+.config
+.config.old
+
+serial.log
+

@@ -1,0 +1,24 @@
+
+--- Kanawha Kernel x64 Syscall Calling Convention ---
+
+Place syscall_id into %rax
+
+Argument Register Order
+
+%rdi
+%rsi
+%rdx
+%r8
+%r9
+%r10
+
+Invoke syscall Instruction
+
+Return Value (if one exists) -> %rax
+
+Caller Saved Registers:
+  rax, rdi, rsi, rdx, rcx, r8, r9, r10, r11
+
+Callee Saved Registers:
+  rbx, rbp, r12, r13, r14, r15, rsp
+

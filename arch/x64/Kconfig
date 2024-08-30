@@ -1,0 +1,35 @@
+
+menu "x64 Options"
+  depends on X64
+
+config X64_BOOT_STACK_SIZE
+  hex "Boot Stack Size"
+  default 0x4000
+  help
+    Size of the boot-time stack used for kernel initialization
+
+config X64_PROT_MODE_TO_LONG_MODE
+  bool "Protected Mode to Long Mode Support"
+  default n
+  help
+    Include support for the transition from 32-bit protected mode to 64-bit long mode
+
+choice
+  prompt "Boot Method"
+  default X64_MULTIBOOT2_BOOT
+  config X64_MULTIBOOT2_BOOT
+    select MULTIBOOT2
+    select X64_PROT_MODE_TO_LONG_MODE
+    bool "Multiboot2"
+endchoice
+
+config X64_BOOT_VGA
+  bool "Use Early Platform VGA for printk"
+  default y
+
+config X64_BOOT_SERIAL
+  bool "Use Early Platform Serial Port for printk"
+  default y
+
+endmenu
+

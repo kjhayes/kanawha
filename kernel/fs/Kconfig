@@ -1,0 +1,13 @@
+
+config UNIX_WARE_BFS
+    tristate "Unix-Ware BFS"
+    default n
+    help
+      An extremely simple and limited filesystem, really only useful as the initrd filesystem.
+
+config CPIO_FS
+    tristate "CPIO"
+    default y
+    help
+      Support for mounting CPIO archives as a simple filesystem
+

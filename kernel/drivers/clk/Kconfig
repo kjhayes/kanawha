@@ -1,0 +1,8 @@
+
+config ACPI_PM_TIMER_CLK
+    tristate "ACPI PM Timer Clock"
+    default y
+    depends on ACPI
+    help
+      Support using the ACPI PM Timer as a clock device
+

@@ -1,0 +1,102 @@
+
+config INIT_PROCESS_PATH
+    string "init Binary Path"
+    default "init.bin"
+    help
+      Path to search for the init process binary blob
+
+config INIT_PROCESS_BINARY_VIRT_ADDRESS
+    hex "init Binary Virtual Address"
+    default 0x0
+    help
+      Virtual address to map in the init process binary blob
+
+config INIT_PROCESS_BINARY_ENTRY_OFFSET
+    hex "init Binary Entry Offset"
+    default 0x0
+    help
+      Offset into the init process binary to begin execution
+
+menu "printk Options"
+config PRINTK_BUFFER_SIZE
+    hex "printk Buffer Size"
+    default 0x1000
+    help
+      Size of the printk static buffer in bytes
+
+config PANIC_BUFFER_SIZE
+    hex "panic Buffer Size"
+    default 0x1000
+    help
+      Size of the panic static buffer in bytes
+
+config PRINTK_MAX_EARLY_HANDLERS
+    int "printk Maximum Early Handlers"
+    default 8
+    help
+      Maximum number of "early" printk handlers during boot
+endmenu
+
+menu "Debug Options"
+config DEBUGGING
+    bool "Enable Debugging Options"
+    default n
+    help
+      Root Debugging Config Option
+
+config DEBUG_SYMBOLS
+    bool "Include Debug Symbols"
+    depends on DEBUGGING
+    default y
+    help
+      Include debug symbols in kernel binary
+
+config DEBUG_ASSERTIONS
+    bool "Enable Debug Assertions"
+    depends on DEBUGGING
+    default y
+    help
+      Enable DEBUG_ASSERT Checking
+
+config DEBUG_BUDDY_ALLOC
+    bool "Debug Buddy Allocators"
+    depends on DEBUGGING
+    default n
+    help
+      Debug kernel Buddy Allocators
+
+config DEBUG_INIT_STAGES
+    bool "Debug init Stages Framework"
+    depends on DEBUGGING
+    default n
+    help
+      Debug the init Stages Framework
+
+endmenu
+
+menu "Filesystems"
+source "kernel/fs/Kconfig"
+endmenu
+
+menu "Drivers"
+source "kernel/drivers/Kconfig"
+endmenu
+
+menu "Schedulers"
+source "kernel/sched/Kconfig"
+endmenu
+
+menu "Misc. Modules"
+
+config MULTIBOOT2
+    tristate "Multiboot2 Support"
+    default n
+    depends on X64 || MIPS
+    help
+      Kernel support for the multiboot2 specification
+
+menu "Multiboot2 Options"
+source "kernel/mb2/Kconfig"
+endmenu
+
+endmenu

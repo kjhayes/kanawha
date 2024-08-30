@@ -1,0 +1,22 @@
+
+config MULTIBOOT2_MODULES
+    bool "Multiboot2 Module Support"
+    default y
+    depends on MULTIBOOT2
+    help
+      Look for and protect Mutliboot2 Modules
+
+config MULTIBOOT2_RAMFILE
+    bool "Multiboot2 ramfile Support"
+    default y
+    depends on MULTIBOOT2
+    help
+      Look for and initialize Multiboot2 Modules as ramfiles
+
+config MULTIBOOT2_ACPI
+    bool "Multiboot2 ACPI Info Support"
+    default y
+    depends on ACPI && MULTIBOOT2
+    help
+      Look for ACPI information in Mutliboot2 structures
+

@@ -1,0 +1,20 @@
+
+menu "Block Devices"
+source "kernel/drivers/blk/Kconfig"
+endmenu
+
+menu "Clock Devices"
+source "kernel/drivers/clk/Kconfig"
+endmenu
+
+config PCI
+    tristate "PCI Support"
+    default y
+    help
+      Base PCI Bus Support
+
+menu "PCI"
+depends on PCI
+source "kernel/drivers/pci/Kconfig"
+endmenu
+

@@ -1,0 +1,135 @@
+
+ENTRY( x64_kernel_entry )
+
+#define __LINKER__
+#include <kanawha/init.h>
+
+#define AFTER(sec) ADDR(sec) + SIZEOF(sec)
+#define LOAD_AFTER(sec) LOADADDR(sec) + SIZEOF(sec)
+
+#define KERNEL_VIRTUAL_ADDR (CONFIG_VIRTUAL_BASE + CONFIG_KERNEL_LOAD_ADDR)
+#define VA_TO_PA(addr) (addr-CONFIG_VIRTUAL_BASE)
+
+PHDRS
+{
+  header PT_PHDR FILEHDR PHDRS FLAGS(4);
+  text PT_LOAD FLAGS(5);
+  data PT_LOAD FLAGS(6);
+  rodata PT_LOAD FLAGS(4);
+  boot PT_LOAD FLAGS(7);
+  note PT_NULL FLAGS(0);
+}
+
+SECTIONS
+{  
+  __kernel_phys_start = CONFIG_KERNEL_LOAD_ADDR;
+  .hdrs CONFIG_KERNEL_LOAD_ADDR : AT(CONFIG_KERNEL_LOAD_ADDR) {
+    *(.hdrs*) 
+    *(.hdrs.*)
+  } :header
+
+  .boot.text ALIGN(16) : AT(ADDR(.boot.text)) {
+      *(.boot.text*) *(boot.text.*)
+  } :boot = 0xcccccccc
+  .boot.data ALIGN(0x1000) : AT(ADDR(.boot.data)) {
+      *(.boot.data*) *(.boot.data.*)
+  } :boot = 0
+
+  . = KERNEL_VIRTUAL_ADDR + (LOAD_AFTER(.boot.data) - CONFIG_KERNEL_LOAD_ADDR);
+
+  .text ALIGN(0x1000) : AT(VA_TO_PA(ADDR(.text))) {
+    *(.text*)
+    *(.text.*)
+  } :text = 0xcccccccc /* fill empty regions with int3 */
+
+  .rodata : AT(VA_TO_PA(ADDR(.rodata))) {
+    *(.srodata .srodata.*)
+    *(.rodata .rodata.*)
+  } :rodata = 0
+
+  .data : AT(VA_TO_PA(ADDR(.data))) {
+    *(.sdata .sdata.*)
+    *(.data .data.*)
+    *(.tdata .tdata.*)
+  } :data = 0
+
+  .bss : AT(VA_TO_PA(ADDR(.bss))) {
+    *(.sbss .sbss.*)
+    *(.bss .bss.*);
+    *(.tbss .tbss*);
+  } :data = 0
+
+// Past Here Everything Should be Discardable After Kernel Initialization
+
+  .kpercpu : AT(VA_TO_PA(ADDR(.kpercpu))) {
+    . = ALIGN(0x1000);
+    __builtin_kpercpu_start = .;
+    *(.kpercpu* .kpercpu.*)
+    . = ALIGN(0x1000);
+    __builtin_kpercpu_end = .;
+  } :data = 0
+
+  .kinit : AT(VA_TO_PA(ADDR(.kinit))) 
+  {
+#define DECLARE_INIT_STAGE_LINKER_SCRIPT_SECTIONS(STAGE,...)\
+    __init_stage_##STAGE##__init_start = .;\
+    *(.kinit.STAGE.init);\
+    __init_stage_##STAGE##__init_end = .;
+
+XFOR_INIT_STAGE(DECLARE_INIT_STAGE_LINKER_SCRIPT_SECTIONS)
+
+  } :data = 0
+
+  .ksymtab : AT(VA_TO_PA(ADDR(.ksymtab)))
+  {
+    __ksymtab_start = .;
+    *(.ksymtab* .ksymtab.*)
+    __ksymtab_end = .;
+  } :data = 0
+
+  . = ALIGN(0x1000);
+
+  __kernel_phys_end = VA_TO_PA(.);
+
+  .shstrtab : {
+     *(.shstrtab* .shstrtab.*)
+  } :note
+
+  .strtab : {
+     *(.strtab* .strtab.*) 
+  } :note
+
+
+  /* Discard Sections */
+
+  .got : {
+  	*(.got) *(.igot.*)
+  }
+  ASSERT(SIZEOF(.got) == 0, "Unexpected GOT entries detected!")
+  
+  .plt : {
+  	*(.plt) *(.plt.*) *(.iplt)
+  }
+  ASSERT(SIZEOF(.plt) == 0, "Unexpected run-time procedure linkages detected!")
+  
+  .rel.dyn : {
+  	*(.rel.*) *(.rel_*)
+  }
+  ASSERT(SIZEOF(.rel.dyn) == 0, "Unexpected run-time relocations (.rel) detected!")
+  
+  .rela.dyn : {
+  	*(.rela.*) *(.rela_*)
+  }
+  ASSERT(SIZEOF(.rela.dyn) == 0, "Unexpected run-time relocations (.rela) detected!")
+
+  .kinit_leftovers : {
+    *(.kinit.*) *(.kinit)
+  }
+  ASSERT(SIZEOF(.kinit_leftovers) == 0, "Unexpected .kinit section(s) detected! (check that all declare_init() calls have a valid init_stage)")
+
+  /DISCARD/ : {
+      *(.eh_frame* .eh_frame.*)
+      *(.comment* .comment.*)
+      *(.kmodinfo* .kmodinfo.*)
+  }
+}

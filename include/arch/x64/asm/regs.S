@@ -1,0 +1,82 @@
+#ifndef __KANAWHA__ARCH_X64_ASM_REGS_H__
+#define __KANAWHA__ARCH_X64_ASM_REGS_H__
+
+#define NUM_CALLER_REGS 9
+#define CALLER_SAVE_SIZE (NUM_CALLER_REGS*8)
+
+#define NUM_CALLEE_REGS 6
+#define CALLEE_SAVE_SIZE (NUM_CALLEE_REGS*8)
+
+// This is meant to keep %rsp 16 byte aligned
+#define CALLER_PUSH_SIZE (NUM_CALLER_REGS*8)
+#define CALLEE_PUSH_SIZE (NUM_CALLEE_REGS*8)
+
+#define PUSHED_CALLER_REGS_INDEX_RAX 0
+#define PUSHED_CALLER_REGS_INDEX_RDI 1
+#define PUSHED_CALLER_REGS_INDEX_RSI 2
+#define PUSHED_CALLER_REGS_INDEX_RDX 3
+#define PUSHED_CALLER_REGS_INDEX_RCX 4
+#define PUSHED_CALLER_REGS_INDEX_R8  5
+#define PUSHED_CALLER_REGS_INDEX_R9  6
+#define PUSHED_CALLER_REGS_INDEX_R10 7
+#define PUSHED_CALLER_REGS_INDEX_R11 8
+
+#ifdef __ASSEMBLER__
+
+#define SAVE_CALLER_REGS(GPR_PTR)\
+movq %rax, (PUSHED_CALLER_REGS_INDEX_RAX*8)(%GPR_PTR);\
+movq %rdi, (PUSHED_CALLER_REGS_INDEX_RDI*8)(%GPR_PTR);\
+movq %rsi, (PUSHED_CALLER_REGS_INDEX_RSI*8)(%GPR_PTR);\
+movq %rdx, (PUSHED_CALLER_REGS_INDEX_RDX*8)(%GPR_PTR);\
+movq %rcx, (PUSHED_CALLER_REGS_INDEX_RCX*8)(%GPR_PTR);\
+movq %r8 , (PUSHED_CALLER_REGS_INDEX_R8 *8)(%GPR_PTR);\
+movq %r9 , (PUSHED_CALLER_REGS_INDEX_R9 *8)(%GPR_PTR);\
+movq %r10, (PUSHED_CALLER_REGS_INDEX_R10*8)(%GPR_PTR);\
+movq %r11, (PUSHED_CALLER_REGS_INDEX_R11*8)(%GPR_PTR);
+
+#define RESTORE_CALLER_REGS(GPR_PTR)\
+movq 0(%GPR_PTR), %rax;\
+movq 8(%GPR_PTR),  %rdi;\
+movq 16(%GPR_PTR), %rsi;\
+movq 24(%GPR_PTR), %rdx;\
+movq 32(%GPR_PTR), %rcx;\
+movq 40(%GPR_PTR), %r8;\
+movq 48(%GPR_PTR), %r9;\
+movq 56(%GPR_PTR), %r10;\
+movq 64(%GPR_PTR), %r11;
+
+#define SAVE_CALLEE_REGS(GPR_PTR)\
+movq %rbx, 0(%GPR_PTR);\
+movq %rbp, 8(%GPR_PTR);\
+movq %r12, 16(%GPR_PTR);\
+movq %r13, 24(%GPR_PTR);\
+movq %r14, 32(%GPR_PTR);\
+movq %r15, 40(%GPR_PTR);
+
+#define RESTORE_CALLEE_REGS(GPR_PTR)\
+movq 0(%GPR_PTR), %rbx;\
+movq 8(%GPR_PTR), %rbp;\
+movq 16(%GPR_PTR), %r12;\
+movq 24(%GPR_PTR), %r13;\
+movq 32(%GPR_PTR), %r14;\
+movq 40(%GPR_PTR), %r15;
+
+#define PUSH_CALLER_REGS()\
+subq $(CALLER_PUSH_SIZE), %rsp;\
+SAVE_CALLER_REGS(rsp);
+
+#define POP_CALLER_REGS()\
+RESTORE_CALLER_REGS(rsp);\
+addq $(CALLER_PUSH_SIZE), %rsp;
+
+#define PUSH_CALLEE_REGS()\
+subq $(CALLEE_PUSH_SIZE), %rsp;\
+SAVE_CALLEE_REGS(rsp);
+
+#define POP_CALLEE_REGS()\
+RESTORE_CALLEE_REGS(rsp);\
+addq $(CALLEE_PUSH_SIZE), %rsp;
+
+#endif
+
+#endif

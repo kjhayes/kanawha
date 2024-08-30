@@ -1,0 +1,97 @@
+
+choice
+  prompt "Architecture"
+  default X64
+  config X64
+    bool "x86_64"
+    select PORT_IO
+    select ACPI
+endchoice
+
+choice
+  prompt "Toolchain"
+  default CLANG
+  config CLANG
+    bool "Clang/LLVM"
+  config GCC
+    bool "GCC"
+endchoice
+
+config OPT_FLAGS
+  string "Compiler Optimization Flags"
+  default -O3
+  help
+    Optimization flags to pass to the compiler
+
+config MAX_CPUS
+  int "Max CPU(s)"
+  default 1
+  help
+    Maximum number of CPU(s) in the system.
+
+menu "Kernel Memory Layout"
+config KERNEL_LOAD_ADDR
+  hex "Kernel Load Address"
+  default 0x0
+  help
+    Physical Address the Kernel should be loaded at.
+
+config VIRTUAL_BASE
+  hex "Identity Map Virtual Base"
+  default 0x0
+  help
+    Virtual address to put the physical memory identity map at.
+
+config IDENTITY_MAP_ORDER
+  int "Identity Map Size Order"
+  default 39
+  help
+    Order which the kernel identity map region should be sized as.
+
+config HEAP_ALIGN_ORDER
+  int "Heap Alignment Order"
+  default 30
+  help
+    Order which the kernel heap needs to be aligned to.
+
+config HEAP_SIZE_ORDER
+  int "Heap Virtual Size Order"
+  default 39
+  help
+    Order which the kernel heap's virtual memory region should be sized as.
+
+config PERCPU_HEAP_SIZE_ORDER
+  int "percpu Heap Virtual Size Order"
+  default 32
+  help
+    Order which each percpu heap's virtual memory region should be sized as.
+
+config MMIO_RESERVE_SIZE_ORDER
+  int "Reserved MMIO Virtual Size Order"
+  default 32
+  help
+    Order which reserved MMIO virtual memory region should be sized as.
+endmenu
+
+menu "Firmware Interfaces"
+config ACPI
+  bool "ACPI"
+  default n
+  help
+    Include support for the Advanced Power and Configuration Interface (ACPI)
+endmenu
+
+source "kernel/Kconfig"
+source "arch/Kconfig"
+
+# Used to check that a .config exists
+config KANAWHA
+    def_bool y
+config MODULES
+    def_bool y
+config PORT_IO
+    def_bool n
+config SMP
+    def_bool y
+    depends on MAX_CPUS > 1
+
