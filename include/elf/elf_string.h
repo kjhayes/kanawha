@@ -11,5 +11,6 @@ const char *elf_get_osabi_string(unsigned char osabi);
 const char *elf_get_abi_version_string(unsigned char abi_version);
 const char *elf_get_type_string(uint16_t type);
 const char *elf_get_machine_string(uint16_t machine);
+const char *elf_get_phdr_type_string(uint32_t ptype);
 
 #endif

@@ -504,7 +504,6 @@ dump_thread_flags(unsigned long flags, printk_f *printer) {
     }
     (*printer)(" ");
     if(flags & THREAD_FLAG_IDLE) {(*printer)("[IDLE]");}
-    if(flags & THREAD_FLAG_USER) {(*printer)("[USER]");}
     if(flags & THREAD_FLAG_PROCESS) {(*printer)("[PROCESS]");}
 }
 

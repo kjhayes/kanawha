@@ -115,3 +115,19 @@ elf_get_machine_string(uint16_t machine) {
     return ret;
 }
 
+const char *
+elf_get_phdr_type_string(uint32_t phdr_type) {
+    const char *ret = "Unknown";
+    switch(phdr_type) {
+#define ELF_PT_STR_CASE(ENUM,VAL,STR,...)\
+        case VAL:\
+            ret = STR;\
+            break;
+        PT_XLIST(ELF_PT_STR_CASE)
+#undef ELF_PT_STR_CASE
+        default:
+            break;
+    }
+    return ret;
+}
+

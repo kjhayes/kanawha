@@ -18,12 +18,72 @@ syscall_mmap(
         struct process *process,
         fd_t file,
         size_t file_offset,
-        void __user **where,
+        void __user *where,
         size_t size,
         unsigned long prot_flags,
         unsigned long mmap_flags)
 {
+    int res;
+
+    // Mis-aligned/Mis-sized
+    if(ptr_orderof(file_offset) < VMEM_MIN_PAGE_ORDER) {
+        return -EINVAL;
+    }
+    if(ptr_orderof(where) < VMEM_MIN_PAGE_ORDER) {
+        return -EINVAL;
+    }
+    if(ptr_orderof(size) < VMEM_MIN_PAGE_ORDER) {
+        return -EINVAL;
+    }
+
+    res = mmap_map_region(
+            process,
+            file,
+            file_offset,
+            (uintptr_t)where,
+            size,
+            prot_flags,
+            mmap_flags);
+    if(res) {
+        return res;
+    }
+
     return -EUNIMPL;
+}
+
+int
+syscall_munmap(
+        struct process *process,
+        void __user *mapping) 
+{
+    int res;
+    struct mmap *mmap = &process->mmap;
+    struct ptree_node *node;
+
+    spin_lock(&mmap->lock);
+
+    node = ptree_get_max_less_or_eq(
+            &mmap->region_tree,
+            (uintptr_t)mapping);
+    if(node == NULL) {
+        spin_unlock(&mmap->lock);
+        return -ENXIO;
+    }
+
+    struct mmap_region *region =
+        container_of(node, struct mmap_region, tree_node);
+
+    res = mmap_unmap_region(
+            process,
+            region->tree_node.key);
+    if(res) {
+        spin_unlock(&mmap->lock);
+        return res;
+    }
+    
+    spin_unlock(&mmap->lock);
+
+    return 0;
 }
 
 static int
@@ -89,7 +149,6 @@ mmap_region_map_page(
     if((region->prot_flags & MMAP_PROT_WRITE))
     {
         if((page->flags & MMAP_PAGE_COPY_ON_WRITE) == 0) {
-            dprintk("Mapping mmap page as writable\n");
             vmem_flags |= VMEM_REGION_WRITE;
         } else {
             dprintk("Avoiding mapping mmap page as writable because it is copy-on-write\n");
@@ -208,10 +267,52 @@ mmap_region_reclaim_page(
     return 0;
 }
 
+static int
+mmap_file_prot_check(
+        struct file_descriptor *desc,
+        unsigned long prot_flags,
+        unsigned long mmap_flags)
+{
+    if((prot_flags & MMAP_PROT_READ) &&
+       (desc->access_flags & FILE_PERM_READ) == 0) {
+        eprintk("mmap_file_prot_check: read permission fail!\n");
+        return -EPERM;
+    }
+    if((prot_flags & MMAP_PROT_WRITE) &&
+       (desc->access_flags & FILE_PERM_WRITE) == 0)
+    {
+        if((mmap_flags & MMAP_PRIVATE) &&
+           (desc->access_flags & FILE_PERM_READ))
+        {
+            // This is fine,
+            //
+            // If we have read permissions, then a user could just
+            // create two mappings, one anonymous, and one read-only
+            // file backed, then copy the data themselves to get a
+            // writable copy.
+            //
+            // This is just a performance save, and stops use from
+            // forcing executables from being opened as "writable"
+            // even if all the mappings are PRIVATE, so the actual
+            // file never gets written to.
+        } else {
+            eprintk("mmap_file_prot_check: write permission fail!\n");
+            return -EPERM;
+        }
+    }
+    if((prot_flags & MMAP_PROT_EXEC) &&
+       (desc->access_flags & FILE_PERM_EXEC) == 0) {
+        eprintk("mmap_file_prot_check: exec permission fail!\n");
+        return -EPERM;
+    }
+
+    return 0;
+}
+
 int
 mmap_map_region(
         struct process *process,
-        struct file_descriptor *desc,
+        fd_t file,
         uintptr_t file_offset,
         uintptr_t mmap_offset,
         size_t size,
@@ -220,39 +321,37 @@ mmap_map_region(
 {
     int res;
 
-    struct mmap *mmap = &process->mmap;
+    // syscall_mmap should check these assumptions for user requests,
+    // but the kernel might be invoking this function incorrectly
+    DEBUG_ASSERT(ptr_orderof(file_offset) >= VMEM_MIN_PAGE_ORDER);
+    DEBUG_ASSERT(ptr_orderof(mmap_offset) >= VMEM_MIN_PAGE_ORDER);
+    DEBUG_ASSERT(ptr_orderof(size) >= VMEM_MIN_PAGE_ORDER);
 
-    if((prot_flags & MMAP_PROT_READ) &&
-       (desc->access_flags & FILE_PERM_READ) == 0) {
-        eprintk("mmap_map_region: read permission fail!\n");
-        return -EPERM;
+    struct file_descriptor *desc;
+
+    if((mmap_flags & MMAP_ANON) == 0) {
+        desc = file_table_get_descriptor(&process->file_table, file);
+
+        res = mmap_file_prot_check(desc, prot_flags, mmap_flags);
+        if(res) {
+            goto err1;
+        }
     }
-    if((prot_flags & MMAP_PROT_WRITE) &&
-       (desc->access_flags & FILE_PERM_WRITE) == 0) {
-        eprintk("mmap_map_region: write permission fail!\n");
-        return -EPERM;
+    else {
+        // This is an anonymous mapping
+        desc = NULL;
     }
-    if((prot_flags & MMAP_PROT_EXEC) &&
-       (desc->access_flags & FILE_PERM_EXEC) == 0) {
-        eprintk("mmap_map_region: exec permission fail!\n");
-        return -EPERM;
-    }
+
+
+    struct mmap *mmap = &process->mmap;
 
     struct mmap_region *region;
     region = kmalloc(sizeof(struct mmap_region));
     if(region == NULL) {
-        return -ENOMEM;
+        res = -ENOMEM;
+        goto err1;
     }
     memset(region, 0, sizeof(struct mmap_region));
-
-    if(size & ((1ULL<<VMEM_MIN_PAGE_ORDER)-1)) {
-        size_t new_size = size;;
-        new_size += ((1ULL<<VMEM_MIN_PAGE_ORDER)-1);
-        new_size &= ~((1ULL<<VMEM_MIN_PAGE_ORDER)-1);
-        dprintk("mmap_map_region rounding up size 0x%llx to the nearest vmem page (new_size=0x%llx)\n",
-                (ull_t)size, (ull_t)new_size);
-        size = new_size;
-    }
 
     region->mmap = mmap;
     region->mmap_flags = mmap_flags;
@@ -275,9 +374,8 @@ mmap_map_region(
             container_of(before, struct mmap_region, tree_node);
         uintptr_t before_ending = before->key + before_region->size;
         if(before_ending > mmap_offset) {
-            spin_unlock(&mmap->lock);
-            kfree(region);
-            return -ENXIO;
+            res = -ENXIO;
+            goto err3;
         }
     }
 
@@ -286,13 +384,22 @@ mmap_map_region(
             &region->tree_node,
             mmap_offset);
     if(res) {
-        spin_unlock(&mmap->lock);
-        kfree(region);
-        return res;
+        goto err3;
     }
 
     spin_unlock(&mmap->lock);
     return 0;
+
+err3:
+    spin_unlock(&mmap->lock);
+err2:
+    kfree(region);
+err1:
+    if(desc) {
+        file_table_put_descriptor(&process->file_table, desc);
+    }
+err0:
+    return res;
 }
 
 int
@@ -317,6 +424,8 @@ mmap_unmap_region(
 
     struct mmap_region *region =
         container_of(pnode, struct mmap_region, tree_node);
+
+    struct file_descriptor *desc = region->desc;
 
     struct ptree_node *removed =
         ptree_remove(&mmap->region_tree, pnode->key);
@@ -353,6 +462,8 @@ mmap_unmap_region(
     }
 
     dprintk("mmap_unmap_region: reclaimed %lld pages\n", (sll_t)num_reclaimed);
+    
+    file_table_put_descriptor(&process->file_table, desc);
 
     spin_unlock(&region->page_tree_lock);
     spin_unlock(&mmap->lock);

@@ -1,22 +1,17 @@
 
 #include <kanawha/usermode.h>
 #include <kanawha/thread.h>
+#include <kanawha/process.h>
 
 __attribute__((noreturn))
 void enter_usermode(void __user *starting_address)
 {
-    struct thread_state *thread = current_thread();
+    struct process *process = current_process();
 
-    if(thread == NULL) {
-        panic("CPU (%ld) called enter_usermode without a thread!\n",
+    if(process == NULL) {
+        panic("CPU (%ld) called enter_usermode without a process!\n",
                 (sl_t)current_cpu_id());
     }
-
-    int lock_irq_flags = spin_lock_irq_save(&thread->lock);
-
-    thread->flags |= THREAD_FLAG_USER;
-
-    spin_unlock_irq_restore(&thread->lock, lock_irq_flags);
 
     /*
      * This little "gap" here allows for an interrupt to occur while we are a "user"
@@ -25,6 +20,15 @@ void enter_usermode(void __user *starting_address)
      * when an interrupt/exception occurs
      */
 
-    arch_enter_usermode(starting_address);
+    void __user *ip = starting_address;
+
+    spin_lock(&process->signal_lock);
+    if(process->forcing_ip) {
+        ip = (void __user *)process->forced_ip;
+        process->forcing_ip = 0;
+    }
+    spin_unlock(&process->signal_lock);
+
+    arch_enter_usermode(ip);
 }
 

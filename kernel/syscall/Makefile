@@ -6,4 +6,5 @@ obj-y += \
 	read.o \
 	write.o \
 	mmap.o \
+	exec.o \
 

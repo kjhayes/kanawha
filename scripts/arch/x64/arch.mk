@@ -5,7 +5,7 @@ QEMU_DEPS += $(OUTPUT_DIR)/kanawha.iso
 QEMU := qemu-system-x86_64 -cdrom $(OUTPUT_DIR)/kanawha.iso
 
 ISO_BOOT_FILES += $(OUTPUT_DIR)/kanawha.o
-ISO_BOOT_FILES += $(SETUPS_DIR)/x64/init.bin
+ISO_BOOT_FILES += $(SETUPS_DIR)/x64/init
 ISO_BOOT_FILES += $(OUTPUT_DIR)/initrd
 
 isofs: $(ISO_BOOT_FILES) $(SETUPS_DIR)/x64/grub.cfg FORCE

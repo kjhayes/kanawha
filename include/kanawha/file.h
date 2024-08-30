@@ -2,13 +2,7 @@
 #define __KANAWHA__FILE_H__
 
 #include <kanawha/fs.h>
-
-typedef uintptr_t fd_t;
-#define NULL_FD (fd_t)(0)
-
-#define FILE_PERM_READ  (1ULL<<0)
-#define FILE_PERM_WRITE (1ULL<<1)
-#define FILE_PERM_EXEC  (1ULL<<2)
+#include <kanawha/uapi/file.h>
 
 struct file_descriptor
 {

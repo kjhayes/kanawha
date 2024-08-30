@@ -41,6 +41,10 @@ struct process
     ilist_node_t child_node;
     ilist_t children;
 
+    spinlock_t signal_lock;
+    int forcing_ip;
+    void __user *forced_ip;
+
     // File Descriptor Table
     struct file_table file_table;
 };
@@ -80,5 +84,14 @@ int
 process_terminate(
         struct process *process,
         int exitcode);
+
+int
+process_force_ip(
+        struct process *process,
+        void __user *ip);
+
+int
+process_clear_forced_ip(
+        struct process *process);
 
 #endif

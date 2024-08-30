@@ -21,6 +21,33 @@ static DECLARE_PTREE(process_pid_tree);
 
 static struct process *init_process = NULL;
 
+int
+process_force_ip(
+        struct process *process,
+        void __user *ip)
+{
+    spin_lock(&process->signal_lock);
+    if(process->forcing_ip) {
+        spin_unlock(&process->signal_lock);
+        return -EALREADY;
+    }
+    process->forcing_ip = 1;
+    process->forced_ip = ip;
+    spin_unlock(&process->signal_lock);
+    return 0;
+}
+
+int
+process_clear_forced_ip(
+        struct process *process)
+{
+    spin_lock(&process->signal_lock);
+    process->forcing_ip = 0;
+    process->forced_ip = NULL;
+    spin_unlock(&process->signal_lock);
+    return 0;
+}
+
 static int
 process_assign_pid(
         struct process *process)
@@ -89,7 +116,6 @@ static void
 init_process_kernel_entry(void *in)
 {
     int res;
-    void __user *entry_point = (void __user *)in;
 
     struct process *process = current_process();
     DEBUG_ASSERT(process != NULL);
@@ -110,49 +136,74 @@ init_process_kernel_entry(void *in)
 
     DEBUG_ASSERT(binary_fd != NULL_FD);
 
-    struct file_descriptor *desc =
-        file_table_get_descriptor(
-                &process->file_table,
-                binary_fd);
-    if(desc == NULL) {
-        panic("Failed to get init binary file descriptor struct!\n");
-    }
-
-    res = file_table_close_file(
-            &process->file_table,
-            binary_fd);
+    res = syscall_exec(
+            process,
+            binary_fd,
+            0);
     if(res) {
-        wprintk("Failed to close init process binary file descriptor after mapping! (err=%s)\n",
-                errnostr(res));
+        panic("Failed to exec the init process file \"%s\"! (err=%s)\n",
+                binary_path, errnostr(res));
     }
 
-    size_t node_size;
-    res = fs_node_attr(
-            desc->node,
-            FS_NODE_ATTR_MAX_OFFSET_END,
-            &node_size);
-    if(res) {
-        panic("Failed to get init process binary size! (err=%s)\n",
-                errnostr(res));
-    }
-
-    res = mmap_map_region(
-        current_process(),
-        desc,
-        0x0,
-        CONFIG_INIT_PROCESS_BINARY_VIRT_ADDRESS,
-        node_size,
-        MMAP_PROT_READ|MMAP_PROT_EXEC,
-        MMAP_PRIVATE);
-
-    if(res) {
-        panic("Failed to mmap init process! (err=%s)\n",
-                errnostr(res));
-    }
-
-    dprintk("init_process_kernel_entry: (entering usermode at address %p)\n",
-            entry_point);
-    enter_usermode(entry_point);
+//    size_t node_size;
+//    {
+//      struct file_descriptor *desc =
+//          file_table_get_descriptor(
+//                  &process->file_table,
+//                  binary_fd);
+//      if(desc == NULL) {
+//          panic("Failed to get init binary file descriptor!\n");
+//      }
+//
+//      res = fs_node_attr(
+//              desc->node,
+//              FS_NODE_ATTR_MAX_OFFSET_END,
+//              &node_size);
+//      if(res) {
+//          panic("Failed to get init process binary size! (err=%s)\n",
+//                  errnostr(res));
+//      }
+//
+//      res = file_table_put_descriptor(
+//                  &process->file_table,
+//                  desc);
+//      if(res) {
+//          panic("Failed to put init binary file descriptor! (err=%s)\n",
+//                  errnostr(res));
+//      }
+//    }
+//
+//    // Align our request size up by a page
+//    if(ptr_orderof(node_size) < VMEM_MIN_PAGE_ORDER) {
+//        node_size &= ~((1ULL<<VMEM_MIN_PAGE_ORDER)-1);
+//        node_size += 1ULL<<VMEM_MIN_PAGE_ORDER;
+//    }
+//
+//    res = mmap_map_region(
+//        current_process(),
+//        binary_fd,
+//        0x0,
+//        CONFIG_INIT_PROCESS_BINARY_VIRT_ADDRESS,
+//        node_size,
+//        MMAP_PROT_READ|MMAP_PROT_EXEC,
+//        MMAP_PRIVATE);
+//
+//    if(res) {
+//        panic("Failed to mmap init process! (err=%s)\n",
+//                errnostr(res));
+//    }
+//
+//    res = file_table_close_file(
+//            &process->file_table,
+//            binary_fd);
+//    if(res) {
+//        wprintk("Failed to close init process binary file descriptor after mapping! (err=%s)\n",
+//                errnostr(res));
+//    }
+//
+//    dprintk("init_process_kernel_entry: (entering usermode at address %p)\n",
+//            entry_point);
+    enter_usermode(NULL);
 }
 
 static struct process *
@@ -262,13 +313,9 @@ launch_init_process(void)
         panic("launch_init_process: init_process is not NULL!\n");
     }
 
-    void *user_entry_address = (void*)(uintptr_t)(
-            CONFIG_INIT_PROCESS_BINARY_ENTRY_OFFSET +
-            CONFIG_INIT_PROCESS_BINARY_VIRT_ADDRESS);
-
     struct process *process = process_alloc(
             init_process_kernel_entry,
-            user_entry_address,
+            NULL,
             PROCESS_FLAG_INIT, // Flags
             NULL // Parent
             );
