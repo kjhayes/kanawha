@@ -140,6 +140,8 @@ exec_elf64_handle_segment(
                     process,
                     file,
                     phdr);
+        case PT_NULL:
+            return 0;
         default:
             printk("Ignoring Unsupported ELF Segment \"%s\" offset=%p, memsz=%p\n",
                     elf_get_phdr_type_string(phdr->p_type), phdr->p_offset, phdr->p_memsz);

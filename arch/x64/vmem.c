@@ -41,7 +41,7 @@ x64_vmem_page_fault_handler(
 
     res = vmem_map_handle_page_fault(faulting_address, pf_flags, current);
 
-    if(res && (pf_flags & PF_FLAG_USERMODE)) {
+    if(res && ((pf_flags & PF_FLAG_USERMODE) == 0)) {
         
         // Kernel Fault ((noreturn))
         eprintk("x64_vmem_page_fault_handler: Failed to handle kernel page fault (err=%s)\n",

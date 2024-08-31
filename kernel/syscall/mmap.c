@@ -26,13 +26,16 @@ syscall_mmap(
     int res;
 
     // Mis-aligned/Mis-sized
-    if(ptr_orderof(file_offset) < VMEM_MIN_PAGE_ORDER) {
+    if(file != NULL_FD && (ptr_orderof(file_offset) < VMEM_MIN_PAGE_ORDER)) {
+        printk("syscall_mmap: file_offset is not aligned to the minimum vmem page size!\n");
         return -EINVAL;
     }
     if(ptr_orderof(where) < VMEM_MIN_PAGE_ORDER) {
+        printk("syscall_mmap: virtual address is not aligned to the minimum vmem page size!\n");
         return -EINVAL;
     }
     if(ptr_orderof(size) < VMEM_MIN_PAGE_ORDER) {
+        printk("syscall_mmap: size is not aligned to the minimum vmem page size!\n");
         return -EINVAL;
     }
 
@@ -48,7 +51,7 @@ syscall_mmap(
         return res;
     }
 
-    return -EUNIMPL;
+    return 0;
 }
 
 int
@@ -323,7 +326,7 @@ mmap_map_region(
 
     // syscall_mmap should check these assumptions for user requests,
     // but the kernel might be invoking this function incorrectly
-    DEBUG_ASSERT(ptr_orderof(file_offset) >= VMEM_MIN_PAGE_ORDER);
+    DEBUG_ASSERT((file == NULL_FD) || (ptr_orderof(file_offset) >= VMEM_MIN_PAGE_ORDER));
     DEBUG_ASSERT(ptr_orderof(mmap_offset) >= VMEM_MIN_PAGE_ORDER);
     DEBUG_ASSERT(ptr_orderof(size) >= VMEM_MIN_PAGE_ORDER);
 

@@ -41,7 +41,7 @@ ARG(fd_t, file)\
 ARG(size_t, file_offset)\
 ARG(void __user *, where)\
 ARG(size_t, size)\
-ARG(unsigned long, access_flags)\
+ARG(unsigned long, prot_flags)\
 ARG(unsigned long, mmap_flags)\
 
 #define SYSCALL_SIG_MUNMAP(RET,ARG)\
@@ -56,12 +56,12 @@ ARG(unsigned long, exec_flags)
 #define SYSCALL_XLIST(X)\
 X(exit,   0, EXIT, SYSCALL_SIG_EXIT)\
 X(open,   1, OPEN, SYSCALL_SIG_OPEN)\
-X(close,  3, CLOSE, SYSCALL_SIG_CLOSE)\
-X(read,   4, READ, SYSCALL_SIG_READ)\
-X(write,  5, WRITE, SYSCALL_SIG_WRITE)\
-X(mmap,   6, MMAP, SYSCALL_SIG_MMAP)\
-X(munmap, 7, MUNMAP, SYSCALL_SIG_MUNMAP)\
-X(exec,   8, EXEC, SYSCALL_SIG_EXEC)
+X(close,  2, CLOSE, SYSCALL_SIG_CLOSE)\
+X(read,   3, READ, SYSCALL_SIG_READ)\
+X(write,  4, WRITE, SYSCALL_SIG_WRITE)\
+X(mmap,   5, MMAP, SYSCALL_SIG_MMAP)\
+X(munmap, 6, MUNMAP, SYSCALL_SIG_MUNMAP)\
+X(exec,   7, EXEC, SYSCALL_SIG_EXEC)
 
 #define DECLARE_SYSCALL_ID_CONSTANTS(__name, __id, __NAME, ...)\
 const static syscall_id_t SYSCALL_ID_ ## __NAME = __id;

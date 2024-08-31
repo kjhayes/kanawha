@@ -20,4 +20,7 @@ SYSCALL_XLIST(DECLARE_SYSCALL_HANDLER_FUNCTIONS)
 
 int syscall_unknown(struct process *process, syscall_id_t id);
 
+const char *
+syscall_id_string(syscall_id_t id);
+
 #endif

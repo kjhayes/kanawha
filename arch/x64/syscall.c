@@ -8,6 +8,7 @@
 #include <kanawha/syscall.h>
 #include <kanawha/xcall.h>
 #include <kanawha/process.h>
+#include <kanawha/assert.h>
 #include <arch/x64/msr.h>
 #include <arch/x64/sysreg.h>
 #include <arch/x64/gdt.h>
@@ -47,14 +48,19 @@ x64_route_syscall(struct x64_syscall_state *state)
     dprintk("x64_route_syscall (id=%ld, user_return=0x%llx, user_rflags=0x%llx)\n",
             (sl_t)id, user_return, (uintptr_t)user_rflags);
 
+    struct process *process = current_process();
+    DEBUG_ASSERT(process);
+
+    printk("PID(%ld) syscall[%s]\n",
+            (sl_t)current_process()->id,
+            syscall_id_string(id));
+
     struct x64_syscall_trampoline *tramp = 
             percpu_ptr(percpu_addr(x64_local_syscall_trampoline));
     dprintk("TRAMPOLINE (user_stack=%p) (user_rip=%p) (trampoline_stack=%p)\n",
             tramp->user_stack,
             tramp->user_return,
             tramp->trampoline_stack_base);
-
-    struct process *process = current_process();
 
     switch(id) {
         case SYSCALL_ID_EXIT:
@@ -127,6 +133,9 @@ x64_route_syscall(struct x64_syscall_state *state)
         default:
             syscall_unknown(process, id);
     }
+
+    printk("PID(%ld) end syscall\n",
+            (sl_t)process->id);
 }
 
 struct x64_syscall_setup_state {
