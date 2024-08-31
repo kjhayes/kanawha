@@ -21,12 +21,14 @@ CFLAGS +=
 AFLAGS +=
 COMMON_FLAGS += \
     -nostdlib \
+	-nostdinc \
 	-static \
 	-I$(KANAWHA_INCLUDE_DIR) \
-	-I$(INCLUDE_DIR)
+	-I$(INCLUDE_DIR) \
+	-I$(INCLUDE_DIR)/libc/ 
 
 
-CRT_SRC_DIR := $(SRC_DIR)/c
+CRT_SRC_DIR := $(SRC_DIR)/crt
 include $(CRT_SRC_DIR)/Makefile
 
 INIT_SRC_DIR := $(SRC_DIR)/init

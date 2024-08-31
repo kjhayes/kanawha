@@ -1,6 +1,7 @@
 
 INIT_OBJS := \
-    main.o
+    main.o \
+	path.o
 
 INIT_OUTPUT_DIR := $(OUTPUT_DIR)/init
 INIT_OUTPUT_OBJS := $(addprefix $(INIT_OUTPUT_DIR)/, $(INIT_OBJS))
