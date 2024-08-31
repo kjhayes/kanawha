@@ -66,8 +66,12 @@ vga_serial_shift_up(
 {
     for(unsigned y = 1; y < serial->height; y++) {
         for(unsigned x = 0; x < serial->width; x++) {
-            uint16_t __mmio *dst=(uint16_t __mmio*)serial->framebuffer+(x+((y-1)*serial->width));
-            uint16_t __mmio *src=(uint16_t __mmio*)serial->framebuffer+(x+(y*serial->height));
+            uint16_t __mmio *dst =
+                ((uint16_t __mmio*)serial->framebuffer)
+                +(x+((y-1)*serial->width));
+            uint16_t __mmio *src =
+                ((uint16_t __mmio*)serial->framebuffer)
+                +(x+(y*serial->width));
             mmio_writew(dst, mmio_readw(src));
         }
     }
@@ -85,7 +89,16 @@ vga_serial_newline(
         uint8_t c,
         uint8_t attr)
 {
+    while(serial->cursor_x < serial->width) {
+        vga_serial_setchar(
+                serial,
+                serial->cursor_x,
+                serial->cursor_y,
+                ' ', attr);
+        serial->cursor_x++;
+    }
     serial->cursor_x = 0;
+
     serial->cursor_y += 1;
     if(serial->cursor_y >= serial->height) {
         serial->cursor_y = serial->height-1;
