@@ -22,7 +22,7 @@ syscall_close(
         return res;
     }
 
-    printk("PID(%ld) syscall_close: fd=%ld\n",
+    dprintk("PID(%ld) syscall_close: fd=%ld\n",
             (sl_t)process->id, (sl_t)file);
     return 0;
 }

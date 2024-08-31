@@ -51,9 +51,7 @@ x64_route_syscall(struct x64_syscall_state *state)
     struct process *process = current_process();
     DEBUG_ASSERT(process);
 
-    printk("PID(%ld) syscall[%s]\n",
-            (sl_t)current_process()->id,
-            syscall_id_string(id));
+    strace_begin_syscall(process, id);
 
     struct x64_syscall_trampoline *tramp = 
             percpu_ptr(percpu_addr(x64_local_syscall_trampoline));
@@ -134,8 +132,7 @@ x64_route_syscall(struct x64_syscall_state *state)
             syscall_unknown(process, id);
     }
 
-    printk("PID(%ld) end syscall\n",
-            (sl_t)process->id);
+    strace_end_syscall(process, id);
 }
 
 struct x64_syscall_setup_state {
