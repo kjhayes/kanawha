@@ -39,14 +39,32 @@ int main(void)
         exit(2);
     }
 
-    const char *msg = "Hello World!\n";
-    res = write(serial,
+    close(char_mount);
+
+    const char *newline = "\n";
+
+    for(size_t i = 0; i < 40; i++) {
+        res = write(serial,
+              0,
+              (void*)newline,
+              strlen(newline));
+        if(res) {
+            return res;
+        }
+    }
+
+    const char *msg = "Hello From Userspace!\n";
+
+    res = write(
+          serial,
           0,
           (void*)msg,
           strlen(msg));
     if(res) {
         return res;
     }
+
+    close(serial);
 
     return 0;
 }
