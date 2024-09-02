@@ -28,6 +28,7 @@ obj-y += \
 	usermode.o \
 	syscall.o \
 	process.o \
+	env.o \
 	cpu.o \
 	percpu.o \
 	mmio.o \

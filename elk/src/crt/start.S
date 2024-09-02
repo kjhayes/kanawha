@@ -1,8 +1,11 @@
 
 // 8 MiB Stack
 #define STACK_TOP 0x1000000
-#define STACK_SIZE 0x800000
+#define STACK_SIZE 0x1000000
 #define STACK_BASE (STACK_TOP + STACK_SIZE)
+
+.extern __elk_crt__get_argv
+.type __elk_crt__get_argv,@function
 
 .global _start
 _start: 
@@ -22,8 +25,27 @@ _start:
 
     movq $STACK_BASE, %rsp
 
+    subq $16, %rsp
+
+    // argc ptr
+    leaq 0(%rsp), %rdi
+    // argv ptr
+    leaq 8(%rsp), %rsi
+    
+    callq __elk_crt__get_argv
+
+    // argc
+    movq 0(%rsp), %rdi
+    // argv
+    movq 8(%rsp), %rsi
+
+    // align the stack
+    subq $8, %rsp
+
     // call the main function
     callq main
+
+    addq $8, %rsp
 
     // Exit using the value returned from main
     movq %rax, %rdi

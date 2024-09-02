@@ -98,6 +98,7 @@ int
 xcall_notify(cpu_id_t cpu)
 {
     struct thread_state *cur_thread = current_thread();
+    DEBUG_ASSERT(cur_thread);
     pin_thread(cur_thread);
     if(cpu == current_cpu_id()) {
         int res = xcall_handle_current();

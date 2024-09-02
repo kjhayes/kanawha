@@ -10,11 +10,16 @@ syscall_open(
         struct process *process,
         fd_t parent_fd,
         const char __user *name,
-        size_t namelen,
         unsigned long access_flags,
         unsigned long mode_flags)
 {
     int res;
+
+    size_t namelen;
+    res = process_strlen_usermem(process, name, SYSCALL_OPEN_MAX_NAMELEN+1, &namelen);
+    if(res) {
+        return NULL_FD;
+    }
 
     if(namelen > SYSCALL_OPEN_MAX_NAMELEN) {
         // Path is too long

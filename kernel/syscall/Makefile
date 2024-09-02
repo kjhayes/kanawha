@@ -7,4 +7,5 @@ obj-y += \
 	write.o \
 	mmap.o \
 	exec.o \
+	environ.o \
 

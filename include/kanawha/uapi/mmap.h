@@ -11,12 +11,4 @@
 #define MMAP_ANON    (0b10 << 0)
 #define MMAP_ANONYMOUS MMAP_ANON
 
-// "where" is not a suggestion
-#define MMAP_FIXED (1ULL << 2)
-
-// If we map on top of another mapping,
-// that mapping can be removed, must
-// be used with "MAP_FIXED"
-#define MMAP_REPLACE (1ULL << 3)
-
 #endif

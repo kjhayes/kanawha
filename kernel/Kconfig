@@ -1,21 +1,15 @@
 
 config INIT_PROCESS_PATH
-    string "init Binary Path"
+    string "init Path"
     default "init.bin"
     help
-      Path to search for the init process binary blob
+      Path to search for the init process ELF executable
 
-config INIT_PROCESS_BINARY_VIRT_ADDRESS
-    hex "init Binary Virtual Address"
-    default 0x0
+config INIT_PROCESS_ARGV_VALUE
+    string "init Arguments"
+    default ""
     help
-      Virtual address to map in the init process binary blob
-
-config INIT_PROCESS_BINARY_ENTRY_OFFSET
-    hex "init Binary Entry Offset"
-    default 0x0
-    help
-      Offset into the init process binary to begin execution
+      Value to set the "ARGV" environment variable to on entry to the init process.
 
 menu "printk Options"
 config PRINTK_BUFFER_SIZE
@@ -57,6 +51,14 @@ config DEBUG_ASSERTIONS
     default y
     help
       Enable DEBUG_ASSERT Checking
+
+config PERCPU_DEBUG_ASSERTIONS
+    bool "Enable percpu Variable Debug Assertions"
+    depends on DEBUGGING && DEBUG_ASSERTIONS
+    default n
+    help
+      Enable the DEBUG_ASSERT_PERCPU_VALID assertion, which includes a percpu checksum variable
+      used to make sure that the percpu variable subsystem is working correctly.
 
 config DEBUG_BUDDY_ALLOC
     bool "Debug Buddy Allocators"

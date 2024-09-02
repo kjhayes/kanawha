@@ -6,6 +6,7 @@
 #include <kanawha/string.h>
 #include <kanawha/printk.h>
 #include <kanawha/percpu.h>
+#include <kanawha/assert.h>
 
 extern void __x64_thread_entry(void);
 
@@ -121,7 +122,9 @@ arch_dump_thread(printk_f *printer, struct thread_state *state)
 __attribute__((no_caller_saved_registers))
 void *__x64_get_current_thread_kernel_rsp(void)
 {
-    return (void*)(uintptr_t)current_thread()->arch_state.kernel_rsp;
+    DEBUG_ASSERT_PERCPU_VALID();
+    struct thread_state *thread = current_thread();
+    return (void*)(uintptr_t)thread->arch_state.kernel_rsp;
 }
 
 

@@ -88,4 +88,22 @@ percpu_calloc(size_t size);
 void
 percpu_free(void __percpu *ptr, size_t size);
 
+// Debug Assertion that a percpu Checksum is valid
+
+#ifdef CONFIG_PERCPU_DEBUG_ASSERTIONS
+
+#define PERCPU_DEBUG_CHECKSUM 0xCAFEBABE
+
+DECLARE_EXTERN_PERCPU_VAR(uint64_t, __percpu_assert_checksum);
+
+#define DEBUG_ASSERT_PERCPU_VALID() \
+    do { \
+        uint64_t checksum = *(uint64_t*)percpu_ptr(percpu_addr(__percpu_assert_checksum));\
+        DEBUG_ASSERT((checksum >> 32) == PERCPU_DEBUG_CHECKSUM);\
+    } while(0)
+
+#else
+#define DEBUG_ASSERT_PERCPU_VALID()
+#endif
+
 #endif

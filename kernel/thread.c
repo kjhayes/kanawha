@@ -12,6 +12,8 @@
 #include <kanawha/scheduler.h>
 #include <kanawha/vmem.h>
 #include <kanawha/slab.h>
+#include <kanawha/process.h>
+#include <kanawha/assert.h>
 
 static DECLARE_SPINLOCK(thread_tree_lock);
 static DECLARE_PTREE(thread_tree);
@@ -276,7 +278,9 @@ __thread_switch_threadless(void *in)
     switching_from->status = THREAD_STATUS_SUSPEND;
     switching_to->status = THREAD_STATUS_RUNNING;
     switching_to->running_on = current_cpu_id();
+    dprintk("setting current_thread=%p\n", switching_to);
     *(struct thread_state **)percpu_ptr(percpu_addr(__current_thread)) = switching_to;
+    DEBUG_ASSERT(current_thread() == switching_to);
 
     vmem_map_activate(switching_to->mem_map);
 
@@ -432,7 +436,9 @@ void thread_abandon(struct thread_state *scheduled)
     }
     spin_unlock(&scheduled->lock);
 
+    dprintk("setting current_thread=%p\n", scheduled);
     *(struct thread_state **)percpu_ptr(percpu_addr(__current_thread)) = scheduled;
+    DEBUG_ASSERT(current_thread() == scheduled);
 
     dprintk("Abandoning thread %p for thread %p\n", cur_thread, scheduled);
 
@@ -488,7 +494,9 @@ void cpu_start_threading(thread_f *func, void *state)
     spin_lock(&current->lock);
     current->status = THREAD_STATUS_RUNNING;
     current->running_on = current_cpu_id();
+    dprintk("setting current_thread=%p\n", current);
     *(struct thread_state **)percpu_ptr(percpu_addr(__current_thread)) = current;
+    DEBUG_ASSERT(current_thread() == current);
     spin_unlock(&current->lock);
 
     dprintk("cpu_start_threading: Activating Thread Virtual Memory Mapping\n");
@@ -498,13 +506,17 @@ void cpu_start_threading(thread_f *func, void *state)
 }
 
 static void
-dump_thread_flags(unsigned long flags, printk_f *printer) {
+dump_thread_flags(struct thread_state *thread, unsigned long flags, printk_f *printer) {
     if(flags == 0) {
         return;
     }
     (*printer)(" ");
     if(flags & THREAD_FLAG_IDLE) {(*printer)("[IDLE]");}
-    if(flags & THREAD_FLAG_PROCESS) {(*printer)("[PROCESS]");}
+    if(flags & THREAD_FLAG_PROCESS) {
+        struct process *process =
+            container_of(thread, struct process, thread);
+        (*printer)("[PROCESS(%ld)]", (sl_t)process->id);
+    }
 }
 
 int
@@ -525,7 +537,7 @@ dump_threads(printk_f *printer)
                 thread->status == THREAD_STATUS_ABANDONED ? "ABANDONED" :
                 "ERROR-INVALID-STATUS");
 
-        dump_thread_flags(thread->flags, printer);
+        dump_thread_flags(thread, thread->flags, printer);
 
         if(thread->status == THREAD_STATUS_RUNNING) {
             (*printer)(" CPU(%ld)", (sl_t)thread->running_on);
@@ -533,6 +545,9 @@ dump_threads(printk_f *printer)
         if(thread->pin_refs) {
             (*printer)(" PINNED(%ld) PIN-REFS(%ld)", (sl_t)thread->pinned_to, (sl_t)thread->pin_refs);
         }
+
+        (*printer)(" [raw=%p]", thread);
+
         (*printer)("\n");
     }
     (*printer)("---------------\n");

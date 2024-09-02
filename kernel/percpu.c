@@ -18,6 +18,10 @@ static size_t percpu_data_size = 0;
 static DECLARE_ILIST(percpu_heap_list);
 static DECLARE_ILIST(percpu_heap_free_list);
 
+#ifdef CONFIG_PERCPU_DEBUG_ASSERTIONS
+DECLARE_PERCPU_VAR(uint64_t, __percpu_assert_checksum);
+#endif
+
 struct percpu_heap
 {
     struct vmem_region *region;
@@ -64,6 +68,11 @@ static_bsp_init_builtin_percpu(void)
     if(res) {
         return res;
     }
+
+#ifdef CONFIG_PERCPU_DEBUG_ASSERTIONS
+    *(uint64_t*)percpu_ptr(percpu_addr(__percpu_assert_checksum)) =
+        ((uint64_t)PERCPU_DEBUG_CHECKSUM << 32) | 0;
+#endif
 
     return 0;
 }
@@ -255,6 +264,11 @@ init_cpu_percpu_data(struct cpu *cpu)
         if(res) {
             return res;
         }
+
+#ifdef CONFIG_PERCPU_DEBUG_ASSERTIONS
+    *(uint64_t*)percpu_ptr_specific(percpu_addr(__percpu_assert_checksum), cpu->id) =
+        ((uint64_t)PERCPU_DEBUG_CHECKSUM << 32) | (uint32_t)cpu->id;
+#endif
     }
 
     return 0;

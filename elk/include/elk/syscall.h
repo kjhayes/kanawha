@@ -12,7 +12,6 @@ void exit(int exitcode);
 fd_t open(
         fd_t parent,
         const char *name,
-        size_t name_len,
         unsigned long access_flags,
         unsigned long mode_flags);
 
@@ -45,5 +44,11 @@ int munmap(
 int exec(
         fd_t file,
         unsigned long exec_flags);
+
+int environ(
+        const char *key,
+        char *value,
+        size_t len,
+        int opcode);
 
 #endif

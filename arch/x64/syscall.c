@@ -70,9 +70,8 @@ x64_route_syscall(struct x64_syscall_state *state)
                         process,
                         (fd_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDI], // parent
                         (const char __user *)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RSI], // name
-                        (size_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDX], // path_length
-                        (unsigned long)state->caller_regs[PUSHED_CALLER_REGS_INDEX_R8], // perm
-                        (unsigned long)state->caller_regs[PUSHED_CALLER_REGS_INDEX_R9] // mode
+                        (unsigned long)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDX], // perm
+                        (unsigned long)state->caller_regs[PUSHED_CALLER_REGS_INDEX_R8] // mode
                         );
             break;
         case SYSCALL_ID_CLOSE:
@@ -126,6 +125,16 @@ x64_route_syscall(struct x64_syscall_state *state)
                         process,
                         (fd_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDI], // file
                         (unsigned long)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RSI] // exec_flags
+                        );
+            break;
+        case SYSCALL_ID_ENVIRON:
+            *ret_val = (uint64_t)(int)
+                syscall_environ(
+                        process,
+                        (const char __user *)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDI], // key
+                        (char __user *)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RSI], // value
+                        (size_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDX], // len
+                        (int)state->caller_regs[PUSHED_CALLER_REGS_INDEX_R8] // operation
                         );
             break;
         default:

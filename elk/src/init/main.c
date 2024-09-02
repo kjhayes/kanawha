@@ -32,7 +32,7 @@ write_str(
     return 0;
 }
 
-int main(void)
+int main(int argc, const char **argv)
 {
     int res;
 
@@ -47,6 +47,11 @@ int main(void)
     }
 
     write_str(serial, "Hello From Userspace!!!\n");
+
+    for(int i = 0; i < argc; i++) {
+        write_str(serial, argv[i]);
+        write_str(serial, "\n");
+    }
 
     close(serial);
 

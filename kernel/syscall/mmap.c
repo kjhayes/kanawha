@@ -61,30 +61,19 @@ syscall_munmap(
 {
     int res;
     struct mmap *mmap = &process->mmap;
-    struct ptree_node *node;
 
-    spin_lock(&mmap->lock);
-
-    node = ptree_get_max_less_or_eq(
-            &mmap->region_tree,
-            (uintptr_t)mapping);
-    if(node == NULL) {
-        spin_unlock(&mmap->lock);
-        return -ENXIO;
+    DEBUG_ASSERT(process);
+    if((uintptr_t)mapping >= mmap->vmem_region->size) 
+    {
+        return -EINVAL;
     }
-
-    struct mmap_region *region =
-        container_of(node, struct mmap_region, tree_node);
 
     res = mmap_unmap_region(
             process,
-            region->tree_node.key);
+            (uintptr_t)mapping);
     if(res) {
-        spin_unlock(&mmap->lock);
         return res;
     }
-    
-    spin_unlock(&mmap->lock);
 
     return 0;
 }
@@ -168,11 +157,13 @@ mmap_region_map_page(
 
     res = vmem_paged_region_map(
             region->mmap->vmem_region,
-            page->tree_node.key,
+            region->tree_node.key + page->tree_node.key,
             page->phys_addr,
             1ULL<<page->order,
             vmem_flags);
     if(res) {
+        eprintk("mmap_region_map_page: vmem_paged_region_map returned %s, region_offset=%p, region_base=%p, offset=%p\n",
+                errnostr(res), page->tree_node.key, region->tree_node.key, page->tree_node.key + region->tree_node.key);
         return res;
     }
 
@@ -194,7 +185,7 @@ mmap_region_unmap_page(
 
     res = vmem_paged_region_unmap(
             region->mmap->vmem_region,
-            page->tree_node.key,
+            region->tree_node.key + page->tree_node.key,
             1ULL<<page->order);
     if(res) {
         return res;
@@ -210,7 +201,8 @@ mmap_region_flush_page(
         struct mmap_region *region,
         struct mmap_page *page)
 {
-    if(page->flags & MMAP_PAGE_ANON) {
+    unsigned long mmap_type = page->flags & 0b11;
+    if(mmap_type == MMAP_PAGE_ANON) {
         return 0;
     }
 
@@ -276,6 +268,8 @@ mmap_file_prot_check(
         unsigned long prot_flags,
         unsigned long mmap_flags)
 {
+    unsigned long mmap_type = mmap_flags & 0b11;
+
     if((prot_flags & MMAP_PROT_READ) &&
        (desc->access_flags & FILE_PERM_READ) == 0) {
         eprintk("mmap_file_prot_check: read permission fail!\n");
@@ -284,7 +278,7 @@ mmap_file_prot_check(
     if((prot_flags & MMAP_PROT_WRITE) &&
        (desc->access_flags & FILE_PERM_WRITE) == 0)
     {
-        if((mmap_flags & MMAP_PRIVATE) &&
+        if((mmap_type == MMAP_PRIVATE) &&
            (desc->access_flags & FILE_PERM_READ))
         {
             // This is fine,
@@ -332,7 +326,9 @@ mmap_map_region(
 
     struct file_descriptor *desc;
 
-    if((mmap_flags & MMAP_ANON) == 0) {
+    unsigned long mmap_type = mmap_flags & 0b11;
+
+    if(mmap_type != MMAP_ANON) {
         desc = file_table_get_descriptor(&process->file_table, file);
 
         res = mmap_file_prot_check(desc, prot_flags, mmap_flags);
@@ -361,6 +357,7 @@ mmap_map_region(
     region->desc = desc;
     region->size = size;
     region->prot_flags = prot_flags;
+    region->file_offset = file_offset;
     region->tree_node.key = mmap_offset;
 
     spinlock_init(&region->page_tree_lock);
@@ -465,8 +462,10 @@ mmap_unmap_region(
     }
 
     dprintk("mmap_unmap_region: reclaimed %lld pages\n", (sll_t)num_reclaimed);
-    
-    file_table_put_descriptor(&process->file_table, desc);
+   
+    if(desc) {
+        file_table_put_descriptor(&process->file_table, desc);
+    }
 
     spin_unlock(&region->page_tree_lock);
     spin_unlock(&mmap->lock);
@@ -510,6 +509,10 @@ mmap_region_load_page(
 
         struct file_descriptor *desc = region->desc;
         DEBUG_ASSERT(desc != NULL);
+        DEBUG_ASSERT_MSG(
+                desc->node != NULL,
+                "MMAP_SHARED or MMAP_PRIVATE region has NULL fs_node! region->mmap_flags=0x%lx, region_offset=%p",
+                region->mmap_flags, region->tree_node.key);
         
         order = fs_node_page_order(region->desc->node);
         if(order < VMEM_MIN_PAGE_ORDER) {
@@ -522,6 +525,16 @@ mmap_region_load_page(
 
         // Patch our page offset
         page_offset = pfn << order;
+
+        // Add our region file offset
+        if(ptr_orderof(region->file_offset) < order)
+        {
+            eprintk("region->file_offset is not aligned to the file page size! (file_offset=%p, page_order=%ld\n",
+                    region->file_offset, (sl_t)order);
+            return -EINVAL;
+        }
+
+        pfn += (region->file_offset >> order);
 
         fs_page = fs_node_get_page(
                 desc->node,
@@ -702,6 +715,8 @@ mmap_read(
 
         spin_lock(&region->page_tree_lock);
 
+        uintptr_t region_offset = offset - region->tree_node.key;
+
         if((region->prot_flags & MMAP_PROT_READ) == 0) {
             // The process is not allowed to read this page
             spin_unlock(&region->page_tree_lock);
@@ -715,15 +730,15 @@ mmap_read(
         }
 
         // Get or load the page
-        pnode = ptree_get_max_less_or_eq(&region->page_tree, offset);
+        pnode = ptree_get_max_less_or_eq(&region->page_tree, region_offset);
         struct mmap_page *page =
             container_of(pnode, struct mmap_page, tree_node);
         if((pnode == NULL) ||
-           (offset >= pnode->key + (1ULL<<page->order))) 
+           (region_offset >= pnode->key + (1ULL<<page->order))) 
         {
             res = mmap_region_load_page(
                     region,
-                    offset - region->tree_node.key,
+                    region_offset,
                     &page);
             if(res) {
                 spin_unlock(&region->page_tree_lock);
@@ -743,13 +758,13 @@ mmap_read(
 
         uintptr_t page_offset = page->tree_node.key;
         size_t page_size = 1ULL << page->order;
-        size_t relative_offset = offset - page_offset;
-        size_t room_avail = page_size - relative_offset;
+        size_t page_relative_offset = region_offset - page_offset;
+        size_t room_avail = page_size - page_relative_offset;
         if(length <= room_avail) {
-            memcpy(dst, page_data + relative_offset, length);
+            memcpy(dst, page_data + page_relative_offset, length);
             length = 0;
         } else {
-            memcpy(dst, page_data + relative_offset, room_avail);
+            memcpy(dst, page_data + page_relative_offset, room_avail);
             length -= room_avail;
             dst += room_avail;
             offset += room_avail;
@@ -802,6 +817,8 @@ mmap_write(
 
         spin_lock(&region->page_tree_lock);
 
+        uintptr_t region_offset = offset - region->tree_node.key;
+
         if((region->prot_flags & MMAP_PROT_WRITE) == 0) {
             // The process is not allowed to write this page
             spin_unlock(&region->page_tree_lock);
@@ -815,15 +832,15 @@ mmap_write(
         }
 
         // Get or load the page
-        pnode = ptree_get_max_less_or_eq(&region->page_tree, offset);
+        pnode = ptree_get_max_less_or_eq(&region->page_tree, region_offset);
         struct mmap_page *page =
             container_of(pnode, struct mmap_page, tree_node);
         if((pnode == NULL) ||
-           (offset >= pnode->key + (1ULL<<page->order))) 
+           (region_offset >= pnode->key + (1ULL<<page->order))) 
         {
             res = mmap_region_load_page(
                     region,
-                    offset - region->tree_node.key,
+                    region_offset,
                     &page);
             if(res) {
                 spin_unlock(&region->page_tree_lock);
@@ -852,13 +869,13 @@ mmap_write(
 
         uintptr_t page_offset = page->tree_node.key;
         size_t page_size = 1ULL << page->order;
-        size_t relative_offset = offset - page_offset;
-        size_t room_avail = page_size - relative_offset;
+        size_t page_relative_offset = region_offset - page_offset;
+        size_t room_avail = page_size - page_relative_offset;
         if(length <= room_avail) {
-            memcpy(page_data + relative_offset, src, length);
+            memcpy(page_data + page_relative_offset, src, length);
             length = 0;
         } else {
-            memcpy(page_data + relative_offset, src, room_avail);
+            memcpy(page_data + page_relative_offset, src, room_avail);
             length -= room_avail;
             src += room_avail;
             offset += room_avail;
@@ -877,23 +894,25 @@ static int
 mmap_not_present_page_fault_handler(
         struct mmap *mmap,
         struct mmap_region *region,
-        uintptr_t offset)
+        uintptr_t region_offset)
 {
     int res;
 
-    uintptr_t region_end = region->tree_node.key + region->size;
-    if(offset >= region_end) {
+    dprintk("mmap_not_present_page_fault_handler: region->base=%p, region_offset=%p, region->file_offset=%p\n",
+            region->tree_node.key, region_offset, region->file_offset);
+
+    if(region_offset >= region->size) {
         goto unhandled;
     }
     
     struct ptree_node *pnode = ptree_get_max_less_or_eq(
-            &region->page_tree, offset);
+            &region->page_tree, region_offset);
 
     struct mmap_page *page;
     if(pnode == NULL) {
         res = mmap_region_load_page(
                 region,
-                offset,
+                region_offset,
                 &page);
         if(res) {
             goto unhandled;
@@ -913,6 +932,7 @@ mmap_not_present_page_fault_handler(
         goto unhandled;
     }
 
+    dprintk("returning handled\n");
     return PAGE_FAULT_HANDLED;
 
 unhandled:
@@ -932,8 +952,9 @@ mmap_page_fault_handler(
     struct mmap *mmap = priv_state;
 
     if((pf_flags & PF_FLAG_USERMODE) == 0) {
-        panic("Kernel attempted to access process mmap region directly! (mmap_offset=%p)\n",
+        eprintk("Kernel attempted to access process mmap region directly! (mmap_offset=%p)\n",
                 offset);
+        return PAGE_FAULT_UNHANDLED;
     }
 
     int res;
@@ -951,11 +972,13 @@ mmap_page_fault_handler(
 
     spin_lock(&region->page_tree_lock);
 
+    uintptr_t region_offset = offset - region->tree_node.key;
+
     if(pf_flags & PF_FLAG_NOT_PRESENT) {
         res = mmap_not_present_page_fault_handler(
                 mmap,
                 region,
-                offset);
+                region_offset);
 
         spin_unlock(&region->page_tree_lock);
         spin_unlock_irq_restore(&mmap->lock, irq_flags);
@@ -964,7 +987,7 @@ mmap_page_fault_handler(
 
     pnode = ptree_get_max_less_or_eq(
             &region->page_tree,
-            offset);
+            region_offset);
     DEBUG_ASSERT(pnode != NULL);
 
     struct mmap_page *page =
@@ -987,5 +1010,109 @@ mmap_page_fault_handler(
     spin_unlock(&region->page_tree_lock);
     spin_unlock_irq_restore(&mmap->lock, irq_flags);
     return PAGE_FAULT_UNHANDLED;
+}
+
+int
+mmap_user_strlen(
+        struct process * process,
+        uintptr_t offset,
+        size_t max_strlen,
+        size_t *out_len)
+{
+    int res;
+
+    struct mmap *mmap = &process->mmap;
+
+    dprintk("mmap_user_strlen: proc=%p, offset=0x%lx, max=0x%lx\n",
+            process, offset, max_strlen);
+
+    int irq_flags = spin_lock_irq_save(&mmap->lock);
+
+    size_t len = 0;
+
+    int done = 0;
+    while(!done && len < max_strlen) {
+
+        struct ptree_node *pnode;
+        pnode = ptree_get_max_less_or_eq(&mmap->region_tree, offset);
+
+        struct mmap_region *region =
+            container_of(pnode, struct mmap_region, tree_node);
+
+        if((pnode == NULL) ||
+           (offset >= region->size + pnode->key))
+        {
+            spin_unlock_irq_restore(&mmap->lock, irq_flags);
+            return -EINVAL;
+        }
+
+        spin_lock(&region->page_tree_lock);
+
+        size_t region_offset = offset - region->tree_node.key;
+
+        if((region->prot_flags & MMAP_PROT_READ) == 0) {
+            // The process is not allowed to read this page
+            spin_unlock(&region->page_tree_lock);
+            spin_unlock_irq_restore(&mmap->lock, irq_flags);
+            return -EINVAL;
+        }
+
+        // Get or load the page
+        pnode = ptree_get_max_less_or_eq(&region->page_tree, region_offset);
+        struct mmap_page *page =
+            container_of(pnode, struct mmap_page, tree_node);
+        if((pnode == NULL) ||
+           (region_offset >= (pnode->key + (1ULL<<page->order)))) 
+        {
+            res = mmap_region_load_page(
+                    region,
+                    region_offset,
+                    &page);
+            if(res) {
+                spin_unlock(&region->page_tree_lock);
+                spin_unlock_irq_restore(&mmap->lock, irq_flags);
+                return res;
+            }
+        }
+
+        if(page == NULL) {
+            spin_unlock(&region->page_tree_lock);
+            spin_unlock_irq_restore(&mmap->lock, irq_flags);
+            return -EINVAL;
+        }
+
+        paddr_t page_paddr = page->phys_addr;
+        void *page_data = (void*)__va(page_paddr);
+
+        uintptr_t page_offset = page->tree_node.key;
+        size_t page_size = 1ULL << page->order;
+        size_t page_relative_offset = region_offset - page_offset;
+        size_t room_avail = page_size - page_relative_offset;
+        DEBUG_ASSERT(room_avail > 0);
+
+        char *str_ptr = page_data + page_relative_offset;
+        char *end_ptr = page_data + page_size;
+
+        DEBUG_ASSERT((uintptr_t)str_ptr < (uintptr_t)end_ptr);
+
+        while(str_ptr != end_ptr) {
+            if(*str_ptr != '\0') {
+                len++;
+            } else {
+                done = 1;
+                break;
+            }
+
+            str_ptr++;
+            offset++;
+        }
+
+        spin_unlock(&region->page_tree_lock);
+    }
+    
+    spin_unlock_irq_restore(&mmap->lock, irq_flags);
+
+    *out_len = len;
+    return 0;
 }
 

@@ -2,6 +2,7 @@
 #define __KANAWHA__SYSCALL_MMAP_H__
 
 #include <kanawha/syscall.h>
+#include <kanawha/uapi/syscall.h>
 #include <kanawha/file.h>
 #include <kanawha/uapi/mmap.h>
 
@@ -103,5 +104,12 @@ mmap_write(
         uintptr_t offset,
         void *dst,
         size_t length);
+
+int
+mmap_user_strlen(
+        struct process *process,
+        uintptr_t offset,
+        size_t max_strlen,
+        size_t *strlen);
 
 #endif

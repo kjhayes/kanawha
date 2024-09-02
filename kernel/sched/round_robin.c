@@ -122,13 +122,13 @@ rr_sched_force_resched(struct scheduler *sched)
         if(res) {
             continue;
         } else {
-            dprintk("scheduled thread %p\n", current->state);
             break;
         }
 
     } while(1);
 
     *current_ptr = current;
+    printk("scheduling thread %p\n", current->state);
     return current->state;
 }
 

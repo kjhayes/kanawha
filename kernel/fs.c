@@ -316,6 +316,8 @@ fs_node_get_page(
 {
     int res;
 
+    DEBUG_ASSERT(node);
+
     struct fs_page *page;
     spin_lock(&node->page_lock);
 

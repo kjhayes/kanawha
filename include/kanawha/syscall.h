@@ -7,8 +7,6 @@
 #include <kanawha/stddef.h>
 #include <kanawha/ops.h>
 #include <kanawha/file.h>
-
-#define __KANAWHA_SYSCALL_KEEP_XLIST
 #include <kanawha/uapi/syscall.h>
 
 struct process;
@@ -18,10 +16,8 @@ SIG_RETURN_TYPE(__SIG) syscall_ ## __name (struct process *process SIG_ARG_DECLS
 SYSCALL_XLIST(DECLARE_SYSCALL_HANDLER_FUNCTIONS)
 #undef DECLARE_SYSCALL_HANDLER_FUNCTIONS
 
-void
-strace_begin_syscall(struct process *process, syscall_id_t id);
-void
-strace_end_syscall(struct process *process, syscall_id_t id);
+void strace_begin_syscall(struct process *process, syscall_id_t id);
+void strace_end_syscall(struct process *process, syscall_id_t id);
 
 int syscall_unknown(struct process *process, syscall_id_t id);
 

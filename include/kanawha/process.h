@@ -6,6 +6,7 @@
 #include <kanawha/vmem.h>
 #include <kanawha/scheduler.h>
 #include <kanawha/file.h>
+#include <kanawha/env.h>
 #include <kanawha/usermode.h>
 #include <kanawha/syscall/mmap.h>
 
@@ -34,6 +35,10 @@ struct process
     unsigned long flags;
     int exitcode;
     int status;
+
+    // Environment Variables
+    spinlock_t environ_lock;
+    struct environment environ;
 
     // Process Hierarchy
     spinlock_t hierarchy_lock;
@@ -78,6 +83,14 @@ process_read_usermem(
         void *dst,
         void __user * src,
         size_t length);
+
+int
+process_strlen_usermem(
+        struct process *process,
+        const char __user *str,
+        size_t max_len,
+        size_t *len);
+
 
 // Terminate the process without signalling
 int

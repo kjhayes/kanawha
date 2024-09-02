@@ -122,6 +122,12 @@ init_process_kernel_entry(void *in)
 
     const char *binary_path = CONFIG_INIT_PROCESS_PATH;
 
+    res = environment_set(process, "ARGV", CONFIG_INIT_PROCESS_ARGV_VALUE);
+    if(res) {
+        panic("Failed to set init process ARGV! (err=%s)\n",
+                errnostr(res));
+    }
+
     fd_t binary_fd;
     res = file_table_open_path(
             &process->file_table,
@@ -505,6 +511,25 @@ process_read_usermem(
             (uintptr_t)src - (uintptr_t)process->mmap_ref->virt_addr,
             dst,
             length);
+    if(res) {
+        return res;
+    }
+    return 0;
+}
+
+int
+process_strlen_usermem(
+        struct process *process,
+        const char __user *str,
+        size_t max_len,
+        size_t *out)
+{
+    int res;
+    res = mmap_user_strlen(
+            process,
+            (uintptr_t)str - (uintptr_t)process->mmap_ref->virt_addr,
+            max_len,
+            out);
     if(res) {
         return res;
     }

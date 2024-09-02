@@ -56,7 +56,6 @@ open_path(
         cur_parent = open(
                 NULL_FD,
                 mount_name,
-                strlen(mount_name),
                 PERM_FLAGS,
                 MODE_FLAGS);
         cur_open++;
@@ -69,7 +68,6 @@ open_path(
         cur_parent = open(
                 NULL_FD,
                 "",
-                0,
                 PERM_FLAGS,
                 MODE_FLAGS);
         cur_open++;
@@ -82,7 +80,6 @@ open_path(
         cur = open(
                 cur_parent,
                 cur_name,
-                namelen,
                 PERM_FLAGS,
                 MODE_FLAGS);
         cur_open++;

@@ -16,11 +16,9 @@ open:
     movq $1, %rax
     // rdi -> fd_t parent
     // rsi -> const char * name
-    // rdx -> size_t name_len
-    // r8 -> unsigned long access_flags
-    // r9 -> unsigned long mode_flags
+    // rdx -> unsigned long access_flags
+    // r8 -> unsigned long mode_flags
     movq %rcx, %r8
-    movq %r8, %r9
     syscall
     retq
 
@@ -61,9 +59,10 @@ mmap:
     // rdi -> fd_t file
     // rsi -> size_t file_offset
     // rdx -> void * where
-    movq %rcx, %r8 // r8 -> size_t size
-    movq %r8, %r9  // r9 -> unsigned long prot_flags
+    // Need to do these backwards
     movq %r9, %r10 // r10 -> unsigned long mmap_flags
+    movq %r8, %r9  // r9 -> unsigned long prot_flags
+    movq %rcx, %r8 // r8 -> size_t size
     syscall
     retq
 
@@ -81,6 +80,17 @@ exec:
     movq $7, %rax
     // rdi -> fd_t file
     // rsi -> unsigned long exec_flags
+    syscall
+    retq
+
+.global environ
+.type environ,@function
+environ:
+    movq $8, %rax
+    // rdi -> const char *key
+    // rsi -> char *value
+    // rdx -> size_t len
+    movq %rcx, %r8 // %r8 -> int opcode
     syscall
     retq
 
