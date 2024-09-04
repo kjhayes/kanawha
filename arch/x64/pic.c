@@ -1,7 +1,9 @@
 
+#include <arch/x64/pic.h>
 #include <kanawha/pio.h>
 #include <kanawha/irq.h>
 #include <kanawha/init.h>
+#include <kanawha/irq_domain.h>
 
 // We need to remap these in-case a spurrious
 // interrupt leaks through the mask
@@ -63,4 +65,25 @@ x64_init_and_disable_pic(void)
     return 0;
 }
 declare_init_desc(static, x64_init_and_disable_pic, "Disabling 8259 PIC");
+
+static struct irq_domain *__pic_irq_domain = NULL;
+
+struct irq_domain *
+x64_pic_irq_domain(void)
+{
+    return __pic_irq_domain;
+}
+
+static int
+x64_pic_create_irq_domain(void)
+{
+    __pic_irq_domain = 
+        alloc_irq_domain_linear(0, 16);
+    if(__pic_irq_domain == NULL) {
+        return -ENOMEM;
+    }
+
+    return 0;
+}
+declare_init_desc(dynamic, x64_pic_create_irq_domain, "Creating 8259 PIC IRQ Domain");
 

@@ -17,6 +17,9 @@
 #include <kanawha/printk.h>
 #include <kanawha/list.h>
 
+#define __phys \
+    __attribute__((address_space(4)))
+
 static inline vaddr_t
 __va(paddr_t paddr) {
     return paddr + CONFIG_VIRTUAL_BASE;

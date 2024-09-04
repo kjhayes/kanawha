@@ -3,6 +3,7 @@
 #include <acpi/madt.h>
 #include <arch/x64/lapic.h>
 #include <arch/x64/xapic.h>
+#include <arch/x64/ioapic.h>
 #include <arch/x64/cpu.h>
 #include <kanawha/errno.h>
 #include <kanawha/string.h>
@@ -11,6 +12,8 @@
 #include <kanawha/kmalloc.h>
 #include <arch/x64/vendor.h>
 #include <arch/x64/cpuid.h>
+#include <arch/x64/ioapic.h>
+#include <arch/x64/pic.h>
 
 static apic_id_t bsp_apic_id;
 
@@ -74,17 +77,140 @@ parse_madt_ioapic(
         struct acpi_madt_entry_hdr *hdr)
 {
     struct acpi_madt_entry_ioapic *entry = (void*)hdr;
-    printk("MADT IOAPIC: id=0x%lx\n", (apic_id_t)entry->ioapic_id);
-    return 0;
+    printk("MADT IOAPIC: id=0x%lx, gsi_base=0x%x\n",
+            (apic_id_t)entry->ioapic_id,
+            entry->gsi_base);
+    int res = x64_register_ioapic(
+            entry->ioapic_id,
+            entry->ioapic_addr,
+            entry->gsi_base);
+    return res;
 }
 
 // Overrides
+
+#define ACPI_MADT_IOAPIC_OVERRIDE_BUS_ISA 0
 static int
 parse_madt_ioapic_override(
         struct acpi_madt *madt,
-        struct acpi_madt_entry_hdr *hdr)
+        struct acpi_madt_entry_hdr *hdr,
+        uint16_t *overriden_isa_irqs)
 {
+    int res;
     struct acpi_madt_entry_ioapic_override *entry = (void*)hdr;
+    printk("MADT IOAPIC Override: bus=0x%x, ioapic-irq=0x%x, pic-irq=0x%x flags=0x%x\n",
+            entry->bus_source,
+            entry->gsi,
+            entry->irq_source,
+            entry->flags);
+
+    int default_active_high = 0;
+    int default_edge_trigger = 0;
+
+    if(entry->bus_source == ACPI_MADT_IOAPIC_OVERRIDE_BUS_ISA)
+    {
+        default_active_high = 1;
+        default_edge_trigger = 1;
+
+        // IOAPIC
+        irq_t ioapic_irq = x64_ioapic_irq(entry->gsi);
+        if(ioapic_irq == NULL_IRQ) {
+            eprintk("ACPI MADT: IOAPIC Override (Failed to get IO/APIC IRQ 0x%x)\n",
+                    entry->gsi);
+            return -EINVAL;
+        }
+        struct irq_desc *ioapic_desc = irq_to_desc(ioapic_irq);
+        if(ioapic_desc == NULL) {
+            eprintk("ACPI MADT: IOAPIC Override (Failed to get IO/APIC IRQ 0x%x Descriptor (global IRQ = 0x%x)\n",
+                    entry->gsi, ioapic_irq);
+            return -EINVAL;
+        }
+
+        // PIC
+        irq_t pic_irq = x64_pic_irq(entry->irq_source);
+        if(pic_irq == NULL_IRQ) {
+            eprintk("ACPI MADT: IOAPIC Override (Failed to get PIC IRQ 0x%x)\n",
+                    entry->gsi);
+            return -EINVAL;
+        }
+        struct irq_desc *pic_desc = irq_to_desc(pic_irq);
+        if(pic_desc == NULL) {
+            eprintk("ACPI MADT: IOAPIC Override (Failed to get PIC IRQ 0x%x Descriptor (global IRQ = 0x%x)\n",
+                    entry->gsi, pic_irq);
+            return -EINVAL;
+        }
+
+        // Installing the Link
+        struct irq_action *link =
+            irq_install_direct_link(ioapic_desc, pic_desc);
+        if(link == NULL) {
+            eprintk("ACPI MADT: IOAPIC Override Failed to link IO/APIC IRQ 0x%x to PIC IRQ 0x%x\n",
+                    entry->gsi, entry->irq_source);
+            return -EINVAL;
+        }
+
+        *overriden_isa_irqs |= (1ULL<<entry->irq_source);
+
+    } else {
+        eprintk("ACPI MADT: IOAPIC Override (Unknown Bus %d)\n",
+                entry->bus_source);
+        return -EUNIMPL;
+    }
+
+    uint8_t polarity_flag = entry->flags & 0b11;
+    uint8_t trigger_mode_flag = (entry->flags>>2) & 0b11;
+
+    int active_high = 0;
+    int edge_trigger = 0;
+
+    switch(polarity_flag) {
+        case 0b00:
+            active_high = default_active_high;
+            break;
+        case 0b01:
+            active_high = 1;
+            break;
+        case 0b11:
+            active_high = 0;
+            break;
+        default:
+            eprintk("Reserved polarity 0b10 in MPS INT Flags of ACPI MADT IRQ Override!\n");
+            return -EINVAL;
+    }
+
+    switch(trigger_mode_flag) {
+        case 0b00:
+            edge_trigger = default_edge_trigger;
+            break;
+        case 0b01:
+            edge_trigger = 1;
+            break;
+        case 0b11:
+            edge_trigger = 0;
+            break;
+        default:
+            eprintk("Reserved trigger_mode 0b10 in MPS INT Flags of ACPI MADT IRQ Override!\n");
+            return -EINVAL;
+    }
+
+    if(active_high) {
+        res = x64_ioapic_set_active_high(entry->gsi);
+    } else {
+        res = x64_ioapic_set_active_low(entry->gsi);
+    }
+    if(res) {
+        return res;
+    }
+
+    if(edge_trigger) {
+        res = x64_ioapic_set_edge_triggered(entry->gsi);
+    } else {
+        res = x64_ioapic_set_level_sensitive(entry->gsi);
+    }
+    if(res) {
+        return res;
+    }
+
     return 0;
 }
 
@@ -94,7 +220,9 @@ parse_madt_ioapic_nmi(
         struct acpi_madt_entry_hdr *hdr)
 {
     struct acpi_madt_entry_ioapic_nmi *entry = (void*)hdr;
-    return 0;
+    printk("MADT IOAPIC NMI: gsi=0x%x\n",
+            entry->gsi);
+    return -EUNIMPL;
 }
 
 static int
@@ -103,6 +231,8 @@ parse_madt_lapic_nmi(
         struct acpi_madt_entry_hdr *hdr)
 {
     struct acpi_madt_entry_lapic_nmi *entry = (void*)hdr;
+    wprintk("MADT LAPIC NMI: lint=0x%x (Unsupported: Requires Handling ACPI Processor ID)\n",
+            entry->lint);
     return 0;
 }
 
@@ -171,12 +301,14 @@ x64_parse_acpi_madt(void) {
 
     offset = sizeof(struct acpi_madt);
     hdr = (void*)madt->data;
+
+    uint16_t overriden_isa_irqs = 0x0;
     while(offset < madt->hdr.length)
     {
         int res = 0;
         switch(hdr->type) {
             case ACPI_MADT_ENTRY_IOAPIC_OVERRIDE:
-                res = parse_madt_ioapic_override(madt, hdr);
+                res = parse_madt_ioapic_override(madt, hdr, &overriden_isa_irqs);
                 break;
             case ACPI_MADT_ENTRY_IOAPIC_NMI:
                 res = parse_madt_ioapic_nmi(madt, hdr);
@@ -191,6 +323,51 @@ x64_parse_acpi_madt(void) {
 
         offset += hdr->length;
         hdr = ((void*)hdr) + hdr->length;
+    }
+
+    for(size_t i = 0; i < 16; i++) {
+        // This ISA IRQ has already been mapped by an override entry
+        if((overriden_isa_irqs >> i) & 1) {
+            printk("ISA IRQ 0x%x was overriden\n", i);
+            continue;
+        }
+
+        // This ISA IRQ didn't have an override, identity map it
+        irq_t pic_irq = x64_pic_irq((hwirq_t)i);
+        struct irq_desc *pic_desc;
+        if(pic_irq == NULL_IRQ) {
+            pic_desc = NULL;
+        } else {
+            pic_desc = irq_to_desc(pic_irq);
+        }
+        if(pic_desc == NULL) {
+            wprintk("Failed to identity map PIC IRQ 0x%x to the IO/APIC (failed to get PIC IRQ)!\n",
+                    (u_t)i);
+            continue;
+        }
+
+        irq_t ioapic_irq = x64_ioapic_irq((hwirq_t)i);
+        struct irq_desc *ioapic_desc;
+        if(ioapic_irq == NULL_IRQ) {
+            ioapic_desc = NULL;
+        } else {
+            ioapic_desc = irq_to_desc(ioapic_irq);
+        }
+        if(ioapic_desc == NULL) {
+            wprintk("Failed to identity map PIC IRQ 0x%x to the IO/APIC (failed to get IO/APIC IRQ)!\n",
+                    (u_t)i);
+            continue;
+        }
+
+        struct irq_action *link = irq_install_direct_link(ioapic_desc, pic_desc);
+        if(link == NULL) {
+            wprintk("Failed to created link from PIC IRQ 0x%x to IO/APIC IRQ 0x%x\n",
+                    (u_t)i, (u_t)i);
+            continue;
+        }
+
+        printk("Linked ISA 0x%x to IOAPIC 0x%x\n",
+                i, i);
     }
 
     return 0;

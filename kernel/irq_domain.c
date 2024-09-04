@@ -87,6 +87,8 @@ irq_install_handler(struct irq_desc *desc, struct device *device, irq_handler_f 
 struct irq_action *
 irq_install_direct_link(struct irq_desc *from, struct irq_desc *to)
 {
+    DEBUG_ASSERT_MSG(from != to, "Trivial IRQ Loop %p == %p", from, to);
+
     struct irq_action *action;
     action = kmalloc(sizeof(struct irq_action));
     if(action == NULL) {
@@ -98,10 +100,18 @@ irq_install_direct_link(struct irq_desc *from, struct irq_desc *to)
     action->type = IRQ_ACTION_DIRECT_LINK;
     action->direct_link_data.link = to;
 
-    int irq_state = rlock_write_lock_irq_save(&from->lock);
+    int irq_state = disable_save_irqs();
+
+    rlock_write_lock(&from->lock);
     ilist_push_tail(&from->actions, &action->list_node);
     from->num_actions++;
-    rlock_write_unlock_irq_restore(&from->lock, irq_state);
+    rlock_write_unlock(&from->lock);
+
+    spin_lock(&to->direct_links_lock);
+    ilist_push_tail(&to->direct_links, &action->direct_link_data.incoming_node);
+    spin_unlock(&to->direct_links_lock);
+
+    enable_restore_irqs(irq_state);
 
     return action;
 }
@@ -140,6 +150,8 @@ irq_action_set_percpu_link(
         struct irq_desc *percpu_desc,
         cpu_id_t to)
 {
+    DEBUG_ASSERT_MSG(action->desc != percpu_desc, "Trivial IRQ Loop %p == %p", action->desc, percpu_desc);
+
     if(action->type != IRQ_ACTION_PERCPU_LINK) {
         return -EINVAL;
     }
@@ -217,10 +229,6 @@ run_irq_actions(struct irq_desc *desc, struct excp_state *excp_state)
                 res = (*action->handler_data.handler)(excp_state, action);
                 break;
             case IRQ_ACTION_DIRECT_LINK:
-                if(action->direct_link_data.link->flags & IRQ_DESC_FLAG_MASKED) {
-                    res = IRQ_UNHANDLED;
-                    break;
-                }
                 res = handle_irq(action->direct_link_data.link, excp_state);
                 break;
             case IRQ_ACTION_PERCPU_LINK:
@@ -229,7 +237,7 @@ run_irq_actions(struct irq_desc *desc, struct excp_state *excp_state)
                         (sl_t)current_cpu_id(),
                         (struct irq_desc**)percpu_ptr(action->percpu_link_data.link),
                         link_desc);
-                if(link_desc && !(link_desc->flags & IRQ_DESC_FLAG_MASKED)) {
+                if(link_desc) {
                     res = handle_irq(link_desc, excp_state);
                 } else {
                     res = IRQ_UNHANDLED;
@@ -237,7 +245,7 @@ run_irq_actions(struct irq_desc *desc, struct excp_state *excp_state)
                 break;
             case IRQ_ACTION_RESOLVED_LINK:
                 link_desc = (action->resolved_link_data.resolver)(excp_state, action);
-                if(link_desc && !(link_desc->flags & IRQ_DESC_FLAG_MASKED)) {
+                if(link_desc) {
                     res = handle_irq(link_desc, excp_state);
                 } else {
                     res = IRQ_UNHANDLED;
@@ -286,7 +294,7 @@ handle_irq(struct irq_desc *desc, struct excp_state *excp_state)
 }
 
 int
-mask_irq_desc(struct irq_desc *desc)
+mask_irq_desc_single(struct irq_desc *desc)
 {
     int res;
     if(desc->dev != NULL) {
@@ -295,11 +303,10 @@ mask_irq_desc(struct irq_desc *desc)
             return res;
         }
     }
-    desc->flags |= IRQ_DESC_FLAG_MASKED;
     return 0;
 }
 int
-unmask_irq_desc(struct irq_desc *desc)
+unmask_irq_desc_single(struct irq_desc *desc)
 {
     int res;
     if(desc->dev != NULL) {
@@ -308,7 +315,55 @@ unmask_irq_desc(struct irq_desc *desc)
             return res;
         }
     }
-    desc->flags &= ~IRQ_DESC_FLAG_MASKED;
+    return 0;
+}
+int
+mask_irq_desc_chain(struct irq_desc *desc)
+{
+    int res;
+
+    res = mask_irq_desc_single(desc);
+    if(res) {
+        return res;
+    }
+
+    int irq_flags = spin_lock_irq_save(&desc->direct_links_lock);
+    ilist_node_t *incoming_node;
+    ilist_for_each(incoming_node, &desc->direct_links) {
+        struct irq_action *direct_link =
+            container_of(incoming_node, struct irq_action, direct_link_data.incoming_node);
+        res = mask_irq_desc_chain(direct_link->desc);
+        if(res) {
+            return res;
+            spin_unlock_irq_restore(&desc->direct_links_lock, irq_flags);
+        }
+    }
+    spin_unlock_irq_restore(&desc->direct_links_lock, irq_flags);
+    return 0;
+}
+
+int
+unmask_irq_desc_chain(struct irq_desc *desc)
+{
+    int res;
+
+    res = unmask_irq_desc_single(desc);
+    if(res) {
+        return res;
+    }
+
+    int irq_flags = spin_lock_irq_save(&desc->direct_links_lock);
+    ilist_node_t *incoming_node;
+    ilist_for_each(incoming_node, &desc->direct_links) {
+        struct irq_action *direct_link =
+            container_of(incoming_node, struct irq_action, direct_link_data.incoming_node);
+        res = unmask_irq_desc_chain(direct_link->desc);
+        if(res) {
+            spin_unlock_irq_restore(&desc->direct_links_lock, irq_flags);
+            return res;
+        }
+    }
+    spin_unlock_irq_restore(&desc->direct_links_lock, irq_flags);
     return 0;
 }
 
@@ -408,7 +463,9 @@ alloc_irq_domain_linear(
         desc->hwirq = domain->base_hwirq + i;
         desc->num_actions = 0;
         rlock_init(&desc->lock);
+        spinlock_init(&desc->direct_links_lock);
         ilist_init(&desc->actions);
+        ilist_init(&desc->direct_links);
     }
 
     rlock_write_unlock_irq_restore(&irq_domain_map_lock, irq_state);
@@ -486,7 +543,7 @@ dump_irq_descs(printk_f *printer)
                         break;
                     case IRQ_ACTION_DIRECT_LINK:
                         (*printer)("DIRECT-LINK(0x%lx)\n",
-                                (unsigned long)action->direct_link_data.link->irq);
+                                (ul_t)action->direct_link_data.link->irq);
                         break;
                     case IRQ_ACTION_PERCPU_LINK:
                         (*printer)("PERCPU-LINK\n");
@@ -500,6 +557,14 @@ dump_irq_descs(printk_f *printer)
                                 action->resolved_link_data.resolver);
                         break;
                 }
+            }
+
+            ilist_node_t *incoming_node;
+            ilist_for_each(incoming_node, &desc->direct_links) {
+                (*printer)("\t\t");
+                struct irq_action *direct_link =
+                    container_of(incoming_node, struct irq_action, direct_link_data.incoming_node);
+                (*printer)("INCOMING-LINK(0x%lx)\n", (ul_t)direct_link->desc->irq);
             }
         }
         (*printer)("}\n");

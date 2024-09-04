@@ -75,6 +75,10 @@ x64_vector_irq_desc(hwirq_t vector)
 // with as few actions as possible already attached
 irq_t x64_request_irq_vector(void);
 
+// Same as x64_request_irq_vector but the interrupt
+// will only be signalled on "cpu"
+irq_t x64_request_cpu_irq_vector(cpu_id_t cpu);
+
 void
 x64_nop_iret(void);
 

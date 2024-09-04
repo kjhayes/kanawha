@@ -12,6 +12,7 @@
 #include <kanawha/stddef.h>
 #include <kanawha/printk.h>
 #include <kanawha/thread.h>
+#include <kanawha/assert.h>
 
 #define LAPIC_MAX_LVT_ENTRIES 7
 
@@ -63,6 +64,7 @@ lapic_lvt_mask_irq(
         struct irq_dev *dev,
         hwirq_t hwirq)
 {
+    dprintk("lapic_lvt_mask_irq hwirq=0x%x\n", hwirq);
     size_t reg = lapic_hwirq_to_lvt_reg[hwirq];
     struct lapic *apic =
         container_of(dev, struct lapic, lvt_dev);
@@ -80,7 +82,7 @@ lapic_lvt_unmask_irq(
         struct irq_dev *dev,
         hwirq_t hwirq)
 {
-    dprintk("lapic_lvt_unmask_irq\n");
+    dprintk("lapic_lvt_unmask_irq hwirq=0x%x\n", hwirq);
     size_t reg = lapic_hwirq_to_lvt_reg[hwirq];
     struct lapic *apic =
         container_of(dev, struct lapic, lvt_dev);
@@ -143,10 +145,28 @@ lapic_trigger_irq(
     return res;
 }
 
+int
+lapic_mask_irq(
+        struct irq_dev *dev,
+        hwirq_t hwirq)
+{
+    // We cannot mask these IRQ's
+    return -EINVAL;
+}
+
+int
+lapic_unmask_irq(
+        struct irq_dev *dev,
+        hwirq_t hwirq)
+{
+    // They are always unmasked so this is fine
+    return 0;
+}
+
 static struct irq_dev_driver
 lapic_irq_driver = {
-    .mask_irq = NULL,
-    .unmask_irq = NULL,
+    .mask_irq = lapic_mask_irq,
+    .unmask_irq = lapic_unmask_irq,
     .trigger_irq = lapic_trigger_irq,
     .ack_irq = lapic_ack_irq,
     .eoi_irq = lapic_eoi_irq,
@@ -403,5 +423,31 @@ bsp_register_cpu_lapic(
     }
 
     return 0;
+}
+
+irq_t
+lapic_vector_irq(cpu_id_t cpu_id, hwirq_t vector)
+{
+    struct cpu *gen_cpu = cpu_from_id(cpu_id);
+    struct x64_cpu *cpu = container_of(
+            gen_cpu, struct x64_cpu, cpu);
+
+    struct lapic *lapic = &cpu->apic;
+    DEBUG_ASSERT(lapic->irq_domain);
+
+    return irq_domain_revmap(lapic->irq_domain, vector);
+}
+
+irq_t
+lapic_lvt_irq(cpu_id_t cpu_id, hwirq_t lvt_index)
+{
+    struct cpu *gen_cpu = cpu_from_id(cpu_id);
+    struct x64_cpu *cpu = container_of(
+            gen_cpu, struct x64_cpu, cpu);
+
+    struct lapic *lapic = &cpu->apic;
+    DEBUG_ASSERT(lapic->irq_domain);
+
+    return irq_domain_revmap(lapic->lvt_domain, lvt_index);
 }
 

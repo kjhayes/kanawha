@@ -30,16 +30,12 @@ irqs_enabled(void) {
     return arch_irqs_enabled();
 }
 
-static DECLARE_SPINLOCK(disable_irqs_lock);
-
 static inline int
 disable_save_irqs(void) {
-    spin_lock(&disable_irqs_lock);
     int state = irqs_enabled();
     if(state) {
         disable_irqs();
     }
-    spin_unlock(&disable_irqs_lock);
     return state;
 }
 
@@ -47,9 +43,7 @@ static inline void
 enable_restore_irqs(int state)
 {
     if(state) {
-        spin_lock(&disable_irqs_lock);
         enable_irqs();
-        spin_unlock(&disable_irqs_lock);
     }
 }
 

@@ -13,6 +13,7 @@ obj-y += \
 	lapic.o \
 	xapic.o \
 	apic_timer.o \
+	ioapic.o \
 	vmem.o \
 	thread.o \
 	usermode.o \

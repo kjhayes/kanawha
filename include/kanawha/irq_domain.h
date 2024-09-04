@@ -28,19 +28,23 @@ typedef struct irq_desc *(irq_resolver_f)(
         struct excp_state *excp_state,
         struct irq_action *action);
 
-#define IRQ_DESC_FLAG_MASKED    (1ULL<<0)
-#define IRQ_DESC_FLAG_SPURRIOUS (1ULL<<1)
+#define IRQ_DESC_FLAG_SPURRIOUS (1ULL<<0)
 struct irq_desc
 {
     irq_t irq;
     hwirq_t hwirq;
 
     rlock_t lock;
-
+   
     unsigned long flags;
 
     size_t num_actions;
     ilist_t actions;
+
+    // List of incoming direct link actions
+    // (child lock must be acquired before parent if multiple are held concurrently)
+    spinlock_t direct_links_lock;
+    ilist_t direct_links;
 
     struct irq_domain *domain;
     struct irq_dev *dev;
@@ -86,6 +90,7 @@ struct irq_action
       } handler_data;
       struct {
           struct irq_desc *link;
+          ilist_node_t incoming_node;
       } direct_link_data;
       struct {
           struct irq_desc __percpu *link;
@@ -93,7 +98,7 @@ struct irq_action
       struct {
           irq_resolver_f *resolver;
       } resolved_link_data;
-    };
+    };  
 };
 
 struct irq_domain *
@@ -104,8 +109,31 @@ irq_t irq_domain_revmap(struct irq_domain *domain, hwirq_t hwirq);
 struct irq_desc *
 irq_to_desc(irq_t irq);
 
-int mask_irq_desc(struct irq_desc *desc);
-int unmask_irq_desc(struct irq_desc *desc);
+// Only mask/unmask this specific descriptor
+int mask_irq_desc_single(struct irq_desc *desc);
+int unmask_irq_desc_single(struct irq_desc *desc);
+
+// Mask/unmask this descriptor and traverse incoming direct link actions
+// and mask/unmask the associated irq descriptors too.
+int mask_irq_desc_chain(struct irq_desc *desc);
+int unmask_irq_desc_chain(struct irq_desc *desc);
+
+static inline int
+mask_irq_desc(struct irq_desc *desc)
+{
+    // Only do single, because the parent might have other
+    // outgoing links which need to remain active
+    return mask_irq_desc_single(desc);
+}
+static inline int
+unmask_irq_desc(struct irq_desc *desc)
+{
+    // Unmask as far as we can, otherwise
+    // we may effectively stay masked because our parent IRQ
+    // is still disabled
+    return unmask_irq_desc_chain(desc);
+}
+
 int trigger_irq_desc(struct irq_desc *desc);
 
 // IRQ Actions

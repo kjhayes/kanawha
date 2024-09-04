@@ -25,7 +25,7 @@ env_get(
         return res;
     }
 
-    printk("keylen=0x%lx\n", keylen);
+    dprintk("keylen=0x%lx\n", keylen);
 
     char *key_buf = kmalloc(keylen + 1);
     if(key_buf == NULL) {
@@ -44,7 +44,7 @@ env_get(
 
     key_buf[keylen] = '\0';
 
-    printk("key=%s\n", key_buf);
+    dprintk("key=%s\n", key_buf);
 
     const char *value =
         environment_get_var(
@@ -55,7 +55,7 @@ env_get(
         return -ENXIO;
     }
 
-    printk("value=%s\n", value);
+    dprintk("value=%s\n", value);
 
     size_t value_len = strlen(value);
     size_t min_len = (value_len+1) <= len ? value_len + 1 : len;

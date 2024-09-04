@@ -296,7 +296,7 @@ create_pt_leaf_entry(
         unsigned long flags)
 {
     *entry = 0;
-    *entry |= base;
+    *entry |= (uintptr_t)base;
 
     if((flags & VMEM_REGION_READ) == 0) {
         eprintk("Cannot map non-readable vmem region on x64!\n");
@@ -342,7 +342,7 @@ create_permissive_pt_table_entry(
         paddr_t next_table)
 {
     *entry = 0;
-    *entry |= next_table;
+    *entry |= (uintptr_t)next_table;
 
     // Be as permissive as possible because restrictions are inherited
     switch(pt_level) {

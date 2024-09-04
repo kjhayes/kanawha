@@ -1,6 +1,7 @@
 
 #include <arch/x64/exception.h>
 #include <arch/x64/sysreg.h>
+#include <arch/x64/cpu.h>
 #include <kanawha/printk.h>
 #include <kanawha/irq.h>
 #include <kanawha/irq_domain.h>
@@ -10,7 +11,9 @@
 #include <kanawha/excp.h>
 #include <kanawha/scheduler.h>
 #include <kanawha/thread.h>
+#include <kanawha/stddef.h>
 #include <kanawha/assert.h>
+#include <kanawha/cpu.h>
 
 struct irq_domain *x64_vector_irq_domain = NULL;
 
@@ -51,6 +54,62 @@ irq_t x64_request_irq_vector(void)
     return min_desc->irq;
 }
 
+irq_t x64_request_cpu_irq_vector(cpu_id_t cpu_id)
+{
+    hwirq_t hwirq = 0xFE; // 0xFF should be assigned to the spurrious vector
+
+    irq_t min_irq = NULL_IRQ;
+    size_t min_actions = (size_t)(-1);
+
+    struct cpu *gen_cpu = cpu_from_id(cpu_id);
+    if(gen_cpu == NULL) {
+        return NULL_IRQ;
+    }
+
+    struct x64_cpu *cpu =
+        container_of(gen_cpu, struct x64_cpu, cpu);
+
+    struct irq_domain *shared_vector_domain = x64_vector_irq_domain;
+    struct irq_domain *local_vector_domain = cpu->apic.irq_domain;
+    
+    if(shared_vector_domain == NULL ||
+       local_vector_domain == NULL)
+    {
+        return NULL_IRQ;
+    }
+
+    for(; hwirq >= 32; hwirq--) {
+        irq_t shared_irq = irq_domain_revmap(shared_vector_domain, hwirq);
+        irq_t local_irq = irq_domain_revmap(local_vector_domain, hwirq);
+        if(shared_irq == NULL_IRQ || local_irq == NULL_IRQ) {
+            continue;
+        }
+
+        size_t num_actions = 0;
+
+        struct irq_desc *shared_desc = irq_to_desc(shared_irq);
+        if(shared_desc == NULL) {
+            continue;
+        }
+        num_actions += shared_desc->num_actions;
+
+        struct irq_desc *local_desc = irq_to_desc(local_irq);
+        if(local_desc == NULL) {
+            continue;
+        }
+        num_actions += local_desc->num_actions;
+
+        if(num_actions == 0) {
+            return local_irq;
+        }
+        if(num_actions < min_actions) {
+            min_irq = local_irq;
+            min_actions = num_actions;
+        }
+    }
+
+    return min_irq;
+}
 __attribute__((noreturn))
 void
 x64_unhandled_exception(struct x64_excp_state *state)

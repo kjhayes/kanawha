@@ -68,7 +68,7 @@ apic_timer_init_current(void)
     struct lapic *apic = &cpu->apic;
     struct lapic_timer *apic_timer = &cpu->apic_timer;
 
-    irq_t timer_irq = irq_domain_revmap(apic->lvt_domain, LAPIC_LVT_TIMER_HWIRQ);
+    irq_t timer_irq = lapic_lvt_irq(current_cpu_id(), LAPIC_LVT_TIMER_HWIRQ);
     if(timer_irq == NULL_IRQ) {
         eprintk("Failed to get local APIC Timer IRQ\n");
         return -ENXIO;
@@ -104,7 +104,8 @@ apic_timer_init_current(void)
     // Unmask the IRQ
     res = unmask_irq(timer_irq);
     if(res) {
-        eprintk("Failed to unmask APIC Timer IRQ before calibration!\n");
+        eprintk("Failed to unmask APIC Timer IRQ before calibration (err=%s)!\n",
+                errnostr(res));
         irq_uninstall_action(timer_action);
         return res;
     }

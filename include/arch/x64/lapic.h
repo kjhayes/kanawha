@@ -158,4 +158,10 @@ bsp_register_cpu_lapic(
 int
 lapic_init_current(void);
 
+irq_t
+lapic_vector_irq(cpu_id_t cpu, hwirq_t vector);
+
+irq_t
+lapic_lvt_irq(cpu_id_t cpu, hwirq_t lvt_index);
+
 #endif
