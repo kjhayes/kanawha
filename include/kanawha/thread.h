@@ -22,10 +22,38 @@ typedef __attribute__((noreturn)) void(threadless_f)(void *in);
 
 typedef uint32_t thread_status_t;
 
-#define THREAD_STATUS_SUSPEND   0
-#define THREAD_STATUS_SCHEDULED 1
-#define THREAD_STATUS_RUNNING   2
-#define THREAD_STATUS_ABANDONED 3
+/*
+ * Valid THREAD_STATUS Transitions
+ * 
+ * // thread_schedule
+ * READY -> SCHEDULED 
+ *
+ * // thread_switch or thread_abandon (to the argument)
+ * SCHEDULED -> RUNNING // done on thread switch
+ *
+ * // thread_switch (to the current thread)
+ * RUNNING -> READY
+ * TIRED -> SLEEPING
+ *
+ * // thread_abandon (to the current thread)
+ * RUNNING -> ABANDONED
+ * 
+ * // thread_tire
+ * RUNNING -> TIRED
+ * READY -> SLEEPING
+ *
+ * // thread_wake
+ * TIRED -> RUNNING
+ * SLEEPING -> READY
+ *
+ */
+
+#define THREAD_STATUS_READY     0 // Not currently running but may be scheduled
+#define THREAD_STATUS_SCHEDULED 1 // (transition stage from READY -> RUNNING)
+#define THREAD_STATUS_RUNNING   2 // Currently running on some processor
+#define THREAD_STATUS_TIRED     3 // Currently running, will go to sleep on next thread switch
+#define THREAD_STATUS_SLEEPING  4 // Sleeping cannot be scheduled
+#define THREAD_STATUS_ABANDONED 5 // Can never be run again without reinitialization
 
 #define THREAD_FLAG_IDLE    (1ULL<<0)
 #define THREAD_FLAG_PROCESS (1ULL<<1)
@@ -36,6 +64,7 @@ struct thread_state
 
     spinlock_t lock;
     struct ptree_node tree_node;
+    ilist_node_t waitqueue_node;
 
     thread_id_t id;
     thread_f *func;
@@ -88,6 +117,20 @@ struct thread_state *idle_thread(void);
 //
 // Returns 0 on success, else, Returns negative errno
 int thread_schedule(struct thread_state *to_schedule);
+
+// Transition the current thread from "RUNNING" to "TIRED"
+// or "READY" to "SLEEPING"
+//
+// Does nothing if the thread is already "TIRED" or "SLEEPING"
+//
+// Returns 0 on success, else, Returns negative errno
+int thread_tire(struct thread_state *thread);
+
+// Does the opposite of threada_tire, going from "TIRED" to "RUNNING"
+// or "SLEEPING" to "READY"
+//
+// Returns 0 on success, else, Returns negative errno
+int thread_wake(struct thread_state *thread);
 
 // Switch to a scheduled thread, saving the state of the calling thread
 // (returns negative errno if we fail to switch threads at all)
