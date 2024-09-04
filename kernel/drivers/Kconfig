@@ -7,6 +7,10 @@ menu "Clock Devices"
 source "kernel/drivers/clk/Kconfig"
 endmenu
 
+menu "Serial Devices"
+source "kernel/drivers/serial/Kconfig"
+endmenu
+
 config PCI
     tristate "PCI Support"
     default y

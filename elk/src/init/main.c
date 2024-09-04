@@ -2,9 +2,6 @@
 #include <elk/syscall.h>
 #include <elk/init/path.h>
 
-static const char *mount_name = "char";
-static const char *serial_name = "vga-serial";
-
 static unsigned long
 strlen(const char *str)
 {
@@ -38,7 +35,7 @@ int main(int argc, const char **argv)
 
     fd_t serial =
         open_path(
-                "char:vga-serial",
+                "char:COM0",
                 FILE_PERM_WRITE,
                 0);
 

@@ -1,0 +1,9 @@
+
+config SERIAL_8250
+    tristate "8250 Based Serial UART(s)"
+    default y
+    help
+      Framework to support 8250-based serial UART devices
+
+source "kernel/drivers/serial/8250/Kconfig"
+

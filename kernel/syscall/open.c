@@ -47,8 +47,10 @@ syscall_open(
 
     name_buf[namelen] = '\0';
 
-    dprintk("PID(%ld) syscall_open(%s)\n",
+#ifdef CONFIG_DEBUG_SYSCALL_OPEN
+    printk("PID(%ld) syscall_open(%s)\n",
             (sl_t)process->id, name_buf);
+#endif
 
     fd_t fd; 
     if(parent_fd == NULL_FD) {

@@ -74,19 +74,34 @@ config DEBUG_INIT_STAGES
     help
       Debug the init Stages Framework
 
+config DEBUG_SYSCALLS
+    bool "Debug syscalls"
+
+menu "syscall Debugging"
+depends on DEBUG_SYSCALLS
+
 config STRACE_LOG_SYSCALL_BEGIN
     bool "Debug Log syscalls"
-    depends on DEBUGGING
+    depends on DEBUGGING && DEBUG_SYSCALLS
     default n
     help
       Log the beginning of each syscall (process ID and syscall ID)
 
 config STRACE_LOG_SYSCALL_END
     bool "Debug Log syscall Endings"
-    depends on DEBUGGING && STRACE_LOG_SYSCALL_BEGIN
+    depends on DEBUGGING && DEBUG_SYSCALLS && STRACE_LOG_SYSCALL_BEGIN
     default n
     help
       Log the ending of each syscall, useful for debugging kernel bugs during the handling of a specific syscall
+
+config DEBUG_SYSCALL_OPEN
+    bool "Log Opened Files"
+    depends on DEBUGGING && DEBUG_SYSCALLS
+    default n
+    help
+      Log the file-names of each file opened by a process.
+
+endmenu
 
 endmenu
 

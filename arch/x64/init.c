@@ -163,7 +163,7 @@ void x64_init(void *in)
     }
 
     dump_device_hierarchy(printk);
-    dump_irq_descs(printk);
+    //dump_irq_descs(printk);
     dump_threads(printk);
 
     fs_dump_attached_mounts(printk, 16);

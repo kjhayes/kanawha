@@ -59,4 +59,18 @@ DEFINE_OP_LIST_WRAPPERS(
 #undef UART_8250_WRITE_REG_SIG
 #undef UART_8250_OP_LIST
 
+// Keeps a reference to "name"
+int
+register_uart_8250(
+        const char *name,
+        struct device *device,
+        struct uart_8250 *uart_8250,
+        struct uart_8250_ops *ops,
+        struct char_driver *char_driver,
+        struct uart_driver *uart_driver);
+
+int
+unregister_uart_8250(
+        struct uart_8250 *uart_8250);
+
 #endif

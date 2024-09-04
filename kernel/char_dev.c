@@ -226,10 +226,6 @@ char_dev_fs_node_read(
         container_of(node, struct char_dev_fs_node, fs_node);
     struct char_dev *dev = container_of(cd_node, struct char_dev, fs_node);
 
-    if(offset != 0) {
-        return -EINVAL;
-    }
-
     *amount = char_dev_read(dev, buffer, *amount);
 
     return 0;
@@ -245,10 +241,6 @@ char_dev_fs_node_write(
     struct char_dev_fs_node *cd_node =
         container_of(node, struct char_dev_fs_node, fs_node);
     struct char_dev *dev = container_of(cd_node, struct char_dev, fs_node);
-
-    if(offset != 0) {
-        return -EINVAL;
-    }
 
     *amount = char_dev_write(dev, buffer, *amount);
 

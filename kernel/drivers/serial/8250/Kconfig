@@ -1,0 +1,8 @@
+
+config PC_COM_8250
+    tristate "PC COM Serial Port(s)"
+    default y
+    depends on SERIAL_8250 && X64
+    help
+      Driver for platform serial ports on x64
+
