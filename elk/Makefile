@@ -31,6 +31,9 @@ COMMON_FLAGS += \
 CRT_SRC_DIR := $(SRC_DIR)/crt
 include $(CRT_SRC_DIR)/Makefile
 
+LIBC_SRC_DIR := $(SRC_DIR)/libc
+include $(LIBC_SRC_DIR)/Makefile
+
 INIT_SRC_DIR := $(SRC_DIR)/init
 include $(INIT_SRC_DIR)/Makefile
 

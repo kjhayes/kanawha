@@ -21,18 +21,28 @@ RET(int)\
 ARG(fd_t, file)
 
 #define SYSCALL_SIG_READ(RET,ARG)\
-RET(int)\
+RET(ssize_t)\
 ARG(fd_t, file)\
 ARG(void __user *, dest)\
-ARG(size_t, src_offset)\
 ARG(size_t, size)
 
 #define SYSCALL_SIG_WRITE(RET,ARG)\
-RET(int)\
+RET(ssize_t)\
 ARG(fd_t, file)\
-ARG(size_t, dst_offset)\
 ARG(void __user *, src)\
 ARG(size_t, size)
+
+#define SYSCALL_SIG_SEEK(RET,ARG)\
+RET(ssize_t)\
+ARG(fd_t, file)\
+ARG(ssize_t, offset)\
+ARG(int, whence)
+
+#define SYSCALL_SIG_ATTR(RET,ARG)\
+RET(int)\
+ARG(fd_t, file)\
+ARG(int, attr)\
+ARG(size_t __user *, value)
 
 #define SYSCALL_SIG_MMAP(RET,ARG)\
 RET(int)\
@@ -59,16 +69,26 @@ ARG(char __user *, value)\
 ARG(size_t, len)\
 ARG(int, operation)
 
+#define SYSCALL_SIG_CHILDNAME(RET,ARG)\
+RET(int)\
+ARG(fd_t, parent)\
+ARG(size_t, child_index)\
+ARG(char __user *, buf)\
+ARG(size_t, buf_size)
+
 #define SYSCALL_XLIST(X)\
 X(exit,    0, EXIT, SYSCALL_SIG_EXIT)\
 X(open,    1, OPEN, SYSCALL_SIG_OPEN)\
 X(close,   2, CLOSE, SYSCALL_SIG_CLOSE)\
 X(read,    3, READ, SYSCALL_SIG_READ)\
 X(write,   4, WRITE, SYSCALL_SIG_WRITE)\
-X(mmap,    5, MMAP, SYSCALL_SIG_MMAP)\
-X(munmap,  6, MUNMAP, SYSCALL_SIG_MUNMAP)\
-X(exec,    7, EXEC, SYSCALL_SIG_EXEC)\
-X(environ, 8, ENVIRON, SYSCALL_SIG_ENVIRON)
+X(seek,    5, SEEK, SYSCALL_SIG_SEEK)\
+X(attr,    6, ATTR, SYSCALL_SIG_ATTR)\
+X(mmap,    7, MMAP, SYSCALL_SIG_MMAP)\
+X(munmap,  8, MUNMAP, SYSCALL_SIG_MUNMAP)\
+X(exec,    9, EXEC, SYSCALL_SIG_EXEC)\
+X(environ, 10, ENVIRON, SYSCALL_SIG_ENVIRON)\
+X(childname, 11, CHILDNAME, SYSCALL_SIG_CHILDNAME)\
 
 #define DECLARE_SYSCALL_ID_CONSTANTS(__name, __id, __NAME, ...)\
 const static syscall_id_t SYSCALL_ID_ ## __NAME = __id;

@@ -7,12 +7,11 @@
 
 #define SYSCALL_READ_MAX_CHUNK_SIZE 0x1000
 
-int
+ssize_t
 syscall_read(
         struct process *process,
         fd_t file,
         void __user *dst,
-        size_t src_offset,
         size_t size)
 {
     int res;
@@ -33,10 +32,15 @@ syscall_read(
         ? SYSCALL_READ_MAX_CHUNK_SIZE : size;
     void *buffer = kmalloc(buffer_len);
 
+    uintptr_t src_offset = desc->seek_offset;
+
+    ssize_t total_read;
+
     while(size > 0)
     {
-        size_t amount = buffer_len > size ? size : buffer_len;
-        size_t amount_read = amount;
+        size_t amount_to_read = buffer_len > size ? size : buffer_len;
+        size_t amount_read = amount_to_read;
+
         res = fs_node_read(
                 desc->node,
                 buffer,
@@ -46,7 +50,7 @@ syscall_read(
             goto err;
         }
 
-        DEBUG_ASSERT(amount_read <= amount);
+        DEBUG_ASSERT(amount_read <= amount_to_read);
 
         res = process_write_usermem(
                 process,
@@ -57,10 +61,18 @@ syscall_read(
             goto err;
         }
 
+        if(amount_read == 0) {
+            break;
+        }
+
         size -= amount_read;
         src_offset += amount_read;
         dst += amount_read;
+        total_read += amount_read;
     }
+
+    desc->seek_offset = src_offset;
+    res = total_read;
 
 err:
     kfree(buffer);

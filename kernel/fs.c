@@ -56,7 +56,13 @@ fs_attach_mount(
     if(was_attached) {
         return -EEXIST;
     }
-    mnt->attach_node.key = name;
+
+    char *dup_name = kstrdup(name);
+    if(dup_name == NULL) {
+        return -ENXIO;
+    }
+    
+    mnt->attach_node.key = dup_name;
     spin_lock(&fs_active_mount_tree_lock);
     int res = stree_insert(&fs_active_mount_tree, &mnt->attach_node);
     spin_unlock(&fs_active_mount_tree_lock);
@@ -78,6 +84,7 @@ fs_deattach_mount(
         stree_remove(
                 &fs_active_mount_tree,
                 name);
+        kfree((void*)node->key);
     }
 
     spin_unlock(&fs_active_mount_tree_lock);

@@ -53,7 +53,7 @@ open_path(
 
     if(colon_offset != -1) {
         char *mount_name = buffer;
-        cur_parent = open(
+        cur_parent = sys_open(
                 NULL_FD,
                 mount_name,
                 PERM_FLAGS,
@@ -65,7 +65,7 @@ open_path(
         }
         cur_name = buffer + (colon_offset+1);
     } else {
-        cur_parent = open(
+        cur_parent = sys_open(
                 NULL_FD,
                 "",
                 PERM_FLAGS,
@@ -77,7 +77,7 @@ open_path(
     while(cur_name < buffer_end) {
         size_t namelen = strlen(cur_name);
         fd_t cur;
-        cur = open(
+        cur = sys_open(
                 cur_parent,
                 cur_name,
                 PERM_FLAGS,
@@ -85,12 +85,12 @@ open_path(
         cur_open++;
         if(cur == NULL_FD) {
             if(cur_parent != NULL_FD) {
-                close(cur_parent);
+                sys_close(cur_parent);
             }
             return NULL_FD;
         }
         if(cur_parent != NULL_FD) {
-            close(cur_parent);
+            sys_close(cur_parent);
         }
 
         cur_name += namelen + 1;

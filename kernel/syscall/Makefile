@@ -5,7 +5,10 @@ obj-y += \
 	close.o \
 	read.o \
 	write.o \
+	seek.o \
+	attr.o \
 	mmap.o \
 	exec.o \
 	environ.o \
+	childname.o \
 

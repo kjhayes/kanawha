@@ -10,6 +10,7 @@ struct file_descriptor
 
     int refs;
 
+    size_t seek_offset;
     unsigned long access_flags;
     unsigned long mode_flags;
 

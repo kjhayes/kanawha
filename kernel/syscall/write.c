@@ -7,11 +7,10 @@
 
 #define SYSCALL_WRITE_MAX_CHUNK_SIZE 0x1000
 
-int
+ssize_t
 syscall_write(
         struct process *process,
         fd_t file,
-        size_t dst_offset,
         void __user *src,
         size_t size)
 {
@@ -43,10 +42,14 @@ syscall_write(
         ? SYSCALL_WRITE_MAX_CHUNK_SIZE : size;
     void *buffer = kmalloc(buffer_len);
 
+    uintptr_t dst_offset = desc->seek_offset;
+
+    ssize_t total_written = 0;
+
     while(size > 0)
     {
-        size_t amount = buffer_len > size ? size : buffer_len;
-        size_t amount_read = amount;
+        size_t amount_to_write = buffer_len > size ? size : buffer_len;
+        size_t amount_written = amount_to_write;
 
         dprintk("Reading from usermem %p, size=0x%llx\n",
                 src, (ull_t)amount_read);
@@ -54,7 +57,7 @@ syscall_write(
                 process,
                 buffer,
                 src,
-                amount_read);
+                amount_written);
         if(res) {
             goto exit;
         }
@@ -62,7 +65,7 @@ syscall_write(
         res = fs_node_write(
                 desc->node,
                 buffer,
-                &amount_read,
+                &amount_written,
                 dst_offset);
         if(res) {
             eprintk("syscall_write: fs_node_write returned %s\n",
@@ -72,13 +75,20 @@ syscall_write(
 
         dprintk("Wrote to fs_node, size=0x%llx\n",
                 (ull_t)amount_read);
-        DEBUG_ASSERT(amount_read <= amount);
+        DEBUG_ASSERT(amount_written <= amount_to_write);
 
-        size -= amount_read;
-        dst_offset += amount_read;
-        src += amount_read;
+        if(amount_written == 0) {
+            break;
+        }
+
+        size -= amount_written;
+        dst_offset += amount_written;
+        src += amount_written;
+        total_written += amount_written;
     }
-    res = 0;
+
+    desc->seek_offset = dst_offset;
+    res = total_written;
 
 exit:
     kfree(buffer);

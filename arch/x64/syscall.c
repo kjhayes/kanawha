@@ -81,23 +81,39 @@ x64_route_syscall(struct x64_syscall_state *state)
                         (fd_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDI]);
             break;
         case SYSCALL_ID_READ:
-            *ret_val = (uint64_t)(int)
+            *ret_val = (uint64_t)(ssize_t)
                 syscall_read(
                         process,
                         (fd_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDI], // file
                         (void __user *)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RSI], // dst
-                        (size_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDX], // src_offset
-                        (size_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_R8] // size
+                        (size_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDX] // size
                         );
             break;
         case SYSCALL_ID_WRITE:
-            *ret_val = (uint64_t)(int)
+            *ret_val = (uint64_t)(ssize_t)
                 syscall_write(
                         process,
                         (fd_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDI], // file
-                        (size_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RSI], // dst_offset
-                        (void __user *)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDX], // src
-                        (size_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_R8] // size
+                        (void __user *)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RSI], // src
+                        (size_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDX] // size
+                        );
+            break;
+        case SYSCALL_ID_SEEK:
+            *ret_val = (uint64_t)(ssize_t)
+                syscall_seek(
+                        process,
+                        (fd_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDI], // file
+                        (ssize_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RSI], // offset
+                        (int)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDX] // whence
+                        );
+            break;
+        case SYSCALL_ID_ATTR:
+            *ret_val = (uint64_t)(int)
+                syscall_attr(
+                        process,
+                        (fd_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDI], // file
+                        (int)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RSI], // attr
+                        (size_t __user *)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDX] // value
                         );
             break;
         case SYSCALL_ID_MMAP:
@@ -137,6 +153,15 @@ x64_route_syscall(struct x64_syscall_state *state)
                         (int)state->caller_regs[PUSHED_CALLER_REGS_INDEX_R8] // operation
                         );
             break;
+        case SYSCALL_ID_CHILDNAME:
+            *ret_val = (uint64_t)(int)
+                syscall_childname(
+                        process,
+                        (fd_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDI], // parent
+                        (size_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RSI], // child index
+                        (char __user *)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDX], // name buffer
+                        (size_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_R8] // buffer length
+                        );
         default:
             syscall_unknown(process, id);
     }

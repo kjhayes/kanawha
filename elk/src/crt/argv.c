@@ -26,7 +26,7 @@ __elk_crt__get_argv(
         const char ***argv_out)
 {
     int res;
-    res = mmap(
+    res = sys_mmap(
             NULL_FD,
             0,
             (void*)ARGV_REGION_BASE,
@@ -34,24 +34,24 @@ __elk_crt__get_argv(
             MMAP_PROT_READ|MMAP_PROT_WRITE,
             MMAP_ANON);
     if(res) {
-        exit(1);
+        sys_exit(1);
     }
 
     void *region_base = (void*)ARGV_REGION_BASE;
 
-    res = environ(
+    res = sys_environ(
             ARGV_ENV_KEY,
             region_base,
             ARGV_REGION_SIZE,
             ENV_GET);
     if(res == -ENXIO) {
-        munmap((void*)ARGV_REGION_BASE);
+        sys_munmap((void*)ARGV_REGION_BASE);
         *argc_out = 0;
         *argv_out = NULL;
         return;
     }
     else if(res) {
-        exit(res);
+        sys_exit(res);
     }
 
     char *end = region_base + ARGV_REGION_SIZE;
@@ -62,7 +62,7 @@ __elk_crt__get_argv(
     size_t room_left = ARGV_REGION_SIZE - argv_len;
     if(room_left >= ARGV_REGION_SIZE) {
         // Underflow
-        exit(1);
+        sys_exit(1);
     }
 
     const char **argv_ptr = (const char **)(end - room_left);
@@ -88,7 +88,7 @@ __elk_crt__get_argv(
                 argc++;
             } else {
                 // Too many or too long argument(s)
-                exit(1);
+                sys_exit(1);
             }
         }
         iter += cur_len + 1;

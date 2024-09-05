@@ -40,6 +40,7 @@ ARG(size_t, buf_size)
 // (could be permissions, attribute doesn't exist, etc.)
 #define FS_NODE_ATTR_MAX_OFFSET      0
 #define FS_NODE_ATTR_MAX_OFFSET_END  1
+#define FS_NODE_ATTR_END_OFFSET FS_NODE_ATTR_MAX_OFFSET_END
 #define FS_NODE_ATTR_CHILD_COUNT     2
 #define FS_NODE_ATTR_SIG(RET,ARG)\
 RET(int)\
@@ -197,7 +198,7 @@ int init_fs_mount_struct(
 struct fs_type *
 fs_type_find(const char *name);
 
-// Keeps a reference to "name"
+// Makes a copy of "name"
 int
 fs_attach_mount(
         struct fs_mount *mount,

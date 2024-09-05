@@ -91,6 +91,8 @@ file_table_open_path(
     desc->node = node;
     desc->refs = 1;
 
+    desc->seek_offset = 0;
+
     // We should be checking these against some form
     // of user/process permissions
     desc->mode_flags = mode_flags;

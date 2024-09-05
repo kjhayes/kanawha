@@ -2,18 +2,31 @@
 .code64
 .text
 
-.global exit
-.type exit,@function
-exit:
-    movq $0, %rax
+#define SYSCALL_ID_EXIT    0
+#define SYSCALL_ID_OPEN    1
+#define SYSCALL_ID_CLOSE   2
+#define SYSCALL_ID_READ    3
+#define SYSCALL_ID_WRITE   4
+#define SYSCALL_ID_SEEK    5
+#define SYSCALL_ID_ATTR    6
+#define SYSCALL_ID_MMAP    7
+#define SYSCALL_ID_MUNMAP  8
+#define SYSCALL_ID_EXEC    9
+#define SYSCALL_ID_ENVIRON 10
+#define SYSCALL_ID_CHILDNAME 11
+
+.global sys_exit
+.type sys_exit,@function
+sys_exit:
+    movq $SYSCALL_ID_EXIT, %rax
     // rdi -> exitcode
     syscall
     retq
 
-.global open
-.type open,@function
-open:
-    movq $1, %rax
+.global sys_open
+.type sys_open,@function
+sys_open:
+    movq $SYSCALL_ID_OPEN, %rax
     // rdi -> fd_t parent
     // rsi -> const char * name
     // rdx -> unsigned long access_flags
@@ -22,40 +35,58 @@ open:
     syscall
     retq
 
-.global close
-.type close,@function
-close:
-    movq $2, %rax
+.global sys_close
+.type sys_close,@function
+sys_close:
+    movq $SYSCALL_ID_CLOSE, %rax
     // rdi -> fd_t file
     syscall
     retq
 
-.global read
-.type read,@function
-read:
-    movq $3, %rax
+.global sys_read
+.type sys_read,@function
+sys_read:
+    movq $SYSCALL_ID_READ, %rax
     // rdi -> fd_t file
     // rsi -> void * dst
-    // rdx -> size_t src_offset
-    movq %rcx, %r8 // r8 -> size_t size
+    // rdx -> size_t size 
     syscall
     retq
 
-.global write
-.type write,@function
-write:
-    movq $4, %rax
+.global sys_write
+.type sys_write,@function
+sys_write:
+    movq $SYSCALL_ID_WRITE, %rax
     // rdi -> fd_t file
-    // rsi -> size_t dst_offset
-    // rdx -> void * src
-    movq %rcx, %r8 // r8 -> size_t size
+    // rsi -> void *src
+    // rdx -> size_t size
     syscall
     retq
 
-.global mmap
-.type mmap,@function
-mmap:
-    movq $5, %rax
+.global sys_seek
+.type sys_seek,@function
+sys_seek:
+    movq $SYSCALL_ID_SEEK, %rax
+    // rdi -> fd_t file
+    // rsi -> size_t offset
+    // rdx -> int whence 
+    syscall
+    retq
+
+.global sys_attr
+.type sys_attr,@function
+sys_attr:
+    movq $SYSCALL_ID_ATTR, %rax
+    // rdi -> fd_t file
+    // rsi -> int attr 
+    // rdx -> size_t __user * value 
+    syscall
+    retq
+
+.global sys_mmap
+.type sys_mmap,@function
+sys_mmap:
+    movq $SYSCALL_ID_MMAP, %rax
     // rdi -> fd_t file
     // rsi -> size_t file_offset
     // rdx -> void * where
@@ -66,31 +97,42 @@ mmap:
     syscall
     retq
 
-.global munmap
-.type munmap,@function
-munmap:
-    movq $6, %rax
+.global sys_munmap
+.type sys_munmap,@function
+sys_munmap:
+    movq $SYSCALL_ID_MUNMAP, %rax
     // rdi -> void * mapping
     syscall
     retq
 
-.global exec
-.type exec,@function
-exec:
-    movq $7, %rax
+.global sys_exec
+.type sys_exec,@function
+sys_exec:
+    movq $SYSCALL_ID_EXEC, %rax
     // rdi -> fd_t file
     // rsi -> unsigned long exec_flags
     syscall
     retq
 
-.global environ
-.type environ,@function
-environ:
-    movq $8, %rax
+.global sys_environ
+.type sys_environ,@function
+sys_environ:
+    movq $SYSCALL_ID_ENVIRON, %rax
     // rdi -> const char *key
     // rsi -> char *value
     // rdx -> size_t len
     movq %rcx, %r8 // %r8 -> int opcode
+    syscall
+    retq
+
+.global sys_childname
+.type sys_childname,@function
+sys_childname:
+    movq $SYSCALL_ID_CHILDNAME, %rax
+    // rdi -> fd_t parent
+    // rsi -> size_t child_index
+    // rdx -> char *name_buf
+    movq %rcx, %r8 // %r8 -> size_t buf_len
     syscall
     retq
 

@@ -19,8 +19,7 @@ write_str(
         const char *str)
 {
     int res;
-    res = write(file,
-          0,
+    res = sys_write(file,
           (void*)str,
           strlen(str));
     if(res) {
@@ -33,24 +32,51 @@ int main(int argc, const char **argv)
 {
     int res;
 
-    fd_t serial =
+    fd_t stdin =
         open_path(
                 "char:COM0",
+                FILE_PERM_READ,
+                0);
+
+    if(stdin == NULL_FD) {
+        sys_exit(1);
+    }
+
+    fd_t stdout =
+        open_path(
+                "char:vga-serial",
                 FILE_PERM_WRITE,
                 0);
 
-    if(serial == NULL_FD) {
-        exit(88);
+    if(stdout == NULL_FD) {
+        sys_close(stdin);
+        sys_exit(1);
     }
 
-    write_str(serial, "Hello From Userspace!!!\n");
+    write_str(stdout, "Hello From Userspace!!!\n");
 
     for(int i = 0; i < argc; i++) {
-        write_str(serial, argv[i]);
-        write_str(serial, "\n");
+        write_str(stdout, "ARG: \"");
+        write_str(stdout, argv[i]);
+        write_str(stdout, "\"\n");
     }
 
-    close(serial);
+    int reading = 1;
+    while(reading) {
+        char c;
+        ssize_t amt = sys_read(stdin, &c, 1);
+        if(amt == 1) {
+            sys_write(stdout, &c, 1);
+        }
+        if(c == 'X') {
+            reading = 0;
+        }
+    }
+
+    write_str(stdout, "\nDetected (X), stopping\n");
+
+    sys_close(stdout);
+    sys_close(stdin);
 
     return 0;
 }

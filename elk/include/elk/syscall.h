@@ -7,30 +7,46 @@
 #include <kanawha/uapi/stdint.h>
 
 __attribute__((noreturn))
-void exit(int exitcode);
+void
+sys_exit(int exitcode);
 
-fd_t open(
+fd_t
+sys_open(
         fd_t parent,
         const char *name,
         unsigned long access_flags,
         unsigned long mode_flags);
 
-int close(
+int
+sys_close(
         fd_t file);
 
-int read(
+ssize_t
+sys_read(
         fd_t file,
         void *dest,
-        size_t src_offset,
         size_t size);
 
-int write(
+ssize_t
+sys_write(
         fd_t file,
-        size_t dest_offset,
         void *src,
         size_t size);
 
-int mmap(
+ssize_t
+sys_seek(
+        fd_t file,
+        ssize_t offset,
+        int whence);
+
+int
+sys_attr(
+        fd_t file,
+        int attr,
+        size_t *value);
+
+int
+sys_mmap(
         fd_t file,
         size_t file_offset,
         void *where,
@@ -38,17 +54,27 @@ int mmap(
         unsigned long prot_flags,
         unsigned long mmap_flags);
 
-int munmap(
+int
+sys_munmap(
         void *mapping);
 
-int exec(
+int
+sys_exec(
         fd_t file,
         unsigned long exec_flags);
 
-int environ(
+int
+sys_environ(
         const char *key,
         char *value,
         size_t len,
         int opcode);
+
+int
+sys_childname(
+        fd_t parent,
+        size_t child_index,
+        char *name_buf,
+        size_t buf_len);
 
 #endif

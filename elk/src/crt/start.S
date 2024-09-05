@@ -11,7 +11,7 @@
 _start: 
 
 // mmap An Anonymous Stack
-    movq $5, %rax // mmap
+    movq $7, %rax // mmap
     movq $0, %rdi // NULL_FD
     movq $0, %rdi // file_offset
     movq $STACK_TOP, %rdx // where
