@@ -10,7 +10,6 @@
 
 extern void __x64_thread_entry(void);
 
-__attribute__((noreturn))
 extern void *
 __x64_thread_run_threadless(void *in, threadless_f *func, uint64_t *rsp_ptr);
 
