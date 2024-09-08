@@ -3,6 +3,7 @@
 #include <kanawha/time.h>
 #include <kanawha/clk_dev.h>
 #include <kanawha/common.h>
+#include <kanawha/errno.h>
 
 static struct clk_dev *clk_source = NULL;
 

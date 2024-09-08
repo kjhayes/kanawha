@@ -25,12 +25,12 @@ rlock_read_lock(rlock_t *lock) {
 
 static inline void
 rlock_read_unlock(rlock_t *lock) {
-    spin_lock(&lock->read_lock);
+    int irq_flags = spin_lock_irq_save(&lock->read_lock);
     lock->readers--;
     if(lock->readers == 0) {
         spin_unlock(&lock->full_lock);
     }
-    spin_unlock(&lock->read_lock);
+    spin_unlock_irq_restore(&lock->read_lock, irq_flags);
 }
 
 static inline void

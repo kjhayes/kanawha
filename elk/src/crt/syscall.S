@@ -2,18 +2,21 @@
 .code64
 .text
 
-#define SYSCALL_ID_EXIT    0
-#define SYSCALL_ID_OPEN    1
-#define SYSCALL_ID_CLOSE   2
-#define SYSCALL_ID_READ    3
-#define SYSCALL_ID_WRITE   4
-#define SYSCALL_ID_SEEK    5
-#define SYSCALL_ID_ATTR    6
-#define SYSCALL_ID_MMAP    7
-#define SYSCALL_ID_MUNMAP  8
-#define SYSCALL_ID_EXEC    9
-#define SYSCALL_ID_ENVIRON 10
+#define SYSCALL_ID_EXIT      0
+#define SYSCALL_ID_OPEN      1
+#define SYSCALL_ID_CLOSE     2
+#define SYSCALL_ID_READ      3
+#define SYSCALL_ID_WRITE     4
+#define SYSCALL_ID_SEEK      5
+#define SYSCALL_ID_ATTR      6
+#define SYSCALL_ID_MMAP      7
+#define SYSCALL_ID_MUNMAP    8
+#define SYSCALL_ID_EXEC      9
+#define SYSCALL_ID_ENVIRON   10
 #define SYSCALL_ID_CHILDNAME 11
+#define SYSCALL_ID_SPAWN     12
+#define SYSCALL_ID_REAP      13
+#define SYSCALL_ID_GETPID    14
 
 .global sys_exit
 .type sys_exit,@function
@@ -133,6 +136,34 @@ sys_childname:
     // rsi -> size_t child_index
     // rdx -> char *name_buf
     movq %rcx, %r8 // %r8 -> size_t buf_len
+    syscall
+    retq
+
+.global sys_spawn
+.type sys_spawn,@function
+sys_spawn:
+    movq $SYSCALL_ID_SPAWN, %rax
+    // rdi -> void *entry 
+    // rsi -> void *arg
+    // rdx -> unsigned long flags 
+    movq %rcx, %r8 // r8 -> pid_t *child_pid
+    syscall
+    retq
+
+.global sys_reap
+.type sys_reap,@function
+sys_reap:
+    movq $SYSCALL_ID_REAP, %rax
+    // rdi -> pid_t child 
+    // rsi -> unsigned long flags
+    // rdx -> int *exitcode 
+    syscall
+    retq
+
+.global sys_getpid
+.type sys_getpid,@function
+sys_getpid:
+    movq $SYSCALL_ID_GETPID, %rax
     syscall
     retq
 

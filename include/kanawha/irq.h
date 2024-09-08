@@ -52,8 +52,21 @@ spin_lock_irq_save(spinlock_t *lock) {
     do {
     int state = disable_save_irqs();
     if(!spin_try_lock(lock)) {
+#ifdef CONFIG_DEBUG_SPINLOCK_TRACK_THREADS
+        if(debug_spinlock_tracking()) {
+            lock->held_by = current_thread();
+        }
+#endif
         return state;
     }
+#ifdef CONFIG_DEBUG_SPINLOCK_TRACK_THREADS
+    if(debug_spinlock_tracking()) {
+        if(lock->held_by != NULL && lock->held_by == current_thread()) {
+            panic("DEADLOCK Detected! lock->held_by == current_thread() == %p\n",
+                    lock->held_by);
+        }
+    }
+#endif
     enable_restore_irqs(state);
     } while(1);
 }

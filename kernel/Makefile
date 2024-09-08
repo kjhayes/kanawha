@@ -35,8 +35,10 @@ obj-y += \
 	symbol.o \
 	module.o \
 	string.o \
+	waitqueue.o \
 	xcall.o \
 	timer.o \
+	spinlock.o \
 	clk.o
 
 obj-$(CONFIG_INITRD) += initrd.o

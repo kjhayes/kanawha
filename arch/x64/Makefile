@@ -29,3 +29,5 @@ obj-$(CONFIG_X64_MULTIBOOT2_BOOT) += mb2_boot.o
 obj-$(CONFIG_X64_BOOT_VGA) += boot_vga.o
 obj-$(CONFIG_X64_BOOT_SERIAL) += boot_serial.o
 
+obj-$(CONFIG_X64_TEST_VOLATILITY_THREAD) += volatile_thread.o
+

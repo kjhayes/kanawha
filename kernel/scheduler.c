@@ -2,6 +2,7 @@
 #include <kanawha/scheduler.h>
 #include <kanawha/spinlock.h>
 #include <kanawha/stree.h>
+#include <kanawha/irq.h>
 #include <kanawha/stddef.h>
 #include <kanawha/percpu.h>
 #include <kanawha/string.h>

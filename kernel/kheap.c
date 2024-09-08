@@ -1,5 +1,6 @@
 
 #include <kanawha/kheap.h>
+#include <kanawha/assert.h>
 
 #define KHEAP_GROWTH_ORDER 21
 
@@ -12,13 +13,26 @@ struct kheap_free_region {
     size_t size;
 };
 
+static void
+kheap_dump(struct kheap *heap, printk_f *printer)
+{
+    ilist_node_t *free_region;
+    ilist_for_each(free_region, &heap->free_list)
+    {
+        struct kheap_free_region *region =
+            container_of(free_region, struct kheap_free_region, list_node);
+        (*printer)("FREE [%p - %p)\n",
+                (void*)region,
+                (void*)region + region->size);
+    }
+}
+
 static int
 kheap_grow(
         struct kheap *heap)
 {
-    // TODO (LOCK ME)
-
     int res;
+    dprintk("kheap_grow\n");
 
     size_t page_size = (1ULL << KHEAP_GROWTH_ORDER);
     if(heap->heap_size - heap->mapped < page_size) {
@@ -48,7 +62,12 @@ kheap_grow(
 
     heap->mapped += page_size;
 
-    return kheap_free_specific(heap, (void*)page_virt, page_size);
+    res = kheap_free_specific(heap, (void*)page_virt, page_size);
+    if(res) {
+        return res;
+    }
+
+    return 0;
 }
 
 static int
@@ -130,19 +149,20 @@ kheap_alloc_specific(struct kheap *heap, order_t align_order, size_t *size)
 {
     ilist_node_t *node;
 
-    dprintk("before kheap_alloc_specific(align=%d)\n", align_order);
-
     struct kheap_free_region *best = NULL;
     size_t best_wasted = (size_t)-1;
-    uintptr_t alloc_base;
+    uintptr_t best_alloc_base;
 
     ilist_for_each(node,&heap->free_list) {
         struct kheap_free_region *region =
             container_of(node, struct kheap_free_region, list_node);
 
+        DEBUG_ASSERT(KERNEL_ADDR(region));
+
         // Try to find the smallest free region that can fit our allocation
         if((region->size) >= *size) {
             uintptr_t region_end = (uintptr_t)region + region->size;
+            uintptr_t alloc_base;
             alloc_base = (region_end - (uintptr_t)*size) & ~((1ULL<<align_order)-1ULL);
             if(alloc_base < (uintptr_t)region) {
                 // Can't fit with alignment
@@ -167,6 +187,9 @@ kheap_alloc_specific(struct kheap *heap, order_t align_order, size_t *size)
              || best->size > region->size) {
                 best = region;
                 best_wasted = wasted;
+                best_alloc_base = alloc_base;
+                dprintk("Using region: [%p-%p)\n",
+                        (uintptr_t)region, (uintptr_t)region + region->size);
                 if(wasted == 0 && region->size == *size) {
                     // We're not going to do any better
                     break;
@@ -186,47 +209,71 @@ kheap_alloc_specific(struct kheap *heap, order_t align_order, size_t *size)
                 dprintk("kheap_alloc_specific: failed to grow heap!\n");
                 return NULL;
             }
+            DEBUG_ASSERT(!ilist_empty(&heap->free_list));
+
             end = container_of(heap->free_list.prev,
                                struct kheap_free_region,
                                list_node);
-            // Try to find the smallest free region that can fit our allocation
-            if((end->size) >= *size) {
-              uintptr_t region_end = (uintptr_t)end + end->size;
-              alloc_base = (region_end - (uintptr_t)*size) & ~((1ULL<<align_order)-1ULL);
-              if(alloc_base < (uintptr_t)end) {
-                  // Can't fit with alignment
-                  continue;
-              }
+            DEBUG_ASSERT(KERNEL_ADDR(end));
 
-              if(alloc_base != (uintptr_t)end 
-                && (alloc_base - (uintptr_t)end) < sizeof(struct kheap_free_region)) {
-                  // Can't fit without losing track of some memory
-                  continue;
-              }
-
-              // We can fit, we are the best automatically
-              best_wasted = (*size - (region_end - alloc_base));
-              best = end;
+            // We're still too small
+            if((end->size) < *size) {
+                continue;
             }
+
+            // We could be large enough (alignment still needs to be checked though)
+            uintptr_t region_base = (uintptr_t)end;
+            uintptr_t region_end = region_base + end->size;
+
+            // Allocate at the end of the region
+            uintptr_t alloc_base = (region_end - (uintptr_t)*size);
+
+            // Align down
+            alloc_base &= ~((1ULL<<align_order)-1ULL);
+
+            if(alloc_base < (uintptr_t)end) {
+                // Can't fit with alignment
+                continue;
+            }
+
+            if(alloc_base != (uintptr_t)end 
+              && (alloc_base - (uintptr_t)end) < sizeof(struct kheap_free_region)) {
+                // Can't fit without losing track of some memory
+                continue;
+            }
+
+            // We can fit, we are the best automatically
+            best_wasted = (region_end - alloc_base) - *size;
+            best = end;
+            best_alloc_base = alloc_base;
+
         } while(best == NULL);
     }
 
     // "best" must be non-null if we reached here
+    DEBUG_ASSERT(KERNEL_ADDR(best));
 
     // Grow the region by the "wasted" bytes so we don't lose track of them
     *size += best_wasted;
-
     best->size -= *size;
+
     if(best->size < sizeof(struct kheap_free_region)) {
         // The region doesn't exist any more
         if(best->size != 0) {
-            eprintk("WARNING: kheap is losing track of 0x%lx bytes!\n", (unsigned long)best->size);
+            wprintk("kheap is losing track of 0x%lx bytes!\n", (unsigned long)best->size);
         }
 
         ilist_remove(&heap->free_list, &best->list_node);
     }
 
-    return (void*)alloc_base;
+#ifdef CONFIG_DEBUG_KHEAP_TOUCH
+    memset((void*)best_alloc_base, 0x55, *size);
+#endif
+
+    dprintk("kheap_alloc_specific -> [%p-%p)\n",
+            best_alloc_base, best_alloc_base + *size);
+
+    return (void*)best_alloc_base;
 }
 
 int
@@ -234,9 +281,14 @@ kheap_free_specific(struct kheap *heap, void *addr, size_t size)
 {
     dprintk("kheap_free_specific <- [%p - %p)\n",
             addr, addr+size);
+    
     if(size < sizeof(struct kheap_free_region)) {
         return -EINVAL;
     }
+
+#ifdef CONFIG_DEBUG_KHEAP_TOUCH
+    memset(addr, 0xAA, size);
+#endif
 
     struct kheap_free_region *region = (struct kheap_free_region*)addr;
     region->size = size;

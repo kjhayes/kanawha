@@ -1,5 +1,6 @@
 
 #include <kanawha/process.h>
+#include <kanawha/irq.h>
 #include <kanawha/thread.h>
 #include <kanawha/stdint.h>
 #include <kanawha/vmem.h>
@@ -11,13 +12,14 @@
 #include <kanawha/timer.h>
 #include <kanawha/assert.h>
 #include <kanawha/syscall/mmap.h>
+#include <kanawha/uapi/spawn.h>
 
 #define PROCESS_LOWMEM_SIZE (1ULL<<32)
 
 static DECLARE_SPINLOCK(process_pid_lock);
 static DECLARE_PTREE(process_pid_tree);
 
-#define MAX_PROCESS_ID (process_id_t)(uintptr_t)(-1)
+#define MAX_PROCESS_ID (pid_t)(uintptr_t)(-1)
 
 static struct process *init_process = NULL;
 
@@ -48,20 +50,45 @@ process_clear_forced_ip(
     return 0;
 }
 
+struct process *
+process_from_pid(
+        pid_t id)
+{
+    int irq_flags = spin_lock_irq_save(&process_pid_lock);
+
+    struct ptree_node *node =
+        ptree_get(&process_pid_tree, id);
+    if(node == NULL) {
+        spin_unlock_irq_restore(&process_pid_lock, irq_flags);
+        return NULL;
+    }
+
+    struct process *proc =
+        container_of(node, struct process, pid_node);
+
+    DEBUG_ASSERT(KERNEL_ADDR(proc));
+
+    spin_unlock_irq_restore(&process_pid_lock, irq_flags);
+    return proc;
+}
+
 static int
 process_assign_pid(
         struct process *process)
 {
     int irq_flags = spin_lock_irq_save(&process_pid_lock);
 
-    process_id_t free_pid = MAX_PROCESS_ID;
+    pid_t free_pid = MAX_PROCESS_ID;
 
-    for(process_id_t pid = 0; pid < MAX_PROCESS_ID; pid++) {
+    for(pid_t pid = 0; pid < MAX_PROCESS_ID; pid++) {
+        dprintk("process_assign_pid: checking %ld\n", pid);
         struct ptree_node *node = ptree_get(&process_pid_tree, pid);
         if(node == NULL) {
             free_pid = pid;
+            dprintk("process_assign_pid: using %ld\n", pid);
             break;
         }
+        dprintk("process_assign_pid: %ld already taken\n", pid);
     }
 
     if(free_pid == MAX_PROCESS_ID) {
@@ -83,7 +110,7 @@ process_remove_pid(
 {
     int irq_flags = spin_lock_irq_save(&process_pid_lock);
 
-    process_id_t free_pid = MAX_PROCESS_ID;
+    pid_t free_pid = MAX_PROCESS_ID;
 
     struct ptree_node *removed;
     removed = ptree_remove(&process_pid_tree, process->id);
@@ -122,7 +149,7 @@ init_process_kernel_entry(void *in)
 
     const char *binary_path = CONFIG_INIT_PROCESS_PATH;
 
-    res = environment_set(process, "ARGV", CONFIG_INIT_PROCESS_ARGV_VALUE);
+    res = environment_set(process->environ, "ARGV", CONFIG_INIT_PROCESS_ARGV_VALUE);
     if(res) {
         panic("Failed to set init process ARGV! (err=%s)\n",
                 errnostr(res));
@@ -130,7 +157,8 @@ init_process_kernel_entry(void *in)
 
     fd_t binary_fd;
     res = file_table_open_path(
-            &process->file_table,
+            process->file_table,
+            process,
             binary_path,
             FILE_PERM_READ|FILE_PERM_EXEC,
             0,
@@ -151,65 +179,36 @@ init_process_kernel_entry(void *in)
                 binary_path, errnostr(res));
     }
 
-//    size_t node_size;
-//    {
-//      struct file_descriptor *desc =
-//          file_table_get_descriptor(
-//                  &process->file_table,
-//                  binary_fd);
-//      if(desc == NULL) {
-//          panic("Failed to get init binary file descriptor!\n");
-//      }
-//
-//      res = fs_node_attr(
-//              desc->node,
-//              FS_NODE_ATTR_MAX_OFFSET_END,
-//              &node_size);
-//      if(res) {
-//          panic("Failed to get init process binary size! (err=%s)\n",
-//                  errnostr(res));
-//      }
-//
-//      res = file_table_put_descriptor(
-//                  &process->file_table,
-//                  desc);
-//      if(res) {
-//          panic("Failed to put init binary file descriptor! (err=%s)\n",
-//                  errnostr(res));
-//      }
-//    }
-//
-//    // Align our request size up by a page
-//    if(ptr_orderof(node_size) < VMEM_MIN_PAGE_ORDER) {
-//        node_size &= ~((1ULL<<VMEM_MIN_PAGE_ORDER)-1);
-//        node_size += 1ULL<<VMEM_MIN_PAGE_ORDER;
-//    }
-//
-//    res = mmap_map_region(
-//        current_process(),
-//        binary_fd,
-//        0x0,
-//        CONFIG_INIT_PROCESS_BINARY_VIRT_ADDRESS,
-//        node_size,
-//        MMAP_PROT_READ|MMAP_PROT_EXEC,
-//        MMAP_PRIVATE);
-//
-//    if(res) {
-//        panic("Failed to mmap init process! (err=%s)\n",
-//                errnostr(res));
-//    }
-//
-//    res = file_table_close_file(
-//            &process->file_table,
-//            binary_fd);
-//    if(res) {
-//        wprintk("Failed to close init process binary file descriptor after mapping! (err=%s)\n",
-//                errnostr(res));
-//    }
-//
-//    dprintk("init_process_kernel_entry: (entering usermode at address %p)\n",
-//            entry_point);
-    enter_usermode(NULL);
+    dprintk("init_process_kernel_entry(%p)\n",
+            NULL);
+
+    enter_usermode(NULL,NULL);
+}
+
+struct spawned_process_state {
+    void __user *entry;
+    void *arg;
+};
+
+static void
+spawned_process_kernel_entry(void *in)
+{
+    int res;
+
+    struct spawned_process_state *state = in;
+
+    struct process *process = current_process();
+    DEBUG_ASSERT(process);
+
+    void __user *entry = state->entry;
+    void *arg = state->arg;
+
+    kfree(state);
+
+    dprintk("spawned_process_kernel_entry(%p,%p)\n",
+            entry, arg);
+
+    enter_usermode(entry,arg);
 }
 
 static struct process *
@@ -227,10 +226,14 @@ process_alloc(
     }
     memset(process, 0, sizeof(struct process));
 
-    res = mmap_init(process, PROCESS_LOWMEM_SIZE);
-    if(res) {
-        goto err1;
-    }
+    spinlock_init(&process->status_lock);
+    spinlock_init(&process->hierarchy_lock);
+    ilist_init(&process->children);
+    waitqueue_init(&process->wait_queue);
+
+    process->mmap = NULL;
+    process->file_table = NULL;
+    process->environ = NULL;
 
     res = thread_init(
             &process->thread,
@@ -239,40 +242,14 @@ process_alloc(
             THREAD_FLAG_PROCESS);
 
     if(res) {
-        goto err2;
+        goto err1;
     }
 
     res = process_assign_pid(process);
     if(res) {
-        goto err3;
-    }
+        goto err2;
+    } 
 
-    res = vmem_map_map_region(process->thread.mem_map, process->mmap.vmem_region, 0x0);
-    if(res) {
-        eprintk("Failed to map mmap into process vmem_map! (err=%s)\n",
-                errnostr(res));
-        goto err4;
-    }
-
-    process->mmap_ref = vmem_map_get_region(process->thread.mem_map, 0x0);
-    if(process->mmap_ref == NULL) {
-       eprintk("Failed to get process vmem_region_ref of process mmap!\n",
-                errnostr(res));
-        goto err4;
-    }
-
-    res = file_table_init(process, &process->file_table);
-    if(res) {
-        eprintk("Failed to initialize process file table! (err=%s)\n",
-                errnostr(res));
-        goto err4;
-    }
-
-    spinlock_init(&process->status_lock);
-    spinlock_init(&process->hierarchy_lock);
-
-    ilist_init(&process->children);
-   
     process->parent = parent;
     if(parent != NULL) {
         spin_lock(&parent->hierarchy_lock);
@@ -285,14 +262,10 @@ process_alloc(
 
     return process;
 
-err5:
-    file_table_deinit(process, &process->file_table);
-err4:
-    process_remove_pid(process);
 err3:
-    thread_deinit(&process->thread);
+    process_remove_pid(process);
 err2:
-    mmap_deinit(process);
+    thread_deinit(&process->thread);
 err1:
     kfree(process);
 err0:
@@ -302,10 +275,7 @@ err0:
 static int
 process_free(struct process *process)
 {
-    file_table_deinit(process, &process->file_table);
-    process_remove_pid(process);
     thread_deinit(&process->thread);
-    mmap_deinit(process);
     kfree(process);
     return 0;
 }
@@ -326,16 +296,36 @@ launch_init_process(void)
             NULL // Parent
             );
 
+    res = mmap_create(PROCESS_LOWMEM_SIZE, process);
+    if(process->mmap == NULL) {
+        process_free(process);
+        return res;
+    }
+
+    res = file_table_create(process);
+    if(res) {
+        eprintk("Failed to create init process file_table!\n",
+                errnostr(res));
+        process_free(process);
+        return res;
+    }
+
+    res = environment_create(process);
+    if(res) {
+        process_free(process);
+        return res;
+    }
+
     init_process = process;
 
-    printk("Created init Process (pid=%ld)\n",
+    dprintk("Created init Process (pid=%ld)\n",
             (sl_t)process->id);
 
     struct scheduler *sched = current_sched();
     if(sched == NULL) {
         eprintk("Could not find a scheduler on CPU (%ld)!\n",
                 (sl_t)current_cpu_id());
-        mmap_deinit(process);
+        mmap_deattach(process->mmap, process);
         kfree(process);
         return -EINVAL;
     }
@@ -344,7 +334,7 @@ launch_init_process(void)
     if(res) {
         eprintk("Failed to set init process scheduler! (err=%s)\n",
                 errnostr(res));
-        mmap_deinit(process);
+        mmap_deattach(process->mmap, process);
         kfree(process);
         return res;
     }
@@ -353,7 +343,7 @@ launch_init_process(void)
     if(res) {
         eprintk("Failed to schedule init process! (err=%s)\n",
                 errnostr(res));
-        mmap_deinit(process);
+        mmap_deattach(process->mmap, process);
         kfree(process);
         return res;
     }
@@ -402,16 +392,15 @@ process_schedule(
     return 0;
 }
 
-int
-process_suspend(
+// The caller must be holding process->status_lock
+static int
+__process_suspend_caller_lock(
         struct process *process) 
 {
     int res;
-    int irq_flags = spin_lock_irq_save(&process->status_lock);
 
     if(process->scheduler == NULL) {
         eprintk("process_suspend: process->scheduler == NULL!\n");
-        spin_unlock_irq_restore(&process->status_lock, irq_flags);
         return -EINVAL;
     }
 
@@ -421,24 +410,30 @@ process_suspend(
                     process->scheduler,
                     &process->thread);
             if(res) {
-                spin_unlock_irq_restore(&process->status_lock, irq_flags);
                 return res;
             }
         case PROCESS_STATUS_SUSPEND:
             break;
         case PROCESS_STATUS_ZOMBIE:
             eprintk("process_schedule: Called on zombie thread!\n");
-            spin_unlock_irq_restore(&process->status_lock, irq_flags);
             return -EINVAL;
         default:
-            spin_unlock_irq_restore(&process->status_lock, irq_flags);
             panic("process_schedule: process has invalid status %ld\n",
                     (sl_t)process->status);
     }
 
-    spin_unlock_irq_restore(&process->status_lock, irq_flags);
-
     return 0;
+}
+
+int
+process_suspend(
+        struct process *process)
+{
+    int res;
+    int irq_flags = spin_lock_irq_save(&process->status_lock);
+    res = __process_suspend_caller_lock(process);
+    spin_unlock_irq_restore(&process->status_lock, irq_flags);
+    return res;
 }
 
 int
@@ -536,12 +531,47 @@ process_strlen_usermem(
     return 0;
 }
 
+// Remove a process from the process hierarchy with 
+// process->parent->hierarchy_lock held
+static int
+__process_reap_parent_lock(
+        struct process *process)
+{
+    int res;
+
+    DEBUG_ASSERT(KERNEL_ADDR(process));
+    DEBUG_ASSERT(KERNEL_ADDR(process->parent));
+
+    // Remove the process from the hierarchy
+    ilist_remove(&process->parent->children, &process->child_node);
+    process->parent = NULL;
+
+    // Free up the PID
+    res = process_remove_pid(process);
+    if(res) {
+        panic("__process_reap: process_remove_pid returned (%s)!\n",
+                errnostr(res));
+    }
+
+    // Free the last bits of memory used by the process
+    res = process_free(process);
+    if(res) {
+        panic("__process_reap: process_free returned (%s)!\n",
+                errnostr(res));
+
+    }
+
+    return 0;
+}
+
 int
 process_terminate(
         struct process *process,
         int exitcode) 
 {
     DEBUG_ASSERT(process != NULL);
+
+    int res;
 
     if(process == init_process) {
         panic("Trying to terminate the init process with exitcode=%d!\n",
@@ -550,20 +580,208 @@ process_terminate(
 
     DEBUG_ASSERT(process->parent != NULL);
 
+    int irq_flags = spin_lock_irq_save(&process->status_lock);
+
     if(process->status == PROCESS_STATUS_ZOMBIE) {
-        eprintk("process_terminate: Called on zombie process!\n");
-        return -EINVAL;
+        // process_terminate is idempotent
+        return 0;
     }
 
-    int irq_flags = spin_lock_irq_save(&process->status_lock);
+    // Suspend the process (deregistering it with any schedulers)
+    res = __process_suspend_caller_lock(process);
+    if(res) {
+        spin_unlock_irq_restore(&process->status_lock, irq_flags);
+        return res;
+    }
+
+    DEBUG_ASSERT(process->status == PROCESS_STATUS_SUSPEND);
+
+    /*
+     * The process might actually still be running on some processor though
+     * (the current thread is probably the process thread anyways)
+     */
 
     process->exitcode = exitcode;
     process->status = PROCESS_STATUS_ZOMBIE;
 
-    spin_unlock_irq_restore(&process->status_lock, irq_flags);
-    
+    if(process->mmap) {
+        mmap_deattach(process->mmap, process);
+    }
+    if(process->file_table) {
+        file_table_deattach(process->file_table, process);
+    }
+    if(process->environ) {
+        environment_deattach(process->environ, process);
+    }
+
+    waitqueue_disable(&process->wait_queue);
+    wake_all(&process->wait_queue);
+    waitqueue_deinit(&process->wait_queue);
+
+    // Terminate and Reap all children of this thread
+    // NOTE: We acquire status_lock before hierarchy_lock here
+    spin_lock(&process->hierarchy_lock);
+    ilist_node_t *child_node;
+    while(!ilist_empty(&process->children))
+    {
+        child_node = process->children.next;
+
+        struct process *child =
+            container_of(child_node, struct process, child_node);
+        DEBUG_ASSERT(KERNEL_ADDR(child));
+        DEBUG_ASSERT(child->parent == process);
+
+        int child_exitcode;
+        res = process_terminate(child, -EINTR);
+        if(res) {
+            eprintk("Failed to terminate child process during process_terminate! (err=%s)\n",
+                    errnostr(res));
+        }
+        // This will remove the process from our list of children
+        res = __process_reap_parent_lock(child);
+        if(res) {
+            eprintk("Failed to reap child process_during process_terminate! (err=%s)\n",
+                    errnostr(res));
+        }
+    }
+
+    // We don't release the hierarchy lock,
+    // because no one should ever be able to add/remove children
+    // after this
+
+    if(current_process() == process) {
+       // IRQ's are left disabled because if we are running on the process' thread
+       // (as is the case in an "exit" syscall) then once we suspend the process,
+       // if we are preempted, then we will never be scheduled again to return.
+        spin_unlock(&process->status_lock);
+    } else {
+        // This is some other process that we are forcing to terminate
+        spin_unlock_irq_restore(&process->status_lock, irq_flags);
+    } 
+   
     return 0;
 }
 
+int
+process_reap(
+        struct process *process,
+        int *exitcode)
+{
+    int res;
 
+    DEBUG_ASSERT(KERNEL_ADDR(process));
+    DEBUG_ASSERT(KERNEL_ADDR(process->parent));
+
+    int irq_flags = spin_lock_irq_save(&process->parent->hierarchy_lock);
+
+    while(process->status != PROCESS_STATUS_ZOMBIE) {
+        wait_on(&process->wait_queue);
+    }
+
+    if(exitcode) {
+        *exitcode = process->exitcode;
+    }
+
+    struct process *parent = process->parent;
+
+    // This will invalidate "process"
+    __process_reap_parent_lock(process);
+
+    spin_unlock_irq_restore(&parent->hierarchy_lock, irq_flags);
+
+    return 0;
+
+err:
+    spin_unlock_irq_restore(&process->parent->hierarchy_lock, irq_flags);
+    return res;
+}
+
+struct process *
+process_spawn_child(
+        struct process *parent,
+        void __user *user_entry,
+        void *arg,
+        unsigned long spawn_flags)
+{
+    int res;
+    int exitcode;
+
+    struct spawned_process_state *state =
+        kmalloc(sizeof(struct spawned_process_state));
+    if(state == NULL) {
+        return NULL;
+    }
+    state->arg = arg;
+    state->entry = user_entry;
+
+    struct process *process =
+        process_alloc(
+                spawned_process_kernel_entry,
+                (void*)state,
+                0,
+                parent);
+
+    if(spawn_flags & SPAWN_MMAP_CLONE) {
+        panic("SPAWN_MMAP_CLONE is unimplemented!\n");
+    } else {
+        // SPAWN_MMAP_SHARED
+        res = mmap_attach(parent->mmap, process);
+        if(res) {
+            goto err1;
+        }
+    }
+
+    if(spawn_flags & SPAWN_FILES_NONE) {
+        res = file_table_create(process);
+        if(res) {
+            goto err1;
+        }
+    } else if(spawn_flags & SPAWN_FILES_CLONE) {
+        panic("SPAWN_FILES_CLONE is unimplemented!\n");
+    } else {
+        res = file_table_attach(parent->file_table, process);
+        if(res) {
+            goto err1;
+        }
+    }
+
+    if(spawn_flags & SPAWN_ENV_NONE) {
+        res = environment_create(process);
+        if(res) {
+            goto err1;
+        }
+    } else if(spawn_flags & SPAWN_ENV_CLONE) {
+        res = environment_clone(parent->environ, process);
+        if(res) {
+            goto err1;
+        }
+    } else {
+        res = environment_attach(parent->environ, process);
+        if(res) {
+            goto err1;
+        }
+    }
+
+    res = process_set_scheduler(process, parent->scheduler);
+    if(res) {
+        goto err1;
+    }
+
+    res = process_schedule(process);
+    if(res) {
+        goto err1;
+    }
+
+    dprintk("spawned process (%ld)\n",
+            (sl_t)process->id);
+
+    return process;
+
+err1:
+    process_terminate(process, 1);
+    process_reap(process, &exitcode);
+    DEBUG_ASSERT(exitcode == 1);
+err0:
+    return NULL;
+}
 

@@ -5,6 +5,8 @@
 #include <kanawha/stdint.h>
 #include <kanawha/stddef.h>
 #include <kanawha/assert.h>
+#include <kanawha/uapi/mmap.h>
+#include <kanawha/syscall/mmap.h>
 #include <elf/elf.h>
 #include <elf/elf_string.h>
 
@@ -225,7 +227,7 @@ syscall_exec(
     int res;
 
     struct file_descriptor *desc =
-        file_table_get_descriptor(&process->file_table, file);
+        file_table_get_descriptor(process->file_table, process, file);
 
     if(desc == NULL) {
         return -EINVAL;
@@ -237,11 +239,11 @@ syscall_exec(
 
     res = process_exec_elf64(process, file, desc);
     if(res) {
-        file_table_put_descriptor(&process->file_table, desc);
+        file_table_put_descriptor(process->file_table, process, desc);
         return res;
     }
 
-    file_table_put_descriptor(&process->file_table, desc);
+    file_table_put_descriptor(process->file_table, process, desc);
     return 0;
 }
 

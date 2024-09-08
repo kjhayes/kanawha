@@ -228,6 +228,11 @@ fs_mount_get_node(
         struct fs_mount *mnt,
         size_t node_index);
 
+// Creates another reference to "node"
+int
+fs_node_get_again(
+        struct fs_node *node);
+
 int
 fs_mount_put_node(
         struct fs_mount *mnt,

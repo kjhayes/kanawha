@@ -242,9 +242,20 @@ fs_mount_get_node(
 
     } else {
         fs_node = container_of(node, struct fs_node, cache_node);
+        fs_node->refcount++;
     }
     spin_unlock(&mnt->cache_lock);
     return fs_node;
+}
+
+int
+fs_node_get_again(
+        struct fs_node *node)
+{
+    struct fs_node *again
+        = fs_mount_get_node(node->mount, node->cache_node.key);
+    DEBUG_ASSERT(again == node);
+    return 0;
 }
 
 int

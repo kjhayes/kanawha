@@ -13,7 +13,8 @@ syscall_close(
     int res;
 
     res = file_table_close_file(
-            &process->file_table,
+            process->file_table,
+            process,
             file);
 
     if(res) {

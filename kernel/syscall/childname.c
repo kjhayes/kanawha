@@ -22,7 +22,7 @@ syscall_childname(
     size_t original_len = buf_len;
 
     struct file_descriptor *desc =
-        file_table_get_descriptor(&process->file_table, parent_fd);
+        file_table_get_descriptor(process->file_table, process, parent_fd);
     if(desc == NULL) {
         res = -EINVAL;
         goto err0;
@@ -74,13 +74,13 @@ syscall_childname(
     }
 
     kfree(kernel_buffer);
-    file_table_put_descriptor(&process->file_table, desc);
+    file_table_put_descriptor(process->file_table, process, desc);
     return 0;
 
 err2:
     kfree(kernel_buffer);
 err1:
-    file_table_put_descriptor(&process->file_table, desc);
+    file_table_put_descriptor(process->file_table, process, desc);
 err0:
     return res;
 }

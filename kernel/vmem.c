@@ -9,6 +9,7 @@
 #include <kanawha/printk.h>
 #include <kanawha/ptree.h>
 #include <kanawha/thread.h>
+#include <kanawha/process.h>
 #include <kanawha/assert.h>
 #include <arch/x64/mmu.h>
 
@@ -259,6 +260,9 @@ vmem_map_map_region(
 {
     int res;
     vaddr_t end = base + region->size;
+
+    DEBUG_ASSERT(KERNEL_ADDR(map));
+    DEBUG_ASSERT(KERNEL_ADDR(region));
 
     spin_lock(&region->lock);
     spin_lock(&map->lock);
@@ -534,32 +538,91 @@ vmem_relax_mapping(vaddr_t virtual_address)
     return -EUNIMPL;
 }
 
+static int
+vmem_map_unhandled_user_page_fault(
+        vaddr_t faulting_address,
+        unsigned long access_flags,
+        struct vmem_map *map)
+{
+    int res;
+
+    struct process *process = current_process();
+    if(!KERNEL_ADDR(process)) {
+        eprintk("User Page Fault without a current process!\n");
+        return -EINVAL;
+    }
+
+    // We need to terminate the process
+    // TODO: Signal something like SIGSEGV once we have
+    // signalling implemented
+
+    eprintk("Terminating PID(%ld) for Invalid Memory Access!\n",
+            (sl_t)process->id);
+
+    res = process_terminate(process, 1);
+    if(res) {
+        eprintk("Failed to terminate PID(%ld)! (err=%s)\n", 
+                (sl_t)process->id,
+                errnostr(res));
+        return res;
+    }
+
+    thread_abandon(force_resched());
+    return 0;
+}
+
 int
 vmem_map_handle_page_fault(
         vaddr_t faulting_address,
         unsigned long access_flags,
         struct vmem_map *map)
 {
+    DEBUG_ASSERT(KERNEL_ADDR(map));
+
     struct vmem_region_ref *ref =
         vmem_map_get_region(map, faulting_address);
 
+    int res;
+
     if(ref == NULL) {
-        return -ENXIO;
+        res = PAGE_FAULT_UNHANDLED;
+    }
+    else {
+        struct vmem_region *region = ref->region;
+        if(region->type != VMEM_REGION_TYPE_PAGED) {
+            eprintk("Page Fault in non-paged vmem region! region=%p ref=%p (unexpected)\n", region, ref);
+            return -EINVAL;
+        }
+
+        uintptr_t offset = faulting_address - ref->virt_addr;
+        res = (region->paged.fault_handler)(ref, offset, access_flags, region->paged.priv_state);
     }
 
-    struct vmem_region *region = ref->region;
-    if(region->type != VMEM_REGION_TYPE_PAGED) {
-        eprintk("Page Fault in non-paged vmem region! region=%p ref=%p (unexpected)\n", region, ref);
-        return -EINVAL;
-    }
-
-    uintptr_t offset = faulting_address - ref->virt_addr;
-    int res = (region->paged.fault_handler)(ref, offset, access_flags, region->paged.priv_state);
     switch(res) {
         case PAGE_FAULT_HANDLED:
             return 0;
         case PAGE_FAULT_UNHANDLED:
-            eprintk("Unhandled Page Fault!\n");
+
+            eprintk("Unhandled Page Fault! (addr=%p) %s%s%s%s%s\n",
+                    faulting_address,
+                    (access_flags & PF_FLAG_NOT_PRESENT ? "[NOT_PRESENT]" : ""),
+                    (access_flags & PF_FLAG_READ ? "[READ]" : ""),
+                    (access_flags & PF_FLAG_WRITE ? "[WRITE]" : ""),
+                    (access_flags & PF_FLAG_EXEC ? "[EXEC]" : ""),
+                    (access_flags & PF_FLAG_USERMODE ? "[USERMODE]" : "")
+                    );
+ 
+            if(access_flags & PF_FLAG_USERMODE) {
+                res = vmem_map_unhandled_user_page_fault(
+                        faulting_address,
+                        access_flags,
+                        map);
+                return res; // res should be zero assuming there are no kernel errors,
+                            // even if we end up killing the user-process
+            } else {
+               return -EINVAL;
+            }
+             
             return -EINVAL;
         default:
             eprintk("vmem_region page fault handler returned unknown value (%d)\n", res);

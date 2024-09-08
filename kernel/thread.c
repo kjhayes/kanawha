@@ -4,6 +4,7 @@
 #include <kanawha/errno.h>
 #include <kanawha/kmalloc.h>
 #include <kanawha/string.h>
+#include <kanawha/irq.h>
 #include <kanawha/percpu.h>
 #include <kanawha/init.h>
 #include <kanawha/ptree.h>
@@ -53,12 +54,15 @@ get_thread_id(struct thread_state *state)
         if(__next_thread_id < 0) {
             __next_thread_id = 0;
         }
+        dprintk("get_thread_id: checking %ld\n", id);
         struct ptree_node *node = ptree_get(&thread_tree, id);
         if(node == NULL) {
+            dprintk("get_thread_id: using %ld\n", id);
             state->id = id;
             ptree_insert(&thread_tree, &state->tree_node, state->id);
             return;
         }
+        dprintk("get_thread_id: %ld already taken\n", id);
         num_loops++;
         if(num_loops < 0) {
             // Overflow,
@@ -174,7 +178,7 @@ thread_init(
     state->func = func;
     state->in = in;
     state->flags = flags;
-    state->status = THREAD_STATUS_READY;
+    state->status = THREAD_STATUS_PREPARING;
     state->pinned_to = NULL_CPU_ID;
     state->pin_refs = 0;
 
@@ -225,6 +229,8 @@ thread_init(
         return res;
     }
 
+    state->status = THREAD_STATUS_READY;
+
     return 0;
 }
 
@@ -233,6 +239,12 @@ thread_deinit(
         struct thread_state *state)
 {
     int res;
+
+    int irq_flags = spin_lock_irq_save(&thread_tree_lock);
+    struct ptree_node *rem = ptree_remove(&thread_tree, state->tree_node.key);
+    DEBUG_ASSERT(rem == &state->tree_node);
+    spin_unlock_irq_restore(&thread_tree_lock, irq_flags);
+
     res = arch_deinit_thread_state(state);
     if(res) {
         return res;
@@ -249,7 +261,20 @@ int
 thread_schedule(struct thread_state *state)
 {
     dprintk("thread_schedule\n");
-    int irq_flags = spin_lock_irq_save(&state->lock);
+
+    int irq_flags = disable_save_irqs();
+
+    if(state->flags & THREAD_FLAG_IDLE) {
+        DEBUG_ASSERT(state->pinned_to == current_cpu_id());
+        // If it's the idle thread, then we should have exclusive access
+        enable_restore_irqs(irq_flags);
+        irq_flags = spin_lock_irq_save(&state->lock);
+    } else { 
+        if(spin_try_lock(&state->lock)) {
+            enable_restore_irqs(irq_flags);
+            return -EBUSY;
+        }
+    }
 
     if(state->status != THREAD_STATUS_READY) {
         spin_unlock_irq_restore(&state->lock, irq_flags);
@@ -258,8 +283,8 @@ thread_schedule(struct thread_state *state)
 
     if(state->pin_refs && state->pinned_to != current_cpu_id()) {
         spin_unlock_irq_restore(&state->lock, irq_flags);
-        eprintk("Tried to schedule thread %p on CPU(%ld) but thread is pinned to CPU (%ld)\n",
-                state, (sl_t)current_cpu_id(), (sl_t)state->pinned_to); 
+        eprintk("Tried to schedule thread %lld on CPU(%ld) but thread is pinned to CPU (%ld)\n",
+                state->id, (sl_t)current_cpu_id(), (sl_t)state->pinned_to); 
         return -EINVAL;
     }
 
@@ -354,6 +379,8 @@ thread_switch(struct thread_state *state)
     }
 
     enable_restore_irqs(irq_flags);
+
+    dprintk("Returned from thread switch (thread=%p)\n", current_thread());
 
     return 0;
 }
@@ -487,9 +514,19 @@ void thread_abandon(struct thread_state *scheduled)
 
     if(scheduled == NULL) {
         scheduled = idle_thread();
+        res = thread_schedule(scheduled);
+        if(res) {
+            panic("Failed to schedule idle thread during thread_abandon(NULL)! (err=%s)\n",
+                    errnostr(res));
+        }
     }
+
+    DEBUG_ASSERT(KERNEL_ADDR(scheduled));
+    DEBUG_ASSERT(scheduled->status == THREAD_STATUS_SCHEDULED);
    
     struct thread_state *cur_thread = *(struct thread_state**)percpu_ptr(percpu_addr(__current_thread));
+
+    DEBUG_ASSERT(KERNEL_ADDR(cur_thread));
 
     spin_lock(&cur_thread->lock);
     if(cur_thread->flags & THREAD_FLAG_IDLE) {
@@ -526,7 +563,11 @@ void thread_abandon(struct thread_state *scheduled)
 
     dprintk("Abandoning thread %p for thread %p\n", cur_thread, scheduled);
 
-    vmem_map_activate(scheduled->mem_map);
+    res = vmem_map_activate(scheduled->mem_map);
+    if(res) {
+        panic("Failed to activate new thread vmem_map during thread_abandon! (err=%s)\n",
+                errnostr(res));
+    }
 
     arch_thread_run_thread(scheduled);
 }
@@ -618,6 +659,7 @@ dump_threads(printk_f *printer)
                 thread->status == THREAD_STATUS_RUNNING ? "RUNNING" :
                 thread->status == THREAD_STATUS_SCHEDULED ? "SCHEDULED" :
                 thread->status == THREAD_STATUS_READY ? "READY" :
+                thread->status == THREAD_STATUS_PREPARING ? "PREPARING" :
                 thread->status == THREAD_STATUS_ABANDONED ? "ABANDONED" :
                 "ERROR-INVALID-STATUS");
 
@@ -720,4 +762,113 @@ thread_relax_mapping(vaddr_t virtual_addr)
 {
     return -EUNIMPL;
 }
+
+// Testing
+
+//static void
+//thread_test_thread_switch(void *in)
+//{
+//    printk("thread_test_thread_switch (current_thread=%p)\n",
+//            current_thread());
+//
+//    struct thread_state *next_thread = in;
+//    int res = thread_schedule(next_thread);
+//    if(res) {
+//        eprintk("thread_test_thread_switch: Failed to schedule next thread! (err=%s)\n",
+//                errnostr(res));
+//    }
+//    thread_switch(next_thread);
+//}
+//
+//static void
+//thread_test_thread_abandon(void *in)
+//{
+//    printk("thread_test_thread_abandon (current_thread=%p)\n",
+//            current_thread());
+//
+//    struct thread_state *next_thread = in;
+//    int res = thread_schedule(next_thread);
+//    if(res) {
+//        eprintk("thread_test_thread_abandon: Failed to schedule next thread! (err=%s)\n",
+//                errnostr(res));
+//    }
+//    thread_abandon(next_thread);
+//}
+//
+//static int
+//thread_test(void)
+//{
+//    int res;
+//
+//    struct thread_state thread_1;
+//    struct thread_state thread_2;
+//
+//    int irq_flags = disable_save_irqs();
+//
+//    res = thread_init(
+//            &thread_1,
+//            thread_test_thread_switch,
+//            current_thread(),
+//            0);
+//    if(res) {
+//        enable_restore_irqs(irq_flags);
+//        return res;
+//    }
+//
+//    res = thread_init(
+//            &thread_2,
+//            thread_test_thread_abandon,
+//            current_thread(),
+//            0);
+//    if(res) {
+//        enable_restore_irqs(irq_flags);
+//        return res;
+//    }
+//
+//    printk("Scheduling thread1\n");
+//    res = thread_schedule(&thread_1);
+//    if(res) {
+//        enable_restore_irqs(irq_flags);
+//        return res;
+//    }
+//    printk("Switching to thread1\n");
+//    res = thread_switch(&thread_1);
+//    if(res) {
+//        enable_restore_irqs(irq_flags);
+//        return res;
+//    }
+//    printk("Returned from thread1\n");
+//
+//    printk("Scheduling thread2\n");
+//    res = thread_schedule(&thread_2);
+//    if(res) {
+//        enable_restore_irqs(irq_flags);
+//        return res;
+//    }
+//    printk("Switching to thread2\n");
+//    res = thread_switch(&thread_2);
+//    if(res) {
+//        enable_restore_irqs(irq_flags);
+//        return res;
+//    }
+//    printk("Returned from thread2\n");
+//
+//    if(thread_1.status != THREAD_STATUS_READY)
+//    {
+//        eprintk("thread_test FAIL: thread_1 is not ready!\n");
+//        return -EINVAL;
+//    }
+//    if(thread_2.status != THREAD_STATUS_ABANDONED)
+//    {
+//        eprintk("thread_test FAIL: thread_2 was not abandoned!\n");
+//        return -EINVAL;
+//    }
+//
+//    thread_deinit(&thread_1);
+//    thread_deinit(&thread_2);
+//
+//    enable_restore_irqs(irq_flags);
+//    return 0;
+//}
+//declare_init_desc(smp, thread_test, "Running Thread Test(s)");
 

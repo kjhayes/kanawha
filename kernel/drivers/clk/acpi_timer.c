@@ -7,6 +7,7 @@
 #include <kanawha/mmio.h>
 #include <kanawha/kmalloc.h>
 #include <kanawha/string.h>
+#include <kanawha/irq.h>
 #include <acpi/acpi.h>
 #include <acpi/table.h>
 #include <acpi/gas.h>

@@ -17,7 +17,7 @@ syscall_attr(
     size_t to_write;
 
     struct file_descriptor *desc =
-        file_table_get_descriptor(&process->file_table, file);
+        file_table_get_descriptor(process->file_table, process, file);
 
     switch(attr) {
         case FILE_ATTR_TELL:
@@ -29,8 +29,7 @@ syscall_attr(
                     FS_NODE_ATTR_END_OFFSET,
                     &to_write);
             if(res) {
-                file_table_put_descriptor(&process->file_table, desc);
-                return res;
+                goto exit;
             }
             break;
         case FILE_ATTR_CHILDREN:
@@ -39,13 +38,12 @@ syscall_attr(
                     FS_NODE_ATTR_CHILD_COUNT,
                     &to_write);
             if(res) {
-                file_table_put_descriptor(&process->file_table, desc);
-                return res;
+                goto exit;
             }
             break;
         default:
-            file_table_put_descriptor(&process->file_table, desc);
-            return -EINVAL;
+            res = -EINVAL;
+            goto exit;
     }
 
     res = process_write_usermem(
@@ -55,11 +53,13 @@ syscall_attr(
             sizeof(size_t));
 
     if(res) {
-        file_table_put_descriptor(&process->file_table, desc);
-        return res;
+        goto exit;
     }
 
-    file_table_put_descriptor(&process->file_table, desc);
-    return 0;
+    res = 0;
+
+exit:
+    file_table_put_descriptor(process->file_table, process, desc);
+    return res;
 }
 

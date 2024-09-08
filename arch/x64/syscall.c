@@ -39,6 +39,8 @@ struct x64_syscall_state {
 void
 x64_route_syscall(struct x64_syscall_state *state)
 {
+    enable_irqs();
+
     syscall_id_t id = state->caller_regs[PUSHED_CALLER_REGS_INDEX_RAX];
     void __user *user_return = (void __user *)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RCX];
     uint64_t user_rflags = state->caller_regs[PUSHED_CALLER_REGS_INDEX_R11];
@@ -162,6 +164,32 @@ x64_route_syscall(struct x64_syscall_state *state)
                         (char __user *)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDX], // name buffer
                         (size_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_R8] // buffer length
                         );
+            break;
+        case SYSCALL_ID_SPAWN:
+            *ret_val = (uint64_t)(int)
+                syscall_spawn(
+                        process,
+                        (void __user *)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDI], // entry
+                        (void *)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RSI], // arg
+                        (unsigned long)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDX], // flags
+                        (pid_t __user *)state->caller_regs[PUSHED_CALLER_REGS_INDEX_R8] // child
+                        );
+            break;
+        case SYSCALL_ID_REAP:
+            *ret_val = (uint64_t)(int)
+                syscall_reap(
+                        process,
+                        (pid_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDI], // to_reap
+                        (unsigned long)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RSI], // flags
+                        (int __user *)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDX] // exitcode
+                        );
+            break;
+        case SYSCALL_ID_GETPID:
+            *ret_val = (uint64_t)(pid_t)
+                syscall_getpid(
+                        process
+                        );
+            break;
         default:
             syscall_unknown(process, id);
     }

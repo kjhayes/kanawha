@@ -4,6 +4,7 @@
 #include <kanawha/stree.h>
 #include <kanawha/stdint.h>
 #include <kanawha/spinlock.h>
+#include <kanawha/list.h>
 
 /*
  * For now, processes aren't going to be limited
@@ -43,39 +44,46 @@ struct envvar {
 };
 
 struct environment {
+    spinlock_t lock;
     struct stree env_table;
+    ilist_t process_list;
 };
 
 int
-environment_init_new(
+environment_create(
         struct process *process);
 
 int
-environment_init_inherit(
-        struct process *parent,
-        struct process *child);
+environment_attach(
+        struct environment *environ,
+        struct process *parent);
 
 int
-environment_deinit(
+environment_deattach(
+        struct environment *environ,
         struct process *process);
 
+int
+environment_clone(
+        struct environment *environ,
+        struct process *process);
 
 // Clears the environment variable "var_name"
 // still returns 0 even if "var_name" didn't exist
 int
 environment_clear_var(
-        struct process *process,
+        struct environment *environ,
         const char *var_name);
 
 int
 environment_clear_all(
-        struct process *process);
+        struct environment *environ);
 
 // Sets the environment variable "var_name" to "value"
 // and creates the variable if it did not exist previously
 int
 environment_set(
-        struct process *process,
+        struct environment *environ,
         const char *var_name,
         const char *value);
 
@@ -92,11 +100,11 @@ environment_set(
 // a critical section, and should not block under any circumstances.
 const char *
 environment_get_var(
-        struct process *process,
+        struct environment *environ,
         const char *var_name);
 
 int
 environment_put_var(
-        struct process *process);
+        struct environment *environ);
 
 #endif

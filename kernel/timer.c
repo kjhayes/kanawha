@@ -6,6 +6,7 @@
 #include <kanawha/kmalloc.h>
 #include <kanawha/string.h>
 #include <kanawha/stddef.h>
+#include <kanawha/irq.h>
 
 static DECLARE_SPINLOCK(timer_event_lock);
 static DECLARE_ILIST(timer_event_queue);

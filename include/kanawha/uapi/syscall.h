@@ -2,6 +2,7 @@
 #define __KANAWHA__UAPI_SYSCALL_H__
 
 #include <kanawha/uapi/file.h>
+#include <kanawha/uapi/process.h>
 
 typedef int syscall_id_t;
 
@@ -76,19 +77,38 @@ ARG(size_t, child_index)\
 ARG(char __user *, buf)\
 ARG(size_t, buf_size)
 
+#define SYSCALL_SIG_SPAWN(RET,ARG)\
+RET(int)\
+ARG(void __user *, func)\
+ARG(void *, arg)\
+ARG(unsigned long, flags)\
+ARG(pid_t __user *, child)
+
+#define SYSCALL_SIG_REAP(RET,ARG)\
+RET(int)\
+ARG(pid_t, id)\
+ARG(unsigned long, flags)\
+ARG(int __user *, exitcode)
+
+#define SYSCALL_SIG_GETPID(RET,ARG)\
+RET(pid_t)
+
 #define SYSCALL_XLIST(X)\
-X(exit,    0, EXIT, SYSCALL_SIG_EXIT)\
-X(open,    1, OPEN, SYSCALL_SIG_OPEN)\
-X(close,   2, CLOSE, SYSCALL_SIG_CLOSE)\
-X(read,    3, READ, SYSCALL_SIG_READ)\
-X(write,   4, WRITE, SYSCALL_SIG_WRITE)\
-X(seek,    5, SEEK, SYSCALL_SIG_SEEK)\
-X(attr,    6, ATTR, SYSCALL_SIG_ATTR)\
-X(mmap,    7, MMAP, SYSCALL_SIG_MMAP)\
-X(munmap,  8, MUNMAP, SYSCALL_SIG_MUNMAP)\
-X(exec,    9, EXEC, SYSCALL_SIG_EXEC)\
-X(environ, 10, ENVIRON, SYSCALL_SIG_ENVIRON)\
+X(exit,      0,  EXIT,      SYSCALL_SIG_EXIT)\
+X(open,      1,  OPEN,      SYSCALL_SIG_OPEN)\
+X(close,     2,  CLOSE,     SYSCALL_SIG_CLOSE)\
+X(read,      3,  READ,      SYSCALL_SIG_READ)\
+X(write,     4,  WRITE,     SYSCALL_SIG_WRITE)\
+X(seek,      5,  SEEK,      SYSCALL_SIG_SEEK)\
+X(attr,      6,  ATTR,      SYSCALL_SIG_ATTR)\
+X(mmap,      7,  MMAP,      SYSCALL_SIG_MMAP)\
+X(munmap,    8,  MUNMAP,    SYSCALL_SIG_MUNMAP)\
+X(exec,      9,  EXEC,      SYSCALL_SIG_EXEC)\
+X(environ,   10, ENVIRON,   SYSCALL_SIG_ENVIRON)\
 X(childname, 11, CHILDNAME, SYSCALL_SIG_CHILDNAME)\
+X(spawn,     12, SPAWN,     SYSCALL_SIG_SPAWN)\
+X(reap,      13, REAP,      SYSCALL_SIG_REAP)\
+X(getpid,    14, GETPID,    SYSCALL_SIG_GETPID)
 
 #define DECLARE_SYSCALL_ID_CONSTANTS(__name, __id, __NAME, ...)\
 const static syscall_id_t SYSCALL_ID_ ## __NAME = __id;

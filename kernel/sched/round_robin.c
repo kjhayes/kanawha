@@ -8,6 +8,8 @@
 #include <kanawha/time.h>
 #include <kanawha/timer.h>
 #include <kanawha/xcall.h>
+#include <kanawha/vmem.h>
+#include <kanawha/assert.h>
 
 struct rr_thread {
     struct thread_state *state;
@@ -62,7 +64,7 @@ rr_sched_alloc_instance(
     sched->num_threads = 0;
     ilist_init(&sched->thread_list);
 
-    struct timer_event *event = timer_set_periodic(sec_to_duration(1), rr_sched_kick, sched);
+    struct timer_event *event = timer_set_periodic(msec_to_duration(20), rr_sched_kick, sched);
     if(event == NULL) {
         eprintk("Failed to set rr_sched periodic kick!\n");
     }
@@ -118,6 +120,9 @@ rr_sched_force_resched(struct scheduler *sched)
 
         current = next;
 
+        DEBUG_ASSERT(KERNEL_ADDR(current));
+        DEBUG_ASSERT(KERNEL_ADDR(current->state));
+
         int res = thread_schedule(current->state);
         if(res) {
             continue;
@@ -128,7 +133,7 @@ rr_sched_force_resched(struct scheduler *sched)
     } while(1);
 
     *current_ptr = current;
-    printk("scheduling thread %p\n", current->state);
+    dprintk("scheduling thread (%lld)\n", (ull_t)current->state->id);
     return current->state;
 }
 

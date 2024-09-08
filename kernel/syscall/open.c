@@ -56,7 +56,8 @@ syscall_open(
     if(parent_fd == NULL_FD) {
         // "name" refers to the name of an attached mount
         res = file_table_open_mount(
-                &process->file_table,
+                process->file_table,
+                process,
                 name_buf,
                 access_flags,
                 mode_flags,
@@ -68,7 +69,8 @@ syscall_open(
         }
     } else {
         res = file_table_open_child(
-                &process->file_table,
+                process->file_table,
+                process,
                 parent_fd,
                 name_buf,
                 access_flags,
@@ -80,8 +82,11 @@ syscall_open(
             return NULL_FD;
         }
     }
-    dprintk("PID(%ld) syscall_open: fd=%ld\n",
+
+#ifdef CONFIG_DEBUG_SYSCALL_OPEN
+    printk("PID(%ld) syscall_open: fd=%ld\n",
             (sl_t)process->id, (sl_t)fd);
+#endif
     return fd;
 }
 

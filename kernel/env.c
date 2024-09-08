@@ -6,32 +6,49 @@
 #include <kanawha/kmalloc.h>
 #include <kanawha/stree.h>
 #include <kanawha/assert.h>
+#include <kanawha/stddef.h>
 
 int
-environment_init_new(
+environment_create(
         struct process *process)
 {
-    stree_init(&process->environ.env_table);
-    spinlock_init(&process->environ_lock);
+    int res;
+
+    struct environment *environ = kmalloc(sizeof(struct environment));
+    if(environ == NULL) {
+        return -ENOMEM;
+    }
+    memset(environ, 0, sizeof(struct environment));
+
+    spinlock_init(&environ->lock);
+    stree_init(&environ->env_table);
+    ilist_init(&environ->process_list);
+
+    res = environment_attach(environ, process);
+    if(res) {
+        kfree(environ);
+        return res;
+    }
+
     return 0;
 }
 
 int
-environment_init_inherit(
-        struct process *parent,
-        struct process *child)
+environment_clone(
+        struct environment *environ,
+        struct process *process)
 {
     int res;
 
-    res = environment_init_new(child);
+    res = environment_create(process);
     if(res) {
         goto err0;
     }
 
-    spin_lock(&parent->environ_lock);
+    spin_lock(&environ->lock);
 
     struct stree_node *node;
-    for(node = stree_get_first(&parent->environ.env_table);
+    for(node = stree_get_first(&environ->env_table);
         node != NULL;
         node = stree_get_next(node))
     {
@@ -63,7 +80,7 @@ environment_init_inherit(
         child_var->value = value_dup;
         child_var->node.key = key_dup;
         res = stree_insert(
-                &child->environ.env_table,
+                &process->environ->env_table,
                 &child_var->node);
         if(res) {
             kfree(child_var);
@@ -73,63 +90,122 @@ environment_init_inherit(
         }
     }
 
-    spin_unlock(&parent->environ_lock);
+    spin_unlock(&environ->lock);
     return 0;
 
 err2:
     // Free any child variables we created
-    environment_clear_all(child);
+    environment_clear_all(process->environ);
 err1:
-    spin_unlock(&parent->environ_lock);
+    spin_unlock(&environ->lock);
 err0:
     return res;
 }
 
+int
+environment_attach(
+        struct environment *environ,
+        struct process *process)
+{
+    spin_lock(&environ->lock);
+
+    ilist_push_tail(&environ->process_list, &process->environ_node);
+    process->environ = environ;
+
+    spin_unlock(&environ->lock);
+    return 0;
+}
+
+int
+environment_deattach(
+        struct environment *environ,
+        struct process *process)
+{
+    spin_lock(&environ->lock);
+
+    ilist_remove(&environ->process_list, &process->environ_node);
+    process->environ = NULL;
+
+    if(ilist_empty(&environ->process_list)) {
+        // We need to free the environment
+
+        struct stree_node *node;
+        do {
+            node = stree_get_first(&environ->env_table);
+            if(node == NULL) {
+                break;
+            }
+            struct stree_node *rem =
+                stree_remove(&environ->env_table, node->key);
+            DEBUG_ASSERT(rem == node);
+
+            struct envvar *var =
+                container_of(node, struct envvar, node);
+
+            kfree((void*)node->key);
+            kfree((void*)var->value);
+            kfree((void*)var);
+
+        } while(1);
+
+        // No one should be able to access the lock now,
+        // so there's no point unlocking it before freeing
+
+        kfree(environ);
+
+    } else {
+        // Only release the lock if there were other processes
+        // still using the environment
+        spin_unlock(&environ->lock);
+    }
+
+    return 0;
+}
 
 int
 environment_clear_all(
-        struct process *process)
+        struct environment *environ)
 {
     struct stree_node *node;
 
-    spin_lock(&process->environ_lock);
+    spin_lock(&environ->lock);
 
-    node = stree_get_first(&process->environ.env_table);
+    node = stree_get_first(&environ->env_table);
     while(node) {
         struct envvar *var =
             container_of(node, struct envvar, node);
 
         struct stree_node *rem =
-            stree_remove(&process->environ.env_table, var->node.key);
+            stree_remove(&environ->env_table, var->node.key);
         DEBUG_ASSERT(rem == node);
 
         kfree((void*)var->node.key);
         kfree((void*)var->value);
         kfree(var);
 
-        node = stree_get_first(&process->environ.env_table);
+        node = stree_get_first(&environ->env_table);
     }
 
-    spin_unlock(&process->environ_lock);
+    spin_unlock(&environ->lock);
     return 0;
 }
 
 int
 environment_clear_var(
-        struct process *process,
+        struct environment *environ,
         const char *var_name)
 {
-    spin_lock(&process->environ_lock);
+    spin_lock(&environ->lock);
 
     struct stree_node *node =
-        stree_get(&process->environ.env_table, var_name);
+        stree_get(&environ->env_table, var_name);
 
     if(node != NULL) {
         struct envvar *var =
             container_of(node, struct envvar, node);
 
         struct stree_node *rem = stree_remove(
-                &process->environ.env_table, var_name);
+                &environ->env_table, var_name);
         DEBUG_ASSERT(rem == node);
         
         kfree((void*)var->node.key);
@@ -137,28 +213,28 @@ environment_clear_var(
         kfree((void*)var);
     }
 
-    spin_unlock(&process->environ_lock);
+    spin_unlock(&environ->lock);
     return 0;
 }
 
 int
 environment_set(
-        struct process *process,
+        struct environment *environ,
         const char *var_name,
         const char *value)
 {
     int res;
 
-    spin_lock(&process->environ_lock);
+    spin_lock(&environ->lock);
 
     struct stree_node *node =
-        stree_get(&process->environ.env_table, var_name);
+        stree_get(&environ->env_table, var_name);
 
     if(node == NULL)
     {
         struct envvar *var = kmalloc(sizeof(struct envvar));
         if(var == NULL) {
-            spin_unlock(&process->environ_lock);
+            spin_unlock(&environ->lock);
             return -ENOMEM;
         }
         memset(var, 0, sizeof(struct envvar));
@@ -166,14 +242,14 @@ environment_set(
         char *key_dup = kstrdup(var_name);
         if(key_dup == NULL) {
             kfree(var);
-            spin_unlock(&process->environ_lock);
+            spin_unlock(&environ->lock);
             return -ENOMEM;
         }
         char *value_dup = kstrdup(value);
         if(value_dup == NULL) {
             kfree(key_dup);
             kfree(var);
-            spin_unlock(&process->environ_lock);
+            spin_unlock(&environ->lock);
             return -ENOMEM;
         }
 
@@ -181,13 +257,13 @@ environment_set(
         var->node.key = key_dup;
 
         res = stree_insert(
-                &process->environ.env_table,
+                &environ->env_table,
                 &var->node);
         if(res) {
             kfree(value_dup);
             kfree(key_dup);
             kfree(var);
-            spin_unlock(&process->environ_lock);
+            spin_unlock(&environ->lock);
             return res;
         }
 
@@ -197,7 +273,7 @@ environment_set(
 
         char *value_dup = kstrdup(value);
         if(value_dup == NULL) {
-            spin_unlock(&process->environ_lock);
+            spin_unlock(&environ->lock);
             return -ENOMEM;
         }
 
@@ -205,24 +281,24 @@ environment_set(
         var->value = value_dup;
     }
 
-    spin_unlock(&process->environ_lock);
+    spin_unlock(&environ->lock);
     return 0;
 }
 
 const char *
 environment_get_var(
-        struct process *process,
+        struct environment *environ,
         const char *var_name)
 {
-    spin_lock(&process->environ_lock);
+    spin_lock(&environ->lock);
 
     struct stree_node *node =
         stree_get(
-                &process->environ.env_table,
+                &environ->env_table,
                 var_name);
 
     if(node == NULL) {
-        spin_unlock(&process->environ_lock);
+        spin_unlock(&environ->lock);
         return NULL;
     }
 
@@ -235,12 +311,12 @@ environment_get_var(
 
 int
 environment_put_var(
-        struct process *process)
+        struct environment *environ)
 {
     // Assert we would fail if we tried locking the environment
-    DEBUG_ASSERT(spin_try_lock(&process->environ_lock));
+    DEBUG_ASSERT(spin_try_lock(&environ->lock));
 
-    spin_unlock(&process->environ_lock);
+    spin_unlock(&environ->lock);
     return 0;
 }
 

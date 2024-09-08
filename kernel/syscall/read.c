@@ -14,10 +14,11 @@ syscall_read(
         void __user *dst,
         size_t size)
 {
-    int res;
+    ssize_t res;
     struct file_descriptor *desc
         = file_table_get_descriptor(
-                &process->file_table,
+                process->file_table,
+                process,
                 file);
 
     if(desc == NULL) {
@@ -25,6 +26,7 @@ syscall_read(
     }
 
     if((desc->access_flags & FILE_PERM_READ) == 0) {
+        file_table_put_descriptor(process->file_table, process, desc);
         return -EPERM;
     }
 
@@ -47,7 +49,8 @@ syscall_read(
                 &amount_read,
                 src_offset);
         if(res) {
-            goto err;
+            DEBUG_ASSERT(res < 0);
+            goto exit;
         }
 
         DEBUG_ASSERT(amount_read <= amount_to_read);
@@ -58,7 +61,8 @@ syscall_read(
                 buffer,
                 amount_read);
         if(res) {
-            goto err;
+            DEBUG_ASSERT(res < 0);
+            goto exit;
         }
 
         if(amount_read == 0) {
@@ -74,7 +78,8 @@ syscall_read(
     desc->seek_offset = src_offset;
     res = total_read;
 
-err:
+exit:
+    file_table_put_descriptor(process->file_table, process, desc);
     kfree(buffer);
     return res;
 }

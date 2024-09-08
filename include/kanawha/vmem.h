@@ -16,6 +16,7 @@
 #include <kanawha/refcount.h>
 #include <kanawha/printk.h>
 #include <kanawha/list.h>
+#include <kanawha/stdint.h>
 
 #define __phys \
     __attribute__((address_space(4)))
@@ -29,6 +30,18 @@ static inline paddr_t
 __pa(vaddr_t vaddr) {
     return vaddr - CONFIG_VIRTUAL_BASE;
 }
+
+// The architecture can define a more strict or lax version
+// of this check if needed
+//
+// At minimum, this needs to always return 0 if ptr==NULL
+#ifndef KERNEL_ADDR 
+#define KERNEL_ADDR(ptr) \
+    (((uintptr_t)ptr & (1ULL<<((sizeof(void*)*8)-1))) != 0)
+#endif
+
+_Static_assert((!KERNEL_ADDR(0)), "Architecture defined KERNEL_ADDR must return 0 for NULL!");
+_Static_assert((KERNEL_ADDR(CONFIG_VIRTUAL_BASE)), "Architecture defined KERNEL_ADDR does not return 1 for CONFIG_VIRTUAL_BASE!");
 
 #define VMEM_REGION_WRITE (1UL<<0)
 #define VMEM_REGION_READ  (1UL<<1)

@@ -3,6 +3,8 @@
 
 #include <kanawha/fs.h>
 #include <kanawha/uapi/file.h>
+#include <kanawha/list.h>
+#include <kanawha/process.h>
 
 struct file_descriptor
 {
@@ -19,28 +21,32 @@ struct file_descriptor
 
 struct file_table
 {
-    struct process *process;
+    spinlock_t lock;
 
-    spinlock_t tree_lock;
     struct ptree descriptor_tree;
     size_t num_open_files;
+
+    ilist_t process_list;
 };
 
-// Initialize "process"'s file table as empty
 int
-file_table_init(
-        struct process *process,
-        struct file_table *table);
+file_table_create(
+        struct process *process);
 
-// Closes all file descriptors and frees all memory
 int
-file_table_deinit(
-        struct process *process,
-        struct file_table *table);
+file_table_attach(
+        struct file_table *table,
+        struct process *process);
+
+int
+file_table_deattach(
+        struct file_table *table,
+        struct process *process);
 
 int
 file_table_open_path(
         struct file_table *table,
+        struct process *process,
         const char *path,
         unsigned long access_flags,
         unsigned long mode_flags,
@@ -49,6 +55,7 @@ file_table_open_path(
 int
 file_table_open_child(
         struct file_table *table,
+        struct process *process,
         fd_t parent,
         const char *name,
         unsigned long access_flags,
@@ -58,6 +65,7 @@ file_table_open_child(
 int
 file_table_open_mount(
         struct file_table* table,
+        struct process *process,
         const char *attach_name,
         unsigned long access_flags,
         unsigned long mode_flags,
@@ -66,6 +74,7 @@ file_table_open_mount(
 int
 file_table_close_file(
         struct file_table *table,
+        struct process *process,
         fd_t fd);
 
 // Get the descriptor struct associated with fd,
@@ -74,11 +83,13 @@ file_table_close_file(
 struct file_descriptor *
 file_table_get_descriptor(
         struct file_table *table,
+        struct process *process,
         fd_t fd);
 
 int
 file_table_put_descriptor(
         struct file_table *table,
+        struct process *process,
         struct file_descriptor *desc);
 
 #endif

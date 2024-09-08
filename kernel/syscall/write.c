@@ -16,16 +16,15 @@ syscall_write(
 {
     int res;
 
-    dprintk("syscall_write(pid=%ld, file=%ld, dst_offset=0x%llx, src=%p, size=0x%llx)\n",
+    dprintk("PID(%ld) syscall_write(file=%ld, size=0x%llx)\n",
             (sl_t)process->id,
             (sl_t)file,
-            (ull_t)dst_offset,
-            src,
             (ull_t)size);
 
     struct file_descriptor *desc
         = file_table_get_descriptor(
-                &process->file_table,
+                process->file_table,
+                process,
                 file);
 
     if(desc == NULL) {
@@ -35,6 +34,7 @@ syscall_write(
 
     if((desc->access_flags & FILE_PERM_WRITE) == 0) {
         eprintk("syscall_write: file descriptor does not have write permissions!\n");
+        file_table_put_descriptor(process->file_table, process, desc);
         return -EPERM;
     }
 
@@ -59,6 +59,7 @@ syscall_write(
                 src,
                 amount_written);
         if(res) {
+            DEBUG_ASSERT(res < 0);
             goto exit;
         }
 
@@ -70,6 +71,7 @@ syscall_write(
         if(res) {
             eprintk("syscall_write: fs_node_write returned %s\n",
                     errnostr(res));
+            DEBUG_ASSERT(res < 0);
             goto exit;
         }
 
@@ -91,6 +93,7 @@ syscall_write(
     res = total_written;
 
 exit:
+    file_table_put_descriptor(process->file_table, process, desc);
     kfree(buffer);
     return res;
 }

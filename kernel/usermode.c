@@ -4,7 +4,7 @@
 #include <kanawha/process.h>
 
 __attribute__((noreturn))
-void enter_usermode(void __user *starting_address)
+void enter_usermode(void __user *starting_address, void *arg)
 {
     struct process *process = current_process();
 
@@ -29,6 +29,6 @@ void enter_usermode(void __user *starting_address)
     }
     spin_unlock(&process->signal_lock);
 
-    arch_enter_usermode(ip);
+    arch_enter_usermode(ip, arg);
 }
 

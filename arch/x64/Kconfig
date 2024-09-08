@@ -31,5 +31,9 @@ config X64_BOOT_SERIAL
   bool "Use Early Platform Serial Port for printk"
   default y
 
+config X64_TEST_VOLATILITY_THREAD
+  tristate "Debug Thread Volatility in Background Thread"
+  default n
+
 endmenu
 

@@ -2,6 +2,7 @@
 #define __KANAWHA__XCALL_H__
 
 #include <kanawha/cpu.h>
+#include <kanawha/irq.h>
 
 typedef void(xcall_f)(void*);
 

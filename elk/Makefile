@@ -25,7 +25,8 @@ COMMON_FLAGS += \
 	-static \
 	-I$(KANAWHA_INCLUDE_DIR) \
 	-I$(INCLUDE_DIR) \
-	-I$(INCLUDE_DIR)/libc/ 
+	-I$(INCLUDE_DIR)/libc/ \
+	-g
 
 
 CRT_SRC_DIR := $(SRC_DIR)/crt

@@ -189,7 +189,11 @@ create_dynamic_slab_allocator(
 void*
 slab_alloc(struct slab_allocator *alloc) 
 {
+    int res;
+
     ilist_node_t *node;
+
+recurse:
     ilist_for_each(node, &alloc->block_list) {
         struct slab_alloc_block *block = container_of(node, struct slab_alloc_block, list_node);
         if(block->num_free == 0) {
@@ -210,7 +214,23 @@ slab_alloc(struct slab_allocator *alloc)
     }
 
     // TODO allocate another block using page_alloc
-    return NULL;
+    paddr_t new_block;
+    res = page_alloc(SLAB_ALLOC_BLOCK_PAGE_ORDER, &new_block, 0);
+    if(res) {
+        return NULL;
+    }
+
+    res = slab_allocator_add_block(
+            alloc,
+            (void*)__va(new_block),
+            1ULL<<SLAB_ALLOC_BLOCK_PAGE_ORDER,
+            0);
+    if(res) {
+        page_free(SLAB_ALLOC_BLOCK_PAGE_ORDER, new_block);
+        return NULL;
+    }
+
+    goto recurse;
 }
 
 void

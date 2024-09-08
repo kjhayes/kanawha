@@ -186,6 +186,8 @@ setup_lapic_irq_dev(
         struct x64_cpu *cpu,
         struct lapic *apic)
 {
+    int res;
+
     dprintk("Setting up CPU (%d) LAPIC Vector IRQ Domain\n",
             cpu->cpu.id);
     apic->irq_dev.device = &apic->device;
@@ -201,11 +203,16 @@ setup_lapic_irq_dev(
     for(hwirq_t vector = 32; vector < 256; vector++)
     {
         irq_t irq = irq_domain_revmap(apic->irq_domain, vector);
+        if(irq == NULL_IRQ) {
+            free_irq_domain_linear(apic->irq_domain);
+            return -EINVAL;
+        }
         struct irq_desc *desc = irq_to_desc(irq);
         if(desc == NULL) {
             free_irq_domain_linear(apic->irq_domain);
             return -EINVAL;
         }
+
         desc->dev = &apic->irq_dev;
 
         struct irq_action *action = x64_vector_lapic_actions[vector-32];
@@ -223,7 +230,11 @@ setup_lapic_irq_dev(
 
         // This means we need to have set up the percpu alloc framework before
         // calling this initialization
-        irq_action_set_percpu_link(action, desc, cpu->cpu.id);
+        res = irq_action_set_percpu_link(action, desc, cpu->cpu.id);
+        if(res) {
+            free_irq_domain_linear(apic->irq_domain);
+            return res;
+        }
     }
 
     return 0;
@@ -407,16 +418,19 @@ bsp_register_cpu_lapic(
     }
 
     // We will use XAPIC mode for all LAPIC(s) for now
+    printk("Setting Up LAPIC XAPIC Mode\n");
     res = xapic_setup_lapic(apic);
     if(res) {
         return res;
     }
 
+    printk("Setting Up LAPIC IRQ Device\n");
     res = setup_lapic_irq_dev(cpu, apic);
     if(res) {
         return res;
     }
 
+    printk("Setting Up LAPIC Local Vector Table\n");
     res = setup_lapic_lvt_dev(cpu, apic);
     if(res) {
         return res;

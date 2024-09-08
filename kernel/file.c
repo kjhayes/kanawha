@@ -13,24 +13,50 @@ static struct file_descriptor
 null_file_descriptor = { 0 };
 
 int
-file_table_init(
-        struct process *process,
-        struct file_table *table)
+file_table_create(
+        struct process *process)
 {
-    table->process = process;
+    int res;
+
+    struct file_table *table = kmalloc(sizeof(struct file_table));
+    if(table == NULL) {
+        return -ENOMEM;
+    }
+    memset(table, 0, sizeof(struct file_table));
+
     table->num_open_files = 0;
-    spinlock_init(&table->tree_lock);
+    spinlock_init(&table->lock);
     ptree_init(&table->descriptor_tree);
+    ilist_init(&table->process_list);
 
     // Insert a dummy descriptor to make sure
     // that we don't assign NULL_FD to an actual
     // descriptor entry
     ptree_insert(&table->descriptor_tree, &null_file_descriptor.tree_node, NULL_FD);
 
+    res = file_table_attach(table, process);
+    if(res) {
+        kfree(table);
+        return res;
+    }
+
     return 0;
 }
 
-// Called when refs == 0, must be called with the lock held
+int
+file_table_attach(
+        struct file_table *table,
+        struct process *process)
+{
+    spin_lock(&table->lock);
+    ilist_push_tail(&table->process_list, &process->file_table_node);
+    process->file_table = table;
+    spin_unlock(&table->lock);
+    return 0;
+}
+
+// Called when refs == 0, or the table is being destroyed,
+// must be called with table->lock held
 static int
 __file_table_free_descriptor(
         struct file_table *table,
@@ -60,15 +86,53 @@ __file_table_free_descriptor(
 }
 
 int
+file_table_deattach(
+        struct file_table *table,
+        struct process *process)
+{
+    spin_lock(&table->lock);
+
+    ilist_remove(&table->process_list, &process->file_table_node);
+    process->file_table = NULL;
+
+    if(ilist_empty(&table->process_list)) {
+        // We need to destroy this file table
+
+        do {
+            struct ptree_node *node =
+                ptree_get_first(&table->descriptor_tree);
+            if(node == NULL) {
+                break;
+            }
+            struct file_descriptor *desc =
+                container_of(node, struct file_descriptor, tree_node);
+
+            __file_table_free_descriptor(table, desc);
+
+        } while(1);
+
+        DEBUG_ASSERT(table->num_open_files == 0);
+
+        kfree(table);
+
+    } else {
+        // Some other process is still using the table
+        spin_unlock(&table->lock);    
+    }
+
+    return 0;
+}
+
+int
 file_table_open_path(
         struct file_table *table,
+        struct process *process,
         const char *path,
         unsigned long access_flags,
         unsigned long mode_flags,
         fd_t *fd)
 {
     int res;
-    struct process *process = table->process;
 
     struct fs_node *node;
     struct fs_mount *mnt;
@@ -99,13 +163,13 @@ file_table_open_path(
     desc->access_flags = access_flags;
 
     // Actually insert the descriptor into the table
-    spin_lock(&table->tree_lock);
+    spin_lock(&table->lock);
 
     res = ptree_insert_any(&table->descriptor_tree, &desc->tree_node);
     if(res) {
         fs_mount_put_node(mnt, node);
         kfree(desc);
-        spin_unlock(&table->tree_lock);
+        spin_unlock(&table->lock);
         return -ENOMEM;
     }
 
@@ -115,7 +179,7 @@ file_table_open_path(
 
     table->num_open_files++;
 
-    spin_unlock(&table->tree_lock);
+    spin_unlock(&table->lock);
 
     return 0;
 }
@@ -123,13 +187,13 @@ file_table_open_path(
 int
 file_table_open_mount(
         struct file_table *table,
+        struct process *process,
         const char *attach_name,
         unsigned long access_flags,
         unsigned long mode_flags,
         fd_t *fd)
 {
     int res;
-    struct process *process = table->process;
 
     struct fs_node *node;
     struct fs_mount *mnt;
@@ -171,13 +235,13 @@ file_table_open_mount(
     desc->access_flags = access_flags;
 
     // Actually insert the descriptor into the table
-    spin_lock(&table->tree_lock);
+    spin_lock(&table->lock);
 
     res = ptree_insert_any(&table->descriptor_tree, &desc->tree_node);
     if(res) {
         fs_mount_put_node(mnt, node);
         kfree(desc);
-        spin_unlock(&table->tree_lock);
+        spin_unlock(&table->lock);
         return -ENOMEM;
     }
 
@@ -187,7 +251,7 @@ file_table_open_mount(
 
     table->num_open_files++;
 
-    spin_unlock(&table->tree_lock);
+    spin_unlock(&table->lock);
 
     return 0;
 }
@@ -195,6 +259,7 @@ file_table_open_mount(
 int
 file_table_open_child(
         struct file_table *table,
+        struct process *process,
         fd_t parent,
         const char *name,
         unsigned long access_flags,
@@ -204,7 +269,7 @@ file_table_open_child(
     int res;
 
     struct file_descriptor *parent_desc =
-        file_table_get_descriptor(table, parent);
+        file_table_get_descriptor(table, process, parent);
 
     if(parent_desc == NULL) {
         return -EINVAL;
@@ -213,11 +278,11 @@ file_table_open_child(
     size_t num_children;
     res = fs_node_attr(parent_desc->node, FS_NODE_ATTR_CHILD_COUNT, &num_children);
     if(res) {
-        file_table_put_descriptor(table, parent_desc);
+        file_table_put_descriptor(table, process, parent_desc);
         return res;
     }
     if(num_children == 0) {
-        file_table_put_descriptor(table, parent_desc);
+        file_table_put_descriptor(table, process, parent_desc);
         return -ENXIO;
     }
 
@@ -246,7 +311,7 @@ file_table_open_child(
     }
 
     if(!found) {
-        file_table_put_descriptor(table, parent_desc);
+        file_table_put_descriptor(table, process, parent_desc);
         return -ENXIO;
     }
 
@@ -254,19 +319,19 @@ file_table_open_child(
     size_t node_index;
     res = fs_node_get_child(parent_desc->node, found_index, &node_index);
     if(res) {
-        file_table_put_descriptor(table, parent_desc);
+        file_table_put_descriptor(table, process, parent_desc);
         return res;
     }
 
     struct fs_node *node;
     node = fs_mount_get_node(parent_desc->node->mount, node_index);
     if(node == NULL) {
-        file_table_put_descriptor(table, parent_desc);
+        file_table_put_descriptor(table, process, parent_desc);
         return -ENXIO;
     }
 
     // We don't need to keep the parent around anymore
-    file_table_put_descriptor(table, parent_desc);
+    file_table_put_descriptor(table, process, parent_desc);
 
     struct file_descriptor *desc;
     desc = kmalloc(sizeof(struct file_descriptor));
@@ -284,13 +349,13 @@ file_table_open_child(
     desc->access_flags = access_flags;
 
     // Actually insert the descriptor into the table
-    spin_lock(&table->tree_lock);
+    spin_lock(&table->lock);
 
     res = ptree_insert_any(&table->descriptor_tree, &desc->tree_node);
     if(res) {
         fs_mount_put_node(node->mount, node);
         kfree(desc);
-        spin_unlock(&table->tree_lock);
+        spin_unlock(&table->lock);
         return -ENOMEM;
     }
 
@@ -300,7 +365,7 @@ file_table_open_child(
 
     table->num_open_files++;
 
-    spin_unlock(&table->tree_lock);
+    spin_unlock(&table->lock);
 
     return 0;
 
@@ -309,22 +374,22 @@ file_table_open_child(
 int
 file_table_close_file(
         struct file_table *table,
+        struct process *process,
         fd_t fd)
 {
     int res;
-    struct process *process = table->process;
 
     if(fd == NULL_FD) {
         return -EINVAL;
     }
 
-    spin_lock(&table->tree_lock);
+    spin_lock(&table->lock);
 
     struct ptree_node *tree_node =
         ptree_get(&table->descriptor_tree, (uintptr_t)fd);
 
     if(tree_node == NULL) {
-        spin_unlock(&table->tree_lock);
+        spin_unlock(&table->lock);
         return -ENXIO;
     }
 
@@ -339,22 +404,23 @@ file_table_close_file(
         if(res) {
             eprintk("file_table_close_file: Failed to free descriptor with refs==0! (err=%s)\n",
                     errnostr(res));
-            spin_unlock(&table->tree_lock);
+            spin_unlock(&table->lock);
             return res;
         }
     }
 
-    spin_unlock(&table->tree_lock);
+    spin_unlock(&table->lock);
     return 0;
 }
 
 struct file_descriptor *
 file_table_get_descriptor(
         struct file_table *table,
+        struct process *process,
         fd_t fd)
 {
     struct file_descriptor *desc;
-    spin_lock(&table->tree_lock);
+    spin_lock(&table->lock);
 
     struct ptree_node *node =
         ptree_get(&table->descriptor_tree, (uintptr_t)fd);
@@ -366,17 +432,18 @@ file_table_get_descriptor(
         desc->refs++;
     }
 
-    spin_unlock(&table->tree_lock);
+    spin_unlock(&table->lock);
     return desc;
 }
 
 int
 file_table_put_descriptor(
         struct file_table *table,
+        struct process *process,
         struct file_descriptor *desc)
 {
     int res;
-    spin_lock(&table->tree_lock);
+    spin_lock(&table->lock);
 
     DEBUG_ASSERT(desc->refs > 0);
     desc->refs--;
@@ -386,7 +453,7 @@ file_table_put_descriptor(
         res = 0;
     }
 
-    spin_unlock(&table->tree_lock);
+    spin_unlock(&table->lock);
 
     return res;
 }

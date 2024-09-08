@@ -48,7 +48,7 @@ env_get(
 
     const char *value =
         environment_get_var(
-                process, key_buf);
+                process->environ, key_buf);
 
     if(value == NULL) {
         kfree(key_buf);
@@ -66,12 +66,12 @@ env_get(
             (void*)value,
             min_len);
     if(res) {
-        environment_put_var(process);
+        environment_put_var(process->environ);
         kfree(key_buf);
         return res;
     }
 
-    environment_put_var(process);
+    environment_put_var(process->environ);
     kfree(key_buf);
     return 0;
 }
@@ -134,7 +134,7 @@ env_set(
     val_buf[vallen] = '\0';
 
     res = environment_set(
-            process,
+            process->environ,
             key_buf,
             val_buf);
     if(res) {
@@ -181,7 +181,7 @@ env_clear(
     buffer[keylen] = '\0';
 
     res = environment_clear_var(
-            process, buffer);
+            process->environ, buffer);
     if(res) {
         kfree(buffer);
         return res;

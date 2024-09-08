@@ -11,6 +11,7 @@
 #include <kanawha/irq_domain.h>
 #include <kanawha/xcall.h>
 #include <kanawha/thread.h>
+#include <kanawha/assert.h>
 #include <arch/x64/sysreg.h>
 #include <arch/x64/exception.h>
 
@@ -41,22 +42,16 @@ x64_vmem_page_fault_handler(
 
     res = vmem_map_handle_page_fault(faulting_address, pf_flags, current);
 
-    if(res && ((pf_flags & PF_FLAG_USERMODE) == 0)) {
+    if(res) {
         
         // Kernel Fault ((noreturn))
-        eprintk("x64_vmem_page_fault_handler: Failed to handle kernel page fault (err=%s)\n",
+        eprintk("x64_vmem_page_fault_handler: Failed to handle page fault (err=%s)\n",
                 errnostr(res));
 
         x64_unhandled_exception((struct x64_excp_state *)excp_state);
 
         // This should never happen but let's be safe
         return -EINVAL;
-    } else if(res) {
-        // User Unhandled Fault
-        // TODO: Kill (or signal) the User Process
-        eprintk("Unhandled User Page Fault (err=%s) (TODO: Kill or Signal)!\n",
-                errnostr(res));
-        return IRQ_UNHANDLED;
     }
 
     dprintk("Page Fault Handled!\n");
@@ -1508,6 +1503,9 @@ int
 arch_vmem_map_activate(
         struct vmem_map *map)
 {
+    DEBUG_ASSERT(KERNEL_ADDR(map));
+    DEBUG_ASSERT(ptr_orderof(map->arch_state.pt_root) >= 12);
+
     write_cr3(map->arch_state.pt_root);
     return 0;
 }

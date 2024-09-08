@@ -1,5 +1,6 @@
 
-COMMON_FLAGS += -mcmodel=large
+COMMON_FLAGS += -mcmodel=large \
+				-mno-red-zone
 
 QEMU_DEPS += $(OUTPUT_DIR)/kanawha.iso
 QEMU := qemu-system-x86_64 -cdrom $(OUTPUT_DIR)/kanawha.iso

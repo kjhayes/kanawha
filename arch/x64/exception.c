@@ -159,9 +159,28 @@ void x64_handle_exception(struct x64_excp_state *state)
             (ul_t)state->vector,
             state);
 
-    DEBUG_ASSERT(
-            (uintptr_t)(current_thread()->arch_state.kernel_rsp)
-            > (uintptr_t)(current_thread()->arch_state.kernel_stack_top));
+    struct thread_state *cur_thread = current_thread();
+
+    DEBUG_ASSERT_MSG(
+            cur_thread == NULL ||
+            cur_thread->status == THREAD_STATUS_RUNNING ||
+            cur_thread->status == THREAD_STATUS_TIRED,
+            "x64_handle_exception non-NULL thread %p has invalid status! (status=%ld)\n",
+            (uintptr_t)cur_thread,
+            (sl_t)cur_thread->status);
+
+    DEBUG_ASSERT_MSG(
+            cur_thread == NULL ||
+            (uintptr_t)(cur_thread->arch_state.kernel_rsp)
+            > (uintptr_t)(cur_thread->arch_state.kernel_stack_top),
+            "x64_handle_exception stack overflow detected! thread=%p id=%ld stack=[%p-%p) rsp=%p",
+            (uintptr_t)cur_thread,
+            (sl_t)cur_thread->id,
+            (uintptr_t)cur_thread->arch_state.kernel_stack_top,
+            (uintptr_t)cur_thread->arch_state.kernel_stack_top
+              + (uintptr_t)cur_thread->arch_state.kernel_stack_size,
+            (uintptr_t)cur_thread->arch_state.kernel_rsp
+            );
 
     if(x64_vector_irq_domain == NULL) {
         eprintk("Exception or Interrupt (0x%lx) Occurred before x64_vector_irq_domain has been initialized on CPU (%ld)\n",
@@ -204,13 +223,17 @@ void x64_handle_exception(struct x64_excp_state *state)
     struct thread_state *new_thread = query_resched();
     if(new_thread != NULL) {
 
-        //printk("CPU (%ld) Interrupt Driven Thread Switch old=%p, new=%p\n",
-        //        (sl_t)current_cpu_id(),
-        //        current_thread(),
-        //        new_thread);
+        dprintk("CPU (%ld) Interrupt Driven Thread Switch old=%p, new=%p\n",
+                (sl_t)current_cpu_id(),
+                current_thread(),
+                new_thread);
 
         x64_nop_iret();
         thread_switch(new_thread);
+
+        dprintk("CPU (%ld) Returned from interrupt driven thread switch! thread=%p\n",
+                (sl_t)current_cpu_id(),
+                current_thread());
 
         // We will eventually return and restore our registers off the stack
         // when we start running this thread again.

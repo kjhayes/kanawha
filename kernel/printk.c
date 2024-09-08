@@ -6,6 +6,9 @@
 #include <kanawha/errno.h>
 #include <kanawha/spinlock.h>
 #include <kanawha/string.h>
+#include <kanawha/thread.h>
+#include <kanawha/process.h>
+#include <kanawha/irq.h>
 
 static DECLARE_SPINLOCK(printk_lock);
 
@@ -622,8 +625,34 @@ snprintk(char *buf, size_t size, const char *fmt, ...) {
     return state.chars_attempted;
 }
 
+__attribute__((noreturn))
+void do_panic(void)
+{
+    disable_irqs();
+
+    panic_printk("    THREAD(");
+    if(current_thread()) { \
+        panic_printk("%lld", (ull_t)current_thread()->id);
+    } else {
+        panic_printk("NULL");
+    }
+    panic_printk(")");
+    if(current_process()) {
+        panic_printk(" PROCESS(%lld)", (ull_t)current_process()->id);
+    }
+    panic_printk("\n");
+
+    dump_threads(panic_printk);
+
+    while(1) {
+        disable_irqs();
+        halt();
+    }
+}
+
 EXPORT_SYMBOL(printk);
 EXPORT_SYMBOL(panic_printk);
 EXPORT_SYMBOL(printk_early_add_handler);
 EXPORT_SYMBOL(snprintk);
+EXPORT_SYMBOL(do_panic);
 

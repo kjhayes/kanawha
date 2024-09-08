@@ -46,8 +46,8 @@ arch_thread_run_thread(struct thread_state *to_run)
     *((typeof(_VALUE)*)(_ARCH_STATE_PTR)->kernel_rsp) = (_VALUE);\
   } while(0)
 
-// 16kb Stacks
-#define KERNEL_THREAD_STACK_SIZE 0x4000
+// 32kb Stacks
+#define KERNEL_THREAD_STACK_SIZE 0x8000
 
 int
 arch_init_thread_state(struct thread_state *state)
@@ -65,6 +65,9 @@ arch_init_thread_state(struct thread_state *state)
     dprintk("__x64_thread_entry = %p\n", __x64_thread_entry);
     thread_push(arch, (uint64_t)state->func);
     thread_push(arch, (uint64_t)__x64_thread_entry);
+
+    uint64_t initial_rflags = 0x0;
+    thread_push(arch, (uint64_t)initial_rflags);
 
     void *regs = thread_alloca(arch, (CALLEE_PUSH_SIZE + CALLER_PUSH_SIZE));
     memset(regs, 0, CALLEE_PUSH_SIZE + CALLER_PUSH_SIZE);

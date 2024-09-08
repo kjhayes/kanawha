@@ -48,12 +48,13 @@ typedef uint32_t thread_status_t;
  *
  */
 
-#define THREAD_STATUS_READY     0 // Not currently running but may be scheduled
-#define THREAD_STATUS_SCHEDULED 1 // (transition stage from READY -> RUNNING)
-#define THREAD_STATUS_RUNNING   2 // Currently running on some processor
-#define THREAD_STATUS_TIRED     3 // Currently running, will go to sleep on next thread switch
-#define THREAD_STATUS_SLEEPING  4 // Sleeping cannot be scheduled
-#define THREAD_STATUS_ABANDONED 5 // Can never be run again without reinitialization
+#define THREAD_STATUS_PREPARING 0 // Still in the process of being created
+#define THREAD_STATUS_READY     1 // Not currently running but may be scheduled
+#define THREAD_STATUS_SCHEDULED 2 // (transition stage from READY -> RUNNING)
+#define THREAD_STATUS_RUNNING   3 // Currently running on some processor
+#define THREAD_STATUS_TIRED     4 // Currently running, will go to sleep on next thread switch
+#define THREAD_STATUS_SLEEPING  5 // Sleeping cannot be scheduled
+#define THREAD_STATUS_ABANDONED 6 // Can never be run again without reinitialization
 
 #define THREAD_FLAG_IDLE    (1ULL<<0)
 #define THREAD_FLAG_PROCESS (1ULL<<1)

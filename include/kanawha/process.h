@@ -5,12 +5,10 @@
 #include <kanawha/stdint.h>
 #include <kanawha/vmem.h>
 #include <kanawha/scheduler.h>
-#include <kanawha/file.h>
 #include <kanawha/env.h>
 #include <kanawha/usermode.h>
-#include <kanawha/syscall/mmap.h>
-
-typedef uintptr_t process_id_t;
+#include <kanawha/waitqueue.h>
+#include <kanawha/uapi/process.h>
 
 #define PROCESS_FLAG_INIT (1ULL<<0)
 
@@ -20,15 +18,12 @@ typedef uintptr_t process_id_t;
 
 struct process
 {
-    process_id_t id;
+    pid_t id;
     struct ptree_node pid_node;
 
     // Threading
     struct thread_state thread;
     struct scheduler *scheduler;
-
-    struct mmap mmap;
-    struct vmem_region_ref *mmap_ref;
 
     // Status
     spinlock_t status_lock;
@@ -36,9 +31,7 @@ struct process
     int exitcode;
     int status;
 
-    // Environment Variables
-    spinlock_t environ_lock;
-    struct environment environ;
+    struct waitqueue wait_queue;
 
     // Process Hierarchy
     spinlock_t hierarchy_lock;
@@ -50,12 +43,33 @@ struct process
     int forcing_ip;
     void __user *forced_ip;
 
+    // Virtual Memory
+    struct mmap *mmap;
+    struct vmem_region_ref *mmap_ref;
+    ilist_node_t mmap_list_node;
+
     // File Descriptor Table
-    struct file_table file_table;
+    struct file_table* file_table;
+    ilist_node_t file_table_node;
+
+    // Environment Variables
+    struct environment *environ;
+    ilist_node_t environ_node;
 };
 
 struct process *
 current_process(void);
+
+struct process *
+process_from_pid(
+        pid_t id);
+
+struct process *
+process_spawn_child(
+        struct process *parent,
+        void __user *entry,
+        void *arg,
+        unsigned long spawn_flags);
 
 int
 process_schedule(
@@ -92,11 +106,25 @@ process_strlen_usermem(
         size_t *len);
 
 
-// Terminate the process without signalling
+// Terminate the process without signalling,
+// if process==current_process() then IRQ's
+// will be disabled on return so that we will
+// not be preempted before we can call thread_abandon
 int
 process_terminate(
         struct process *process,
         int exitcode);
+
+// De-allocate a process and get the exitcode
+//
+// Returns 0, populates exitcode, and invalidates the process pointer on success,
+// else Returns a negative errno, exitcode is undefined, and process should still be valid
+//
+// If process is not a ZOMBIE, then process_reap will return -EINVAL
+int
+process_reap(
+        struct process *process,
+        int *exitcode);
 
 int
 process_force_ip(

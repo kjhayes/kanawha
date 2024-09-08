@@ -18,7 +18,8 @@ strlen(char *str)
 #define ARGV_ENV_KEY "ARGV"
 
 #define ARGV_REGION_SIZE 0x1000
-#define ARGV_REGION_BASE 0x2000000
+#define STACK_REGION_BASE 0x1000000
+#define ARGV_REGION_BASE STACK_REGION_BASE - ARGV_REGION_SIZE
 
 void
 __elk_crt__get_argv(

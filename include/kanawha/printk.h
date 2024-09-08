@@ -3,7 +3,6 @@
 
 #include <kanawha/common.h>
 #include <kanawha/stdint.h>
-#include <kanawha/irq.h>
 
 typedef void(printk_early_handler_f)(char);
 
@@ -39,14 +38,13 @@ int printk(const char *fmt, ...);
 // panic's get their own buffer, so that there's no need for locking
 int panic_printk(const char *fmt, ...);
 
+__attribute__((noreturn))
+void do_panic(void);
+
 #define panic(fmt, ...) \
     do {\
-        disable_irqs(); \
         panic_printk("[PANIC] (%s:%d): " fmt, (const char*)__FILE__, (int)__LINE__, ##__VA_ARGS__); \
-        while(1) { \
-            disable_irqs(); \
-            halt(); \
-        } \
+        do_panic(); \
     } while(0)
 
 int printk_early_init(void);

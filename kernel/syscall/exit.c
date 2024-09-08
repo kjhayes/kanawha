@@ -18,6 +18,8 @@ syscall_exit(
                 process, exitcode, errnostr(res));
     }
 
-    thread_abandon(query_resched());
+    dprintk("Abandoning process %ld (exitcode=%d)\n", process->id, exitcode);
+
+    thread_abandon(force_resched());
 }
 

@@ -31,17 +31,30 @@ __x64_returned_from_thread_abandon:
 .type __x64_thread_run_threadless, @function
 
 __x64_thread_run_threadless: 
-    // Save all registers (this isn't strictly necessary but we'll be safe for now) TODO
+    // Save our flags and disable interrupts
+    pushfq
+    cli 
+    // Save all registers (this isn't strictly necessary but we'll be safe for now)
     PUSH_CALLER_REGS()
     PUSH_CALLEE_REGS()
 
     // Save our stack
+__x64_thread_stack_save:
     movq %rsp, 0(%rdx)
 
     // We are now effectively "threadless"
+
+    // Align the stack
+    movq %rsp, %rdx
+    andq $(~0xF), %rsp
+    pushq %rdx
    
     // %rdi already has our "in" argument
     callq *%rsi
+
+    // Undo stack alignment
+    popq %rdx
+    movq %rdx, %rsp
 
     // the threadless_f* we just called should be noreturn,
     // so we never reach this loop.
@@ -54,11 +67,15 @@ __x64_thread_run_threadless:
 __x64_thread_run_thread:
 
     // Restore our stack
+__x64_thread_stack_restore:
     movq %rdi, %rsp
 
     // Restore our registers
     POP_CALLEE_REGS()
     POP_CALLER_REGS()
+
+    // Restore RFLAGS
+    popfq
 
     // Return to our thread
     retq
@@ -104,13 +121,16 @@ __x64_enter_usermode:
 
     // Leave our return %rsp as zero
 
-    // Zero out our GPRs
+    // Place the "arg" into the first kernel syscall
+    // argument register
+    movq %rsi, %rdi
+
+    // Zero out the rest of our GPRs
     xorq %rax, %rax
     xorq %rbx, %rbx
     xorq %rcx, %rcx
     xorq %rdx, %rdx
-    xorq %rdi, %rdi
-    xorq %rsi, %rdi
+    xorq %rsi, %rsi
     xorq %r8, %r8
     xorq %r9, %r9
     xorq %r10, %r10

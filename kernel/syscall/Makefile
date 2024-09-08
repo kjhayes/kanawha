@@ -11,4 +11,7 @@ obj-y += \
 	exec.o \
 	environ.o \
 	childname.o \
+	spawn.o \
+	reap.o \
+	getpid.o
 

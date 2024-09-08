@@ -4,9 +4,9 @@
 #define __user __attribute__((address_space(3)))
 
 __attribute__((noreturn))
-void enter_usermode(void __user *starting_address);
+void enter_usermode(void __user *starting_address, void *arg);
 
 __attribute__((noreturn))
-void arch_enter_usermode(void __user *starting_address);
+void arch_enter_usermode(void __user *starting_address, void *arg);
 
 #endif

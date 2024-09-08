@@ -2,6 +2,8 @@
 #include <kanawha/ptree.h>
 #include <kanawha/printk.h>
 #include <kanawha/errno.h>
+#include <kanawha/vmem.h>
+#include <kanawha/assert.h>
 
 static inline int
 ptree_insert_bst(struct ptree *tree, struct ptree_node *node) 
@@ -76,6 +78,9 @@ ptree_insert_any(
         struct ptree_node *node)
 {
     uintptr_t key = 0;
+
+    node->left = NULL;
+    node->right = NULL;
 
     struct ptree_node *other =
         ptree_get_last(tree);
@@ -186,6 +191,7 @@ ptree_get(struct ptree *tree, uintptr_t key)
     dprintk("ptree_get key=%p\n", key);
     struct ptree_node *current = tree->root;
     while(current != NULL) {
+        DEBUG_ASSERT(KERNEL_ADDR(current));
         dprintk("cmp=%p\n", current->key);
         if(current->key < key) {
             dprintk("go right\n");

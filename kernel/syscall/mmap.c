@@ -2,6 +2,7 @@
 #include <kanawha/syscall.h>
 #include <kanawha/process.h>
 #include <kanawha/file.h>
+#include <kanawha/irq.h>
 #include <kanawha/stdint.h>
 #include <kanawha/kmalloc.h>
 #include <kanawha/string.h>
@@ -12,6 +13,7 @@
 #include <kanawha/process.h>
 #include <kanawha/page_alloc.h>
 #include <kanawha/syscall/mmap.h>
+#include <kanawha/vmem.h>
 
 int
 syscall_mmap(
@@ -60,9 +62,9 @@ syscall_munmap(
         void __user *mapping) 
 {
     int res;
-    struct mmap *mmap = &process->mmap;
-
-    DEBUG_ASSERT(process);
+    struct mmap *mmap = process->mmap;
+    DEBUG_ASSERT(KERNEL_ADDR(mmap));
+    DEBUG_ASSERT(KERNEL_ADDR(process));
     if((uintptr_t)mapping >= mmap->vmem_region->size) 
     {
         return -EINVAL;
@@ -86,16 +88,21 @@ mmap_page_fault_handler(
         void *priv_state);
 
 int
-mmap_init(
-        struct process *process,
-        size_t size)
+mmap_create(
+        size_t size,
+        struct process *initial_process)
 {
-    struct mmap *mmap = &process->mmap;
+    int res;
 
+    struct mmap *mmap = kmalloc(sizeof(struct mmap));
+    if(mmap == NULL) {
+        return -ENOMEM;
+    }
     memset(mmap, 0, sizeof(struct mmap));
 
     spinlock_init(&mmap->lock);
     ptree_init(&mmap->region_tree);
+    ilist_init(&mmap->process_list);
 
     mmap->vmem_region =
         vmem_region_create_paged(
@@ -104,18 +111,88 @@ mmap_init(
                 mmap);
 
     if(mmap->vmem_region == NULL) {
-        return -ENOMEM;
+        kfree(mmap);
+        return -EINVAL;
+    }
+
+    res = mmap_attach(mmap, initial_process);
+    if(res) {
+        vmem_region_destroy(mmap->vmem_region);
+        kfree(mmap);
+        return res;
     }
 
     return 0;
 }
 
 int
-mmap_deinit(
+mmap_attach(
+        struct mmap *mmap,
         struct process *process)
 {
-    struct mmap *mmap = &process->mmap;
-    return -EUNIMPL;
+    int res;
+
+    int irq_flags = spin_lock_irq_save(&mmap->lock);
+
+    process->mmap = mmap;
+    ilist_push_tail(&mmap->process_list, &process->mmap_list_node);
+
+    res = vmem_map_map_region(
+            process->thread.mem_map,
+            mmap->vmem_region,
+            0x0);
+    if(res) {
+        ilist_remove(&mmap->process_list, &process->mmap_list_node);
+        process->mmap = NULL;
+        spin_unlock_irq_restore(&mmap->lock, irq_flags);
+        return res;
+    }
+
+    process->mmap_ref = vmem_map_get_region(process->thread.mem_map, 0x0);
+    DEBUG_ASSERT(KERNEL_ADDR(process->mmap_ref));
+
+    spin_unlock_irq_restore(&mmap->lock, irq_flags);
+    dprintk("Attached MMAP %p to Process %p\n",mmap,process);
+    return 0;
+}
+
+int
+mmap_deattach(
+        struct mmap *mmap,
+        struct process *process)
+{
+    int res;
+
+    int irq_flags = spin_lock_irq_save(&mmap->lock);
+
+    res = vmem_map_unmap_region(
+            process->thread.mem_map,
+            process->mmap_ref);
+    if(res) {
+        spin_unlock_irq_restore(&mmap->lock, irq_flags);
+        return res;
+    }
+
+    ilist_remove(&mmap->process_list, &process->mmap_list_node);
+    process->mmap = NULL;
+
+    if(ilist_empty(&mmap->process_list)) {
+        // This was the last process to hold a reference to this mmap
+        res = vmem_region_destroy(mmap->vmem_region);
+        if(res) {
+            wprintk("Failed to destroy mmap vmem_region! (err=%s)\n",
+                    errnostr(res));
+        }
+        kfree(mmap);
+        
+        // Don't unlock the lock just to be extra safe,
+        // we'd rather deadlock than use an invalid vmem_region
+        return 0;
+    }
+
+    spin_unlock_irq_restore(&mmap->lock, irq_flags);
+    return 0;
+
 }
 
 static inline int
@@ -206,10 +283,7 @@ mmap_region_flush_page(
         return 0;
     }
 
-    struct file_descriptor *desc = region->desc;
-    DEBUG_ASSERT_MSG(desc != NULL, "mmap Region has NULL file descriptor without MMAP_PAGE_NO_SWAP!");
-
-    struct fs_node *node = desc->node; 
+    struct fs_node *node = region->fs_node; 
     return fs_node_flush_page(node, page->fs_page);
 }
 
@@ -242,9 +316,9 @@ mmap_region_reclaim_page(
             return res;
         }
     } else {
-        DEBUG_ASSERT(page->fs_page != NULL);
+        DEBUG_ASSERT(KERNEL_ADDR(page->fs_page));
         res = fs_node_put_page(
-                region->desc->node,
+                region->fs_node,
                 page->fs_page,
                 modified);
         if(res) {
@@ -324,25 +398,37 @@ mmap_map_region(
     DEBUG_ASSERT(ptr_orderof(mmap_offset) >= VMEM_MIN_PAGE_ORDER);
     DEBUG_ASSERT(ptr_orderof(size) >= VMEM_MIN_PAGE_ORDER);
 
-    struct file_descriptor *desc;
+    struct fs_node *fs_node;
 
     unsigned long mmap_type = mmap_flags & 0b11;
 
     if(mmap_type != MMAP_ANON) {
-        desc = file_table_get_descriptor(&process->file_table, file);
+        struct file_descriptor *desc =
+            file_table_get_descriptor(process->file_table, process, file);
 
         res = mmap_file_prot_check(desc, prot_flags, mmap_flags);
         if(res) {
-            goto err1;
+            file_table_put_descriptor(process->file_table, process, desc);
+            goto err0;
         }
+
+        res = fs_node_get_again(desc->node);
+        if(res) {
+            file_table_put_descriptor(process->file_table, process, desc);
+            goto err0;
+        }
+        fs_node = desc->node;
+
+        file_table_put_descriptor(process->file_table, process, desc);
     }
     else {
         // This is an anonymous mapping
-        desc = NULL;
+        fs_node = NULL;
     }
 
 
-    struct mmap *mmap = &process->mmap;
+    struct mmap *mmap = process->mmap;
+    DEBUG_ASSERT(KERNEL_ADDR(mmap));
 
     struct mmap_region *region;
     region = kmalloc(sizeof(struct mmap_region));
@@ -354,13 +440,17 @@ mmap_map_region(
 
     region->mmap = mmap;
     region->mmap_flags = mmap_flags;
-    region->desc = desc;
+    region->fs_node = fs_node;
     region->size = size;
     region->prot_flags = prot_flags;
     region->file_offset = file_offset;
     region->tree_node.key = mmap_offset;
 
     spinlock_init(&region->page_tree_lock);
+    dprintk("mmap_region page_tree_init region=%p [%p-%p)\n",
+            region,
+            region->tree_node.key,
+            region->tree_node.key + region->size);
     ptree_init(&region->page_tree);
 
     uintptr_t end_offset = mmap_offset + size;
@@ -374,7 +464,14 @@ mmap_map_region(
             container_of(before, struct mmap_region, tree_node);
         uintptr_t before_ending = before->key + before_region->size;
         if(before_ending > mmap_offset) {
-            res = -ENXIO;
+            eprintk("PID(%ld) mmap request [%p-%p) overlaps mapping [%p-%p)\n",
+                   (sl_t)process->id,
+                   mmap_offset,
+                   end_offset,
+                   before->key,
+                   before_ending
+                   );
+            res = -EALREADY;
             goto err3;
         }
     }
@@ -395,8 +492,8 @@ err3:
 err2:
     kfree(region);
 err1:
-    if(desc) {
-        file_table_put_descriptor(&process->file_table, desc);
+    if(fs_node) {
+        fs_mount_put_node(fs_node->mount, fs_node);
     }
 err0:
     return res;
@@ -409,7 +506,8 @@ mmap_unmap_region(
 {
     int res;
 
-    struct mmap *mmap = &process->mmap;
+    struct mmap *mmap = process->mmap;
+    DEBUG_ASSERT(KERNEL_ADDR(mmap));
 
     spin_lock(&mmap->lock);
 
@@ -425,7 +523,7 @@ mmap_unmap_region(
     struct mmap_region *region =
         container_of(pnode, struct mmap_region, tree_node);
 
-    struct file_descriptor *desc = region->desc;
+    struct fs_node *fs_node = region->fs_node;
 
     struct ptree_node *removed =
         ptree_remove(&mmap->region_tree, pnode->key);
@@ -463,8 +561,8 @@ mmap_unmap_region(
 
     dprintk("mmap_unmap_region: reclaimed %lld pages\n", (sll_t)num_reclaimed);
    
-    if(desc) {
-        file_table_put_descriptor(&process->file_table, desc);
+    if(fs_node) {
+        fs_mount_put_node(fs_node->mount, fs_node);
     }
 
     spin_unlock(&region->page_tree_lock);
@@ -507,14 +605,12 @@ mmap_region_load_page(
     }
     else if(mmap_type == MMAP_SHARED || mmap_type == MMAP_PRIVATE) {
 
-        struct file_descriptor *desc = region->desc;
-        DEBUG_ASSERT(desc != NULL);
         DEBUG_ASSERT_MSG(
-                desc->node != NULL,
+                KERNEL_ADDR(region->fs_node),
                 "MMAP_SHARED or MMAP_PRIVATE region has NULL fs_node! region->mmap_flags=0x%lx, region_offset=%p",
                 region->mmap_flags, region->tree_node.key);
         
-        order = fs_node_page_order(region->desc->node);
+        order = fs_node_page_order(region->fs_node);
         if(order < VMEM_MIN_PAGE_ORDER) {
             wprintk("Tried to mmap file with page order %ld, which is too small to mmap! (VMEM_MIN_PAGE_ORDER=%ld)\n",
                     (sl_t)order, (sl_t)VMEM_MIN_PAGE_ORDER);
@@ -537,7 +633,7 @@ mmap_region_load_page(
         pfn += (region->file_offset >> order);
 
         fs_page = fs_node_get_page(
-                desc->node,
+                region->fs_node,
                 pfn);
         if(fs_page == NULL) {
             return -EINVAL;
@@ -560,6 +656,9 @@ mmap_region_load_page(
         if(page_flags & MMAP_PAGE_ANON) {
             page_free(order, paddr);
         }
+        else {
+            fs_node_put_page(region->fs_node, page->fs_page, 0);
+        }
         return -ENOMEM;
     }
     memset(page, 0, sizeof(struct mmap_page));
@@ -569,10 +668,16 @@ mmap_region_load_page(
     page->phys_addr = paddr;
     page->fs_page = fs_page;
 
+    DEBUG_ASSERT(ptr_orderof(page->phys_addr) >= VMEM_MIN_PAGE_ORDER);
+
+    dprintk("mmap_region page_tree insert: region=%p, page=%p, page->region_offset=%p, page->order=%ld\n",
+            region, page, page->tree_node.key, page->order);
     res = ptree_insert(&region->page_tree, &page->tree_node, page_offset);
     if(res) {
         if(page_flags & MMAP_PAGE_ANON) {
             page_free(order, paddr);
+        } else {
+            fs_node_put_page(region->fs_node, page->fs_page, 0);
         }
         kfree(page);
         return res;
@@ -623,13 +728,12 @@ mmap_page_do_copy_on_write(
 
         dprintk("putting fs_page\n");
 
-        DEBUG_ASSERT(region);
-        DEBUG_ASSERT(region->desc);
-        DEBUG_ASSERT(region->desc->node);
+        DEBUG_ASSERT(KERNEL_ADDR(region));
+        DEBUG_ASSERT(KERNEL_ADDR(region->fs_node));
 
-        struct fs_node *fs_node = region->desc->node;
+        struct fs_node *fs_node = region->fs_node;
 
-        DEBUG_ASSERT(page->fs_page);
+        DEBUG_ASSERT(KERNEL_ADDR(page->fs_page));
 
         res = fs_node_put_page(
                 fs_node,
@@ -677,7 +781,8 @@ mmap_read(
 {
     int res;
 
-    struct mmap *mmap = &process->mmap;
+    struct mmap *mmap = process->mmap;
+    DEBUG_ASSERT(KERNEL_ADDR(mmap));
 
     dprintk("mmap_read(pid=%ld, offset=%p, dst=%p, length=0x%llx)\n",
             (sl_t)process->id, offset, dst, (ull_t)length);
@@ -786,7 +891,8 @@ mmap_write(
 {
     int res;
 
-    struct mmap *mmap = &process->mmap;
+    struct mmap *mmap = process->mmap;
+    DEBUG_ASSERT(KERNEL_ADDR(mmap));
 
     // Overflow checking
     if(~(uintptr_t)(0) - offset < length) {
@@ -988,7 +1094,7 @@ mmap_page_fault_handler(
     pnode = ptree_get_max_less_or_eq(
             &region->page_tree,
             region_offset);
-    DEBUG_ASSERT(pnode != NULL);
+    DEBUG_ASSERT(KERNEL_ADDR(pnode));
 
     struct mmap_page *page =
         container_of(pnode, struct mmap_page, tree_node);
@@ -1021,10 +1127,17 @@ mmap_user_strlen(
 {
     int res;
 
-    struct mmap *mmap = &process->mmap;
+    struct mmap *mmap = process->mmap;
+    DEBUG_ASSERT(KERNEL_ADDR(mmap));
+    DEBUG_ASSERT(ptr_orderof(mmap) >= orderof(typeof(*mmap)));
+    DEBUG_ASSERT(KERNEL_ADDR(mmap->vmem_region));
+    DEBUG_ASSERT(ptr_orderof(mmap->vmem_region) >= orderof(typeof(*mmap->vmem_region)));
+    DEBUG_ASSERT(mmap->vmem_region->type == VMEM_REGION_TYPE_PAGED);
+    DEBUG_ASSERT(mmap->vmem_region->size != 0);
+    DEBUG_ASSERT(mmap->vmem_region->num_refs > 0);
 
-    dprintk("mmap_user_strlen: proc=%p, offset=0x%lx, max=0x%lx\n",
-            process, offset, max_strlen);
+    dprintk("mmap_user_strlen: PID(%ld), mmap=%p, offset=0x%lx, max=0x%lx\n",
+            (sl_t)process->id, mmap, offset, max_strlen);
 
     int irq_flags = spin_lock_irq_save(&mmap->lock);
 
@@ -1046,6 +1159,12 @@ mmap_user_strlen(
             return -EINVAL;
         }
 
+        DEBUG_ASSERT(ptr_orderof(region->tree_node.key) >= VMEM_MIN_PAGE_ORDER);
+        DEBUG_ASSERT(ptr_orderof(region->tree_node.key) <= 64);
+        DEBUG_ASSERT(region->size > 0);
+
+        dprintk("region=%p [%p-%p)\n", region, region->tree_node.key, region->tree_node.key + region->size);
+
         spin_lock(&region->page_tree_lock);
 
         size_t region_offset = offset - region->tree_node.key;
@@ -1064,6 +1183,7 @@ mmap_user_strlen(
         if((pnode == NULL) ||
            (region_offset >= (pnode->key + (1ULL<<page->order)))) 
         {
+            dprintk("loading page (offset=%p)\n", region_offset);
             res = mmap_region_load_page(
                     region,
                     region_offset,
@@ -1073,13 +1193,29 @@ mmap_user_strlen(
                 spin_unlock_irq_restore(&mmap->lock, irq_flags);
                 return res;
             }
+        } else {
+            dprintk("already had page (offset=%p)\n", region_offset);
         }
+
+        struct ptree_node *iter = ptree_get_first(&region->page_tree);
+        for(; iter != NULL; iter = ptree_get_next(iter)) {
+            struct mmap_page *iter_page =
+                container_of(iter, struct mmap_page, tree_node);
+            dprintk("page=%p, phys_addr=%p, order=%ld, fs_page=%p\n",
+                    iter_page,
+                    iter_page->phys_addr,
+                    (sl_t)iter_page->order,
+                    iter_page->fs_page);
+        }
+
 
         if(page == NULL) {
             spin_unlock(&region->page_tree_lock);
             spin_unlock_irq_restore(&mmap->lock, irq_flags);
             return -EINVAL;
         }
+
+        DEBUG_ASSERT(ptr_orderof(page->phys_addr) >= VMEM_MIN_PAGE_ORDER);
 
         paddr_t page_paddr = page->phys_addr;
         void *page_data = (void*)__va(page_paddr);

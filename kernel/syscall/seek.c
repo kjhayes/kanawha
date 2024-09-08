@@ -14,7 +14,7 @@ syscall_seek(
     int res;
 
     struct file_descriptor *desc =
-        file_table_get_descriptor(&process->file_table, file);
+        file_table_get_descriptor(process->file_table, process, file);
 
     if(desc == NULL) {
         return -ENXIO;
@@ -35,18 +35,18 @@ syscall_seek(
                   FS_NODE_ATTR_END_OFFSET,
                   &file_end);
           if(res) {
-              file_table_put_descriptor(&process->file_table, desc);
+              file_table_put_descriptor(process->file_table, process, desc);
               return res;
           }
           desc->seek_offset = file_end + offset;
           break;
         default:
-          file_table_put_descriptor(&process->file_table, desc);
+          file_table_put_descriptor(process->file_table, process, desc);
           return -EINVAL;
     }
 
     ssize_t ret_offset = desc->seek_offset;
-    file_table_put_descriptor(&process->file_table, desc);
+    file_table_put_descriptor(process->file_table, process, desc);
     return ret_offset;
 }
 

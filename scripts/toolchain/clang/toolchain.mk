@@ -11,3 +11,5 @@ endif
 OBJCOPY := llvm-objcopy
 OBJDUMP := llvm-objdump
 
+COMMON_FLAGS += -fno-omit-frame-pointer
+

@@ -5,6 +5,7 @@
 
 #include <kanawha/uapi/file.h>
 #include <kanawha/uapi/stdint.h>
+#include <kanawha/uapi/process.h>
 
 __attribute__((noreturn))
 void
@@ -76,5 +77,21 @@ sys_childname(
         size_t child_index,
         char *name_buf,
         size_t buf_len);
+
+int
+sys_spawn(
+        void *func,
+        void *arg,
+        unsigned long flags,
+        pid_t *pid);
+
+int
+sys_reap(
+        pid_t child,
+        unsigned long flags,
+        int *exitcode);
+
+pid_t
+sys_getpid(void);
 
 #endif

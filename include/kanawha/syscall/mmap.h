@@ -5,6 +5,7 @@
 #include <kanawha/uapi/syscall.h>
 #include <kanawha/file.h>
 #include <kanawha/uapi/mmap.h>
+#include <kanawha/list.h>
 
 struct process;
 
@@ -48,7 +49,8 @@ struct mmap_region
 {
     struct mmap *mmap;
 
-    struct file_descriptor *desc;
+    struct fs_node *fs_node;
+
     uintptr_t file_offset;
     uintptr_t size;
 
@@ -66,15 +68,24 @@ struct mmap
     spinlock_t lock;
 
     struct ptree region_tree;
-
     struct vmem_region *vmem_region;
+
+    ilist_t process_list;
 };
 
+// Create a new mmap for the process
 int
-mmap_init(struct process *process, size_t size);
+mmap_create(size_t size, struct process *process);
 
+// Attach a process to the mmap,
 int
-mmap_deinit(struct process *process);
+mmap_attach(struct mmap *map, struct process *process);
+
+// Deattach a process from the mmap,
+// if this is the last process attached, then the mmap will be
+// freed.
+int
+mmap_deattach(struct mmap *map, struct process *process);
 
 int
 mmap_map_region(
