@@ -2,9 +2,11 @@
 #include <elk/syscall.h>
 #include <elk/init/path.h>
 #include <kanawha/uapi/spawn.h>
+#include <kanawha/uapi/environ.h>
 
 static fd_t stdout = NULL_FD;
-static fd_t stdin = NULL_FD;
+
+const char *exec_path = NULL;
 
 static int
 puts(const char *str)
@@ -29,7 +31,7 @@ puts(const char *str)
 }
 
 int
-run_thread(
+run_exec_thread(
         int(*thread_f)(void),
         pid_t *pid)
 {
@@ -41,7 +43,7 @@ run_thread(
     res = sys_spawn(
             _thread_start,
             (void*)thread_f,
-            SPAWN_MMAP_SHARED|SPAWN_ENV_SHARED|SPAWN_FILES_SHARED,
+            SPAWN_MMAP_SHARED|SPAWN_ENV_CLONE|SPAWN_FILES_NONE,
             &child_pid);
 
     if(res) {
@@ -54,25 +56,43 @@ run_thread(
     return res;
 }
 
-int child_thread(void)
+int exec_thread(void)
 {
-    puts("child_thread\n");
+    // This thread shares the address space,
+    // has a copy of the environment, and no files opened
+
+    int res;
+
+    if(exec_path == NULL) {
+        return 1;
+    }
+    
+    fd_t exec_fd =
+        open_path(exec_path,
+                FILE_PERM_READ|FILE_PERM_EXEC,
+                0);
+
+    if(exec_fd == NULL_FD) {
+        return 2;
+    }
+
+    res = sys_environ("ARGV", NULL, 0, ENV_CLEAR);
+    if(res) {
+        return res;
+    }
+
+    // We're going to be leaking a whole stack here (whoops).
+    res = sys_exec(exec_fd, 0);
+    if(res) {
+        return res;
+    }
+
     return 0;
 }
 
 int main(int argc, const char **argv)
 {
     int res;
-
-    stdin =
-        open_path(
-                "char:COM0",
-                FILE_PERM_READ,
-                0);
-
-    if(stdin == NULL_FD) {
-        sys_exit(1);
-    }
 
     stdout =
         open_path(
@@ -81,53 +101,39 @@ int main(int argc, const char **argv)
                 0);
 
     if(stdout == NULL_FD) {
-        sys_close(stdin);
-        sys_exit(1);
+        return 1;
     }
 
-    puts("Hello From Userspace!!!\n");
 
     pid_t child_pid;
 
-    for(size_t i = 0; i < 15; i++) {
-        res = run_thread(child_thread, &child_pid);
+    if(argc < 1) {
+        return 2;
+    }
+
+    exec_path = argv[0];
+
+    if(exec_path == NULL) {
+        return 3;
+    }
+
+    while(1) {
+        puts("Elk Init: Launching Process \"");
+        puts(exec_path);
+        puts("\"\n");
+
+        res = run_exec_thread(exec_thread, &child_pid);
         if(res) {
             puts("run_thread failed!\n");
             sys_exit(-res);
         }
         int exitcode;
         while(sys_reap(child_pid, 0, &exitcode));
+        
+        puts("Elk Init: Process Exited");
     }
-
-    for(int i = 0; i < argc; i++) {
-        puts("ARG: \"");
-        puts(argv[i]);
-        puts("\"\n");
-    }
-
-    int reading = 1;
-    while(reading) {
-        char c;
-        ssize_t amt = sys_read(stdin, &c, 1);
-        if(amt < 0) {
-            puts("sys_read returned an error!\n");
-            sys_exit(-amt);
-        }
-        if(amt == 1) {
-            if(c == '\r') {
-                c = '\n';
-            }
-            sys_write(stdout, &c, 1);
-        }
-        if(c == 'X') {
-            reading = 0;
-        }
-    }
-
-    puts("\nDetected (X), stopping\n");
 
     sys_close(stdout);
-    sys_close(stdin);
 
     return 0;
 }

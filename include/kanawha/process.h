@@ -10,6 +10,8 @@
 #include <kanawha/waitqueue.h>
 #include <kanawha/uapi/process.h>
 
+#define PROCESS_LOWMEM_SIZE (1ULL<<32)
+
 #define PROCESS_FLAG_INIT (1ULL<<0)
 
 #define PROCESS_STATUS_SCHEDULED 0

@@ -31,7 +31,8 @@ x64_setup_idt_exception_descriptor(
         | IDT64_ENTRY_FLAG_IST_NONE;
 
     desc->flags = (desc->flags & ~IDT64_ENTRY_FLAG_GATE_TYPE_MASK)
-        | IDT64_ENTRY_FLAG_GATE_TYPE_TRAP;
+        | IDT64_ENTRY_FLAG_GATE_TYPE_INTERRUPT; // We still want IF disabled on user exceptions, so we
+                                                // don't have a race condition setting swapgs
 
     desc->flags |= IDT64_ENTRY_FLAG_PRESENT;
 

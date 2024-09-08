@@ -24,6 +24,8 @@ struct file_table
     spinlock_t lock;
 
     struct ptree descriptor_tree;
+    struct file_descriptor null_descriptor;
+
     size_t num_open_files;
 
     ilist_t process_list;

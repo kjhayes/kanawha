@@ -14,8 +14,6 @@
 #include <kanawha/syscall/mmap.h>
 #include <kanawha/uapi/spawn.h>
 
-#define PROCESS_LOWMEM_SIZE (1ULL<<32)
-
 static DECLARE_SPINLOCK(process_pid_lock);
 static DECLARE_PTREE(process_pid_tree);
 

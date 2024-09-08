@@ -9,6 +9,8 @@
 
 #include <kanawha/stdint.h>
 #include <kanawha/errno.h>
+#include <kanawha/assert.h>
+#include <kanawha/vmem.h>
 
 int
 handle_init_stage_generic(
@@ -30,6 +32,7 @@ handle_init_stage_generic(
       num_deferred = 0;
       for(size_t i = 0; i < num_events; i++) {
           struct init_stage_event *event = &events[i];
+          DEBUG_ASSERT(KERNEL_ADDR(event));
           init_f *func = event->func;
           if(func != NULL) {
               if(event->desc_name != NULL) {

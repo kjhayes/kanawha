@@ -5,6 +5,7 @@
 #include <kanawha/process.h>
 #include <kanawha/kmalloc.h>
 #include <kanawha/string.h>
+#include <kanawha/assert.h>
 
 #define USER_ENV_MAX_KEYLEN 128
 #define USER_ENV_MAX_VALLEN 0x1000
@@ -156,12 +157,17 @@ env_clear(
 {
     int res;
 
+    DEBUG_ASSERT(KERNEL_ADDR(process->environ));
+
     size_t keylen;
     res = process_strlen_usermem(
             process, key, USER_ENV_MAX_KEYLEN, &keylen);
     if(res) {
         return res;
     }
+
+    printk("syscall_env: ENV_CLEAR keylen=%p\n",
+            keylen);
 
     char *buffer = kmalloc(keylen+1);
     if(buffer == NULL) {
@@ -179,6 +185,8 @@ env_clear(
     }
 
     buffer[keylen] = '\0';
+
+    printk("syscall_env: ENV_CLEAR key=%s\n", buffer);
 
     res = environment_clear_var(
             process->environ, buffer);

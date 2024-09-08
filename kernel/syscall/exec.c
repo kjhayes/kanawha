@@ -230,11 +230,29 @@ syscall_exec(
         file_table_get_descriptor(process->file_table, process, file);
 
     if(desc == NULL) {
+        file_table_put_descriptor(process->file_table, process, desc);
         return -EINVAL;
     }
 
     if((desc->access_flags & FILE_PERM_EXEC) == 0) {
+        file_table_put_descriptor(process->file_table, process, desc);
         return -EPERM;
+    }
+
+    res = mmap_deattach(process->mmap, process);
+    if(res) {
+        file_table_put_descriptor(process->file_table, process, desc);
+        eprintk("syscall_exec: Failed to deattach mmap! (err=%s)\n",
+                errnostr(res));
+        return res;
+    }
+
+    res = mmap_create(PROCESS_LOWMEM_SIZE, process);
+    if(res) {
+        file_table_put_descriptor(process->file_table, process, desc);
+        eprintk("syscall_exec: Failed to create new mmap! (err=%s)\n",
+                errnostr(res));
+        return res;
     }
 
     res = process_exec_elf64(process, file, desc);

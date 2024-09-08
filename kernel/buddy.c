@@ -287,6 +287,9 @@ buddy_region_alloc(
         }
 
         void *next_order_page_paddr;
+        // TODO: Recursion is really dangerous,
+        // this can easily cause a stack overflow especially on -O0,
+        // rework this.
         res = buddy_region_alloc(region, order+1, &next_order_page_paddr);
         if(res) {
             // Probably just out of memory then...

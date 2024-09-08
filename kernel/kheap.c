@@ -42,7 +42,7 @@ kheap_grow(
     paddr_t page_phys;
     res = page_alloc(KHEAP_GROWTH_ORDER, &page_phys, 0);
     if(res) {
-        dprintk("kheap_grow failed to allocate heap page! (err=%s)\n", errnostr(res));
+        eprintk("kheap_grow: failed to allocate heap page! (err=%s)\n", errnostr(res));
         return res;
     }
 
@@ -55,7 +55,7 @@ kheap_grow(
             page_size,
             VMEM_REGION_WRITE|VMEM_REGION_READ|VMEM_REGION_EXEC);
     if(res) {
-        dprintk("kheap_grow failed to map heap page! (err=%s)\n", errnostr(res));
+        eprintk("kheap_grow: failed to map heap page! (err=%s)\n", errnostr(res));
         page_free(KHEAP_GROWTH_ORDER, page_phys);
         return res;
     }
@@ -64,6 +64,8 @@ kheap_grow(
 
     res = kheap_free_specific(heap, (void*)page_virt, page_size);
     if(res) {
+        eprintk("kheap_grow: kheap_free_specific returned %s\n",
+                errnostr(res));
         return res;
     }
 
@@ -166,7 +168,7 @@ kheap_alloc_specific(struct kheap *heap, order_t align_order, size_t *size)
             alloc_base = (region_end - (uintptr_t)*size) & ~((1ULL<<align_order)-1ULL);
             if(alloc_base < (uintptr_t)region) {
                 // Can't fit with alignment
-                dprintk("Cannot use region of size: 0x%lx (not enough room for alignment padding)\n"
+                dprintk("kheap_alloc_specific: Cannot use region of size: 0x%lx (not enough room for alignment padding)\n"
                         "(alloc_base=%p, region=%p)\n",
                         (unsigned long)region->size,
                         alloc_base, (uintptr_t)region);
@@ -175,7 +177,7 @@ kheap_alloc_specific(struct kheap *heap, order_t align_order, size_t *size)
             if(alloc_base != (uintptr_t)region 
               && (alloc_base - (uintptr_t)region) < sizeof(struct kheap_free_region)) {
                 // Can't fit without losing track of some memory
-                dprintk("Cannot use region of size: 0x%lx (would lose track of memory)\n",
+                dprintk("kheap_alloc_specific: Cannot use region of size: 0x%lx (would lose track of memory)\n",
                         (unsigned long)region->size);
                 continue;
             }
@@ -188,7 +190,7 @@ kheap_alloc_specific(struct kheap *heap, order_t align_order, size_t *size)
                 best = region;
                 best_wasted = wasted;
                 best_alloc_base = alloc_base;
-                dprintk("Using region: [%p-%p)\n",
+                dprintk("kheap_alloc_specific: Using region: [%p-%p)\n",
                         (uintptr_t)region, (uintptr_t)region + region->size);
                 if(wasted == 0 && region->size == *size) {
                     // We're not going to do any better
@@ -200,13 +202,14 @@ kheap_alloc_specific(struct kheap *heap, order_t align_order, size_t *size)
 
     if(best == NULL) {
         // We need to increase the size of our heap
-        dprintk("Growing heap\n");
+        dprintk("kheap_alloc_specific: growing heap\n");
         int res;
         struct kheap_free_region *end = NULL;
         do {
             res = kheap_grow(heap);
             if(res) {
-                dprintk("kheap_alloc_specific: failed to grow heap!\n");
+                eprintk("kheap_alloc_specific: failed to grow heap! (err=%s)\n",
+                        errnostr(res));
                 return NULL;
             }
             DEBUG_ASSERT(!ilist_empty(&heap->free_list));
@@ -218,6 +221,7 @@ kheap_alloc_specific(struct kheap *heap, order_t align_order, size_t *size)
 
             // We're still too small
             if((end->size) < *size) {
+                dprintk("kheap_alloc_specific: still too small\n");
                 continue;
             }
 
@@ -233,12 +237,14 @@ kheap_alloc_specific(struct kheap *heap, order_t align_order, size_t *size)
 
             if(alloc_base < (uintptr_t)end) {
                 // Can't fit with alignment
+                dprintk("kheap_alloc_specific: cannot fit with alignment\n");
                 continue;
             }
 
             if(alloc_base != (uintptr_t)end 
               && (alloc_base - (uintptr_t)end) < sizeof(struct kheap_free_region)) {
                 // Can't fit without losing track of some memory
+                dprintk("kheap_alloc_specific: would lose track of memory\n");
                 continue;
             }
 

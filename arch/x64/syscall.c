@@ -195,6 +195,14 @@ x64_route_syscall(struct x64_syscall_state *state)
     }
 
     strace_end_syscall(process, id);
+
+    if(process->forcing_ip) {
+        state->caller_regs[PUSHED_CALLER_REGS_INDEX_RCX] =
+            (uint64_t)process->forced_ip;
+        process->forcing_ip = 0;
+    }
+
+    return;
 }
 
 struct x64_syscall_setup_state {

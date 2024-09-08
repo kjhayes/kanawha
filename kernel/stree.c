@@ -4,6 +4,8 @@
 #include <kanawha/string.h>
 #include <kanawha/errno.h>
 #include <kanawha/printk.h>
+#include <kanawha/assert.h>
+#include <kanawha/vmem.h>
 
 static int
 stree_insert_bst(
@@ -72,23 +74,32 @@ stree_remove(
         struct stree *tree,
         const char *key)
 {
+    dprintk("stree_remove: getting node\n");
     struct stree_node *node = stree_get(tree, key);
     if(node == NULL) {
         return node;
     } 
 
+    dprintk("stree_remove: deattaching node\n");
     struct stree_node *parent = node->parent;
-    if(parent->left == node) {
-        parent->left = NULL;
-    } else if(parent->right == node) {
-        parent->right = NULL;
+    if(parent == NULL) {
+        DEBUG_ASSERT(tree->root == node);
+        tree->root = NULL;
     } else {
-        eprintk("stree_remove found malformed stree!\n");
-        return NULL;
+        if(parent->left == node) {
+            parent->left = NULL;
+        } else if(parent->right == node) {
+            parent->right = NULL;
+        } else {
+            eprintk("stree_remove found malformed stree!\n");
+            return NULL;
+        }
     }
 
+    dprintk("stree_remove: reattaching left\n");
     int res;
     if(node->left) {
+        node->left->parent = NULL;
         res = stree_insert_bst(tree, node->left);
         if(res) {
             eprintk("Failed to insert node left branch in stree_remove!\n");
@@ -96,7 +107,9 @@ stree_remove(
         }
         node->left = NULL;
     }
+    dprintk("stree_remove: reattaching right\n");
     if(node->right) {
+        node->right->parent = NULL;
         res = stree_insert_bst(tree, node->right);
         if(res) {
             eprintk("Failed to insert node right branch in stree_remove!\n");
@@ -105,6 +118,7 @@ stree_remove(
         node->right = NULL;
     }
 
+    dprintk("stree_remove: rebalancing\n");
     res = stree_rebalance(tree);
     if(res) {
         eprintk("Failed to rebalance stree after stree_remove!\n");

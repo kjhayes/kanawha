@@ -44,8 +44,22 @@ x64_syscall_entry:
     movq 16(%rax), %rcx
     movq %rcx, %rsp
  
-    // __attribute__((no_caller_saved_regs)) so this should preserve everything but %rax
+    // we need to preserve all caller saved but %rax and %rcx
+    pushq %rdi
+    pushq %rsi
+    pushq %rdx
+    pushq %r8
+    pushq %r9
+    pushq %r10
+    pushq %r11
     callq __x64_get_current_thread_kernel_rsp
+    popq %r11
+    popq %r10
+    popq %r9
+    popq %r8
+    popq %rdx
+    popq %rsi
+    popq %rdi
 
     // Swap to the thread stack
     movq %rax, %rsp

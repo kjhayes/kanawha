@@ -5,10 +5,11 @@ endef
 -include $(MK_SCRIPTS_DIR)/include.mk
 
 ifdef OBJDUMP
-asm: $(OUTPUT_DIR)/kanawha.asm
+asm: kanawha.asm
+kanawha.asm: $(OUTPUT_DIR)/kanawha.asm
 $(OUTPUT_DIR)/kanawha.asm: $(OUTPUT_DIR)/kanawha.o
 	$(call qinfo, OBJDUMP, $(call rel-dir, $@, $(OUTPUT_DIR)))
-	$(Q)$(OBJDUMP) -d $< > $@
+	$(Q)$(OBJDUMP) -D $< > $@
 endif
 
 endif

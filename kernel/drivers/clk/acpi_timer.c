@@ -94,6 +94,7 @@ init_acpi_pm_timer_clk(void)
 
     struct acpi_pm_timer *clk = kmalloc(sizeof(struct acpi_pm_timer));
     if(clk == NULL) {
+        eprintk("Failed to allocate ACPI PM Timer\n");
         return -ENOMEM;
     }
     memset(clk, 0, sizeof(struct acpi_pm_timer));

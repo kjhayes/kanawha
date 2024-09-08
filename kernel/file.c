@@ -9,9 +9,6 @@
 #include <kanawha/assert.h>
 #include <kanawha/kmalloc.h>
 
-static struct file_descriptor
-null_file_descriptor = { 0 };
-
 int
 file_table_create(
         struct process *process)
@@ -32,7 +29,8 @@ file_table_create(
     // Insert a dummy descriptor to make sure
     // that we don't assign NULL_FD to an actual
     // descriptor entry
-    ptree_insert(&table->descriptor_tree, &null_file_descriptor.tree_node, NULL_FD);
+    memset(&table->null_descriptor, 0, sizeof(table->null_descriptor));
+    ptree_insert(&table->descriptor_tree, &table->null_descriptor.tree_node, NULL_FD);
 
     res = file_table_attach(table, process);
     if(res) {
@@ -63,12 +61,22 @@ __file_table_free_descriptor(
         struct file_descriptor *desc)
 {
     int res;
+
     struct ptree_node *removed
         = ptree_remove(
                 &table->descriptor_tree,
                 desc->tree_node.key);
 
     DEBUG_ASSERT(removed == &desc->tree_node);
+
+    if(removed->key == NULL_FD) {
+        // This was the null descriptor of the table
+        return 0;
+    }
+
+    DEBUG_ASSERT(KERNEL_ADDR(desc));
+    DEBUG_ASSERT(KERNEL_ADDR(desc->node));
+    DEBUG_ASSERT(KERNEL_ADDR(desc->node->mount));
 
     res = fs_mount_put_node(
             desc->node->mount,
@@ -107,6 +115,8 @@ file_table_deattach(
             struct file_descriptor *desc =
                 container_of(node, struct file_descriptor, tree_node);
 
+            DEBUG_ASSERT(KERNEL_ADDR(table));
+            DEBUG_ASSERT(KERNEL_ADDR(desc));
             __file_table_free_descriptor(table, desc);
 
         } while(1);

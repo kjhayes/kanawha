@@ -69,16 +69,14 @@ SECTIONS
     __builtin_kpercpu_end = .;
   } :data = 0
 
-  .kinit : AT(VA_TO_PA(ADDR(.kinit))) 
-  {
 #define DECLARE_INIT_STAGE_LINKER_SCRIPT_SECTIONS(STAGE,...)\
+  .kinit.STAGE : AT(VA_TO_PA(ADDR(.kinit.STAGE))) \
+  { \
     __init_stage_##STAGE##__init_start = .;\
     *(.kinit.STAGE.init);\
-    __init_stage_##STAGE##__init_end = .;
-
-XFOR_INIT_STAGE(DECLARE_INIT_STAGE_LINKER_SCRIPT_SECTIONS)
-
+    __init_stage_##STAGE##__init_end = .;\
   } :data = 0
+XFOR_INIT_STAGE(DECLARE_INIT_STAGE_LINKER_SCRIPT_SECTIONS)
 
   .ksymtab : AT(VA_TO_PA(ADDR(.ksymtab)))
   {

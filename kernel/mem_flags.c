@@ -507,8 +507,6 @@ free_phys_mem(void)
             return res;
         }
 
-
-
         dprintk("Registered Buddy Allocator for region [%p - %p)\n",
                 (void*)entry->base, (void*)(entry->base + entry->size));
     }

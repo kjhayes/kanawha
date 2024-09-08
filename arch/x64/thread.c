@@ -129,7 +129,6 @@ arch_dump_thread(printk_f *printer, struct thread_state *state)
 }
 
 // This is just to avoid hard-coding any struct offsets into assembly
-__attribute__((no_caller_saved_registers))
 void *__x64_get_current_thread_kernel_rsp(void)
 {
     DEBUG_ASSERT_PERCPU_VALID();

@@ -279,6 +279,7 @@ dump_page_alloc_amounts(void)
 
     return 0;
 }
+declare_init(dynamic, dump_page_alloc_amounts);
 declare_init(late, dump_page_alloc_amounts);
 
 // Cached Anonymous Pages

@@ -266,11 +266,12 @@ arch_vmem_map_init(struct vmem_map *map)
     return 0;
 }
 
+// Every region should have been unmapped from this map already
 int
 arch_vmem_map_deinit(struct vmem_map *map)
 {
     int res;
-    if(map->arch_state.pt_level == 0) {
+    if(map->arch_state.pt_level <= 3) {
         eprintk("Trying to deinit vmem_map with pt_level %d!\n", map->arch_state.pt_level);
         return -EINVAL;
     }
@@ -919,10 +920,59 @@ map_region_tables(
     return 0;
 }
 
+static int
+free_page_tables(
+        paddr_t table,
+        int level)
+{
+    int res;
+
+    DEBUG_ASSERT(level > 0 && level <= 5);
+
+    uint64_t *table_entries = (uint64_t*)__va(table);
+    size_t num_entries = pt_level_num_table_entries(level);
+
+    uint64_t present_mask = pt_level_present_mask(level);
+
+    for(size_t i = 0; i < num_entries; i++)
+    {
+        uint64_t entry = table_entries[i];
+
+        // Skip not-present entries
+        if((present_mask & entry) == 0) {
+            continue;
+        }
+
+        // We don't need to do anything for leaf entries
+        if(pt_level_entry_is_leaf(level, entry)) {
+            continue;
+        }
+
+        // This must be a present table
+        paddr_t subtable = pt_level_addr_mask(level) & entry;
+        res = free_page_tables(subtable, level-1);
+        if(res) {
+            return res;
+        }
+    }
+
+    res = page_free(ptr_orderof(pt_level_table_size(level)), table);
+    if(res) {
+        return res;
+    }
+
+    return 0;
+}
+
+// This region should not exist in any maps at this point
 int
 arch_vmem_region_deinit(struct vmem_region *region)
 {
-    return -EUNIMPL;
+    if(region->arch_state.entry_only) {
+        return 0;
+    } else {
+        return free_page_tables(region->arch_state.pt_table, region->arch_state.pt_level);
+    }
 }
 
 int
@@ -1199,9 +1249,6 @@ arch_vmem_map_unmap_region(
 
     while(pt_level > ref->region->arch_state.pt_level) {
         size_t index = pt_level_table_index(map->arch_state.pt_level, ref->virt_addr);
-        if(res) {
-            return res;
-        }
         map_entry = ((uint64_t*)__va(map_table)) + index;
 
         uint64_t addr_mask = pt_level_addr_mask(pt_level);
@@ -1217,9 +1264,6 @@ arch_vmem_map_unmap_region(
 
     if(ref->region->arch_state.entry_only) {
         size_t index = pt_level_table_index(pt_level, ref->virt_addr);
-        if(res) {
-            return res;
-        }
         uint64_t *entry = ((uint64_t*)__va(map_table)) + index;
         switch(pt_level) {
             case 1: 
@@ -1345,9 +1389,6 @@ arch_vmem_paged_region_map(
         do {
             size_t cur_region_size = pt_level_entry_region_size(cur_level);
             size_t cur_entries_per_table = pt_level_num_table_entries(cur_level);
-            if(res) {
-                return res;
-            }
             size_t cur_index = (offset / cur_region_size) % cur_entries_per_table;
             uint64_t *cur_entry = ((uint64_t*)__va(cur_table)) + cur_index;
 
@@ -1459,9 +1500,6 @@ arch_vmem_paged_region_unmap(
         do {
             size_t cur_region_size = pt_level_entry_region_size(cur_level);
             size_t cur_entries_per_table = pt_level_num_table_entries(cur_level);
-            if(res) {
-                return res;
-            }
             size_t cur_index = (offset / cur_region_size) % cur_entries_per_table;
             uint64_t *cur_entry = ((uint64_t*)__va(cur_table)) + cur_index;
 

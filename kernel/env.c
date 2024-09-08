@@ -197,6 +197,7 @@ environment_clear_var(
 {
     spin_lock(&environ->lock);
 
+    dprintk("Getting Node\n");
     struct stree_node *node =
         stree_get(&environ->env_table, var_name);
 
@@ -204,13 +205,20 @@ environment_clear_var(
         struct envvar *var =
             container_of(node, struct envvar, node);
 
+        dprintk("Removing Node\n");
         struct stree_node *rem = stree_remove(
                 &environ->env_table, var_name);
         DEBUG_ASSERT(rem == node);
-        
+       
+        dprintk("Freeing key\n");
         kfree((void*)var->node.key);
+        dprintk("Freeing value\n");
         kfree((void*)var->value);
+        dprintk("Freeing var\n");
         kfree((void*)var);
+    } else {
+       spin_unlock(&environ->lock);
+       return -ENXIO;
     }
 
     spin_unlock(&environ->lock);

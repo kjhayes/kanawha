@@ -224,13 +224,28 @@ vmem_region_destroy(
         struct vmem_region *region)
 {
     int res;
+
+    do {
+        ilist_node_t *region_node = ilist_pop_head(&region->ref_list);
+        if(region_node == NULL) {
+            break;
+        }
+        struct vmem_region_ref *ref =
+            container_of(region_node, struct vmem_region_ref, region_node);
+
+        res = vmem_map_unmap_region(ref->map, ref);
+        if(res) {
+            eprintk("vmem_region_destroy failed to unmap vmem region!\n");
+            return res;
+        }
+    } while(1);
+
     res = arch_vmem_region_deinit(region);
     if(res) {
         return res;
     }
 
-    // TODO
-    return -EUNIMPL;
+    return 0;
 }
 
 struct vmem_region_ref *
@@ -469,18 +484,27 @@ vmem_paged_region_map(
         size_t size,
         unsigned long flags)
 {
+    int res;
     if(offset + size > region->size) {
+        eprintk("vmem_paged_region_map: tried to map outside of region bounds!\n");
         return -ERANGE;
     }
     if(region->type != VMEM_REGION_TYPE_PAGED) {
+        eprintk("vmem_paged_region_map: region->type != VMEM_REGION_TYPE_PAGED!\n");
         return -EINVAL;
     }
-    return arch_vmem_paged_region_map(
+    res = arch_vmem_paged_region_map(
             region,
             offset,
             phys_addr,
             size,
             flags);
+    if(res) {
+        eprintk("arch_vmem_paged_region_map returned %s\n",
+                errnostr(res));
+        return res;
+    }
+    return 0;
 }
 
 int

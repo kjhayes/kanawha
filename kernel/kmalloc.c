@@ -61,7 +61,6 @@ declare_init_desc(kmalloc, kmalloc_init, "Initializing Kernel Heap");
 
 void * kmalloc(size_t size)
 {
-
     if(size == 0) {
         // Free will ignore NULL so this is fine
         return NULL;
@@ -84,7 +83,7 @@ void * kmalloc(size_t size)
     void *alloc = kheap_alloc_specific(&kmalloc_heap, KMALLOC_ALIGN_ORDER, &req_size);
     if(alloc == NULL) {
         spin_unlock_irq_restore(&kmalloc_lock, irq_flags);
-        dprintk("kmalloc call to kmalloc_specific(%d, size=0x%lx)\n",
+        dprintk("kmalloc call to kmalloc_specific(%d, size=0x%lx) returned NULL\n",
                 KMALLOC_ALIGN_ORDER, size + bookkeeping_size);
         return alloc;
     }
@@ -106,6 +105,7 @@ void * kmalloc(size_t size)
 
     void *ret = alloc + bookkeeping_size;
 
+    dprintk("kmalloc(0x%llx) -> %p\n",size,ret);
     return ret;
 }
 
