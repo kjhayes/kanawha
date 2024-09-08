@@ -245,17 +245,17 @@ process_alloc(
         goto err1;
     }
 
-    res = process_assign_pid(process);
-    if(res) {
-        goto err2;
-    } 
-
     process->parent = parent;
     if(parent != NULL) {
         spin_lock(&parent->hierarchy_lock);
         ilist_push_tail(&parent->children, &process->child_node);
         spin_unlock(&parent->hierarchy_lock);
     }
+
+    res = process_assign_pid(process);
+    if(res) {
+        goto err2;
+    } 
 
     process->flags = flags;
     process->status = PROCESS_STATUS_SUSPEND;
@@ -578,14 +578,14 @@ process_terminate(
                 exitcode);
     }
 
-    DEBUG_ASSERT(process->parent != NULL);
-
     int irq_flags = spin_lock_irq_save(&process->status_lock);
 
     if(process->status == PROCESS_STATUS_ZOMBIE) {
         // process_terminate is idempotent
         return 0;
     }
+
+    DEBUG_ASSERT(process->parent != NULL);
 
     // Suspend the process (deregistering it with any schedulers)
     res = __process_suspend_caller_lock(process);

@@ -169,19 +169,6 @@ void x64_handle_exception(struct x64_excp_state *state)
             (uintptr_t)cur_thread,
             (sl_t)cur_thread->status);
 
-    DEBUG_ASSERT_MSG(
-            cur_thread == NULL ||
-            (uintptr_t)(cur_thread->arch_state.kernel_rsp)
-            > (uintptr_t)(cur_thread->arch_state.kernel_stack_top),
-            "x64_handle_exception stack overflow detected! thread=%p id=%ld stack=[%p-%p) rsp=%p",
-            (uintptr_t)cur_thread,
-            (sl_t)cur_thread->id,
-            (uintptr_t)cur_thread->arch_state.kernel_stack_top,
-            (uintptr_t)cur_thread->arch_state.kernel_stack_top
-              + (uintptr_t)cur_thread->arch_state.kernel_stack_size,
-            (uintptr_t)cur_thread->arch_state.kernel_rsp
-            );
-
     if(x64_vector_irq_domain == NULL) {
         eprintk("Exception or Interrupt (0x%lx) Occurred before x64_vector_irq_domain has been initialized on CPU (%ld)\n",
                 (ul_t)state->vector, (sl_t)current_cpu_id());

@@ -780,7 +780,9 @@ map_region_tables(
         paddr_t map_table,
         paddr_t region_table,
         int table_level,
-        vaddr_t vbase)
+        vaddr_t vbase,
+        struct vmem_map *map,
+        struct vmem_region *region)
 {
     int res;
 
@@ -850,6 +852,8 @@ map_region_tables(
 
         if(!(*map_entry & present_mask)) {
             // Map isn't present, we can map in the region table directly
+            dprintk("map_table %p level %lld, entry %lld is not present, overriding\n",
+                    map_table, table_level, vi);
             *map_entry = *region_entry;
             continue;
         }
@@ -860,6 +864,7 @@ map_region_tables(
         int region_is_leaf = entry_must_be_leaf ? 1 :
                              entry_can_be_leaf ? *region_entry & page_size_mask : 0;
 
+        DEBUG_ASSERT(region->type != VMEM_REGION_TYPE_PAGED || !region_is_leaf);
 
         if(map_is_leaf || region_is_leaf) {
             // OVERLAP!!!
@@ -870,6 +875,7 @@ map_region_tables(
         }
 
         paddr_t region_next_addr = *region_entry & next_table_addr_mask;
+        paddr_t map_next_addr = *map_entry & next_table_addr_mask;
 
         // They are both tables
         if(!(*map_entry & shared_table_mask)) {
@@ -881,7 +887,7 @@ map_region_tables(
             }
 
             // Make a copy of the other region's top level table
-            memcpy((void*)__va(shared_table), (void*)__va(region_next_addr), level_below_size);
+            memcpy((void*)__va(shared_table), (void*)__va(map_next_addr), level_below_size);
 
             // Create a shared table entry
             res = create_shared_pt_table_entry(
@@ -893,7 +899,7 @@ map_region_tables(
             }
         }
 
-        paddr_t map_next_addr = *map_entry & next_table_addr_mask;
+        map_next_addr = *map_entry & next_table_addr_mask;
         
         // Already was or is now a shared page,
         // so we can recursively call ourselves on it
@@ -901,7 +907,9 @@ map_region_tables(
                 map_next_addr,
                 region_next_addr,
                 table_level-1,
-                vbase + (entry_region_size * (vi-vindex)));
+                vbase + (entry_region_size * (vi-vindex)),
+                map,
+                region);
 
         if(res) {
             return res;
@@ -1026,7 +1034,9 @@ arch_vmem_map_map_region(
                 map_table,
                 region_table,
                 pt_level,
-                ref->virt_addr);
+                ref->virt_addr,
+                map,
+                ref->region);
         if(res) {
             return res;
         }
@@ -1126,7 +1136,7 @@ unmap_region_tables(
             eprintk("unmap_region_tables: map_is_leaf != region_is_leaf\n");
             return -EINVAL;
         }
-        else if(map_is_leaf) {
+        else if(map_is_leaf /* && region_is_leaf */) {
             // Zero out the entry in the map
             *map_entry = 0;
         } else {

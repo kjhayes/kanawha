@@ -16,8 +16,8 @@ void arch_enter_usermode(void __user *starting_address, void *arg)
 
     DEBUG_ASSERT(state);
 
-    state->arch_state.kernel_rsp =
-        (uintptr_t)((void*)state->arch_state.kernel_stack_top + state->arch_state.kernel_stack_size);
+    state->arch_state.stack.rsp =
+        (uintptr_t)(void*)state->arch_state.stack.stack_base;
 
     __x64_enter_usermode(starting_address, arg);
 }

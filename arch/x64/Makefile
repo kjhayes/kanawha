@@ -16,6 +16,7 @@ obj-y += \
 	ioapic.o \
 	vmem.o \
 	thread.o \
+	stack.o \
 	usermode.o \
 	syscall.o \
 	exception.o \

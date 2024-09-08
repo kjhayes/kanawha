@@ -394,6 +394,8 @@ int vmem_map_activate(struct vmem_map *map)
 {
     int res;
 
+    DEBUG_ASSERT(KERNEL_ADDR(map));
+
     struct vmem_map **current_map = percpu_ptr(percpu_addr(current_vmem_map));
 
     if(*current_map == map) {
@@ -411,14 +413,14 @@ int vmem_map_activate(struct vmem_map *map)
     dprintk("Activating vmem_map %p on CPU %ld\n",
             map, (sl_t)current_cpu_id());
 
-    //arch_dump_vmem_map(printk, map);
-
     res = arch_vmem_map_activate(map);
     if(res) {
         if(greater) {spin_unlock(&greater->lock);}
         if(lesser) {spin_unlock(&lesser->lock);}
         return res;
     }
+
+    dprintk("returned from arch_vmem_map_activate\n");
     
     map->active_on++;
     if(*current_map) {
@@ -512,6 +514,7 @@ int
 vmem_force_mapping(struct vmem_region *region, vaddr_t virtual_address)
 {
     int res;
+
     res = vmem_map_map_region(
             default_map,
             region,

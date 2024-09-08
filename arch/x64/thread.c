@@ -1,5 +1,6 @@
 
 #include <arch/x64/asm/regs.S>
+#include <arch/x64/stack.h>
 #include <kanawha/thread.h>
 #include <kanawha/errno.h>
 #include <kanawha/kmalloc.h>
@@ -23,53 +24,55 @@ arch_thread_run_threadless(
 {
     __x64_thread_run_threadless(
             in, func,
-            &current_thread()->arch_state.kernel_rsp);
+            &current_thread()->arch_state.stack.rsp);
 }
 
 __attribute__((noreturn)) void
 arch_thread_run_thread(struct thread_state *to_run)
 {
-    __x64_thread_run_thread((void*)to_run->arch_state.kernel_rsp);
+    __x64_thread_run_thread((void*)to_run->arch_state.stack.rsp);
 }
 
-#define thread_alloca(_ARCH_STATE_PTR, _AMT)\
+#define thread_alloca(_STACK_STATE_PTR, _AMT)\
   ({\
    void *val;\
-   (_ARCH_STATE_PTR)->kernel_rsp -= (uint64_t)(_AMT);\
-   val = (void*)((_ARCH_STATE_PTR)->kernel_rsp);\
+   (_STACK_STATE_PTR)->rsp -= (uint64_t)(_AMT);\
+   val = (void*)((_STACK_STATE_PTR)->rsp);\
    val;\
    })
 
-#define thread_push(_ARCH_STATE_PTR, _VALUE)\
+#define thread_push(_STACK_STATE_PTR, _VALUE)\
   do {\
-    (_ARCH_STATE_PTR)->kernel_rsp -= sizeof(_VALUE);\
-    *((typeof(_VALUE)*)(_ARCH_STATE_PTR)->kernel_rsp) = (_VALUE);\
+    (_STACK_STATE_PTR)->rsp -= sizeof(_VALUE);\
+    *((typeof(_VALUE)*)(_STACK_STATE_PTR)->rsp) = (_VALUE);\
   } while(0)
 
 // 32kb Stacks
-#define KERNEL_THREAD_STACK_SIZE 0x8000
+#define KERNEL_THREAD_STACK_ORDER 15
 
 int
 arch_init_thread_state(struct thread_state *state)
 {
-    struct arch_thread_state *arch = &state->arch_state;
+    int res;
 
-    arch->kernel_stack_size = KERNEL_THREAD_STACK_SIZE;
-    arch->kernel_stack_top = kmalloc(arch->kernel_stack_size);
-    if(arch->kernel_stack_top == NULL) {
-        return -ENOMEM;
+    struct arch_thread_state *arch = &state->arch_state;
+    struct x64_thread_stack *stack = &state->arch_state.stack;
+
+    res = x64_thread_stack_init(state, KERNEL_THREAD_STACK_ORDER);
+    if(res) {
+        return res;
     }
-    arch->kernel_rsp = (uint64_t)(arch->kernel_stack_top + arch->kernel_stack_size);
 
     dprintk("state->func = %p\n", state->func);
     dprintk("__x64_thread_entry = %p\n", __x64_thread_entry);
-    thread_push(arch, (uint64_t)state->func);
-    thread_push(arch, (uint64_t)__x64_thread_entry);
+
+    thread_push(stack, (uint64_t)state->func);
+    thread_push(stack, (uint64_t)__x64_thread_entry);
 
     uint64_t initial_rflags = 0x0;
-    thread_push(arch, (uint64_t)initial_rflags);
+    thread_push(stack, (uint64_t)initial_rflags);
 
-    void *regs = thread_alloca(arch, (CALLEE_PUSH_SIZE + CALLER_PUSH_SIZE));
+    void *regs = thread_alloca(stack, (CALLEE_PUSH_SIZE + CALLER_PUSH_SIZE));
     memset(regs, 0, CALLEE_PUSH_SIZE + CALLER_PUSH_SIZE);
 
     uint64_t *callee_regs = regs;
@@ -85,8 +88,12 @@ arch_init_thread_state(struct thread_state *state)
 int
 arch_deinit_thread_state(struct thread_state *state)
 {
+    int res;
     struct arch_thread_state *arch = &state->arch_state;
-    kfree(arch->kernel_stack_top);
+    res = x64_thread_stack_deinit(state);
+    if(res) {
+        return res;
+    }
     return 0;
 }
 
@@ -94,26 +101,27 @@ int
 arch_dump_thread(printk_f *printer, struct thread_state *state)
 {
     struct arch_thread_state *arch_state = &state->arch_state;
-    void *kernel_stack_base = arch_state->kernel_stack_top + arch_state->kernel_stack_size;
-    size_t allocated = (uintptr_t)kernel_stack_base - (uintptr_t)arch_state->kernel_rsp;
-    (*printer)("Kernel Stack Size      : 0x%llx\n", (unsigned long long)arch_state->kernel_stack_size);
+    struct x64_thread_stack *stack = &arch_state->stack;
+    void *kernel_stack_base = (void*)stack->stack_top + (1ULL<<stack->order);
+    size_t allocated = (uintptr_t)kernel_stack_base - (uintptr_t)stack->rsp;
+    (*printer)("Kernel Stack Size      : 0x%llx\n", (unsigned long long)(1ULL<<stack->order));
     (*printer)("Kernel Stack Allocated : 0x%llx\n", (unsigned long long)allocated);
     (*printer)("Kernel Stack Base      : 0x%llx\n", (unsigned long long)kernel_stack_base);
-    (*printer)("Kernel Stack Pointer   : 0x%llx\n", (unsigned long long)arch_state->kernel_rsp);
-    (*printer)("Kernel Stack Top       : 0x%llx\n", (unsigned long long)arch_state->kernel_stack_top);
+    (*printer)("Kernel Stack Pointer   : 0x%llx\n", (unsigned long long)stack->rsp);
+    (*printer)("Kernel Stack Top       : 0x%llx\n", (unsigned long long)stack->stack_top);
     (*printer)("--- Kernel Stack ---\n");
 
     size_t num_64 = allocated / sizeof(uint64_t);
     size_t extra_bytes = allocated % sizeof(uint64_t);
     for(ssize_t i = num_64-1; i >= 0; i--) {
         (*printer)("[uint64_t] %p : 0x%llx\n",
-                &((uint64_t*)(arch_state->kernel_rsp + extra_bytes))[i],
-                ((uint64_t*)(arch_state->kernel_rsp + extra_bytes))[i]);
+                &((uint64_t*)(stack->rsp + extra_bytes))[i],
+                ((uint64_t*)(stack->rsp + extra_bytes))[i]);
     }
     for(ssize_t i = extra_bytes - 1; i >= 0; i++) {
         (*printer)("[uint8_t] %p : 0x%x\n",
-                &((uint8_t*)arch_state->kernel_rsp)[i],
-                ((uint8_t*)arch_state->kernel_rsp)[i]);
+                &((uint8_t*)stack->rsp)[i],
+                ((uint8_t*)stack->rsp)[i]);
     }
 
     (*printer)("-------------------\n");
@@ -126,7 +134,7 @@ void *__x64_get_current_thread_kernel_rsp(void)
 {
     DEBUG_ASSERT_PERCPU_VALID();
     struct thread_state *thread = current_thread();
-    return (void*)(uintptr_t)thread->arch_state.kernel_rsp;
+    return (void*)(uintptr_t)thread->arch_state.stack.rsp;
 }
 
 

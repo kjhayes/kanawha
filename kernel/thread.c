@@ -301,6 +301,8 @@ __thread_switch_threadless(void *in)
     struct thread_state *switching_from = current_thread();
     struct thread_state *switching_to = (struct thread_state *)in;
 
+    DEBUG_ASSERT(KERNEL_ADDR(switching_to));
+
     // TIRED -> SLEEPING or RUNNING -> READY transition
     switch(switching_from->status) {
         case THREAD_STATUS_TIRED:
@@ -324,10 +326,14 @@ __thread_switch_threadless(void *in)
     *(struct thread_state **)percpu_ptr(percpu_addr(__current_thread)) = switching_to;
     DEBUG_ASSERT(current_thread() == switching_to);
 
+    dprintk("activating vmem_map of new thread!\n");
+    DEBUG_ASSERT(KERNEL_ADDR(switching_to->mem_map));
     vmem_map_activate(switching_to->mem_map);
 
     spin_unlock(&switching_from->lock);
     spin_unlock(&switching_to->lock);
+
+    dprintk("running new thread\n");
 
     arch_thread_run_thread(switching_to);
     
@@ -734,6 +740,9 @@ thread_force_mapping(
         vaddr_t virtual_addr)
 {
     int res;
+
+    dprintk("Thread Force Mapping [%p-%p) -> %p\n",
+            virtual_addr, virtual_addr + region->size, region);
 
     int irq_flags = spin_lock_irq_save(&thread_tree_lock);
 
