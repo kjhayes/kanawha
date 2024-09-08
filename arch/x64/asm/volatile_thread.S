@@ -4,27 +4,27 @@
 .extern x64_volatility_thread_fail
 
 #define REGISTER_XLIST(X)\
-X(rax)\
-X(rbx)\
-X(rcx)\
-X(rdx)\
-X(rdi)\
-X(rsi)\
-X(rbp)\
-X(r8) \
-X(r9) \
-X(r10)\
-X(r11)\
-X(r12)\
-X(r13)\
-X(r14)\
-X(r15)
+X(rax, 0)\
+X(rbx, 1)\
+X(rcx, 2)\
+X(rdx, 3)\
+X(rdi, 4)\
+X(rsi, 5)\
+X(rbp, 6)\
+X(r8,  7)\
+X(r9,  8)\
+X(r10, 9)\
+X(r11, 10)\
+X(r12, 11)\
+X(r13, 12)\
+X(r14, 13)\
+X(r15, 14)
 
 // Register Strings
 
 .rodata
 
-#define DECLARE_REG_STRING(__reg) \
+#define DECLARE_REG_STRING(__reg, ...) \
 __reg ## _str: ;\
 .ascii #__reg ;\
 .byte 0 ;
@@ -42,18 +42,18 @@ x64_volatility_thread:
     // Enable interrupts
     sti
 
-x64_volatility_thread_loop:
-#define SET_REGISTER(__reg)\
-    movq $VOLATILE_CHECKSUM, %__reg; \
+#define SET_REGISTER(__reg, __offset)\
+    movq $(VOLATILE_CHECKSUM + __offset), %__reg; \
 
     REGISTER_XLIST(SET_REGISTER)
 #undef SET_REGISTER
 
-#define CHECK_REGISTER(__reg)\
-    cmpq $VOLATILE_CHECKSUM, %__reg; \
+x64_volatility_thread_loop:
+#define CHECK_REGISTER(__reg, __offset)\
+    cmpq $(VOLATILE_CHECKSUM + __offset), %__reg; \
     jz __reg ## _pass_check; \
     movq %__reg, %rsi; \
-    movq $VOLATILE_CHECKSUM, %rdx; \
+    movq $(VOLATILE_CHECKSUM + __offset), %rdx; \
     movabsq $__reg ## _str, %rdi; \
     callq x64_volatility_thread_fail; \
     retq; \
