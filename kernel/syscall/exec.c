@@ -164,6 +164,7 @@ process_exec_elf64(
     int res;
 
     if((desc->access_flags & FILE_PERM_READ) == 0) {
+        eprintk("process_exec_elf64: file does not have READ permissions!\n");
         return -EPERM;
     }
 
@@ -236,6 +237,7 @@ syscall_exec(
 
     if((desc->access_flags & FILE_PERM_EXEC) == 0) {
         file_table_put_descriptor(process->file_table, process, desc);
+        eprintk("syscall_exec: file does not have EXEC permissions!\n");
         return -EPERM;
     }
 
@@ -261,7 +263,15 @@ syscall_exec(
         return res;
     }
 
+    dprintk("syscall_exec: desc->node->index = %lld\n", (sll_t)desc->node->cache_node.key);
     file_table_put_descriptor(process->file_table, process, desc);
+
+    res = vmem_flush_region(process->mmap->vmem_region);
+    if(res) {
+        eprintk("syscall_exec: Failed to flush mmap region!\n");
+        return res;
+    }
+
     return 0;
 }
 

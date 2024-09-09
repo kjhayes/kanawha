@@ -26,13 +26,12 @@ open_path(
     
     int colon_offset = -1;
 
-    int total_num_opens = 1;
+    int total_num_opens = 2;
     for(unsigned long i = 0; i < pathlen; i++) {
         buffer[i] = path[i];
         if(buffer[i] == ':' && colon_offset == -1) {
             colon_offset = i;
             buffer[i] = '\0';
-            total_num_opens++;
         }
         if(buffer[i] == '/') {
             buffer[i] = '\0';

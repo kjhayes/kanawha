@@ -53,6 +53,13 @@ syscall_mmap(
         return res;
     }
 
+    res = vmem_flush_region(process->mmap->vmem_region);
+    if(res) {
+        eprintk("syscall_mmap: Failed to flush mmap region!\n");
+        return res;
+    }
+    
+
     return 0;
 }
 

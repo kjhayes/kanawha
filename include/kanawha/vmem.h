@@ -160,7 +160,7 @@ struct vmem_map *
 vmem_map_get_current(void);
 
 int
-vmem_map_flush(struct vmem_map *map);
+vmem_flush_map(struct vmem_map *map);
 
 int
 vmem_flush_region(struct vmem_region *region);

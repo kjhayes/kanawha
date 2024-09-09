@@ -11,6 +11,7 @@
 #include <kanawha/thread.h>
 #include <kanawha/process.h>
 #include <kanawha/assert.h>
+#include <kanawha/irq.h>
 #include <arch/x64/mmu.h>
 
 static DECLARE_SPINLOCK(vmem_map_slab_lock);
@@ -374,7 +375,7 @@ vmem_map_unmap_region(
 }
 
 int
-vmem_map_flush(struct vmem_map *map) 
+vmem_flush_map(struct vmem_map *map) 
 {
     int res;
     spin_lock(&map->lock);
@@ -384,7 +385,7 @@ vmem_map_flush(struct vmem_map *map)
 }
 
 int
-vmem_region_flush(struct vmem_region *region) 
+vmem_flush_region(struct vmem_region *region) 
 {
     int res;
     spin_lock(&region->lock);
@@ -393,7 +394,7 @@ vmem_region_flush(struct vmem_region *region)
     {
         struct vmem_region_ref *ref =
             container_of(node, struct vmem_region_ref, region_node);
-        res = vmem_map_flush(ref->map);
+        res = vmem_flush_map(ref->map);
         if(res) {
             spin_unlock(&region->lock);
             return res;
@@ -421,6 +422,7 @@ int vmem_map_activate(struct vmem_map *map)
     lesser = (uintptr_t)*current_map < (uintptr_t)map ? *current_map : map;
     greater = (uintptr_t)*current_map < (uintptr_t)map ? map : *current_map;
    
+    int irq_flags = disable_save_irqs();
 
     if(lesser) {spin_lock(&lesser->lock);}
     if(greater) {spin_lock(&greater->lock);}
@@ -445,6 +447,8 @@ int vmem_map_activate(struct vmem_map *map)
 
     if(greater) {spin_unlock(&greater->lock);}
     if(lesser) {spin_unlock(&lesser->lock);}
+
+    enable_restore_irqs(irq_flags);
 
     return 0;
 }

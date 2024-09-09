@@ -11,6 +11,33 @@ config INIT_PROCESS_ARGV_VALUE
     help
       Value to set the "ARGV" environment variable to on entry to the init process.
 
+config ROOT_FS
+    bool "Mount Root FS"
+    default n
+    help
+      Have the kernel mount an initial file system during boot for the init process
+
+config ROOT_FS_FILE
+    string "Root FS Disk Path"
+    depends on ROOT_FS
+    default "ramfile:initrd"
+    help
+      Path to mount the initial ramdisk from
+
+config ROOT_FS_FILESYSTEM
+    string "Root FS Filesystem"
+    depends on ROOT_FS
+    default "cpio"
+    help
+      Filesystem type to try mounting the root fs as.
+
+config ROOT_FS_MOUNT_NAME
+    string "Root FS Mount Name"
+    depends on ROOT_FS
+    default ""
+    help
+      Name to attach the Root FS mount under.
+
 menu "printk Options"
 config PRINTK_BUFFER_SIZE
     hex "printk Buffer Size"

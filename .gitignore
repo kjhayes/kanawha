@@ -1,5 +1,6 @@
 
 build/**/*
+initrd/**/*
 compile_commands.json
 .cache/
 .config

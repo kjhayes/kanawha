@@ -3,6 +3,7 @@
 #include <elk/init/path.h>
 #include <kanawha/uapi/spawn.h>
 #include <kanawha/uapi/environ.h>
+#include <kanawha/uapi/errno.h>
 
 static fd_t stdout = NULL_FD;
 
@@ -26,7 +27,6 @@ puts(const char *str)
     if(res) {
         return res;
     }
-
     return 0;
 }
 
@@ -39,19 +39,16 @@ run_exec_thread(
 
     int res;
 
-    pid_t child_pid;
     res = sys_spawn(
             _thread_start,
             (void*)thread_f,
             SPAWN_MMAP_SHARED|SPAWN_ENV_CLONE|SPAWN_FILES_NONE,
-            &child_pid);
+            pid);
 
     if(res) {
         puts("sys_spawn Failed!\n");
         sys_exit(-res);
     }
-
-    *pid = child_pid;
 
     return res;
 }
@@ -84,10 +81,10 @@ int exec_thread(void)
     // We're going to be leaking a whole stack here (whoops).
     res = sys_exec(exec_fd, 0);
     if(res) {
-        return res;
+        sys_exit(res);
     }
 
-    return 0;
+    sys_exit(1);
 }
 
 int main(int argc, const char **argv)
@@ -128,9 +125,17 @@ int main(int argc, const char **argv)
             sys_exit(-res);
         }
         int exitcode;
-        while(sys_reap(child_pid, 0, &exitcode));
+        do {
+            int reap_ret = sys_reap(child_pid, 0, &exitcode);
+            if(reap_ret == 0) {
+                break;
+            }
+            if(reap_ret == -ENXIO) {
+                puts("init: child pid does not exist???\n");
+            }
+        } while(1);
         
-        puts("Elk Init: Process Exited");
+        puts("Elk Init: Process Exited!\n");
     }
 
     sys_close(stdout);

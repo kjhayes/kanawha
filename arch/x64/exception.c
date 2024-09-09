@@ -154,10 +154,13 @@ x64_unhandled_interrupt(struct x64_excp_state *state)
 
 void x64_handle_exception(struct x64_excp_state *state)
 {
-    dprintk("CPU (%ld) exception 0x%lx state=%p\n",
+    int ring_from = state->cs & 0b11;
+
+    dprintk("CPU (%ld) exception 0x%lx state=%p ring_from=%d\n",
             (sl_t)current_cpu_id(),
             (ul_t)state->vector,
-            state);
+            state,
+            ring_from);
 
     struct thread_state *cur_thread = current_thread();
 
@@ -227,6 +230,13 @@ void x64_handle_exception(struct x64_excp_state *state)
     } else {
         //printk("CPU (%ld) No Interrupt Driven Thread Switch\n",
         //        (sl_t)current_cpu_id());
+    }
+
+    if(ring_from != 0) {
+        // We need to reset the thread stack pointer
+        // because we are returning to usermode
+        cur_thread->arch_state.stack.rsp =
+            cur_thread->arch_state.stack.stack_base;
     }
 
     return;

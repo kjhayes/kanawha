@@ -192,6 +192,11 @@ cpio_mount_file(
     if(res) {goto err0;}
 
 
+    res = fs_node_get_again(backing_node);
+    if(res) {
+        goto err0;
+    }
+
     mnt->backing_file = backing_node;
 
     mnt->type = CPIO_BINARY; // For now, this is all we will support
@@ -208,7 +213,7 @@ cpio_mount_file(
             FS_NODE_ATTR_MAX_OFFSET_END,
             &file_size);
     if(res) {
-        goto err0;
+        goto err1;
     }
 
     struct cpio_header hdr;
@@ -225,7 +230,7 @@ cpio_mount_file(
         if(hdr.binary.c_magic != CPIO_HEADER_MAGIC) {
             eprintk("Found file in CPIO filesystem with invalid magic! (file=0x%x, magic=0x%x)\n", hdr.binary.c_magic, CPIO_HEADER_MAGIC);
             // If this isn't our first iteration, we might be leaking memory
-            goto err0;
+            goto err1;
         }
 
         size_t namesize = hdr.binary.c_namesize;
@@ -259,7 +264,7 @@ cpio_mount_file(
         struct cpio_index *index = kmalloc(sizeof(struct cpio_index));
         if(index == NULL) {
             res = -ENOMEM;
-            goto err0;
+            goto err1;
         }
         index->offset = offset;
         index->filesize = filesize;
@@ -297,7 +302,7 @@ cpio_mount_file(
     mnt->index_to_ino = kmalloc(sizeof(size_t) * mnt->num_files);
     if(mnt->index_to_ino == NULL) {
         res = -ENOMEM;
-        goto err0;
+        goto err1;
     }
 
     // Set up mapping from root directory index to inode number
@@ -317,6 +322,8 @@ cpio_mount_file(
     *out_ptr = &mnt->mnt;
     return 0;
 
+err1:
+    fs_mount_put_node(mnt->backing_file->mount, mnt->backing_file);
 err0:
     kfree(mnt);
     return res;

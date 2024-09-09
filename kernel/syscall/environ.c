@@ -166,7 +166,7 @@ env_clear(
         return res;
     }
 
-    printk("syscall_env: ENV_CLEAR keylen=%p\n",
+    dprintk("syscall_env: ENV_CLEAR keylen=%p\n",
             keylen);
 
     char *buffer = kmalloc(keylen+1);
@@ -186,7 +186,7 @@ env_clear(
 
     buffer[keylen] = '\0';
 
-    printk("syscall_env: ENV_CLEAR key=%s\n", buffer);
+    dprintk("syscall_env: ENV_CLEAR key=%s\n", buffer);
 
     res = environment_clear_var(
             process->environ, buffer);

@@ -106,7 +106,7 @@ __thread_start_stack_spin_lock:
     movq %rcx, __num_stacks
 
     movq $0, __stack_lock
-    
+   
     subq $8, %rsp
 
     callq *%rbx

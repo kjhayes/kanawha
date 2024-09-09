@@ -35,8 +35,15 @@ include $(CRT_SRC_DIR)/Makefile
 LIBC_SRC_DIR := $(SRC_DIR)/libc
 include $(LIBC_SRC_DIR)/Makefile
 
-INIT_SRC_DIR := $(SRC_DIR)/init
-include $(INIT_SRC_DIR)/Makefile
+EXEC_DIRS := \
+	init \
+	sh
+
+define include_src_dir
+$(1)_SRC_DIR := $$(SRC_DIR)/$1
+include $$($(1)_SRC_DIR)/Makefile
+endef
+$(foreach EXEC_DIR,$(EXEC_DIRS),$(eval $(call include_src_dir,$(EXEC_DIR))))
 
 $(shell mkdir -p $(OUTPUT_DIR))
 

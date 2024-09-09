@@ -18,7 +18,7 @@ syscall_exit(
                 process, exitcode, errnostr(res));
     }
 
-    dprintk("Abandoning process %ld (exitcode=%d)\n", process->id, exitcode);
+    printk("Exiting PID(%ld) (exitcode=%d)\n", process->id, exitcode);
 
     thread_abandon(force_resched());
 }

@@ -47,8 +47,8 @@ arch_thread_run_thread(struct thread_state *to_run)
     *((typeof(_VALUE)*)(_STACK_STATE_PTR)->rsp) = (_VALUE);\
   } while(0)
 
-// 32kb Stacks
-#define KERNEL_THREAD_STACK_ORDER 15
+// 64kb Stacks
+#define KERNEL_THREAD_STACK_ORDER 16
 
 int
 arch_init_thread_state(struct thread_state *state)

@@ -42,6 +42,7 @@ obj-y += \
 	clk.o
 
 obj-$(CONFIG_INITRD) += initrd.o
+obj-$(CONFIG_ROOT_FS) += rootfs.o
 
 obj-y += fs/
 obj-y += syscall/

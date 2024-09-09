@@ -10,6 +10,8 @@ syscall_reap(
 {
     int res;
 
+    dprintk("syscall_reap: PID(%lld)\n", to_reap_id);
+
     struct process *to_reap = 
         process_from_pid(to_reap_id);
 
