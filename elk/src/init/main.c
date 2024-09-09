@@ -1,6 +1,6 @@
 
 #include <elk/syscall.h>
-#include <elk/init/path.h>
+#include <elk/path.h>
 #include <kanawha/uapi/spawn.h>
 #include <kanawha/uapi/environ.h>
 #include <kanawha/uapi/errno.h>

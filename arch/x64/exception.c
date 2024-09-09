@@ -156,11 +156,13 @@ void x64_handle_exception(struct x64_excp_state *state)
 {
     int ring_from = state->cs & 0b11;
 
-    dprintk("CPU (%ld) exception 0x%lx state=%p ring_from=%d\n",
+    dprintk("CPU (%ld) exception 0x%lx ring_from=%d\n"
+           "\trip=%p\n"
+            ,
             (sl_t)current_cpu_id(),
             (ul_t)state->vector,
-            state,
-            ring_from);
+            ring_from,
+            state->rip);
 
     struct thread_state *cur_thread = current_thread();
 

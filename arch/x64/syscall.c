@@ -196,11 +196,18 @@ x64_route_syscall(struct x64_syscall_state *state)
 
     strace_end_syscall(process, id);
 
+    disable_irqs();
+
     if(process->forcing_ip) {
         state->caller_regs[PUSHED_CALLER_REGS_INDEX_RCX] =
             (uint64_t)process->forced_ip;
         process->forcing_ip = 0;
     }
+
+    // We want to reset the kernel stack in-case we were preempted
+    // when interrupts were enabled
+    process->thread.arch_state.stack.rsp =
+        process->thread.arch_state.stack.stack_base;
 
     return;
 }

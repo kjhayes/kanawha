@@ -1,5 +1,5 @@
 
-#include <elk/init/path.h>
+#include <elk/path.h>
 #include <elk/syscall.h>
 
 static unsigned long

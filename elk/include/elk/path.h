@@ -1,5 +1,5 @@
-#ifndef __KANAWHA__ELK_INIT_H__
-#define __KANAWHA__ELK_INIT_H__
+#ifndef __KANAWHA__ELK_PATH_H__
+#define __KANAWHA__ELK_PATH_H__
 
 #include <kanawha/uapi/file.h>
 
