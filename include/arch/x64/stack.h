@@ -4,6 +4,8 @@
 #include <kanawha/stdint.h>
 #include <kanawha/vmem.h>
 
+struct thread_state;
+
 struct x64_thread_stack
 {
     struct vmem_region *region;
