@@ -1,9 +1,9 @@
 
 #include <elk/syscall.h>
-#include <elk/path.h>
 #include <kanawha/uapi/spawn.h>
 #include <kanawha/uapi/environ.h>
 #include <kanawha/uapi/errno.h>
+#include <kanawha/uapi/mount.h>
 
 static fd_t stdout = NULL_FD;
 
@@ -64,13 +64,16 @@ int exec_thread(void)
         return 1;
     }
     
-    fd_t exec_fd =
-        open_path(exec_path,
-                FILE_PERM_READ|FILE_PERM_EXEC,
-                0);
+    fd_t exec_fd;
 
-    if(exec_fd == NULL_FD) {
-        return 2;
+    res = sys_open(
+            exec_path,
+            FILE_PERM_READ|FILE_PERM_EXEC,
+            0,
+            &exec_fd);
+
+    if(res) {
+        return res;
     }
 
     res = sys_environ("ARGV", NULL, 0, ENV_CLEAR);
@@ -91,11 +94,31 @@ int main(int argc, const char **argv)
 {
     int res;
 
-    stdout =
-        open_path(
-                "char:vga-serial",
+    fd_t root;
+    res = sys_open(
+            "/",
+            0,
+            0,
+            &root);
+    if(res) {
+        return res;
+    }
+
+    res = sys_mount(
+            "chardev",
+            root,
+            "chr",
+            "sys",
+            MOUNT_SPECIAL);
+    if(res) {
+        return res;
+    }
+
+    res = sys_open(
+                "/chr/vga-serial",
                 FILE_PERM_WRITE,
-                0);
+                0,
+                &stdout);
 
     if(stdout == NULL_FD) {
         return 1;

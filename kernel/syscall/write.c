@@ -4,6 +4,7 @@
 #include <kanawha/file.h>
 #include <kanawha/kmalloc.h>
 #include <kanawha/assert.h>
+#include <kanawha/fs/node.h>
 
 #define SYSCALL_WRITE_MAX_CHUNK_SIZE 0x1000
 
@@ -64,7 +65,7 @@ syscall_write(
         }
 
         res = fs_node_write(
-                desc->node,
+                desc->path->fs_node,
                 buffer,
                 &amount_written,
                 dst_offset);

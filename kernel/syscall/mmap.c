@@ -14,6 +14,7 @@
 #include <kanawha/page_alloc.h>
 #include <kanawha/syscall/mmap.h>
 #include <kanawha/vmem.h>
+#include <kanawha/fs/node.h>
 
 int
 syscall_mmap(
@@ -419,12 +420,12 @@ mmap_map_region(
             goto err0;
         }
 
-        res = fs_node_get_again(desc->node);
+        res = fs_node_get(desc->path->fs_node);
         if(res) {
             file_table_put_descriptor(process->file_table, process, desc);
             goto err0;
         }
-        fs_node = desc->node;
+        fs_node = desc->path->fs_node;
 
         file_table_put_descriptor(process->file_table, process, desc);
     }
@@ -500,7 +501,7 @@ err2:
     kfree(region);
 err1:
     if(fs_node) {
-        fs_mount_put_node(fs_node->mount, fs_node);
+        fs_node_put(fs_node);
     }
 err0:
     return res;
@@ -569,7 +570,7 @@ mmap_unmap_region(
     dprintk("mmap_unmap_region: reclaimed %lld pages\n", (sll_t)num_reclaimed);
    
     if(fs_node) {
-        fs_mount_put_node(fs_node->mount, fs_node);
+        fs_node_put(fs_node);
     }
 
     spin_unlock(&region->page_tree_lock);

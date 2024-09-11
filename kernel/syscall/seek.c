@@ -1,6 +1,7 @@
 
 #include <kanawha/syscall.h>
 #include <kanawha/file.h>
+#include <kanawha/fs/node.h>
 #include <kanawha/uapi/seek.h>
 #include <kanawha/process.h>
 
@@ -31,7 +32,7 @@ syscall_seek(
           break;
         case SEEK_END:
           res = fs_node_attr(
-                  desc->node,
+                  desc->path->fs_node,
                   FS_NODE_ATTR_END_OFFSET,
                   &file_end);
           if(res) {

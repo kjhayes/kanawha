@@ -1,5 +1,8 @@
 
-#include <kanawha/fs.h>
+#include <kanawha/fs/type.h>
+#include <kanawha/fs/mount.h>
+#include <kanawha/fs/node.h>
+#include <kanawha/fs/stree.h>
 #include <kanawha/stdint.h>
 #include <kanawha/stddef.h>
 #include <kanawha/vmem.h>
@@ -138,29 +141,35 @@ ramfile_fs_node_ops = {
     .attr = ramfile_attr,
 };
 
-static struct stree_fs_mount ramfile_mount;
+static struct stree_fs_mount __ramfile_mount;
 
 static int
 ramfile_mount_init(void)
 {
     int res;
 
-    res = stree_fs_mount_init(&ramfile_mount);
+    res = stree_fs_mount_init(&__ramfile_mount);
     if(res) {
         return res;
     }
 
-    res = fs_attach_mount(
-            &ramfile_mount.mount,
-            "ramfile");
-    if(res) {
-        stree_fs_mount_deinit(&ramfile_mount);
-        return res;
-    }
+//    res = fs_attach_mount(
+//            &__ramfile_mount.mount,
+//            "ramfile");
+//    if(res) {
+//        stree_fs_mount_deinit(&__ramfile_mount);
+//        return res;
+//    }
 
     return 0;
 }
 declare_init_desc(bus, ramfile_mount_init, "Attaching ramfile Mount");
+
+struct fs_mount *
+ramfile_mount(void)
+{
+    return &__ramfile_mount.mount;
+}
 
 int
 create_ramfile(
@@ -189,7 +198,7 @@ create_ramfile(
     ramfile->fs_node.fs_node.ops = &ramfile_fs_node_ops;
 
     res = stree_fs_mount_insert(
-            &ramfile_mount,
+            &__ramfile_mount,
             &ramfile->fs_node,
             ramfile_name);
     if(res) {
@@ -205,5 +214,73 @@ destroy_ramfile(
         const char *ramfile_name)
 {
     return -EUNIMPL;
+}
+
+struct fs_node *
+ramfile_get(const char *name)
+{
+    int res; 
+
+    struct fs_mount *mnt = ramfile_mount();
+    if(mnt == NULL) {
+        return NULL;
+    }
+
+    size_t root_index;
+
+    res = fs_mount_root_index(mnt, &root_index);
+    if(res) {
+        return NULL;
+    }
+
+    struct fs_node *root_node =
+        fs_mount_get_node(mnt, root_index);
+
+    if(root_node == NULL) {
+        return NULL;
+    }
+
+    size_t num_children;
+    res = fs_node_attr(root_node, FS_NODE_ATTR_CHILD_COUNT, &num_children);
+    if(res) {
+        fs_node_put(root_node);
+        return NULL;
+    }
+
+    size_t namelen = strlen(name);
+    char buf[namelen+1];
+
+    for(size_t child_index = 0; child_index < num_children; child_index++) {
+        res = fs_node_child_name(root_node, child_index, buf, namelen+1);
+        if(res) {
+            continue;
+        }
+        buf[namelen] = '\0';
+
+        if(strcmp(buf, name) != 0) {
+            continue;
+        }
+
+        size_t node_index;
+        res = fs_node_get_child(root_node, child_index, &node_index);
+        if(res) {
+            fs_node_put(root_node);
+            return NULL;
+        }
+
+        struct fs_node *node;
+        node = fs_mount_get_node(mnt, node_index);
+        fs_node_put(root_node);
+        return node;
+    }
+
+    fs_node_put(root_node);
+    return NULL;
+}
+
+int
+ramfile_put(struct fs_node *node)
+{
+    return fs_node_put(node);
 }
 

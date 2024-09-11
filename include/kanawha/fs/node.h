@@ -1,5 +1,5 @@
-#ifndef __KANAWHA__FS_H__
-#define __KANAWHA__FS_H__
+#ifndef __KANAWHA__FS_NODE_H__
+#define __KANAWHA__FS_NODE_H__
 
 #include <kanawha/ops.h>
 #include <kanawha/stdint.h>
@@ -108,58 +108,6 @@ struct fs_node
     struct ptree_node cache_node;
 };
 
-// Get the root fs_node of the mount
-#define FS_MOUNT_ROOT_INDEX_SIG(RET,ARG)\
-RET(int)\
-ARG(size_t*, root_node_index)
-
-// Populate RAM-based data structures for the fs_node
-#define FS_MOUNT_LOAD_NODE_SIG(RET,ARG)\
-RET(struct fs_node *)\
-ARG(size_t, node_index)
-
-#define FS_MOUNT_UNLOAD_NODE_SIG(RET,ARG)\
-RET(int)\
-ARG(struct fs_node *, node)
-
-#define FS_MOUNT_OP_LIST(OP, ...)\
-OP(root_index, FS_MOUNT_ROOT_INDEX_SIG, ##__VA_ARGS__)\
-OP(load_node, FS_MOUNT_LOAD_NODE_SIG, ##__VA_ARGS__)\
-OP(unload_node, FS_MOUNT_UNLOAD_NODE_SIG, ##__VA_ARGS__)
-
-struct fs_mount_ops {
-DECLARE_OP_LIST_PTRS(FS_MOUNT_OP_LIST, struct fs_mount *)
-};
-
-struct fs_mount
-{
-    struct fs_mount_ops *ops;
-
-    struct stree_node attach_node;
-    atomic_bool_t is_attached;
-
-    spinlock_t cache_lock;
-    struct ptree node_cache;
-};
-
-#define FS_TYPE_MOUNT_FILE_SIG(RET,ARG)\
-RET(int)\
-ARG(struct fs_node *, node)\
-ARG(struct fs_mount **, out_mnt)\
-
-#define FS_TYPE_UNMOUNT_SIG(RET,ARG)\
-RET(int)\
-ARG(struct fs_mount *, mnt)
-
-#define FS_TYPE_OP_LIST(OP, ...)\
-OP(mount_file, FS_TYPE_MOUNT_FILE_SIG, ##__VA_ARGS__)\
-OP(unmount, FS_TYPE_UNMOUNT_SIG, ##__VA_ARGS__)
-
-struct fs_type {
-DECLARE_OP_LIST_PTRS(FS_TYPE_OP_LIST, struct fs_type *)
-    struct stree_node fs_type_node;
-};
-
 DEFINE_OP_LIST_WRAPPERS(
         FS_NODE_OP_LIST,
         static inline,
@@ -168,74 +116,19 @@ DEFINE_OP_LIST_WRAPPERS(
         ->ops->,
         SELF_ACCESSOR)
 
-DEFINE_OP_LIST_WRAPPERS(
-        FS_MOUNT_OP_LIST,
-        static inline,
-        /* No Prefix */,
-        fs_mount,
-        ->ops->,
-        SELF_ACCESSOR)
-
-DEFINE_OP_LIST_WRAPPERS(
-        FS_TYPE_OP_LIST,
-        static inline,
-        /* No Prefix */,
-        fs_type,
-        ->,
-        SELF_ACCESSOR)
-
-// Keeps a reference to name
-int register_fs_type(
-        struct fs_type *type,
-        char *name);
-
-// Initialize generic fields of an fs_mount,
-// for use by implementations of fs_type_mount_*
-int init_fs_mount_struct(
-        struct fs_mount *mnt,
-        struct fs_mount_ops *ops);
-
-struct fs_type *
-fs_type_find(const char *name);
-
-// Makes a copy of "name"
-int
-fs_attach_mount(
-        struct fs_mount *mount,
-        const char *name);
-
-struct fs_mount *
-fs_deattach_mount(
-        const char *name);
-
-struct fs_mount *
-fs_mount_lookup(const char *name);
+#undef FS_NODE_READ_SIG
+#undef FS_NODE_WRITE_SIG
+#undef FS_NODE_ATTR_SIG
+#undef FS_NODE_FLUSH_SIG
+#undef FS_NODE_CHILD_NAME_SIG
+#undef FS_NODE_GET_CHILD_SIG
+#undef FS_NODE_OP_LIST
 
 int
-fs_path_lookup(
-        const char *path,
-        struct fs_mount **mnt,
-        struct fs_node **node);
-
-int
-fs_node_lookup(
-        struct fs_mount *mnt,
-        const char *path,
-        size_t *index_out);
-
-struct fs_node *
-fs_mount_get_node(
-        struct fs_mount *mnt,
-        size_t node_index);
-
-// Creates another reference to "node"
-int
-fs_node_get_again(
+fs_node_get(
         struct fs_node *node);
-
 int
-fs_mount_put_node(
-        struct fs_mount *mnt,
+fs_node_put(
         struct fs_node *node);
 
 order_t
@@ -277,54 +170,5 @@ int
 immutable_fs_node_write(struct fs_node *, void *, size_t *, uintptr_t);
 int
 writethrough_fs_node_flush(struct fs_node *node);
-
-/*
- * stree Wrapper Mount
- */
-
-struct stree_fs_node
-{
-    struct fs_node fs_node;
-    struct stree_node stree_node;
-    struct ptree_node index_node;
-};
-
-struct stree_fs_mount
-{
-    spinlock_t lock;
-    struct fs_mount mount;
-
-    struct stree_fs_node root_node;
-    size_t num_children;
-
-    struct stree node_tree;
-    struct ptree node_index_tree;
-};
-
-int
-stree_fs_mount_init(
-        struct stree_fs_mount *mnt);
-
-int
-stree_fs_mount_deinit(
-        struct stree_fs_mount *mnt);
-
-struct fs_mount *
-stree_fs_mount_get_mount(
-        struct stree_fs_mount *mnt);
-
-int
-stree_fs_mount_insert(
-        struct stree_fs_mount *mnt,
-        struct stree_fs_node *node,
-        const char *name);
-
-int
-stree_fs_mount_remove(
-        struct stree_fs_mount *mnt,
-        struct stree_fs_node *node);
-
-void
-fs_dump_attached_mounts(printk_f *printer, int depth);
 
 #endif

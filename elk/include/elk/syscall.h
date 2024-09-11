@@ -11,12 +11,12 @@ __attribute__((noreturn))
 void
 sys_exit(int exitcode);
 
-fd_t
+int
 sys_open(
-        fd_t parent,
-        const char *name,
+        const char *path,
         unsigned long access_flags,
-        unsigned long mode_flags);
+        unsigned long mode_flags,
+        fd_t *fd);
 
 int
 sys_close(
@@ -93,5 +93,13 @@ sys_reap(
 
 pid_t
 sys_getpid(void);
+
+int
+sys_mount(
+        const char *source,
+        fd_t dest_dir,
+        const char *dest_name,
+        const char *fs_type,
+        unsigned long flags);
 
 #endif

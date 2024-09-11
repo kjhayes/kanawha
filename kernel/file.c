@@ -8,6 +8,8 @@
 #include <kanawha/vmem.h>
 #include <kanawha/assert.h>
 #include <kanawha/kmalloc.h>
+#include <kanawha/fs/path.h>
+#include <kanawha/fs/node.h>
 
 int
 file_table_create(
@@ -75,15 +77,12 @@ __file_table_free_descriptor(
     }
 
     DEBUG_ASSERT(KERNEL_ADDR(desc));
-    DEBUG_ASSERT(KERNEL_ADDR(desc->node));
-    DEBUG_ASSERT(KERNEL_ADDR(desc->node->mount));
+    DEBUG_ASSERT(KERNEL_ADDR(desc->path));
 
-    res = fs_mount_put_node(
-            desc->node->mount,
-            desc->node);
+    res = fs_path_put(desc->path);
 
     if(res) {
-        eprintk("Failed to put fs_node when closing file descriptor!\n");
+        eprintk("Failed to put fs_path when closing file descriptor!\n");
         return res;
     }
 
@@ -134,255 +133,61 @@ file_table_deattach(
 }
 
 int
-file_table_open_path(
+file_table_open(
         struct file_table *table,
         struct process *process,
-        const char *path,
+        const char *path_str,
         unsigned long access_flags,
         unsigned long mode_flags,
         fd_t *fd)
 {
     int res;
 
-    struct fs_node *node;
-    struct fs_mount *mnt;
-
-    res = fs_path_lookup(
-            path,
-            &mnt,
-            &node);
-    if(res) {
-        return res;
-    }
-
-    struct file_descriptor *desc;
-    desc = kmalloc(sizeof(struct file_descriptor));
+    struct file_descriptor *desc =
+        kmalloc(sizeof(struct file_descriptor));
     if(desc == NULL) {
         return -ENOMEM;
     }
     memset(desc, 0, sizeof(struct file_descriptor));
 
-    desc->node = node;
+    res = fs_path_lookup_for_process(
+            process,
+            path_str,
+            access_flags,
+            mode_flags,
+            &desc->path);
+    if(res) {
+        kfree(desc);
+        return res;
+    }
+
     desc->refs = 1;
-
-    desc->seek_offset = 0;
-
-    // We should be checking these against some form
-    // of user/process permissions
     desc->mode_flags = mode_flags;
     desc->access_flags = access_flags;
 
-    // Actually insert the descriptor into the table
     spin_lock(&table->lock);
 
-    res = ptree_insert_any(&table->descriptor_tree, &desc->tree_node);
+    res = ptree_insert_any(
+            &table->descriptor_tree,
+            &desc->tree_node);
     if(res) {
-        fs_mount_put_node(mnt, node);
-        kfree(desc);
         spin_unlock(&table->lock);
-        return -ENOMEM;
-    }
-
-    if(fd != NULL) {
-        *fd = (fd_t)desc->tree_node.key;
+        fs_path_put(desc->path);
+        kfree(desc);
+        return res;
     }
 
     table->num_open_files++;
 
     spin_unlock(&table->lock);
 
-    return 0;
-}
-
-int
-file_table_open_mount(
-        struct file_table *table,
-        struct process *process,
-        const char *attach_name,
-        unsigned long access_flags,
-        unsigned long mode_flags,
-        fd_t *fd)
-{
-    int res;
-
-    struct fs_node *node;
-    struct fs_mount *mnt;
-
-    mnt = fs_mount_lookup(
-            attach_name);
-    if(mnt == NULL) {
-        return -ENXIO;
-    }
-
-    size_t root_index;
-    res = fs_mount_root_index(
-            mnt,
-            &root_index);
-    if(res) {
-        return res;
-    }
-
-    node = fs_mount_get_node(mnt, root_index);
-    if(node == NULL) {
-        eprintk("file_table_open_mount: received root index 0x%llx, but fs_mount_get_node failed! (err=%s)\n",
-                (ull_t)root_index, errnostr(res));
-        return -ENXIO;
-    }
-
-    struct file_descriptor *desc;
-    desc = kmalloc(sizeof(struct file_descriptor));
-    if(desc == NULL) {
-        return -ENOMEM;
-    }
-    memset(desc, 0, sizeof(struct file_descriptor));
-
-    desc->node = node;
-    desc->refs = 1;
-
-    // We should be checking these against some form
-    // of user/process permissions
-    desc->mode_flags = mode_flags;
-    desc->access_flags = access_flags;
-
-    // Actually insert the descriptor into the table
-    spin_lock(&table->lock);
-
-    res = ptree_insert_any(&table->descriptor_tree, &desc->tree_node);
-    if(res) {
-        fs_mount_put_node(mnt, node);
-        kfree(desc);
-        spin_unlock(&table->lock);
-        return -ENOMEM;
-    }
-
-    if(fd != NULL) {
-        *fd = (fd_t)desc->tree_node.key;
-    }
-
-    table->num_open_files++;
-
-    spin_unlock(&table->lock);
+    *fd = desc->tree_node.key;
 
     return 0;
 }
 
 int
-file_table_open_child(
-        struct file_table *table,
-        struct process *process,
-        fd_t parent,
-        const char *name,
-        unsigned long access_flags,
-        unsigned long mode_flags,
-        fd_t *fd)
-{
-    int res;
-
-    struct file_descriptor *parent_desc =
-        file_table_get_descriptor(table, process, parent);
-
-    if(parent_desc == NULL) {
-        return -EINVAL;
-    }
-
-    size_t num_children;
-    res = fs_node_attr(parent_desc->node, FS_NODE_ATTR_CHILD_COUNT, &num_children);
-    if(res) {
-        file_table_put_descriptor(table, process, parent_desc);
-        return res;
-    }
-    if(num_children == 0) {
-        file_table_put_descriptor(table, process, parent_desc);
-        return -ENXIO;
-    }
-
-    int found = 0;
-    size_t found_index;
-    size_t name_len = strlen(name);
-    char name_buf[name_len+1];
-
-    for(size_t i = 0; i < num_children; i++) {
-        res = fs_node_child_name(
-                parent_desc->node,
-                i,
-                name_buf,
-                name_len);
-        if(res) {
-            wprintk("Failed to get fs_node child name during file_table_open_child! (err=%s)\n",
-                    errnostr(res));
-            continue;
-        }
-        name_buf[name_len] = '\0';
-        if(strcmp(name_buf, name) == 0) {
-            found_index = i;
-            found = 1;
-            break;
-        }
-    }
-
-    if(!found) {
-        file_table_put_descriptor(table, process, parent_desc);
-        return -ENXIO;
-    }
-
-   
-    size_t node_index;
-    res = fs_node_get_child(parent_desc->node, found_index, &node_index);
-    if(res) {
-        file_table_put_descriptor(table, process, parent_desc);
-        return res;
-    }
-
-    struct fs_node *node;
-    node = fs_mount_get_node(parent_desc->node->mount, node_index);
-    if(node == NULL) {
-        file_table_put_descriptor(table, process, parent_desc);
-        return -ENXIO;
-    }
-
-    // We don't need to keep the parent around anymore
-    file_table_put_descriptor(table, process, parent_desc);
-
-    struct file_descriptor *desc;
-    desc = kmalloc(sizeof(struct file_descriptor));
-    if(desc == NULL) {
-        return -ENOMEM;
-    }
-    memset(desc, 0, sizeof(struct file_descriptor));
-
-    desc->node = node;
-    desc->refs = 1;
-
-    // We should be checking these against some form
-    // of user/process permissions
-    desc->mode_flags = mode_flags;
-    desc->access_flags = access_flags;
-
-    // Actually insert the descriptor into the table
-    spin_lock(&table->lock);
-
-    res = ptree_insert_any(&table->descriptor_tree, &desc->tree_node);
-    if(res) {
-        fs_mount_put_node(node->mount, node);
-        kfree(desc);
-        spin_unlock(&table->lock);
-        return -ENOMEM;
-    }
-
-    if(fd != NULL) {
-        *fd = (fd_t)desc->tree_node.key;
-    }
-
-    table->num_open_files++;
-
-    spin_unlock(&table->lock);
-
-    return 0;
-
-}
-
-int
-file_table_close_file(
+file_table_close(
         struct file_table *table,
         struct process *process,
         fd_t fd)

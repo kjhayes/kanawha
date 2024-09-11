@@ -1,6 +1,5 @@
 
 #include <elk/syscall.h>
-#include <elk/path.h>
 #include <kanawha/uapi/spawn.h>
 #include <kanawha/uapi/environ.h>
 #include <kanawha/uapi/errno.h>
@@ -12,20 +11,23 @@ static int
 stdio_setup(const char *stdin_path,
             const char *stdout_path)
 {
-    stdin = open_path(
+    int res;
+    res = sys_open(
             stdin_path,
             FILE_PERM_READ,
-            0);
-    if(stdin == NULL_FD) {
-        return -EINVAL;
+            0,
+            &stdin);
+    if(res) {
+        return res;
     }
 
-    stdout = open_path(
+    res = sys_open(
             stdout_path,
             FILE_PERM_WRITE,
-            0);
-    if(stdout == NULL_FD) {
-        return -EINVAL;
+            0,
+            &stdout);
+    if(res) {
+        return res;
     }
 
     return 0;
@@ -134,16 +136,18 @@ do_exec(void)
 {
     int res;
 
-    fd_t exec_file =
-        open_path(
+    fd_t exec_file;
+
+    res = sys_open(
                 exec_path,
                 FILE_PERM_EXEC|FILE_PERM_READ,
-                0);
-    if(exec_file == NULL_FD) {
+                0,
+                &exec_file);
+    if(res) {
         puts("Could not find \"");
         puts(exec_path);
         puts("\"\n");
-        return -ENXIO;
+        return res;
     }
 
     res = sys_environ("ARGV", argv_data, strlen(argv_data), ENV_SET);
@@ -191,14 +195,16 @@ int
 main(int argc, const char **argv)
 {
     int res = stdio_setup(
-            "char:COM0",
-            "char:COM0");
+            "/chr/COM0",
+            "/chr/COM0");
+    if(res) {
+        return res;
+    }
 
     int running = 1;
 
     const size_t buffer_len = 0x2000;
     char input_buffer[buffer_len];
-
 
     while(running)
     {

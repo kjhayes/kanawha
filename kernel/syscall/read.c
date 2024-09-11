@@ -4,6 +4,7 @@
 #include <kanawha/file.h>
 #include <kanawha/kmalloc.h>
 #include <kanawha/assert.h>
+#include <kanawha/fs/node.h>
 
 #define SYSCALL_READ_MAX_CHUNK_SIZE 0x1000
 
@@ -44,7 +45,7 @@ syscall_read(
         size_t amount_read = amount_to_read;
 
         res = fs_node_read(
-                desc->node,
+                desc->path->fs_node,
                 buffer,
                 &amount_read,
                 src_offset);

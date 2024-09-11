@@ -11,11 +11,11 @@ RET(void)\
 ARG(int, exitcode)
 
 #define SYSCALL_SIG_OPEN(RET,ARG)\
-RET(fd_t)\
-ARG(fd_t, parent)\
-ARG(const char __user *, name)\
+RET(int)\
+ARG(const char __user *, path)\
 ARG(unsigned long, access_flags)\
-ARG(unsigned long, mode_flags)
+ARG(unsigned long, mode_flags)\
+ARG(fd_t __user *, fd)
 
 #define SYSCALL_SIG_CLOSE(RET,ARG)\
 RET(int)\
@@ -93,22 +93,36 @@ ARG(int __user *, exitcode)
 #define SYSCALL_SIG_GETPID(RET,ARG)\
 RET(pid_t)
 
+#define SYSCALL_SIG_MOUNT(RET,ARG)\
+RET(int)\
+ARG(const char __user *, source)\
+ARG(fd_t, dest_dir)\
+ARG(const char __user *, dest_name)\
+ARG(const char __user *, fs_type)\
+ARG(unsigned long, flags)
+
+#define SYSCALL_SIG_UNMOUNT(RET,ARG)\
+RET(int)\
+ARG(fd_t, mntpoint)
+
 #define SYSCALL_XLIST(X)\
-X(exit,      0,  EXIT,      SYSCALL_SIG_EXIT)\
-X(open,      1,  OPEN,      SYSCALL_SIG_OPEN)\
-X(close,     2,  CLOSE,     SYSCALL_SIG_CLOSE)\
-X(read,      3,  READ,      SYSCALL_SIG_READ)\
-X(write,     4,  WRITE,     SYSCALL_SIG_WRITE)\
-X(seek,      5,  SEEK,      SYSCALL_SIG_SEEK)\
-X(attr,      6,  ATTR,      SYSCALL_SIG_ATTR)\
-X(mmap,      7,  MMAP,      SYSCALL_SIG_MMAP)\
-X(munmap,    8,  MUNMAP,    SYSCALL_SIG_MUNMAP)\
-X(exec,      9,  EXEC,      SYSCALL_SIG_EXEC)\
-X(environ,   10, ENVIRON,   SYSCALL_SIG_ENVIRON)\
-X(childname, 11, CHILDNAME, SYSCALL_SIG_CHILDNAME)\
-X(spawn,     12, SPAWN,     SYSCALL_SIG_SPAWN)\
-X(reap,      13, REAP,      SYSCALL_SIG_REAP)\
-X(getpid,    14, GETPID,    SYSCALL_SIG_GETPID)
+X(exit,      0,  EXIT,       SYSCALL_SIG_EXIT)\
+X(open,      1,  OPEN,       SYSCALL_SIG_OPEN)\
+X(close,     2,  CLOSE,      SYSCALL_SIG_CLOSE)\
+X(read,      3,  READ,       SYSCALL_SIG_READ)\
+X(write,     4,  WRITE,      SYSCALL_SIG_WRITE)\
+X(seek,      5,  SEEK,       SYSCALL_SIG_SEEK)\
+X(attr,      6,  ATTR,       SYSCALL_SIG_ATTR)\
+X(mmap,      7,  MMAP,       SYSCALL_SIG_MMAP)\
+X(munmap,    8,  MUNMAP,     SYSCALL_SIG_MUNMAP)\
+X(exec,      9,  EXEC,       SYSCALL_SIG_EXEC)\
+X(environ,   10, ENVIRON,    SYSCALL_SIG_ENVIRON)\
+X(childname, 11, CHILDNAME,  SYSCALL_SIG_CHILDNAME)\
+X(spawn,     12, SPAWN,      SYSCALL_SIG_SPAWN)\
+X(reap,      13, REAP,       SYSCALL_SIG_REAP)\
+X(getpid,    14, GETPID,     SYSCALL_SIG_GETPID)\
+X(mount,     15, MOUNT,      SYSCALL_SIG_MOUNT)\
+X(unmount,   16, UNMOUNT,    SYSCALL_SIG_UNMOUNT)
 
 #define DECLARE_SYSCALL_ID_CONSTANTS(__name, __id, __NAME, ...)\
 const static syscall_id_t SYSCALL_ID_ ## __NAME = __id;

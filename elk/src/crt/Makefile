@@ -2,8 +2,7 @@
 CRT_OBJS += \
     start.o \
 	syscall.o \
-	argv.o \
-	path.o 
+	argv.o
 
 CRT_OUTPUT_DIR := $(OUTPUT_DIR)/crt
 CRT_OUTPUT_OBJS := $(addprefix $(CRT_OUTPUT_DIR)/, $(CRT_OBJS))

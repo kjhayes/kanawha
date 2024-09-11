@@ -1,4 +1,13 @@
 
-obj-$(CONFIG_UNIX_WARE_BFS) += bfs.o
-obj-$(CONFIG_CPIO_FS) += cpio.o
+obj-y += \
+	node.o \
+	mount.o \
+	type.o \
+	path.o \
+	stree.o
+
+obj-y += sys/
+
+obj-y += bfs/
+obj-y += cpio/
 

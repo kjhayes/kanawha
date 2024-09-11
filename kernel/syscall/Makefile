@@ -13,5 +13,6 @@ obj-y += \
 	childname.o \
 	spawn.o \
 	reap.o \
-	getpid.o
+	getpid.o \
+	mount.o
 

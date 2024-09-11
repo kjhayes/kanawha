@@ -9,7 +9,6 @@
 #include <kanawha/irq_domain.h>
 #include <kanawha/clk.h>
 #include <kanawha/usermode.h>
-#include <kanawha/fs.h>
 
 #include <arch/x64/fpu.h>
 #include <arch/x64/gdt.h>
@@ -165,8 +164,6 @@ void x64_init(void *in)
     dump_device_hierarchy(printk);
     //dump_irq_descs(printk);
     dump_threads(printk);
-
-    fs_dump_attached_mounts(printk, 16);
 
     printk("CPU (%ld) init thread is idling\n", (sl_t)current_cpu_id());
     idle_loop();

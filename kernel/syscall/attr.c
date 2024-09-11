@@ -3,7 +3,7 @@
 #include <kanawha/uapi/attr.h>
 #include <kanawha/errno.h>
 #include <kanawha/file.h>
-#include <kanawha/fs.h>
+#include <kanawha/fs/node.h>
 #include <kanawha/process.h>
 
 int
@@ -25,7 +25,7 @@ syscall_attr(
             break;
         case FILE_ATTR_SIZE:
             res = fs_node_attr(
-                    desc->node,
+                    desc->path->fs_node,
                     FS_NODE_ATTR_END_OFFSET,
                     &to_write);
             if(res) {
@@ -34,7 +34,7 @@ syscall_attr(
             break;
         case FILE_ATTR_CHILDREN:
             res = fs_node_attr(
-                    desc->node,
+                    desc->path->fs_node,
                     FS_NODE_ATTR_CHILD_COUNT,
                     &to_write);
             if(res) {

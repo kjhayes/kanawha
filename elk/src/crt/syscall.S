@@ -17,6 +17,8 @@
 #define SYSCALL_ID_SPAWN     12
 #define SYSCALL_ID_REAP      13
 #define SYSCALL_ID_GETPID    14
+#define SYSCALL_ID_MOUNT     15
+#define SYSCALL_ID_UNMOUNT   16
 
 .global sys_exit
 .type sys_exit,@function
@@ -30,11 +32,10 @@ sys_exit:
 .type sys_open,@function
 sys_open:
     movq $SYSCALL_ID_OPEN, %rax
-    // rdi -> fd_t parent
-    // rsi -> const char * name
-    // rdx -> unsigned long access_flags
-    // r8 -> unsigned long mode_flags
-    movq %rcx, %r8
+    // rdi -> const char * name
+    // rsi -> unsigned long access_flags
+    // rdx -> unsigned long mode_flags
+    movq %rcx, %r8 // r8 -> fd_t *fd_out
     syscall
     retq
 
@@ -164,6 +165,27 @@ sys_reap:
 .type sys_getpid,@function
 sys_getpid:
     movq $SYSCALL_ID_GETPID, %rax
+    syscall
+    retq
+
+.global sys_mount
+.type sys_mount,@function
+sys_mount:
+    movq $SYSCALL_ID_MOUNT, %rax
+    // rdi -> const char *source
+    // rsi -> fd_t dest_dir 
+    // rdx -> const char *dest_name
+    // Need to do these backwards
+    movq %r8, %r9  // r9 -> unsigned long flags
+    movq %rcx, %r8 // r8 -> const char *fs_type
+    syscall
+    retq
+
+.global sys_unmount
+.type sys_unmount,@function
+sys_unmount:
+    movq $SYSCALL_ID_UNMOUNT, %rax
+    // rdi -> fd_t mount_point
     syscall
     retq
 

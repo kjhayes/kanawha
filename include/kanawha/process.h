@@ -57,6 +57,9 @@ struct process
     // Environment Variables
     struct environment *environ;
     ilist_node_t environ_node;
+
+    // Root Directory
+    struct fs_path *root;
 };
 
 struct process *

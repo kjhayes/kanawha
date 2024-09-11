@@ -1,6 +1,8 @@
 // Unix-Ware Boot File System (BFS) Driver
 
-#include <kanawha/fs.h>
+#include <kanawha/fs/type.h>
+#include <kanawha/fs/mount.h>
+#include <kanawha/fs/node.h>
 #include <kanawha/init.h>
 #include <kanawha/kmalloc.h>
 #include <kanawha/string.h>

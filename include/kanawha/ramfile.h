@@ -12,4 +12,14 @@ create_ramfile(
 int
 destroy_ramfile(const char *ramfile_name);
 
+struct fs_mount *
+ramfile_mount(void);
+
+struct fs_node *
+ramfile_get(const char *name);
+
+int
+ramfile_put(
+        struct fs_node *node);
+
 #endif

@@ -70,10 +70,10 @@ x64_route_syscall(struct x64_syscall_state *state)
             *ret_val = (uint64_t)(fd_t)
                 syscall_open(
                         process,
-                        (fd_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDI], // parent
-                        (const char __user *)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RSI], // name
-                        (unsigned long)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDX], // perm
-                        (unsigned long)state->caller_regs[PUSHED_CALLER_REGS_INDEX_R8] // mode
+                        (const char __user *)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDI], // path
+                        (unsigned long)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RSI], // access_flags
+                        (unsigned long)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDX], // mode_flags
+                        (fd_t __user *)state->caller_regs[PUSHED_CALLER_REGS_INDEX_R8] // fd_out
                         );
             break;
         case SYSCALL_ID_CLOSE:
@@ -188,6 +188,24 @@ x64_route_syscall(struct x64_syscall_state *state)
             *ret_val = (uint64_t)(pid_t)
                 syscall_getpid(
                         process
+                        );
+            break;
+        case SYSCALL_ID_MOUNT:
+            *ret_val = (uint64_t)(int)
+                syscall_mount(
+                        process,
+                        (const char __user *)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDI], // source
+                        (fd_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RSI], // dst_dir
+                        (const char __user *)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDX], // dst_name
+                        (const char __user *)state->caller_regs[PUSHED_CALLER_REGS_INDEX_R8], // fs_type
+                        (unsigned long)state->caller_regs[PUSHED_CALLER_REGS_INDEX_R9] // flags
+                        );
+            break;
+        case SYSCALL_ID_UNMOUNT:
+            *ret_val = (uint64_t)(int)
+                syscall_unmount(
+                        process,
+                        (fd_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDI] // mount point
                         );
             break;
         default:

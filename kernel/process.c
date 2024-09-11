@@ -8,6 +8,10 @@
 #include <kanawha/usermode.h>
 #include <kanawha/string.h>
 #include <kanawha/kmalloc.h>
+#include <kanawha/ramfile.h>
+#include <kanawha/fs/type.h>
+#include <kanawha/fs/node.h>
+#include <kanawha/fs/mount.h>
 #include <kanawha/stddef.h>
 #include <kanawha/timer.h>
 #include <kanawha/assert.h>
@@ -16,8 +20,6 @@
 
 static DECLARE_SPINLOCK(process_pid_lock);
 static DECLARE_PTREE(process_pid_tree);
-
-#define MAX_PROCESS_ID (pid_t)(uintptr_t)(-1)
 
 static struct process *init_process = NULL;
 
@@ -76,27 +78,14 @@ process_assign_pid(
 {
     int irq_flags = spin_lock_irq_save(&process_pid_lock);
 
-    pid_t free_pid = MAX_PROCESS_ID;
-
-    for(pid_t pid = 0; pid < MAX_PROCESS_ID; pid++) {
-        dprintk("process_assign_pid: checking %ld\n", pid);
-        struct ptree_node *node = ptree_get(&process_pid_tree, pid);
-        if(node == NULL) {
-            free_pid = pid;
-            dprintk("process_assign_pid: using %ld\n", pid);
-            break;
-        }
-        dprintk("process_assign_pid: %ld already taken\n", pid);
-    }
-
-    if(free_pid == MAX_PROCESS_ID) {
+    int res;
+    res = ptree_insert_any(&process_pid_tree, &process->pid_node);
+    if(res) {
         spin_unlock_irq_restore(&process_pid_lock, irq_flags);
-        return -ENOMEM;
+        return res;
     }
 
-    process->id = free_pid;
-    process->pid_node.key = free_pid;
-    ptree_insert(&process_pid_tree, &process->pid_node, free_pid);
+    process->id = process->pid_node.key;
 
     spin_unlock_irq_restore(&process_pid_lock, irq_flags);
     return 0;
@@ -107,8 +96,6 @@ process_remove_pid(
         struct process *process)
 {
     int irq_flags = spin_lock_irq_save(&process_pid_lock);
-
-    pid_t free_pid = MAX_PROCESS_ID;
 
     struct ptree_node *removed;
     removed = ptree_remove(&process_pid_tree, process->id);
@@ -154,7 +141,7 @@ init_process_kernel_entry(void *in)
     }
 
     fd_t binary_fd;
-    res = file_table_open_path(
+    res = file_table_open(
             process->file_table,
             process,
             binary_path,
@@ -220,6 +207,7 @@ process_alloc(
 
     struct process *process = kmalloc(sizeof(struct process));
     if(process == NULL) {
+        eprintk("process_alloc: Out of Memory!\n");
         goto err0;
     }
     memset(process, 0, sizeof(struct process));
@@ -229,6 +217,7 @@ process_alloc(
     ilist_init(&process->children);
     waitqueue_init(&process->wait_queue);
 
+    process->root = NULL;
     process->mmap = NULL;
     process->file_table = NULL;
     process->environ = NULL;
@@ -240,6 +229,8 @@ process_alloc(
             THREAD_FLAG_PROCESS);
 
     if(res) {
+        eprintk("process_alloc: thread_init returned (%s)\n",
+                errnostr(res));
         goto err1;
     }
 
@@ -252,6 +243,8 @@ process_alloc(
 
     res = process_assign_pid(process);
     if(res) {
+        eprintk("process_alloc: process_assign_pid returned (%s)\n",
+                errnostr(res));
         goto err2;
     } 
 
@@ -293,6 +286,45 @@ launch_init_process(void)
             PROCESS_FLAG_INIT, // Flags
             NULL // Parent
             );
+    if(process == NULL) {
+        panic("Failed to alloc init process!\n");
+    }
+
+    const char *file_path = CONFIG_ROOT_FS_RAMFILE;
+    const char *fs_name = CONFIG_ROOT_FS_FILESYSTEM;
+
+    struct fs_type *type =
+        fs_type_find(fs_name);
+    if(type == NULL) {
+        eprintk("Cannot find root fs filesystem type \"%s\"\n",
+                fs_name);
+        return -ENXIO;
+    }
+
+    struct fs_node *backing_file =
+        ramfile_get(file_path);
+
+    struct fs_mount *root_fs_mnt;
+    res = fs_type_mount_file(
+            type,
+            backing_file,
+            &root_fs_mnt);
+    if(res) {
+        ramfile_put(backing_file);
+        return res;
+    }
+    ramfile_put(backing_file);
+
+    struct fs_path *root;
+    res = fs_path_mount_root(root_fs_mnt, &root);
+    if(res) {
+        process_free(process);
+        return res;
+    }
+    ramfile_put(backing_file);
+    printk("process=%p, &process->root=%p\n",
+            process, &process->root);
+    process->root = root;
 
     res = mmap_create(PROCESS_LOWMEM_SIZE, process);
     if(process->mmap == NULL) {
@@ -602,6 +634,9 @@ process_terminate(
     process->exitcode = exitcode;
     process->status = PROCESS_STATUS_ZOMBIE;
 
+    if(process->root) {
+        fs_path_put(process->root);
+    }
     if(process->mmap) {
         mmap_deattach(process->mmap, process);
     }
@@ -718,6 +753,9 @@ process_spawn_child(
                 (void*)state,
                 0,
                 parent);
+
+    process->root = parent->root;
+    fs_path_get(process->root);
 
     if(spawn_flags & SPAWN_MMAP_CLONE) {
         panic("SPAWN_MMAP_CLONE is unimplemented!\n");

@@ -2,7 +2,7 @@
 #include <kanawha/syscall.h>
 #include <kanawha/process.h>
 #include <kanawha/file.h>
-#include <kanawha/fs.h>
+#include <kanawha/fs/node.h>
 #include <kanawha/kmalloc.h>
 #include <kanawha/string.h>
 #include <kanawha/assert.h>
@@ -35,7 +35,7 @@ syscall_childname(
 
     size_t num_children;
     res = fs_node_attr(
-            desc->node,
+            desc->path->fs_node,
             FS_NODE_ATTR_CHILD_COUNT,
             &num_children);
     if(res) {
@@ -57,7 +57,7 @@ syscall_childname(
         goto err1;
     }
 
-    res = fs_node_child_name(desc->node, child_index, kernel_buffer, buf_len-1);
+    res = fs_node_child_name(desc->path->fs_node, child_index, kernel_buffer, buf_len-1);
     kernel_buffer[buf_len] = '\0';
 
     size_t actual_len = strlen(kernel_buffer);

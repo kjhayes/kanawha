@@ -3,7 +3,6 @@ obj-y += \
 	ptree.o \
 	stree.o \
 	buddy.o \
-	fs.o \
 	file.o \
 	kheap.o \
 	kmalloc.o \
@@ -40,8 +39,6 @@ obj-y += \
 	timer.o \
 	spinlock.o \
 	clk.o
-
-obj-$(CONFIG_ROOT_FS) += rootfs.o
 
 obj-y += fs/
 obj-y += syscall/

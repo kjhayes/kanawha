@@ -3,6 +3,6 @@
 
 #include <kanawha/uapi/stdint.h>
 
-typedef uintptr_t pid_t;
+typedef long pid_t;
 
 #endif

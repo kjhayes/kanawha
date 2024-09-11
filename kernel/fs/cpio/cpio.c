@@ -1,11 +1,14 @@
 // CPIO Archive as a Filesystem
 
-#include <kanawha/fs.h>
+#include <kanawha/fs/type.h>
+#include <kanawha/fs/mount.h>
+#include <kanawha/fs/node.h>
 #include <kanawha/init.h>
 #include <kanawha/kmalloc.h>
 #include <kanawha/string.h>
 #include <kanawha/vmem.h>
 #include <kanawha/stddef.h>
+#include <kanawha/stdint.h>
 
 #define CPIO_FS_TYPE_NAME "cpio"
 #define CPIO_ROOT_INDEX 0x10000
@@ -192,7 +195,7 @@ cpio_mount_file(
     if(res) {goto err0;}
 
 
-    res = fs_node_get_again(backing_node);
+    res = fs_node_get(backing_node);
     if(res) {
         goto err0;
     }
@@ -509,6 +512,7 @@ cpio_fs_mount_ops = {
 static struct fs_type
 cpio_fs_type = {
     .mount_file = cpio_mount_file,
+    .mount_special = fs_type_cannot_mount_special,
     .unmount = cpio_unmount,
 };
 

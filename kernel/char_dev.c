@@ -4,7 +4,10 @@
 #include <kanawha/kmalloc.h>
 #include <kanawha/spinlock.h>
 #include <kanawha/stddef.h>
-#include <kanawha/fs.h>
+#include <kanawha/fs/type.h>
+#include <kanawha/fs/mount.h>
+#include <kanawha/fs/node.h>
+#include <kanawha/fs/sys/sysfs.h>
 #include <kanawha/init.h>
 #include <kanawha/assert.h>
 #include <kanawha/string.h>
@@ -379,10 +382,8 @@ char_dev_init_fs_mount(void)
         return res;
     }
 
-    res = fs_attach_mount(&cd_mnt->fs_mount, "char");
+    res = sysfs_register_mount(&cd_mnt->fs_mount, "chardev");
     if(res) {
-        eprintk("Failed to attach chardev fs mount (\"char\")! (err=%s)\n",
-                errnostr(res));
         return res;
     }
 

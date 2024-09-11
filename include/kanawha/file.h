@@ -1,7 +1,7 @@
 #ifndef __KANAWHA__FILE_H__
 #define __KANAWHA__FILE_H__
 
-#include <kanawha/fs.h>
+#include <kanawha/fs/path.h>
 #include <kanawha/uapi/file.h>
 #include <kanawha/list.h>
 #include <kanawha/process.h>
@@ -16,7 +16,7 @@ struct file_descriptor
     unsigned long access_flags;
     unsigned long mode_flags;
 
-    struct fs_node *node;
+    struct fs_path *path;
 };
 
 struct file_table
@@ -46,7 +46,7 @@ file_table_deattach(
         struct process *process);
 
 int
-file_table_open_path(
+file_table_open(
         struct file_table *table,
         struct process *process,
         const char *path,
@@ -55,26 +55,7 @@ file_table_open_path(
         fd_t *fd);
 
 int
-file_table_open_child(
-        struct file_table *table,
-        struct process *process,
-        fd_t parent,
-        const char *name,
-        unsigned long access_flags,
-        unsigned long mode_flags,
-        fd_t *fd);
-
-int
-file_table_open_mount(
-        struct file_table* table,
-        struct process *process,
-        const char *attach_name,
-        unsigned long access_flags,
-        unsigned long mode_flags,
-        fd_t *fd);
-
-int
-file_table_close_file(
+file_table_close(
         struct file_table *table,
         struct process *process,
         fd_t fd);

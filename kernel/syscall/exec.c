@@ -7,6 +7,8 @@
 #include <kanawha/assert.h>
 #include <kanawha/uapi/mmap.h>
 #include <kanawha/syscall/mmap.h>
+#include <kanawha/fs/node.h>
+
 #include <elf/elf.h>
 #include <elf/elf_string.h>
 
@@ -168,7 +170,7 @@ process_exec_elf64(
         return -EPERM;
     }
 
-    struct fs_node *elf_node = desc->node;
+    struct fs_node *elf_node = desc->path->fs_node;
 
     Elf64_Ehdr elf_hdr;
     size_t amount = sizeof(Elf64_Ehdr);
@@ -263,7 +265,7 @@ syscall_exec(
         return res;
     }
 
-    dprintk("syscall_exec: desc->node->index = %lld\n", (sll_t)desc->node->cache_node.key);
+    dprintk("syscall_exec: desc->path->fs_node->index = %lld\n", (sll_t)desc->path->fs_node->cache_node.key);
     file_table_put_descriptor(process->file_table, process, desc);
 
     res = vmem_flush_region(process->mmap->vmem_region);

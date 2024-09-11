@@ -6,7 +6,8 @@
 #include <kanawha/ops.h>
 #include <kanawha/stree.h>
 #include <kanawha/ptree.h>
-#include <kanawha/fs.h>
+#include <kanawha/fs/mount.h>
+#include <kanawha/fs/node.h>
 
 struct char_dev;
 struct char_driver;
