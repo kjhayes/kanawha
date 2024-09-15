@@ -102,4 +102,21 @@ sys_mount(
         const char *fs_type,
         unsigned long flags);
 
+int
+sys_dirbegin(
+        fd_t dir);
+int
+sys_dirnext(
+        fd_t dir);
+int
+sys_dirattr(
+        fd_t dir,
+        int attr,
+        size_t *value);
+int
+sys_dirname(
+        fd_t dir,
+        char *buf,
+        size_t buflen);
+
 #endif

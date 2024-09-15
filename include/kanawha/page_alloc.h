@@ -6,7 +6,6 @@
 #include <kanawha/list.h>
 #include <kanawha/ops.h>
 #include <kanawha/spinlock.h>
-#include <kanawha/page_cache.h>
 
 #define PAGE_ALLOC_MIN_ORDER 12
 #define PAGE_ALLOC_MAX_ORDER 21
@@ -89,35 +88,5 @@ page_alloc_get_allocator(
 #undef PAGE_ALLOCATOR_AMOUNT_FREE_SIG
 #undef PAGE_ALLOCATOR_OP_LIST
 #endif
-
-struct cached_anon_page {
-    struct cached_page page;
-    struct page_allocator *cur_allocator;
-    order_t order;
-    unsigned long flags;
-    ilist_node_t list_node;
-};
-
-// In-Place Initialization of an anonymous page
-int
-init_cached_anon_page(
-        struct cached_anon_page *page,
-        struct cached_page_ops *ops, // Can provide non-NULL values for functions
-                                     // other than alloc and free
-        order_t order,
-        unsigned long flags);
-
-int
-deinit_cached_anon_page(
-        struct cached_anon_page *page);
-
-// Malloc'ed initialization of an anonymous page
-struct cached_page *
-page_alloc_cached(
-        order_t order,
-        unsigned long flags);
-int
-page_free_cached(
-        struct cached_page *page);
 
 #endif

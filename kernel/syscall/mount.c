@@ -39,6 +39,7 @@ syscall_mount(
       if(fs_type_buf == NULL) {
           return -ENOMEM;
       }
+      fs_type_buf[fs_type_strlen] = '\0';
 
       res = process_read_usermem(
               process,
@@ -94,6 +95,7 @@ syscall_mount(
           kfree(src_buf);
           return res;
       }
+      src_buf[src_strlen] = '\0';
 
       if(flags & MOUNT_SPECIAL) {
           res = fs_type_mount_special(type, src_buf, &mnt);
@@ -117,8 +119,8 @@ syscall_mount(
               return res;
           }
 
-          struct file_descriptor *src_desc =
-              file_table_get_descriptor(
+          struct file *src_desc =
+              file_table_get_file(
                       process->file_table,
                       process,
                       src_fd);
@@ -136,7 +138,7 @@ syscall_mount(
                   src_desc->path->fs_node,
                   &mnt);
 
-          file_table_put_descriptor(
+          file_table_put_file(
                   process->file_table,
                   process,
                   src_desc);
@@ -184,8 +186,8 @@ syscall_mount(
     }
     dst_name_buf[dst_name_strlen] = '\0';
 
-    struct file_descriptor *dst_desc =
-        file_table_get_descriptor(
+    struct file *dst_desc =
+        file_table_get_file(
                 process->file_table,
                 process,
                 dst_dir);
@@ -204,7 +206,7 @@ syscall_mount(
             &mnt_point);
     if(res) {
         kfree(dst_name_buf);
-        file_table_put_descriptor(
+        file_table_put_file(
                 process->file_table,
                 process,
                 dst_desc);
@@ -212,7 +214,7 @@ syscall_mount(
     }
 
     kfree(dst_name_buf);
-    file_table_put_descriptor(
+    file_table_put_file(
             process->file_table,
             process,
             dst_desc);

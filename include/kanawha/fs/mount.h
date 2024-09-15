@@ -38,9 +38,6 @@ struct fs_mount
 {
     struct fs_mount_ops *ops;
 
-    struct stree_node attach_node;
-    atomic_bool_t is_attached;
-
     spinlock_t cache_lock;
     struct ptree node_cache;
 };

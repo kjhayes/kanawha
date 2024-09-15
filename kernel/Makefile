@@ -9,7 +9,6 @@ obj-y += \
 	printk.o \
 	mem_flags.o \
 	page_alloc.o \
-	page_cache.o \
 	vmem.o \
 	slab.o \
 	init.o \
@@ -17,7 +16,6 @@ obj-y += \
 	common.o \
 	bitmap.o \
 	device.o \
-	blk_dev.o \
 	ramfile.o \
 	char_dev.o \
 	irq_domain.o \

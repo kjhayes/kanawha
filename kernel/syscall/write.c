@@ -1,6 +1,7 @@
 
 #include <kanawha/syscall.h>
 #include <kanawha/process.h>
+#include <kanawha/fs/file.h>
 #include <kanawha/file.h>
 #include <kanawha/kmalloc.h>
 #include <kanawha/assert.h>
@@ -22,8 +23,8 @@ syscall_write(
             (sl_t)file,
             (ull_t)size);
 
-    struct file_descriptor *desc
-        = file_table_get_descriptor(
+    struct file *desc
+        = file_table_get_file(
                 process->file_table,
                 process,
                 file);
@@ -35,7 +36,7 @@ syscall_write(
 
     if((desc->access_flags & FILE_PERM_WRITE) == 0) {
         eprintk("syscall_write: file descriptor does not have write permissions!\n");
-        file_table_put_descriptor(process->file_table, process, desc);
+        file_table_put_file(process->file_table, process, desc);
         return -EPERM;
     }
 
@@ -43,58 +44,38 @@ syscall_write(
         ? SYSCALL_WRITE_MAX_CHUNK_SIZE : size;
     void *buffer = kmalloc(buffer_len);
 
-    uintptr_t dst_offset = desc->seek_offset;
+    ssize_t amount_to_write = buffer_len > size ? size : buffer_len;
+    ssize_t amount_written = amount_to_write;
 
-    ssize_t total_written = 0;
-
-    while(size > 0)
-    {
-        size_t amount_to_write = buffer_len > size ? size : buffer_len;
-        size_t amount_written = amount_to_write;
-
-        dprintk("Reading from usermem %p, size=0x%llx\n",
-                src, (ull_t)amount_read);
-        res = process_read_usermem(
-                process,
-                buffer,
-                src,
-                amount_written);
-        if(res) {
-            DEBUG_ASSERT(res < 0);
-            goto exit;
-        }
-
-        res = fs_node_write(
-                desc->path->fs_node,
-                buffer,
-                &amount_written,
-                dst_offset);
-        if(res) {
-            eprintk("syscall_write: fs_node_write returned %s\n",
-                    errnostr(res));
-            DEBUG_ASSERT(res < 0);
-            goto exit;
-        }
-
-        dprintk("Wrote to fs_node, size=0x%llx\n",
-                (ull_t)amount_read);
-        DEBUG_ASSERT(amount_written <= amount_to_write);
-
-        if(amount_written == 0) {
-            break;
-        }
-
-        size -= amount_written;
-        dst_offset += amount_written;
-        src += amount_written;
-        total_written += amount_written;
+    dprintk("Reading from usermem %p, size=0x%llx\n",
+            src, (ull_t)amount_read);
+    res = process_read_usermem(
+            process,
+            buffer,
+            src,
+            amount_written);
+    if(res) {
+        DEBUG_ASSERT(res < 0);
+        goto exit;
     }
 
-    desc->seek_offset = dst_offset;
-    res = total_written;
+    amount_written = direct_file_write(
+            desc,
+            buffer,
+            amount_to_write);
+    if(amount_written < 0) {
+        eprintk("syscall_write: fs_node_write returned %s\n",
+                errnostr(res));
+        DEBUG_ASSERT(res < 0);
+        res = amount_written;
+        goto exit;
+    }
+
+    desc->seek_offset += amount_written;
+    res = amount_written;
 
 exit:
-    file_table_put_descriptor(process->file_table, process, desc);
+    file_table_put_file(process->file_table, process, desc);
     kfree(buffer);
     return res;
 }

@@ -3,6 +3,7 @@
 
 #include <kanawha/stdint.h>
 #include <kanawha/printk.h>
+#include <kanawha/assert.h>
 
 struct ilist_head {
     struct ilist_head *next;
@@ -69,6 +70,8 @@ ilist_push_tail(ilist_t *list, ilist_node_t *node)
 static inline ilist_node_t *
 ilist_pop_head(ilist_t *list)
 {
+    DEBUG_ASSERT(list != NULL);
+
     if(list->next == list) {
         return NULL;
     }

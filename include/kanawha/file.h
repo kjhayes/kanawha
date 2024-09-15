@@ -6,13 +6,15 @@
 #include <kanawha/list.h>
 #include <kanawha/process.h>
 
-struct file_descriptor
+struct file
 {
-    struct ptree_node tree_node;
+    struct ptree_node table_node;
 
     int refs;
 
     size_t seek_offset;
+    size_t dir_offset;
+
     unsigned long access_flags;
     unsigned long mode_flags;
 
@@ -24,7 +26,7 @@ struct file_table
     spinlock_t lock;
 
     struct ptree descriptor_tree;
-    struct file_descriptor null_descriptor;
+    struct file null_descriptor;
 
     size_t num_open_files;
 
@@ -63,16 +65,16 @@ file_table_close(
 // Get the descriptor struct associated with fd,
 // and refuse to allow the closing the file until
 // file_table_put_descriptor is called
-struct file_descriptor *
-file_table_get_descriptor(
+struct file *
+file_table_get_file(
         struct file_table *table,
         struct process *process,
         fd_t fd);
 
 int
-file_table_put_descriptor(
+file_table_put_file(
         struct file_table *table,
         struct process *process,
-        struct file_descriptor *desc);
+        struct file *file);
 
 #endif

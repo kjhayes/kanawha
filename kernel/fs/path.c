@@ -44,68 +44,50 @@ __fs_path_traverse(
 
     // Load the file from underlying fs_node's
     struct fs_node *dir_fs_node = dir->fs_node;
-    size_t num_children;
-    res = fs_node_attr(dir_fs_node, FS_NODE_ATTR_CHILD_COUNT, &num_children);
+
+    size_t mount_index;
+    res = fs_node_lookup(
+            dir_fs_node,
+            child_name,
+            &mount_index);
     if(res) {
         spin_unlock(&fs_path_global_lock);
         return res;
     }
 
-    char name_buf[FS_PATH_MAX_NAMELEN];
-    for(size_t child_index = 0; child_index < num_children; child_index++) {
-        res = fs_node_child_name(dir_fs_node, child_index, name_buf, FS_PATH_MAX_NAMELEN);
-        if(res) {
-            continue;
-        }
-        name_buf[FS_PATH_MAX_NAMELEN-1] = '\0';
-        if(strcmp(name_buf, child_name) != 0) {
-            continue;
-        }
+    DEBUG_ASSERT(KERNEL_ADDR(dir_fs_node->mount));
+    dprintk("fs_node_lookup -> %p\n", mount_index);
 
-        // This is it
-        size_t mount_index;
-        res = fs_node_get_child(dir_fs_node, child_index, &mount_index);
-        if(res) {
-            spin_unlock(&fs_path_global_lock);
-            return res;
-        }
-
-        struct fs_node *child_fs_node =
-            fs_mount_get_node(
-                    dir_fs_node->mount,
-                    mount_index);
-        if(child_fs_node == NULL) {
-            spin_unlock(&fs_path_global_lock);
-            return -EINVAL;
-        }
-
-        struct fs_path *child = kmalloc(sizeof(struct fs_path));
-        if(child == NULL) {
-            spin_unlock(&fs_path_global_lock);
-            return -ENOMEM;
-        }
-        memset(child, 0, sizeof(struct fs_path));
-
-        child->refs = 1;
-        child->name = kstrdup(child_name);
-        if(child->name == NULL) {
-            kfree(child);
-            spin_unlock(&fs_path_global_lock);
-            return -ENOMEM;
-        }
-        child->fs_node = child_fs_node;
-
-        child->parent = dir;
-        ilist_push_tail(&dir->children, &child->child_node);
-        ilist_init(&child->children);
-
-        *out = child;
+    struct fs_node *child_fs_node =
+        fs_mount_get_node(
+                dir_fs_node->mount,
+                mount_index);
+    if(child_fs_node == NULL) {
         spin_unlock(&fs_path_global_lock);
-        return 0;
+        return -EINVAL;
     }
 
-    // Failed to find any child with that name
-    *out = NULL;
+    struct fs_path *child = kmalloc(sizeof(struct fs_path));
+    if(child == NULL) {
+        spin_unlock(&fs_path_global_lock);
+        return -ENOMEM;
+    }
+    memset(child, 0, sizeof(struct fs_path));
+
+    child->refs = 1;
+    child->name = kstrdup(child_name);
+    if(child->name == NULL) {
+        kfree(child);
+        spin_unlock(&fs_path_global_lock);
+        return -ENOMEM;
+    }
+    child->fs_node = child_fs_node;
+
+    child->parent = dir;
+    ilist_push_tail(&dir->children, &child->child_node);
+    ilist_init(&child->children);
+
+    *out = child;
     spin_unlock(&fs_path_global_lock);
     return 0;
 }
@@ -180,6 +162,8 @@ fs_path_mount_root(
         return res;
     }
 
+    dprintk("fs_path_mount_root: root_index=%p\n",root_index);
+
     mntpoint->fs_node = fs_mount_get_node(mnt, root_index);
     if(mntpoint->fs_node == NULL) {
         kfree(mntpoint);
@@ -219,6 +203,8 @@ fs_path_mount_dir(
         kfree(mntpoint);
         return res;
     }
+
+    dprintk("fs_path_mount_dir: root_index=%p\n",root_index);
 
     mntpoint->fs_node = fs_mount_get_node(mnt, root_index);
     if(mntpoint->fs_node == NULL) {

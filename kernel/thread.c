@@ -612,7 +612,7 @@ void cpu_start_threading(thread_f *func, void *state)
                 (long)current_cpu_id(), errnostr(res));
     }
 
-    dprintk("Created initial thread on CPU (%ld)\n",
+    printk("Created initial thread on CPU (%ld)\n",
         (long)current_cpu_id());
 
     pin_thread_specific(current, current_cpu_id());
@@ -665,6 +665,8 @@ dump_threads(printk_f *printer)
                 thread->status == THREAD_STATUS_RUNNING ? "RUNNING" :
                 thread->status == THREAD_STATUS_SCHEDULED ? "SCHEDULED" :
                 thread->status == THREAD_STATUS_READY ? "READY" :
+                thread->status == THREAD_STATUS_TIRED ? "TIRED" :
+                thread->status == THREAD_STATUS_SLEEPING ? "SLEEPING" :
                 thread->status == THREAD_STATUS_PREPARING ? "PREPARING" :
                 thread->status == THREAD_STATUS_ABANDONED ? "ABANDONED" :
                 "ERROR-INVALID-STATUS");

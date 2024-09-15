@@ -2,6 +2,8 @@
 #include <kanawha/fs/mount.h>
 #include <kanawha/fs/node.h>
 #include <kanawha/stddef.h>
+#include <kanawha/assert.h>
+#include <kanawha/vmem.h>
 
 int
 init_fs_mount_struct(
@@ -9,7 +11,6 @@ init_fs_mount_struct(
         struct fs_mount_ops *ops)
 {
     mnt->ops = ops;
-    atomic_bool_set_relaxed(&mnt->is_attached, 0);
     ptree_init(&mnt->node_cache);
     return 0;
 }
@@ -21,12 +22,25 @@ fs_mount_get_node(
 {
     struct fs_node *fs_node = NULL;
     struct ptree_node *node;
+
+    DEBUG_ASSERT(KERNEL_ADDR(mnt));
+
     spin_lock(&mnt->cache_lock);
+
     node = ptree_get(&mnt->node_cache, node_index);
+
     if(node == NULL) {
+        dprintk("load_node mnt=%p, mnt->load_node=%p, mnt->unload_node=%p, node_index=%p\n",
+                mnt, mnt->ops->load_node, mnt->ops->unload_node, node_index);
         fs_node = fs_mount_load_node(mnt, node_index);
-        dprintk("fs_mount_load_node -> %p, ops = %p\n",
-                fs_node, fs_node->ops);
+
+        if(fs_node == NULL) {
+            spin_unlock(&mnt->cache_lock);
+            return NULL;
+        }
+
+        dprintk("fs_mount_load_node -> %p, node_ops = %p, file_ops = %p\n",
+                fs_node, fs_node->node_ops, fs_node->file_ops);
 
         spinlock_init(&fs_node->page_lock);
         ptree_init(&fs_node->page_cache);
@@ -43,10 +57,13 @@ fs_mount_get_node(
         }
 
     } else {
+        DEBUG_ASSERT(KERNEL_ADDR(node));
         fs_node = container_of(node, struct fs_node, cache_node);
         fs_node->refcount++;
     }
+
     spin_unlock(&mnt->cache_lock);
+
     return fs_node;
 }
 
@@ -69,14 +86,6 @@ fs_mount_put_node(
         if(res) {
             goto err;
         }
-
-        // Flush the node (if we had a reclaimable list,
-        //                 we might be able to put this off for a bit)
-        res = fs_node_flush(node);
-        if(res) {
-            goto err;
-        }
-
 
         // TODO
         // Add this node to a list of reclaimable nodes

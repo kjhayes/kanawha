@@ -109,15 +109,6 @@ x64_route_syscall(struct x64_syscall_state *state)
                         (int)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDX] // whence
                         );
             break;
-        case SYSCALL_ID_ATTR:
-            *ret_val = (uint64_t)(int)
-                syscall_attr(
-                        process,
-                        (fd_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDI], // file
-                        (int)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RSI], // attr
-                        (size_t __user *)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDX] // value
-                        );
-            break;
         case SYSCALL_ID_MMAP:
             *ret_val = (uint64_t)(int)
                 syscall_mmap(
@@ -153,16 +144,6 @@ x64_route_syscall(struct x64_syscall_state *state)
                         (char __user *)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RSI], // value
                         (size_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDX], // len
                         (int)state->caller_regs[PUSHED_CALLER_REGS_INDEX_R8] // operation
-                        );
-            break;
-        case SYSCALL_ID_CHILDNAME:
-            *ret_val = (uint64_t)(int)
-                syscall_childname(
-                        process,
-                        (fd_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDI], // parent
-                        (size_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RSI], // child index
-                        (char __user *)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDX], // name buffer
-                        (size_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_R8] // buffer length
                         );
             break;
         case SYSCALL_ID_SPAWN:
@@ -206,6 +187,38 @@ x64_route_syscall(struct x64_syscall_state *state)
                 syscall_unmount(
                         process,
                         (fd_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDI] // mount point
+                        );
+            break;
+       case SYSCALL_ID_DIRBEGIN:
+            *ret_val = (uint64_t)(int)
+                syscall_dirbegin(
+                        process,
+                        (fd_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDI] // dir
+                        );
+            break;
+       case SYSCALL_ID_DIRNEXT:
+            *ret_val = (uint64_t)(int)
+                syscall_dirnext(
+                        process,
+                        (fd_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDI] // dir
+                        );
+            break;
+       case SYSCALL_ID_DIRATTR:
+            *ret_val = (uint64_t)(int)
+                syscall_dirattr(
+                        process,
+                        (fd_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDI], // mount point
+                        (int)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RSI], // attr
+                        (size_t __user *)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDX] // value
+                        );
+            break;
+       case SYSCALL_ID_DIRNAME:
+            *ret_val = (uint64_t)(int)
+                syscall_dirname(
+                        process,
+                        (fd_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDI], // mount point
+                        (char __user *)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RSI], // buffer
+                        (size_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDX] // buflen
                         );
             break;
         default:

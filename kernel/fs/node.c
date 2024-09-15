@@ -7,10 +7,18 @@
 #include <kanawha/kmalloc.h>
 #include <kanawha/page_alloc.h>
 #include <kanawha/string.h>
+#include <kanawha/assert.h>
+#include <kanawha/vmem.h>
 
 int
 fs_node_get(struct fs_node *node)
 {
+    DEBUG_ASSERT(KERNEL_ADDR(node));
+    DEBUG_ASSERT(KERNEL_ADDR(node->mount));
+
+    dprintk("fs_node_get: inode = %p\n",
+            node->cache_node.key);
+
     struct fs_node *again
         = fs_mount_get_node(node->mount, node->cache_node.key);
     DEBUG_ASSERT(again == node);
@@ -25,11 +33,24 @@ fs_node_put(struct fs_node *node)
 
 // FS-Node Caching
 
-order_t
+int
 fs_node_page_order(
-        struct fs_node *node)
+        struct fs_node *node,
+        order_t *order)
 {
-    return VMEM_MIN_PAGE_ORDER;
+    int res;
+    size_t node_order;
+    res = fs_node_getattr(
+            node,
+            FS_NODE_ATTR_PAGE_ORDER,
+            &node_order);
+    if(res) {
+        return res;
+    }
+
+    *order = (order_t)node_order;
+
+    return 0;
 }
 
 struct fs_page *
@@ -56,7 +77,13 @@ fs_node_get_page(
 
         page->pins = 1;
 
-        order_t order = fs_node_page_order(node);
+        order_t order;
+        res = fs_node_page_order(node, &order);
+        if(res) {
+            spin_unlock(&node->page_lock);
+            return NULL;
+        }
+
         res = page_alloc(order, &page->paddr, 0);
         if(res) {
             spin_unlock(&node->page_lock);
@@ -65,11 +92,10 @@ fs_node_get_page(
         }
 
         size_t amount = 1ULL<<order;
-        fs_node_read(
+        fs_node_read_page(
                 node,
                 (void*)__va(page->paddr),
-                &amount,
-                pfn<<order);
+                pfn);
 
         if(amount == 0) {
             spin_unlock(&node->page_lock);
@@ -159,11 +185,10 @@ fs_node_flush_page_lockless(
 
     size_t amount = page->size;
 
-    res = fs_node_write(
+    res = fs_node_write_page(
             node,
             (void*)__va(page->paddr),
-            &amount,
-            page->tree_node.key << page->order);
+            page->tree_node.key);
 
     if(res) {
         return res;
@@ -212,48 +237,180 @@ fs_node_flush_all_pages(
 }
 
 int
-childless_fs_node_get_child(
-        struct fs_node *node,
-        size_t child_index,
-        size_t *node_index)
-{
-    return -ENXIO;
-}
-int
-childless_fs_node_child_name(
-        struct fs_node * node,
-        size_t child_index,
-        char *buf,
-        size_t buf_size)
-{
-    return -ENXIO;
-}
-
-int
-unreadable_fs_node_read(
-        struct fs_node *node,
+fs_node_paged_read(
+        struct fs_node *fs_node,
+        uintptr_t offset,
         void *buffer,
-        size_t *amount,
-        uintptr_t offset)
+        size_t buflen)
 {
-    return -EINVAL;
-}
+    int res;
 
-int
-immutable_fs_node_write(
-        struct fs_node *node,
-        void *buffer,
-        size_t *amount,
-        uintptr_t offset)
-{
-    return -EINVAL;
-}
+    size_t original_len = buflen;
+    size_t total_read = 0;
 
-int
-writethrough_fs_node_flush(
-        struct fs_node *node)
-{
+    order_t order;
+    res = fs_node_page_order(fs_node, &order);
+    if(res) {
+        return res;
+    }
+
+    while(buflen > 0)
+    {
+        uintptr_t offset_pfn = offset >> order;
+        uintptr_t page_offset = offset & ((1ULL<<order)-1);
+        uintptr_t room_left = (1ULL<<order) - page_offset;
+
+        struct fs_page *page = fs_node_get_page(fs_node, offset_pfn);
+        if(page == NULL) {
+            return -EINVAL;
+        }
+
+        ssize_t to_read = buflen < room_left ? buflen : room_left;
+
+        memcpy(buffer, (void*)__va(page->paddr) + page_offset, to_read);
+
+        buffer += to_read;
+        buflen -= to_read;
+        total_read += to_read;
+        offset += to_read;
+    }
+
+    DEBUG_ASSERT(total_read == original_len);
+
     return 0;
 }
 
+int
+fs_node_paged_write(
+        struct fs_node *fs_node,
+        uintptr_t offset,
+        void *buffer,
+        size_t buflen)
+{
+    int res;
+
+    size_t original_len = buflen;
+    size_t total_read = 0;
+
+    order_t order;
+    res = fs_node_page_order(fs_node, &order);
+    if(res) {
+        return res;
+    }
+
+    while(buflen > 0)
+    {
+        uintptr_t offset_pfn = offset >> order;
+        uintptr_t page_offset = offset & ((1ULL<<order)-1);
+        uintptr_t room_left = (1ULL<<order) - page_offset;
+
+        struct fs_page *page = fs_node_get_page(fs_node, offset_pfn);
+        if(page == NULL) {
+            return -EINVAL;
+        }
+
+        ssize_t to_read = buflen < room_left ? buflen : room_left;
+
+        memcpy((void*)__va(page->paddr) + page_offset, buffer, to_read);
+
+        buffer += to_read;
+        buflen -= to_read;
+        total_read += to_read;
+        offset += to_read;
+    }
+
+    DEBUG_ASSERT(total_read == original_len);
+
+    return 0;
+}
+
+/*
+ * Error fs_node Method Implementations
+ */
+
+int
+fs_node_cannot_read_page(
+        struct fs_node *node,
+        void *page,
+        uintptr_t pfn)
+{
+    return -EINVAL;
+}
+int
+fs_node_cannot_write_page(
+        struct fs_node *node,
+        void *page,
+        uintptr_t pfn)
+{
+    return -EINVAL;
+}
+int
+fs_node_cannot_flush(
+        struct fs_node *node)
+{
+    return -EINVAL;
+}
+int
+fs_node_cannot_getattr(
+        struct fs_node *node,
+        int attr,
+        size_t *value)
+{
+    return -EINVAL;
+}
+int
+fs_node_cannot_setattr(
+        struct fs_node *node,
+        int attr,
+        size_t value)
+{
+    return -EINVAL;
+}
+int
+fs_node_cannot_lookup(
+        struct fs_node *node,
+        const char *name,
+        size_t *inode)
+{
+    return -EINVAL;
+}
+int
+fs_node_cannot_mkfile(
+        struct fs_node *node,
+        const char *name,
+        unsigned long flags)
+{
+    return -EINVAL;
+}
+int
+fs_node_cannot_mkdir(
+        struct fs_node *node,
+        const char *name,
+        unsigned long flags)
+{
+    return -EINVAL;
+}
+int
+fs_node_cannot_link(
+        struct fs_node *node,
+        const char *name,
+        size_t inode)
+{
+    return -EINVAL;
+}
+int
+fs_node_cannot_symlink(
+        struct fs_node *node,
+        const char *name,
+        const char *path)
+{
+    return -EINVAL;
+}
+int
+fs_node_cannot_unlink(
+        struct fs_node *node,
+        const char *name)
+{
+    return -EINVAL;
+}
 

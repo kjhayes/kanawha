@@ -3,7 +3,6 @@
 #include <kanawha/string.h>
 #include <kanawha/kmalloc.h>
 #include <kanawha/page_alloc.h>
-#include <kanawha/page_cache.h>
 #include <kanawha/stddef.h>
 #include <kanawha/vmem.h>
 #include <kanawha/assert.h>
@@ -32,7 +31,7 @@ file_table_create(
     // that we don't assign NULL_FD to an actual
     // descriptor entry
     memset(&table->null_descriptor, 0, sizeof(table->null_descriptor));
-    ptree_insert(&table->descriptor_tree, &table->null_descriptor.tree_node, NULL_FD);
+    ptree_insert(&table->descriptor_tree, &table->null_descriptor.table_node, NULL_FD);
 
     res = file_table_attach(table, process);
     if(res) {
@@ -60,16 +59,16 @@ file_table_attach(
 static int
 __file_table_free_descriptor(
         struct file_table *table,
-        struct file_descriptor *desc)
+        struct file *desc)
 {
     int res;
 
     struct ptree_node *removed
         = ptree_remove(
                 &table->descriptor_tree,
-                desc->tree_node.key);
+                desc->table_node.key);
 
-    DEBUG_ASSERT(removed == &desc->tree_node);
+    DEBUG_ASSERT(removed == &desc->table_node);
 
     if(removed->key == NULL_FD) {
         // This was the null descriptor of the table
@@ -111,8 +110,8 @@ file_table_deattach(
             if(node == NULL) {
                 break;
             }
-            struct file_descriptor *desc =
-                container_of(node, struct file_descriptor, tree_node);
+            struct file *desc =
+                container_of(node, struct file, table_node);
 
             DEBUG_ASSERT(KERNEL_ADDR(table));
             DEBUG_ASSERT(KERNEL_ADDR(desc));
@@ -143,12 +142,12 @@ file_table_open(
 {
     int res;
 
-    struct file_descriptor *desc =
-        kmalloc(sizeof(struct file_descriptor));
+    struct file *desc =
+        kmalloc(sizeof(struct file));
     if(desc == NULL) {
         return -ENOMEM;
     }
-    memset(desc, 0, sizeof(struct file_descriptor));
+    memset(desc, 0, sizeof(struct file));
 
     res = fs_path_lookup_for_process(
             process,
@@ -169,7 +168,7 @@ file_table_open(
 
     res = ptree_insert_any(
             &table->descriptor_tree,
-            &desc->tree_node);
+            &desc->table_node);
     if(res) {
         spin_unlock(&table->lock);
         fs_path_put(desc->path);
@@ -181,7 +180,7 @@ file_table_open(
 
     spin_unlock(&table->lock);
 
-    *fd = desc->tree_node.key;
+    *fd = desc->table_node.key;
 
     return 0;
 }
@@ -200,16 +199,16 @@ file_table_close(
 
     spin_lock(&table->lock);
 
-    struct ptree_node *tree_node =
+    struct ptree_node *table_node =
         ptree_get(&table->descriptor_tree, (uintptr_t)fd);
 
-    if(tree_node == NULL) {
+    if(table_node == NULL) {
         spin_unlock(&table->lock);
         return -ENXIO;
     }
 
-    struct file_descriptor *desc =
-        container_of(tree_node, struct file_descriptor, tree_node);
+    struct file *desc =
+        container_of(table_node, struct file, table_node);
 
     DEBUG_ASSERT(desc->refs > 0);
     desc->refs--;
@@ -228,13 +227,13 @@ file_table_close(
     return 0;
 }
 
-struct file_descriptor *
-file_table_get_descriptor(
+struct file *
+file_table_get_file(
         struct file_table *table,
         struct process *process,
         fd_t fd)
 {
-    struct file_descriptor *desc;
+    struct file *desc;
     spin_lock(&table->lock);
 
     struct ptree_node *node =
@@ -243,7 +242,7 @@ file_table_get_descriptor(
     if(node == NULL) {
         desc = NULL;
     } else {
-        desc = container_of(node, struct file_descriptor, tree_node);
+        desc = container_of(node, struct file, table_node);
         desc->refs++;
     }
 
@@ -252,10 +251,10 @@ file_table_get_descriptor(
 }
 
 int
-file_table_put_descriptor(
+file_table_put_file(
         struct file_table *table,
         struct process *process,
-        struct file_descriptor *desc)
+        struct file *desc)
 {
     int res;
     spin_lock(&table->lock);

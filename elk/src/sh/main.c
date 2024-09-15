@@ -38,17 +38,28 @@ puts(const char *str)
 {
     unsigned long len = 0;
     const char *iter = str;
-    while(*iter) {
+    while(*iter != '\0') {
         len++;
         iter++;
     }
- 
-    ssize_t res = sys_write(stdout,
-          (void*)str,
-          len);
-    if(res) {
-        return res;
+
+    ssize_t written = 0;
+
+    while(written < len) {
+        ssize_t cur = sys_write(
+              stdout,
+              (void*)(str + written),
+              (len-written));
+        if(cur < 0) {
+            return cur;
+        }
+        else if(cur == 0) {
+            return -ERANGE;
+        } else {
+            written += cur;
+        }
     }
+
     return 0;
 }
 

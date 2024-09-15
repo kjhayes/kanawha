@@ -15,7 +15,6 @@ struct xcall_state
     spinlock_t lock;
 
     ilist_t queue;
-    ilist_t complete;
 
     irq_t ipi;
     struct irq_action *action;
@@ -50,9 +49,7 @@ xcall_handle_current(void)
         
         (*xcall->func)(xcall->arg);
 
-        // We could be in interrupt context, so we don't want to
-        // free these here.
-        ilist_push_tail(&state->complete, &xcall->queue_node);
+        kfree(xcall);
 
     } while(1);
 
@@ -147,7 +144,6 @@ bsp_init_xcalls(void)
     for(cpu_id_t cpu = 0; cpu < total_num_cpus(); cpu++) {
         struct xcall_state *state = percpu_ptr_specific(percpu_addr(xcall_state), cpu);
         ilist_init(&state->queue);
-        ilist_init(&state->complete);
         spinlock_init(&state->lock);
         state->ipi = IRQ_NONE;
         state->action = NULL;

@@ -6,13 +6,12 @@ obj-y += \
 	read.o \
 	write.o \
 	seek.o \
-	attr.o \
 	mmap.o \
 	exec.o \
 	environ.o \
-	childname.o \
 	spawn.o \
 	reap.o \
 	getpid.o \
-	mount.o
+	mount.o \
+	dir.o
 

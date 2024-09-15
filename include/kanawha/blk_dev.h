@@ -6,7 +6,6 @@
 #include <kanawha/list.h>
 #include <kanawha/atomic.h>
 #include <kanawha/ptree.h>
-#include <kanawha/page_cache.h>
 #include <kanawha/stree.h>
 
 #define MIN_BLOCK_DEVICE_PAGE_ORDER 12

@@ -240,6 +240,9 @@ mmap_region_map_page(
     // No writable exec mappings (should be caught earlier than this)
     DEBUG_ASSERT(!((vmem_flags & VMEM_REGION_EXEC) && (vmem_flags & VMEM_REGION_WRITE)));
 
+    DEBUG_ASSERT(KERNEL_ADDR(region));
+    DEBUG_ASSERT(KERNEL_ADDR(region->mmap));
+    DEBUG_ASSERT(KERNEL_ADDR(region->mmap->vmem_region));
     res = vmem_paged_region_map(
             region->mmap->vmem_region,
             region->tree_node.key + page->tree_node.key,
@@ -346,7 +349,7 @@ mmap_region_reclaim_page(
 
 static int
 mmap_file_prot_check(
-        struct file_descriptor *desc,
+        struct file *desc,
         unsigned long prot_flags,
         unsigned long mmap_flags)
 {
@@ -411,23 +414,23 @@ mmap_map_region(
     unsigned long mmap_type = mmap_flags & 0b11;
 
     if(mmap_type != MMAP_ANON) {
-        struct file_descriptor *desc =
-            file_table_get_descriptor(process->file_table, process, file);
+        struct file *desc =
+            file_table_get_file(process->file_table, process, file);
 
         res = mmap_file_prot_check(desc, prot_flags, mmap_flags);
         if(res) {
-            file_table_put_descriptor(process->file_table, process, desc);
+            file_table_put_file(process->file_table, process, desc);
             goto err0;
         }
 
         res = fs_node_get(desc->path->fs_node);
         if(res) {
-            file_table_put_descriptor(process->file_table, process, desc);
+            file_table_put_file(process->file_table, process, desc);
             goto err0;
         }
         fs_node = desc->path->fs_node;
 
-        file_table_put_descriptor(process->file_table, process, desc);
+        file_table_put_file(process->file_table, process, desc);
     }
     else {
         // This is an anonymous mapping
@@ -618,7 +621,10 @@ mmap_region_load_page(
                 "MMAP_SHARED or MMAP_PRIVATE region has NULL fs_node! region->mmap_flags=0x%lx, region_offset=%p",
                 region->mmap_flags, region->tree_node.key);
         
-        order = fs_node_page_order(region->fs_node);
+        res = fs_node_page_order(region->fs_node, &order);
+        if(res) {
+            return res;
+        }
         if(order < VMEM_MIN_PAGE_ORDER) {
             wprintk("Tried to mmap file with page order %ld, which is too small to mmap! (VMEM_MIN_PAGE_ORDER=%ld)\n",
                     (sl_t)order, (sl_t)VMEM_MIN_PAGE_ORDER);

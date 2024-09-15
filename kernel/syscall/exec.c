@@ -161,7 +161,7 @@ static int
 process_exec_elf64(
         struct process *process,
         fd_t file,
-        struct file_descriptor *desc)
+        struct file *desc)
 {
     int res;
 
@@ -175,14 +175,9 @@ process_exec_elf64(
     Elf64_Ehdr elf_hdr;
     size_t amount = sizeof(Elf64_Ehdr);
 
-    res = fs_node_read(elf_node, &elf_hdr, &amount, 0);
+    res = fs_node_paged_read(elf_node, 0, &elf_hdr, amount);
     if(res) {
         return res;
-    }
-    
-    // File is too small
-    if(amount != sizeof(Elf64_Ehdr)) {
-        return -EINVAL;
     }
 
     res = exec_elf64_check_header(&elf_hdr);
@@ -196,7 +191,7 @@ process_exec_elf64(
     for(size_t i = 0; i < elf_hdr.e_phnum; i++)
     {
         amount = elf_hdr.e_phentsize;
-        res = fs_node_read(elf_node, &phdr, &amount, elf_hdr.e_phoff + (i * elf_hdr.e_phentsize));
+        res = fs_node_paged_read(elf_node, elf_hdr.e_phoff + (i * elf_hdr.e_phentsize), &phdr, amount);
         if(res) {
             return res;
         }
@@ -229,23 +224,23 @@ syscall_exec(
 {
     int res;
 
-    struct file_descriptor *desc =
-        file_table_get_descriptor(process->file_table, process, file);
+    struct file *desc =
+        file_table_get_file(process->file_table, process, file);
 
     if(desc == NULL) {
-        file_table_put_descriptor(process->file_table, process, desc);
+        file_table_put_file(process->file_table, process, desc);
         return -EINVAL;
     }
 
     if((desc->access_flags & FILE_PERM_EXEC) == 0) {
-        file_table_put_descriptor(process->file_table, process, desc);
+        file_table_put_file(process->file_table, process, desc);
         eprintk("syscall_exec: file does not have EXEC permissions!\n");
         return -EPERM;
     }
 
     res = mmap_deattach(process->mmap, process);
     if(res) {
-        file_table_put_descriptor(process->file_table, process, desc);
+        file_table_put_file(process->file_table, process, desc);
         eprintk("syscall_exec: Failed to deattach mmap! (err=%s)\n",
                 errnostr(res));
         return res;
@@ -253,7 +248,7 @@ syscall_exec(
 
     res = mmap_create(PROCESS_LOWMEM_SIZE, process);
     if(res) {
-        file_table_put_descriptor(process->file_table, process, desc);
+        file_table_put_file(process->file_table, process, desc);
         eprintk("syscall_exec: Failed to create new mmap! (err=%s)\n",
                 errnostr(res));
         return res;
@@ -261,12 +256,12 @@ syscall_exec(
 
     res = process_exec_elf64(process, file, desc);
     if(res) {
-        file_table_put_descriptor(process->file_table, process, desc);
+        file_table_put_file(process->file_table, process, desc);
         return res;
     }
 
     dprintk("syscall_exec: desc->path->fs_node->index = %lld\n", (sll_t)desc->path->fs_node->cache_node.key);
-    file_table_put_descriptor(process->file_table, process, desc);
+    file_table_put_file(process->file_table, process, desc);
 
     res = vmem_flush_region(process->mmap->vmem_region);
     if(res) {

@@ -37,7 +37,10 @@ include $(LIBC_SRC_DIR)/Makefile
 
 EXEC_DIRS := \
 	init \
-	sh
+	sh \
+	mount \
+	ls \
+	cat
 
 define include_src_dir
 $(1)_SRC_DIR := $$(SRC_DIR)/$1

@@ -19,6 +19,10 @@
 #define SYSCALL_ID_GETPID    14
 #define SYSCALL_ID_MOUNT     15
 #define SYSCALL_ID_UNMOUNT   16
+#define SYSCALL_ID_DIRBEGIN  17
+#define SYSCALL_ID_DIRNEXT   18
+#define SYSCALL_ID_DIRATTR   19
+#define SYSCALL_ID_DIRNAME   20
 
 .global sys_exit
 .type sys_exit,@function
@@ -186,6 +190,42 @@ sys_mount:
 sys_unmount:
     movq $SYSCALL_ID_UNMOUNT, %rax
     // rdi -> fd_t mount_point
+    syscall
+    retq
+
+.global sys_dirbegin
+.type sys_dirbegin,@function
+sys_dirbegin:
+    movq $SYSCALL_ID_DIRBEGIN, %rax
+    // rdi -> fd_t dir 
+    syscall
+    retq
+
+.global sys_dirnext
+.type sys_dirnext,@function
+sys_dirnext:
+    movq $SYSCALL_ID_DIRNEXT, %rax
+    // rdi -> fd_t dir 
+    syscall
+    retq
+
+.global sys_dirattr
+.type sys_dirattr,@function
+sys_dirattr:
+    movq $SYSCALL_ID_DIRATTR, %rax
+    // rdi -> fd_t dir 
+    // rsi -> int attr
+    // rdx -> size_t *value
+    syscall
+    retq
+
+.global sys_dirname
+.type sys_dirname,@function
+sys_dirname:
+    movq $SYSCALL_ID_DIRNAME, %rax
+    // rdi -> fd_t dir 
+    // rsi -> char *buffer
+    // rdx -> size_t buffer_len
     syscall
     retq
 

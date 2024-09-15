@@ -1,6 +1,7 @@
 
 #include <kanawha/syscall.h>
 #include <kanawha/file.h>
+#include <kanawha/fs/file.h>
 #include <kanawha/fs/node.h>
 #include <kanawha/uapi/seek.h>
 #include <kanawha/process.h>
@@ -14,40 +15,36 @@ syscall_seek(
 {
     int res;
 
-    struct file_descriptor *desc =
-        file_table_get_descriptor(process->file_table, process, file);
+    int fs_whence;
+    switch(whence) {
+        case SEEK_CUR:
+            fs_whence = FS_FILE_SEEK_CUR;
+            break;
+        case SEEK_END:
+            fs_whence = FS_FILE_SEEK_END;
+            break;
+        case SEEK_SET:
+            fs_whence = FS_FILE_SEEK_SET;
+            break;
+        default:
+            return -EINVAL;
+    }
+    
+    struct file *desc =
+        file_table_get_file(process->file_table, process, file);
 
     if(desc == NULL) {
         return -ENXIO;
     }
 
-    size_t file_end;
-
-    switch(whence) {
-        case SEEK_SET:
-          desc->seek_offset = offset;
-          break;
-        case SEEK_CUR:
-          desc->seek_offset += offset;
-          break;
-        case SEEK_END:
-          res = fs_node_attr(
-                  desc->path->fs_node,
-                  FS_NODE_ATTR_END_OFFSET,
-                  &file_end);
-          if(res) {
-              file_table_put_descriptor(process->file_table, process, desc);
-              return res;
-          }
-          desc->seek_offset = file_end + offset;
-          break;
-        default:
-          file_table_put_descriptor(process->file_table, process, desc);
-          return -EINVAL;
-    }
+    desc->seek_offset =
+        direct_file_seek(
+                desc,
+                offset,
+                fs_whence);
 
     ssize_t ret_offset = desc->seek_offset;
-    file_table_put_descriptor(process->file_table, process, desc);
+    file_table_put_file(process->file_table, process, desc);
     return ret_offset;
 }
 

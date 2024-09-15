@@ -21,7 +21,8 @@ static DECLARE_SPINLOCK(kmalloc_lock);
 #ifdef CONFIG_DEBUG_KMALLOC_BITMAP
 // One bit per byte in the kmalloc heap (Insanely wasteful)
 // If this is used, make sure CONFIG_HEAP_SIZE_ORDER is as small as possible
-static DECLARE_BITMAP(kmalloc_debug_bitmap, 1ULL<<CONFIG_HEAP_SIZE_ORDER);
+static DECLARE_BITMAP(kmalloc_debug_bitmap, (1ULL<<CONFIG_HEAP_SIZE_ORDER));
+#define KMALLOC_BITMAP_NUM_BITS (1ULL<<CONFIG_HEAP_SIZE_ORDER)
 #endif
 
 static struct kheap kmalloc_heap = {
@@ -88,11 +89,15 @@ void * kmalloc(size_t size)
         return alloc;
     }
 #ifdef CONFIG_DEBUG_KMALLOC_BITMAP
-    for(size_t i = 0; i < req_size; i++) {
+    for(size_t i = 0; i < req_size; i++)
+    {
         uintptr_t byte_offset = ((uintptr_t)alloc - kmalloc_heap.vbase) + i;
+        DEBUG_ASSERT(byte_offset < KMALLOC_BITMAP_NUM_BITS);
         if(bitmap_check(kmalloc_debug_bitmap, byte_offset)) {
-            panic("kheap_alloc_specific allocated the same byte twice (heap_offset=%p, vaddr=%p)!\n",
+            panic_printk("kheap_alloc_specific allocated the same byte twice (heap_offset=%p, vaddr=%p)!\n",
                     byte_offset, ((uintptr_t)alloc) + i);
+            unsigned long *nearby = &kmalloc_debug_bitmap[byte_offset/BITS_PER_LONG];
+            panic("Bitmap: 0x%lx, base=%p\n", *nearby, ((void*)nearby - (void*)kmalloc_debug_bitmap)*8);
         }
         bitmap_set(kmalloc_debug_bitmap, byte_offset);
     }
@@ -105,7 +110,8 @@ void * kmalloc(size_t size)
 
     void *ret = alloc + bookkeeping_size;
 
-    dprintk("kmalloc(0x%llx) -> %p\n",size,ret);
+    dprintk("kmalloc(0x%llx) -> [%p-%p)\n",size,ret,ret+size);
+
     return ret;
 }
 
@@ -124,8 +130,10 @@ void kfree(void *addr)
         dprintk("kfree call to kfree_specific failed! (err=%s)\n", errnostr(res));
     }
 #ifdef CONFIG_DEBUG_KMALLOC_BITMAP
-    for(size_t i = 0; i < size; i++) {
+    for(size_t i = 0; i < size; i++)
+    {
         uintptr_t byte_offset = ((uintptr_t)size_ptr - kmalloc_heap.vbase) + i;
+        DEBUG_ASSERT(byte_offset < KMALLOC_BITMAP_NUM_BITS);
         if(!bitmap_check(kmalloc_debug_bitmap, byte_offset)) {
             panic("kfree double free detected (heap_offset=%p, vaddr=%p, alloc_offset=%p)!\n",
                     byte_offset, ((uintptr_t)addr) + i, i);
@@ -133,7 +141,10 @@ void kfree(void *addr)
         bitmap_clear(kmalloc_debug_bitmap, byte_offset);
     }
 #endif
+
     spin_unlock_irq_restore(&kmalloc_lock, irq_flags);
+
+    dprintk("kfree(%p)\n", addr);
 }
 
 EXPORT_SYMBOL(kmalloc);

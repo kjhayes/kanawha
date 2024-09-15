@@ -4,10 +4,11 @@ obj-y += \
 	mount.o \
 	type.o \
 	path.o \
-	stree.o
+	file.o \
+	flat.o
 
 obj-y += sys/
 
-obj-y += bfs/
+obj-y += ext2/
 obj-y += cpio/
 

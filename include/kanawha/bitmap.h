@@ -2,11 +2,14 @@
 #define __KANAWHA__BITMAP_H__
 
 #include <kanawha/stdint.h>
+#include <kanawha/assert.h>
 
 #define BITS_PER_LONG (sizeof(unsigned long)*8)
 
 #define DECLARE_BITMAP(name, entries)\
-    unsigned long name[(entries/BITS_PER_LONG) + ((entries % BITS_PER_LONG)!=0)] = {0}
+    unsigned long (name)[\
+        ((entries)/BITS_PER_LONG) + (((entries) % BITS_PER_LONG)!=0)\
+    ]
 
 static inline int
 bitmap_check(unsigned long *bitmap, size_t bit)

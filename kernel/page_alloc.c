@@ -10,6 +10,7 @@
 #include <kanawha/slab.h>
 #include <kanawha/kmalloc.h>
 #include <kanawha/assert.h>
+#include <kanawha/vmem.h>
 
 // Define the page_allocator Wrapper Functions
 DEFINE_OP_LIST_WRAPPERS(
@@ -198,7 +199,7 @@ page_alloc_get_allocator(
                 continue;
             }
 
-            //printk("page_alloc -> %p\n", *addr);
+            dprintk("page_alloc -> %p\n", *addr);
             return alloc;
         }
     }
@@ -216,13 +217,22 @@ page_alloc(order_t order, paddr_t *addr, unsigned long flags)
     if(alloc == NULL) {
         return -ENOMEM;
     }
+    DEBUG_ASSERT_MSG(KERNEL_ADDR(alloc),
+            "alloc = %p",
+            (void*)alloc);
+    DEBUG_ASSERT_MSG(KERNEL_ADDR(__va(*addr)),
+            "addr paddr = %p, vaddr %p",
+            (void*)*addr, (void*)__va((*addr)));
+    DEBUG_ASSERT_MSG(ptr_orderof(*addr) >= order,
+            "addr paddr = %p, order = %lu",
+            (void*)alloc, (ul_t)order);
     return 0;
 }
 
 int
 page_free(order_t order, paddr_t addr) 
 {
-    //printk("page_free -> %p\n", addr);
+    dprintk("page_free -> %p\n", addr);
     struct ptree_node *alloc_ptree_node = ptree_get_max_less(
                 &page_allocator_interval_tree,
                 addr);
@@ -281,162 +291,4 @@ dump_page_alloc_amounts(void)
 }
 declare_init(dynamic, dump_page_alloc_amounts);
 declare_init(late, dump_page_alloc_amounts);
-
-// Cached Anonymous Pages
-
-static int
-cached_anon_page_populate(struct cached_page *page)
-{
-    return 0;
-}
-static int
-cached_anon_page_flush(struct cached_page *page)
-{
-    return 0;
-}
-
-static int
-cached_anon_page_alloc_backing(struct cached_page *page, paddr_t *out)
-{
-    struct cached_anon_page *anon =
-        container_of(page, struct cached_anon_page, page);
-
-    anon->cur_allocator =
-        page_alloc_get_allocator(
-                anon->order,
-                out,
-                anon->flags);
-
-    if(anon->cur_allocator == NULL) {
-        eprintk("cached_anon_page_alloc_backing(page->order=%ld, page->flags=0x%lx) failed!\n",
-                anon->order, anon->flags);
-        return -ENOMEM;
-    }
-
-    spin_lock(&anon->cur_allocator->lock);
-    ilist_push_tail(&anon->cur_allocator->cache_list, &anon->list_node);
-    anon->cur_allocator->amount_cached += (1ULL << anon->order);
-    anon->cur_allocator->num_cached += 1;
-    spin_unlock(&anon->cur_allocator->lock);
-
-    return 0;
-}
-
-static int
-cached_anon_page_free_backing(struct cached_page *page)
-{
-    int res;
-    struct cached_anon_page *anon =
-        container_of(page, struct cached_anon_page, page);
-
-    spin_lock(&anon->cur_allocator->lock);
-    ilist_remove(&anon->cur_allocator->cache_list, &anon->list_node);
-    anon->cur_allocator->amount_cached -= (1ULL << page->order);
-    anon->cur_allocator->num_cached -= 1;
-    spin_unlock(&anon->cur_allocator->lock);
-
-    res = page_free(page->order, anon->page.cur_phys_addr);
-    if(res) {
-        spin_lock(&anon->cur_allocator->lock);
-        ilist_push_head(&anon->cur_allocator->cache_list, &anon->list_node);
-        anon->cur_allocator->amount_cached += (1ULL << page->order);
-        anon->cur_allocator->num_cached += 1;
-        spin_unlock(&anon->cur_allocator->lock);
-        return res;
-    }
-
-    anon->cur_allocator = NULL;
-
-    return 0;
-}
-
-static struct cached_page_ops
-cached_anon_page_ops = {
-    .flush = cached_anon_page_flush,
-    .populate = cached_anon_page_populate,
-    .alloc_backing = cached_anon_page_alloc_backing,
-    .free_backing = cached_anon_page_free_backing,
-};
-
-int
-init_cached_anon_page(
-        struct cached_anon_page *page,
-        struct cached_page_ops *ops,
-        order_t order,
-        unsigned long flags)
-{
-
-    if(ops->alloc_backing == NULL) {
-        ops->alloc_backing = cached_anon_page_alloc_backing;
-    }
-    if(ops->free_backing == NULL) {
-        ops->free_backing = cached_anon_page_free_backing;
-    }
-
-    page->flags = flags;
-    page->order = order;
-    page->cur_allocator = NULL;
-    init_cached_page(&page->page,
-            order,
-            ops);
-    return 0;
-}
-
-int
-deinit_cached_anon_page(
-        struct cached_anon_page *page)
-{
-    int res;
-    spin_lock(&page->page.pin_lock);
-
-    if(page->page.pins > 0) {
-        res = -EPERM;
-        goto err;
-    }
-
-    if((page->page.flags & CACHED_PAGE_FLAG_PRESENT)
-        && page->cur_allocator != NULL)
-    {
-        spin_lock(&page->cur_allocator->lock);
-        ilist_remove(&page->cur_allocator->cache_list, &page->list_node);
-        page->cur_allocator->amount_cached -= (1ULL << page->order);
-        page->cur_allocator->num_cached -= 1;
-        spin_unlock(&page->cur_allocator->lock);
-
-        res = page_free(page->order, page->page.cur_phys_addr);
-        if(res) {
-            goto err;
-        }
-    }
-
-    spin_unlock(&page->page.pin_lock);
-    return 0;
-
-err:
-    spin_unlock(&page->page.pin_lock);
-    return res;
-}
-
-
-struct cached_page *
-page_alloc_cached(order_t order, unsigned long flags)
-{
-    struct cached_anon_page *page;
-    page = (void*)kmalloc(sizeof(struct cached_anon_page));
-    init_cached_anon_page(page, &cached_anon_page_ops, order, flags);
-    return &page->page;
-}
-
-int
-page_free_cached(struct cached_page *page)
-{
-    struct cached_anon_page *anon =
-        container_of(page, struct cached_anon_page, page);
-
-    int res;
-    res = deinit_cached_anon_page(anon);
-    if(res) {return res;}
-    kfree(anon);
-    return 0;
-}
 

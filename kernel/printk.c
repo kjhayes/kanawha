@@ -109,12 +109,14 @@ int vprintk_putc(struct vprintk_state *state, char c)
 static
 int vprintk_puts(struct vprintk_state *state, char *str) {
     int res;
+    DEBUG_ASSERT(KERNEL_ADDR(str));
     while(*str) {
         res = vprintk_putc(state, *str);
         if(res) {
             return res;
         }
         str++;
+        DEBUG_ASSERT(KERNEL_ADDR(str));
     }
     return 0;
 }

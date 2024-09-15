@@ -249,6 +249,72 @@ pt_level_entry_is_leaf(int level, uint64_t entry)
     }
 }
 
+static inline int
+__x64_verify_page_table(
+        paddr_t table,
+        int level)
+{
+    int res;
+
+    void *vaddr = (void*)__va(table);
+    if(!(KERNEL_ADDR(vaddr))) {
+        eprintk("Kernel Page Table Address paddr=%p, vaddr=%p is Invalid!\n",
+                (uint64_t)table,
+                (uint64_t)vaddr);
+        return -EINVAL;
+    }
+
+    size_t num_entries = pt_level_num_table_entries(level);
+    uint64_t addr_mask = pt_level_addr_mask(level);
+    uint64_t present_mask = pt_level_present_mask(level);
+
+    uint64_t *entries = vaddr;
+    for(size_t i = 0; i < num_entries; i++) {
+        uint64_t entry = entries[i];
+
+        if((entry & present_mask) == 0) {
+            continue;
+        }
+
+        paddr_t addr = entry & addr_mask;
+        void *entry_vaddr = (void*)__va(addr);
+
+        if(!(KERNEL_ADDR(entry_vaddr))) {
+            eprintk("Kernel Page Table Entry entry=%p is Invalid!\n");
+            return -EINVAL;
+        }
+
+        if(!pt_level_entry_is_leaf(level, entry)) {
+            res = __x64_verify_page_table(addr, level-1);
+            if(res) {
+                eprintk("Kernel Page Subtable at Level %d is Invalid!\n",
+                        level-1);
+                return res;
+            }
+        }
+    }
+    return 0;
+}
+
+static inline void
+x64_verify_page_table(
+        paddr_t table,
+        int level)
+{
+#ifndef CONFIG_DEBUG_ASSERTIONS
+    return;
+#else
+    int res;
+    res = __x64_verify_page_table(table, level);
+    if(res) {
+        panic("Failed to verify x64 Page Table paddr=%p vaddr=%p, level=%d\n",
+                (uint64_t)table,
+                (uint64_t)__va(table),
+                level);
+    }
+#endif
+}
+
 int
 arch_vmem_map_init(struct vmem_map *map)
 {
@@ -262,6 +328,8 @@ arch_vmem_map_init(struct vmem_map *map)
 
     map->arch_state.pt_level = 4;
     memset((void*)__va(map->arch_state.pt_root), 0, X64_PML4_SIZE);
+
+    x64_verify_page_table(map->arch_state.pt_root, map->arch_state.pt_level);
 
     return 0;
 }
@@ -337,7 +405,12 @@ create_permissive_pt_table_entry(
         int pt_level,
         paddr_t next_table)
 {
+    x64_verify_page_table(next_table, pt_level-1);
+
     *entry = 0;
+
+    DEBUG_ASSERT(ptr_orderof(next_table) >= 12);
+
     *entry |= (uintptr_t)next_table;
 
     // Be as permissive as possible because restrictions are inherited
@@ -370,6 +443,8 @@ create_shared_pt_table_entry(
         int pt_level,
         paddr_t next_table)
 {
+    x64_verify_page_table(next_table, pt_level-1);
+
     int res = create_permissive_pt_table_entry(
             entry, pt_level, next_table);
     if(res) {
@@ -401,6 +476,8 @@ create_pt_table_entry(
         paddr_t next_table,
         unsigned long flags)
 {
+    x64_verify_page_table(next_table, pt_level-1);
+
     *entry = 0;
     *entry |= next_table;
 
@@ -455,6 +532,8 @@ create_empty_pt_table(
         return -ENOMEM;
     }
     memset((void*)__va(*table_ptr), 0, table_size);
+
+    x64_verify_page_table(*table_ptr, table_level);
 
     return 0;
 }
@@ -524,6 +603,7 @@ create_paged_pt_table(
       }
     }
 
+    x64_verify_page_table(*table_ptr, table_level);
     return 0;
 
 }
@@ -611,6 +691,8 @@ create_direct_pt_table(
           return res;
       }
     }
+
+    x64_verify_page_table(*table_ptr, table_level);
 
     return 0;
 }
@@ -702,6 +784,11 @@ arch_vmem_region_init_direct(struct vmem_region *region)
         }
     }
 
+    if(region->arch_state.entry_only == 0) {
+        x64_verify_page_table(
+                region->arch_state.pt_table,
+                region->arch_state.pt_level);
+    }
     return 0;
 }
 
@@ -759,6 +846,10 @@ arch_vmem_region_init_paged(struct vmem_region *region)
     if(res) {
         return res;
     }
+
+    x64_verify_page_table(
+            region->arch_state.pt_table,
+            region->arch_state.pt_level);
 
     return 0;
 }
@@ -1328,6 +1419,9 @@ arch_vmem_paged_region_map(
 {
     int res;
 
+    DEBUG_ASSERT(KERNEL_ADDR(region));
+    DEBUG_ASSERT(KERNEL_ADDR(__va(phys_addr)));
+
     if(offset % X64_PT_ENTRY_REGION_SIZE ||
        size % X64_PT_ENTRY_REGION_SIZE)
     {
@@ -1386,18 +1480,35 @@ arch_vmem_paged_region_map(
         paddr_t cur_table = region->arch_state.pt_table;
         int cur_level = region->arch_state.pt_level;
 
+        x64_verify_page_table(
+                region->arch_state.pt_table,
+                region->arch_state.pt_level);
+
         do {
             size_t cur_region_size = pt_level_entry_region_size(cur_level);
             size_t cur_entries_per_table = pt_level_num_table_entries(cur_level);
             size_t cur_index = (offset / cur_region_size) % cur_entries_per_table;
             uint64_t *cur_entry = ((uint64_t*)__va(cur_table)) + cur_index;
 
+            x64_verify_page_table(
+                cur_table,
+                cur_level);
+
             uint64_t present_mask = pt_level_present_mask(cur_level);
 
             if(present_mask & *cur_entry) {
-                // This must be a page table (TODO check this in an assertion)
+                // This must be a page table
+                DEBUG_ASSERT(!pt_level_entry_is_leaf(cur_level, *cur_entry));
+
                 uint64_t addr_mask = pt_level_addr_mask(cur_level);
                 cur_table = *cur_entry & addr_mask;
+
+                DEBUG_ASSERT_MSG(KERNEL_ADDR((void*)__va(cur_table)),
+                        "table paddr=%p, vaddr=%p, cur_entry=%p",
+                        (void*)cur_table,
+                        (void*)__va(cur_table),
+                        (uint64_t)*cur_entry);
+
                 cur_level--;
             }
             else {
@@ -1409,6 +1520,9 @@ arch_vmem_paged_region_map(
                 if(res) {
                     return res;
                 }
+
+                DEBUG_ASSERT(KERNEL_ADDR((void*)__va(subtable)));
+
                 res = create_permissive_pt_table_entry(
                         cur_entry,
                         cur_level,
@@ -1503,6 +1617,8 @@ arch_vmem_paged_region_unmap(
             size_t cur_index = (offset / cur_region_size) % cur_entries_per_table;
             uint64_t *cur_entry = ((uint64_t*)__va(cur_table)) + cur_index;
 
+            DEBUG_ASSERT(KERNEL_ADDR(cur_entry));
+
             uint64_t present_mask = pt_level_present_mask(cur_level);
 
             if(present_mask & *cur_entry) {
@@ -1520,6 +1636,9 @@ arch_vmem_paged_region_unmap(
                 if(res) {
                     return res;
                 }
+
+                DEBUG_ASSERT(KERNEL_ADDR((void*)__va(subtable)));
+
                 res = create_permissive_pt_table_entry(
                         cur_entry,
                         cur_level,
