@@ -97,7 +97,7 @@ sys_mmap:
     movq $SYSCALL_ID_MMAP, %rax
     // rdi -> fd_t file
     // rsi -> size_t file_offset
-    // rdx -> void * where
+    // rdx -> void ** where
     // Need to do these backwards
     movq %r9, %r10 // r10 -> unsigned long mmap_flags
     movq %r8, %r9  // r9 -> unsigned long prot_flags

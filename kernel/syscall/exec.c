@@ -101,7 +101,7 @@ exec_elf64_load_segment(
     }
 
     if(filesz > 0) {
-        res = mmap_map_region(
+        res = mmap_map_region_exact(
                 process,
                 file,
                 phdr->p_offset,
@@ -115,7 +115,7 @@ exec_elf64_load_segment(
     } 
 
     if(bsssz > 0) {
-        res = mmap_map_region(
+        res = mmap_map_region_exact(
                 process,
                 NULL_FD,
                 0,

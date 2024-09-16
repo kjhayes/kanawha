@@ -11,4 +11,6 @@
 #define MMAP_ANON    (0b10 << 0)
 #define MMAP_ANONYMOUS MMAP_ANON
 
+#define MMAP_EXACT (1ULL<<2)
+
 #endif

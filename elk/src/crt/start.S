@@ -19,7 +19,9 @@ _start:
 
     movq __num_stacks, %rcx
     imulq $STACK_SIZE, %rcx, %rdx
-    addq $STACK_TOP, %rdx // where
+    addq $STACK_TOP, %rdx
+    movq %rdx, __mmap_where
+    movabsq $__mmap_where, %rdx
 
     movq %rdx, %rsp
     addq $STACK_SIZE, %rsp
@@ -27,6 +29,7 @@ _start:
     movq $STACK_SIZE, %r8 // size
     movq $(0b11), %r9 // MMAP_PROT_READ|MMAP_PROT_WRITE
     movq $(0b10), %r10 // MMAP_ANON
+    orq $(1ULL<<2), %r10 // MMAP_EXACT
     syscall
 
     testq %rax, %rax
@@ -124,6 +127,9 @@ __thread_start_stack_map_fail:
     syscall
 
 .data
+
+__mmap_where:
+.quad 0
 
 __stack_lock:
 .quad 0

@@ -21,19 +21,29 @@ syscall_mmap(
         struct process *process,
         fd_t file,
         size_t file_offset,
-        void __user *where,
+        void __user * __user* where,
         size_t size,
         unsigned long prot_flags,
         unsigned long mmap_flags)
 {
     int res;
 
+    void __user *requested;
+    res = process_read_usermem(
+            process,
+            &requested,
+            where,
+            sizeof(void __user *));
+    if(res) {
+        return res;
+    }
+
     // Mis-aligned/Mis-sized
     if(file != NULL_FD && (ptr_orderof(file_offset) < VMEM_MIN_PAGE_ORDER)) {
         wprintk("syscall_mmap: file_offset is not aligned to the minimum vmem page size!\n");
         return -EINVAL;
     }
-    if(ptr_orderof(where) < VMEM_MIN_PAGE_ORDER) {
+    if(ptr_orderof(requested) < VMEM_MIN_PAGE_ORDER) {
         wprintk("syscall_mmap: virtual address is not aligned to the minimum vmem page size!\n");
         return -EINVAL;
     }
@@ -42,16 +52,53 @@ syscall_mmap(
         return -EINVAL;
     }
 
-    res = mmap_map_region(
-            process,
-            file,
-            file_offset,
-            (uintptr_t)where,
-            size,
-            prot_flags,
-            mmap_flags);
-    if(res) {
-        return res;
+    if(mmap_flags & MMAP_EXACT)
+    {
+        res = mmap_map_region_exact(
+                process,
+                file,
+                file_offset,
+                (uintptr_t)requested,
+                size,
+                prot_flags,
+                mmap_flags);
+        if(res) {
+            return res;
+        }
+    }
+    else
+    { // The kernel can adjust the offset
+        uintptr_t hint_offset = (uintptr_t)requested;
+        res = mmap_map_region(
+                process,
+                file,
+                file_offset,
+                &hint_offset,
+                size,
+                prot_flags,
+                mmap_flags);
+        if(res) {
+            return res;
+        }
+
+        // If the kernel modified the address,
+        // we need to write the actual region base
+        // back to usermem
+        if(hint_offset != (uintptr_t)requested) {
+            requested = (void __user *)hint_offset;
+            res = process_write_usermem(
+                    process,
+                    where,
+                    &requested,
+                    sizeof(void __user *));
+            if(res) {
+                // TODO: this is tricky, it's not really possible to
+                // undo the mapping at this point (especially once
+                // we allow over-writing other mappings)
+                wprintk("syscall_mmap: Successfully mapped region, but failed to write address back to user memory!\n");
+                return res;
+            }
+        }
     }
 
     res = vmem_flush_region(process->mmap->vmem_region);
@@ -391,8 +438,185 @@ mmap_file_prot_check(
     return 0;
 }
 
+// Needs the mmap->lock to be held,
+// and set's region->tree_node.key to a valid mmap_offset
+static int
+__mmap_locked_hint_offset(
+        struct mmap *mmap,
+        struct mmap_region *region,
+        uintptr_t hint_offset,
+        size_t size)
+{
+    // TODO: Actually take the hint into account
+
+    size_t mmap_size = mmap->vmem_region->size;
+
+    if(size >= mmap_size) {
+        return -ENOMEM;
+    }
+
+    struct ptree_node *before_node;
+    before_node = ptree_get_first(&mmap->region_tree);
+
+    // If there are no regions at all, we will map at "midway"
+    // (Roughly in the middle of user-memory)
+    uintptr_t midway = mmap->vmem_region->size / 2;
+    midway &= ~((1ULL<<VMEM_MIN_PAGE_ORDER)-1);
+    uintptr_t cur_offset = midway;
+
+    while(before_node) {
+        struct mmap_region *before_region =
+            container_of(before_node, struct mmap_region, tree_node);
+
+        cur_offset = before_node->key + before_region->size;
+
+        if((mmap_size - size) < cur_offset) {
+            // Would run off the end of user memory
+            return -ENOMEM;
+        }
+
+        uintptr_t cur_end = cur_offset + size;
+
+        struct ptree_node *after_node = ptree_get_next(before_node);
+        if(after_node == NULL) {
+            break;
+        }
+
+        if(cur_end > after_node->key) {
+            // Not enough room between the regions
+            before_node = after_node;
+            continue;
+        }
+
+        // We can fit between the two regions
+        region->tree_node.key = cur_offset;
+        return 0;
+    }
+
+    // We reached the end, there is no region after "cur_offset"
+    if((mmap_size - size) < cur_offset) {
+        // Not enough room before the end of user-memory
+        return -ENOMEM;
+    }
+
+    region->tree_node.key = cur_offset;
+    return 0;
+}
+
 int
 mmap_map_region(
+        struct process *process,
+        fd_t file,
+        uintptr_t file_offset,
+        uintptr_t *hint_offset,
+        size_t size,
+        unsigned long prot_flags,
+        unsigned long mmap_flags)
+{
+    int res;
+
+    // syscall_mmap should check these assumptions for user requests,
+    // but the kernel might be invoking this function incorrectly
+    DEBUG_ASSERT(size > 0);
+    DEBUG_ASSERT((file == NULL_FD) || (ptr_orderof(file_offset) >= VMEM_MIN_PAGE_ORDER));
+    DEBUG_ASSERT(ptr_orderof(size) >= VMEM_MIN_PAGE_ORDER);
+
+    struct fs_node *fs_node;
+
+    unsigned long mmap_type = mmap_flags & 0b11;
+
+    if(mmap_type != MMAP_ANON) {
+        struct file *desc =
+            file_table_get_file(process->file_table, process, file);
+
+        res = mmap_file_prot_check(desc, prot_flags, mmap_flags);
+        if(res) {
+            file_table_put_file(process->file_table, process, desc);
+            goto err0;
+        }
+
+        res = fs_node_get(desc->path->fs_node);
+        if(res) {
+            file_table_put_file(process->file_table, process, desc);
+            goto err0;
+        }
+        fs_node = desc->path->fs_node;
+
+        file_table_put_file(process->file_table, process, desc);
+    }
+    else {
+        // This is an anonymous mapping
+        fs_node = NULL;
+    }
+
+
+    struct mmap *mmap = process->mmap;
+    DEBUG_ASSERT(KERNEL_ADDR(mmap));
+
+    struct mmap_region *region;
+    region = kmalloc(sizeof(struct mmap_region));
+    if(region == NULL) {
+        res = -ENOMEM;
+        goto err1;
+    }
+    memset(region, 0, sizeof(struct mmap_region));
+
+    region->mmap = mmap;
+    region->mmap_flags = mmap_flags;
+    region->fs_node = fs_node;
+    region->size = size;
+    region->prot_flags = prot_flags;
+    region->file_offset = file_offset;
+
+    spinlock_init(&region->page_tree_lock);
+    ptree_init(&region->page_tree);
+
+    spin_lock(&mmap->lock);
+
+    // This will find us a valid offset
+    res = __mmap_locked_hint_offset(
+            mmap,
+            region,
+            *hint_offset,
+            size);
+    if(res) {
+        goto err3;
+    }
+
+    dprintk("mmap_region region=%p [%p-%p)\n",
+            region,
+            region->tree_node.key,
+            region->tree_node.key + region->size);
+
+    *hint_offset = region->tree_node.key;
+
+    res = ptree_insert(
+            &mmap->region_tree,
+            &region->tree_node,
+            region->tree_node.key);
+    if(res) {
+        eprintk("__mmap_locked_hint_offset returned an offset=%p which could not be inserted! (err=%s)\n",
+                *hint_offset, errnostr(res));
+        goto err3;
+    }
+
+    spin_unlock(&mmap->lock);
+    return 0;
+
+err3:
+    spin_unlock(&mmap->lock);
+err2:
+    kfree(region);
+err1:
+    if(fs_node) {
+        fs_node_put(fs_node);
+    }
+err0:
+    return res;
+}
+
+int
+mmap_map_region_exact(
         struct process *process,
         fd_t file,
         uintptr_t file_offset,
@@ -468,6 +692,7 @@ mmap_map_region(
 
     spin_lock(&mmap->lock);
 
+    // We need to check that this mapping doesn't conflict
     struct ptree_node *before =
         ptree_get_max_less(&mmap->region_tree, end_offset);
     if(before != NULL) {
@@ -486,6 +711,11 @@ mmap_map_region(
             goto err3;
         }
     }
+
+    dprintk("mmap_region region=%p [%p-%p)\n",
+            region,
+            region->tree_node.key,
+            region->tree_node.key + region->size);
 
     res = ptree_insert(
             &mmap->region_tree,

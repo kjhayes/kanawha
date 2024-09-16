@@ -50,7 +50,7 @@ int
 sys_mmap(
         fd_t file,
         size_t file_offset,
-        void *where,
+        void **where,
         size_t size,
         unsigned long prot_flags,
         unsigned long mmap_flags);

@@ -115,7 +115,7 @@ x64_route_syscall(struct x64_syscall_state *state)
                         process,
                         (fd_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDI], // file
                         (size_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RSI], // file offset
-                        (void __user *)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDX], // where
+                        (void __user * __user *)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDX], // where
                         (size_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_R8], // size
                         (unsigned long)state->caller_regs[PUSHED_CALLER_REGS_INDEX_R9], // access_flags
                         (unsigned long)state->caller_regs[PUSHED_CALLER_REGS_INDEX_R10] // mmap_flags

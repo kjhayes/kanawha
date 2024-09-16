@@ -16,10 +16,7 @@ strlen(char *str)
 }
 
 #define ARGV_ENV_KEY "ARGV"
-
 #define ARGV_REGION_SIZE 0x1000
-#define STACK_REGION_BASE 0x1000000
-#define ARGV_REGION_BASE STACK_REGION_BASE - ARGV_REGION_SIZE
 
 void
 __elk_crt__get_argv(
@@ -27,18 +24,17 @@ __elk_crt__get_argv(
         const char ***argv_out)
 {
     int res;
+    void *region_base;
     res = sys_mmap(
             NULL_FD,
             0,
-            (void*)ARGV_REGION_BASE,
+            &region_base,
             ARGV_REGION_SIZE,
             MMAP_PROT_READ|MMAP_PROT_WRITE,
             MMAP_ANON);
     if(res) {
-        sys_exit(1);
+        sys_exit(res);
     }
-
-    void *region_base = (void*)ARGV_REGION_BASE;
 
     res = sys_environ(
             ARGV_ENV_KEY,
@@ -46,7 +42,7 @@ __elk_crt__get_argv(
             ARGV_REGION_SIZE,
             ENV_GET);
     if(res == -ENXIO) {
-        sys_munmap((void*)ARGV_REGION_BASE);
+        sys_munmap((void*)region_base);
         *argc_out = 0;
         *argv_out = NULL;
         return;

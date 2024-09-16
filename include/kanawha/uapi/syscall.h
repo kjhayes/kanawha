@@ -49,7 +49,7 @@ ARG(size_t __user *, value)
 RET(int)\
 ARG(fd_t, file)\
 ARG(size_t, file_offset)\
-ARG(void __user *, where)\
+ARG(void __user * __user*, where)\
 ARG(size_t, size)\
 ARG(unsigned long, prot_flags)\
 ARG(unsigned long, mmap_flags)\

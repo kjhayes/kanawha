@@ -8,23 +8,6 @@
 #include <kanawha/list.h>
 
 struct process;
-
-int
-syscall_mmap(
-        struct process *process,
-        fd_t file,
-        size_t file_offset,
-        void __user *where,
-        size_t size,
-        unsigned long prot_flags,
-        unsigned long mmap_flags);
-
-int
-syscall_munmap(
-        struct process *process,
-        void __user *mapping);
-
-struct process;
 struct mmap_region;
 
 // This page is mapped in
@@ -89,6 +72,16 @@ mmap_deattach(struct mmap *map, struct process *process);
 
 int
 mmap_map_region(
+        struct process *process,
+        fd_t file,
+        uintptr_t file_offset,
+        uintptr_t *hint_offset,
+        size_t size,
+        unsigned long prot_flags,
+        unsigned long mmap_flags);
+
+int
+mmap_map_region_exact(
         struct process *process,
         fd_t file,
         uintptr_t file_offset,
