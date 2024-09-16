@@ -64,6 +64,7 @@ x64_thread_stack_init(
 
     if(stack->region == NULL) {
         res = -ENOMEM;
+        eprintk("Failed to create x64 thread stack vmem region!\n");
         goto err1;
     }
 
@@ -79,6 +80,7 @@ x64_thread_stack_init(
             &virt_base);
 
     if(res) {
+        eprintk("Failed to reserve x64 thread stack virtual memory!\n");
         goto err2;
     }
 
@@ -100,6 +102,8 @@ x64_thread_stack_init(
             1ULL<<stack->order,
             VMEM_REGION_READ|VMEM_REGION_WRITE);
     if(res) {
+        eprintk("Failed to map x64 thread stack! (err=%s)\n",
+                errnostr(res));
         goto err3;
     }
 
@@ -107,6 +111,8 @@ x64_thread_stack_init(
             stack->region,
             stack->virt_base);
     if(res) {
+        eprintk("Failed to force mapping of x64 thread stack! (err=%s)\n",
+                errnostr(res));
         goto err3;
     }
 
