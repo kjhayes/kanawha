@@ -7,8 +7,8 @@
 #include <kanawha/buddy.h>
 #include <kanawha/vmem.h>
 
-int
-mem_flags_get_overlapping(
+static int
+__mem_flags_get_overlapping(
         struct mem_flags *map,
         uintptr_t base,
         size_t *base_index)
@@ -56,6 +56,8 @@ mem_flags_get_overlapping_regions(
     size_t base_entry_index = -1;
     size_t num_found = 0;
 
+    spin_lock(&map->lock);
+
     for(size_t i = 0; i < map->num_entries; i++) {
         struct mem_flags_entry *cur_entry = &map->entries[i];
         uintptr_t cur_end = cur_entry->base + cur_entry->size;
@@ -73,13 +75,17 @@ mem_flags_get_overlapping_regions(
         }
     }
 
+    spin_unlock(&map->lock);
+
     *base_index = base_entry_index;
     *num_entries = num_found;
+
     return 0;
 }
 
 int mem_flags_clear_all(struct mem_flags *map, unsigned long empty_flags) 
 {
+    spin_lock(&map->lock);
     if(map->max_entries <= 0) {
         return -EINVAL;
     }
@@ -88,6 +94,7 @@ int mem_flags_clear_all(struct mem_flags *map, unsigned long empty_flags)
     map->entries[0].size = -1;
     map->entries[0].base = 0;
     map->entries[0].flags = empty_flags;
+    spin_unlock(&map->lock);
     return 0;
 }
 
@@ -103,7 +110,7 @@ __mem_flags_split_at(
 
     int res;
     size_t index;
-    res = mem_flags_get_overlapping(map, base, &index);
+    res = __mem_flags_get_overlapping(map, base, &index);
     if(res) {
         return res;
     }
@@ -157,10 +164,10 @@ __mem_flags_change_flags(
 
 __recurse:
     if(size <= 0) {
-        return 0;
+        goto exit;
     }
 
-    res = mem_flags_get_overlapping(map, base, &index);
+    res = __mem_flags_get_overlapping(map, base, &index);
     if(res) {
         return res;
     }
@@ -176,7 +183,7 @@ __recurse:
             if(size > 0) {
                 goto __recurse;
             } else {
-                return 0;
+                goto exit;
             }
 
         } else {
@@ -200,21 +207,44 @@ __recurse:
 
         goto __recurse;
     }
+
+exit:
+
+    // Merge any adjacent regions with the same flags
+    if(map->num_entries > 0) {
+        // Reverse order so we can coalesce more than one at a time
+        for(size_t iplus = map->num_entries-1; iplus > 0; iplus--) {
+
+            size_t i = iplus-1;
+
+            struct mem_flags_entry *lower = &map->entries[i];
+            struct mem_flags_entry *upper = &map->entries[i+1];
+
+            if(lower->flags == upper->flags) {
+                lower->size += upper->size;
+                upper->size = 0;
+            }
+        }
+
+        // Now we need to remove any size zero entries and compact the map
+        size_t gap_size = 0; // (also equal to the number of entries we are removing)
+        for(size_t i = 0; i < map->num_entries; i++) {
+            struct mem_flags_entry *cur = &map->entries[i];
+            if(cur->size == 0) {
+                gap_size++;
+                continue;
+            }
+
+            if(gap_size > 0) {
+                map->entries[i - gap_size] = map->entries[i];
+            }
+        }
+        map->num_entries -= gap_size;
+    }
+
+    return 0;
 }
 
-
-static int 
-mem_flags_change_flags(
-        struct mem_flags *map,
-        uintptr_t base,
-        size_t size,
-        unsigned long flags_input,
-        unsigned long(*flag_func)(unsigned long flags, unsigned long flags_input))
-{
-    int res;
-    res = __mem_flags_change_flags(map, base, size, flags_input, flag_func);
-    return res;
-}
 
 static inline unsigned long 
 __mem_flags_set_flags_func(unsigned long flags, unsigned long to_set) {
@@ -228,19 +258,52 @@ __mem_flags_clear_flags_func(unsigned long flags, unsigned long to_clear) {
     return flags & ~to_clear;
 }
 
-int 
+static int 
+__mem_flags_set_flags(
+        struct mem_flags *map,
+        uintptr_t base,
+        size_t size,
+        unsigned long to_set)
+{
+    return __mem_flags_change_flags(
+            map,
+            base,
+            size,
+            to_set,
+            __mem_flags_set_flags_func);
+}
+
+int
 mem_flags_set_flags(
         struct mem_flags *map,
         uintptr_t base,
         size_t size,
         unsigned long to_set)
 {
-    return mem_flags_change_flags(
+    int res;
+    spin_lock(&map->lock);
+    res = __mem_flags_set_flags(
             map,
             base,
             size,
-            to_set,
-            __mem_flags_set_flags_func);
+            to_set);
+    spin_unlock(&map->lock);
+    return res;
+}
+
+static int
+__mem_flags_clear_flags(
+        struct mem_flags *map,
+        uintptr_t base,
+        size_t size,
+        unsigned long to_clear)
+{
+    return __mem_flags_change_flags(
+            map,
+            base,
+            size,
+            to_clear,
+            __mem_flags_clear_flags_func); 
 }
 
 int 
@@ -250,29 +313,19 @@ mem_flags_clear_flags(
         size_t size,
         unsigned long to_clear)
 {
-    return mem_flags_change_flags(
+    int res;
+    spin_lock(&map->lock);
+    res = __mem_flags_clear_flags(
             map,
             base,
             size,
-            to_clear,
-            __mem_flags_clear_flags_func);
-}
-
-unsigned long
-mem_flags_read(
-        struct mem_flags *map,
-        uintptr_t addr)
-{
-    struct mem_flags_entry *entry;
-    entry = mem_flags_read_entry(map, addr);
-    if(entry == NULL) {
-        return 0;
-    }
-    return entry->flags;
+            to_clear);
+    spin_unlock(&map->lock);
+    return res;
 }
 
 struct mem_flags_entry *
-mem_flags_read_entry(
+__mem_flags_read_entry(
         struct mem_flags *map,
         uintptr_t addr)
 {
@@ -285,6 +338,23 @@ mem_flags_read_entry(
     }
     return NULL;
 }
+
+unsigned long
+mem_flags_read(
+        struct mem_flags *map,
+        uintptr_t addr)
+{
+    struct mem_flags_entry *entry;
+    spin_lock(&map->lock);
+    entry = __mem_flags_read_entry(map, addr);
+    if(entry == NULL) {
+        spin_unlock(&map->lock);
+        return 0;
+    }
+    spin_unlock(&map->lock);
+    return entry->flags;
+}
+
 int
 mem_flags_find_and_reserve(
         struct mem_flags *map,
@@ -297,6 +367,7 @@ mem_flags_find_and_reserve(
         uintptr_t *base_out)
 {
     int res;
+    spin_lock(&map->lock);
     for(size_t i = 0; i < map->num_entries; i++) {
         struct mem_flags_entry *entry = &map->entries[i];
         if(entry->size < size) {
@@ -324,18 +395,22 @@ mem_flags_find_and_reserve(
         // Can fit and we have the right flags,
         // set the flags and return this region
 
-        res = mem_flags_set_flags(map, base, size, to_set);
+        res = __mem_flags_set_flags(map, base, size, to_set);
         if(res) {
+            spin_unlock(&map->lock);
             return res;
         }
-        res = mem_flags_clear_flags(map, base, size, to_clear);
+        res = __mem_flags_clear_flags(map, base, size, to_clear);
         if(res) {
+            spin_unlock(&map->lock);
             return res;
         }
 
+        spin_unlock(&map->lock);
         *base_out = base;
         return 0;
     }
+    spin_unlock(&map->lock);
     return -ENOMEM;
 }
 
@@ -345,6 +420,7 @@ mem_flags_print(
         printk_f *printer,
         void(*flag_printer)(printk_f *printer, unsigned long flags))
 {
+    spin_lock(&map->lock);
     for(size_t i = 0; i < map->num_entries; i++) {
         struct mem_flags_entry *entry = &map->entries[i];
         uintptr_t end = entry->base + entry->size;
@@ -353,6 +429,7 @@ mem_flags_print(
         (*flag_printer)(printer, (unsigned long)entry->flags);
         (*printer)("\n");
     }
+    spin_unlock(&map->lock);
 }
 
 /*

@@ -49,13 +49,6 @@ mem_flags_read(
         struct mem_flags *map,
         uintptr_t addr);
 
-// Returns NULL if addr is not found in the map
-// Else returns the entry of addr
-struct mem_flags_entry *
-mem_flags_read_entry(
-        struct mem_flags *map,
-        uintptr_t addr);
-
 // Find a region aligned to "align_order" of size "size"
 // with flags matching "must_be_*" and modify the flags
 // with "to_set" and "to_clear"
