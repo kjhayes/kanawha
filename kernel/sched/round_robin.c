@@ -13,12 +13,14 @@
 
 struct rr_thread {
     struct thread_state *state;
+
     ilist_node_t list_node;
 };
 
 struct rr_scheduler {
     struct scheduler sched;
 
+    spinlock_t list_lock;
     size_t num_threads;
     ilist_t thread_list;
 
@@ -63,6 +65,7 @@ rr_sched_alloc_instance(
 
     sched->num_threads = 0;
     ilist_init(&sched->thread_list);
+    spinlock_init(&sched->list_lock);
 
     struct timer_event *event = timer_set_periodic(msec_to_duration(20), rr_sched_kick, sched);
     if(event == NULL) {
@@ -91,8 +94,11 @@ rr_sched_force_resched(struct scheduler *sched)
 {
     struct rr_scheduler *rr_sched =
         container_of(sched, struct rr_scheduler, sched);
-    
+   
+    int irq_flags = spin_lock_irq_save(&rr_sched->list_lock);
+
     if(rr_sched->num_threads == 0) {
+        spin_unlock_irq_restore(&rr_sched->list_lock, irq_flags);
         dprintk("rr_sched_force_resched without any threads!\n");
         return NULL;
     }
@@ -111,6 +117,7 @@ rr_sched_force_resched(struct scheduler *sched)
         }
 
         if(next == running) {
+            spin_unlock_irq_restore(&rr_sched->list_lock, irq_flags);
             return NULL;
         }
 
@@ -133,6 +140,8 @@ rr_sched_force_resched(struct scheduler *sched)
     } while(1);
 
     *current_ptr = current;
+    spin_unlock_irq_restore(&rr_sched->list_lock, irq_flags);
+
     dprintk("scheduling thread (%lld)\n", (ull_t)current->state->id);
     return current->state;
 }
@@ -149,6 +158,8 @@ rr_sched_add_thread(
         struct scheduler *sched,
         struct thread_state *state)
 {
+    dprintk("rr_sched_add_thread(%ld)\n",
+            state->id);
     struct rr_scheduler *rr_sched =
         container_of(sched, struct rr_scheduler, sched);
 
@@ -159,8 +170,10 @@ rr_sched_add_thread(
     memset(thread, 0, sizeof(struct rr_thread));
 
     thread->state = state;
+    int irq_flags = spin_lock_irq_save(&rr_sched->list_lock);
     ilist_push_tail(&rr_sched->thread_list, &thread->list_node);
     rr_sched->num_threads++;
+    spin_unlock_irq_restore(&rr_sched->list_lock, irq_flags);
 
     return 0;
 }
@@ -170,8 +183,14 @@ rr_sched_remove_thread(
         struct scheduler *sched,
         struct thread_state *state)
 {
+    dprintk("rr_sched_remove_thread(%ld)\n",
+            state->id);
+
     struct rr_scheduler *rr_sched =
         container_of(sched, struct rr_scheduler, sched);
+
+
+    int irq_flags = spin_lock_irq_save(&rr_sched->list_lock);
 
     ilist_node_t *node;
     ilist_for_each(node, &rr_sched->thread_list) {
@@ -179,9 +198,16 @@ rr_sched_remove_thread(
             container_of(node, struct rr_thread, list_node);
         if(thread->state == state) {
             ilist_remove(&rr_sched->thread_list, &thread->list_node);
+            rr_sched->num_threads--;
+            struct rr_thread **current_ptr = (struct rr_thread**)percpu_ptr(rr_sched->current_rr_thread);
+            if((*current_ptr)->state == state) {
+                *current_ptr = NULL;
+            }
+            spin_unlock_irq_restore(&rr_sched->list_lock, irq_flags);
             return 0;
         }
     }
+    spin_unlock_irq_restore(&rr_sched->list_lock, irq_flags);
 
     return -ENXIO;
 }
