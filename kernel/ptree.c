@@ -11,15 +11,15 @@ ptree_insert_bst(struct ptree *tree, struct ptree_node *node)
     if(tree->root == NULL) {
         tree->root = node;
         node->parent = NULL;
+        return 0;
     } else {
-        int inserted = 0;
         struct ptree_node *potential_parent = tree->root;
-        while (!inserted) {
+        while (1) {
           if(potential_parent->key > node->key) {
               if(potential_parent->left == NULL) {
                   node->parent = potential_parent;
                   potential_parent->left = node;
-                  inserted = 1;
+                  return 0;
               } else {
                   potential_parent = potential_parent->left;
               }
@@ -27,7 +27,7 @@ ptree_insert_bst(struct ptree *tree, struct ptree_node *node)
               if(potential_parent->right == NULL) {
                   node->parent = potential_parent;
                   potential_parent->right = node;
-                  inserted = 1;
+                  return 0;
               } else {
                   potential_parent = potential_parent->right;
               }
@@ -37,8 +37,6 @@ ptree_insert_bst(struct ptree *tree, struct ptree_node *node)
           }
         }
     }
-
-    return 0;
 }
 
 static int
@@ -293,18 +291,28 @@ ptree_get_last(struct ptree *tree)
 struct ptree_node *
 ptree_get_next(struct ptree_node *node)
 {
+    DEBUG_ASSERT(KERNEL_ADDR(node));
     if(node->right) {
-        return node->right;
+        struct ptree_node *right = node->right;
+        // Go as far left as possible after going right once
+        while(right->left) {
+            right = right->left;
+        }
+        return right;
     }
 
-    struct ptree_node *parent = node->parent;
-
-    while(parent) {
+    struct ptree_node *parent;
+    parent = node->parent;
+    while(parent != NULL) {
         if(parent->left == node) {
+            // parent is next greater 
             return parent;
-        } else { // parent->right == node
+        }
+        else {
+            // parent is lesser
             node = parent;
             parent = parent->parent;
+            continue;
         }
     }
 

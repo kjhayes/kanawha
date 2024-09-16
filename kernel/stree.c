@@ -12,6 +12,8 @@ stree_insert_bst(
         struct stree *tree,
         struct stree_node *node)
 {
+    DEBUG_ASSERT(KERNEL_ADDR(tree));
+    DEBUG_ASSERT(KERNEL_ADDR(node));
     if(tree->root == NULL) {
         tree->root = node;
         node->parent = NULL;
@@ -170,7 +172,11 @@ struct stree_node *
 stree_get_next(struct stree_node *node)
 {
     if(node->right) {
-        return node->right;
+        struct stree_node *right = node->right;
+        while(right->left) {
+            right = right->left;
+        }
+        return right;
     }
 
     struct stree_node *parent = node->parent;
