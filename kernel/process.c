@@ -251,6 +251,8 @@ process_alloc(
     process->flags = flags;
     process->status = PROCESS_STATUS_SUSPEND;
 
+    dprintk("allocated process(%ld) thread(%ld)\n", process->id, process->thread.id);
+
     return process;
 
 err3:
@@ -322,7 +324,7 @@ launch_init_process(void)
         return res;
     }
     ramfile_put(backing_file);
-    printk("process=%p, &process->root=%p\n",
+    dprintk("process=%p, &process->root=%p\n",
             process, &process->root);
     process->root = root;
 
@@ -390,6 +392,9 @@ process_schedule(
     int res;
     int irq_flags = spin_lock_irq_save(&process->status_lock);
 
+    dprintk("scheduling process(%ld) thread(%ld)\n",
+            process->id, process->thread.id);
+
     if(process->scheduler == NULL) {
         eprintk("process_schedule: process->scheduler == NULL!\n");
         spin_unlock_irq_restore(&process->status_lock, irq_flags);
@@ -405,6 +410,8 @@ process_schedule(
                 spin_unlock_irq_restore(&process->status_lock, irq_flags);
                 return res;
             }
+            process->status = PROCESS_STATUS_SCHEDULED;
+            break;
         case PROCESS_STATUS_SCHEDULED:
             break;
         case PROCESS_STATUS_ZOMBIE:
@@ -429,19 +436,18 @@ __process_suspend_caller_lock(
 {
     int res;
 
-    if(process->scheduler == NULL) {
-        eprintk("process_suspend: process->scheduler == NULL!\n");
-        return -EINVAL;
-    }
-
     switch(process->status) {
         case PROCESS_STATUS_SCHEDULED:
-            res = scheduler_remove_thread(
-                    process->scheduler,
-                    &process->thread);
-            if(res) {
-                return res;
+            if(process->scheduler != NULL) {
+                res = scheduler_remove_thread(
+                        process->scheduler,
+                        &process->thread);
+                if(res) {
+                    return res;
+                }
             }
+            process->status = PROCESS_STATUS_SUSPEND;
+            break;
         case PROCESS_STATUS_SUSPEND:
             break;
         case PROCESS_STATUS_ZOMBIE:
@@ -473,6 +479,9 @@ process_set_scheduler(
 {
     int res;
 
+    DEBUG_ASSERT(KERNEL_ADDR(process));
+    DEBUG_ASSERT(KERNEL_ADDR(sched));
+
     int irq_flags = spin_lock_irq_save(&process->status_lock);
 
     if(process->status == PROCESS_STATUS_ZOMBIE) {
@@ -491,6 +500,7 @@ process_set_scheduler(
     }
 
     process->scheduler = sched;
+
     if(process->status == PROCESS_STATUS_SCHEDULED) {
         res = scheduler_add_thread(process->scheduler, &process->thread);
         if(res) {
@@ -612,6 +622,10 @@ process_terminate(
 
     if(process->status == PROCESS_STATUS_ZOMBIE) {
         // process_terminate is idempotent
+        wprintk("process_terminate is changing ZOMBIE error code from %d to %d!\n",
+                process->exitcode, exitcode);
+        process->exitcode = exitcode;
+        spin_unlock_irq_restore(&process->status_lock, irq_flags);
         return 0;
     }
 
@@ -621,6 +635,8 @@ process_terminate(
     res = __process_suspend_caller_lock(process);
     if(res) {
         spin_unlock_irq_restore(&process->status_lock, irq_flags);
+        eprintk("process_terminate: __process_suspend_caller_lock returned: %s\n",
+                errnostr(res));
         return res;
     }
 
@@ -683,9 +699,9 @@ process_terminate(
     // after this
 
     if(current_process() == process) {
-       // IRQ's are left disabled because if we are running on the process' thread
-       // (as is the case in an "exit" syscall) then once we suspend the process,
-       // if we are preempted, then we will never be scheduled again to return.
+        // IRQ's are left disabled because if we are running on the process' thread
+        // (as is the case in an "exit" syscall) then once we suspend the process,
+        // if we are preempted, then we will never be scheduled again to return.
         spin_unlock(&process->status_lock);
     } else {
         // This is some other process that we are forcing to terminate
@@ -738,12 +754,16 @@ process_spawn_child(
 {
     int res;
     int exitcode;
+    
+    DEBUG_ASSERT(KERNEL_ADDR(parent));
 
     struct spawned_process_state *state =
         kmalloc(sizeof(struct spawned_process_state));
     if(state == NULL) {
         return NULL;
     }
+    memset(state, 0, sizeof(struct spawned_process_state));
+
     state->arg = arg;
     state->entry = user_entry;
 
@@ -753,16 +773,30 @@ process_spawn_child(
                 (void*)state,
                 0,
                 parent);
+    if(process == NULL) {
+        kfree(state);
+        return NULL;
+    }
 
+    DEBUG_ASSERT(process->status == PROCESS_STATUS_SUSPEND);
+
+    DEBUG_ASSERT(KERNEL_ADDR(parent->root));
     process->root = parent->root;
     fs_path_get(process->root);
 
     if(spawn_flags & SPAWN_MMAP_CLONE) {
         panic("SPAWN_MMAP_CLONE is unimplemented!\n");
+        if(res) {
+            eprintk("Failed to clone mmap for spawned process! (err=%s)\n",
+                    errnostr(res));
+            goto err1;
+        }
     } else {
         // SPAWN_MMAP_SHARED
         res = mmap_attach(parent->mmap, process);
         if(res) {
+            eprintk("Failed to attach mmap to spawned process! (err=%s)\n",
+                    errnostr(res));
             goto err1;
         }
     }
@@ -770,13 +804,22 @@ process_spawn_child(
     if(spawn_flags & SPAWN_FILES_NONE) {
         res = file_table_create(process);
         if(res) {
+            eprintk("Failed to create file table for spawned process! (err=%s)\n",
+                    errnostr(res));
             goto err1;
         }
     } else if(spawn_flags & SPAWN_FILES_CLONE) {
         panic("SPAWN_FILES_CLONE is unimplemented!\n");
+        if(res) {
+            eprintk("Failed to clone file table for spawned process! (err=%s)\n",
+                    errnostr(res));
+            goto err1;
+        }
     } else {
         res = file_table_attach(parent->file_table, process);
         if(res) {
+            eprintk("Failed to attach file table to spawned process! (err=%s)\n",
+                    errnostr(res));
             goto err1;
         }
     }
@@ -784,27 +827,37 @@ process_spawn_child(
     if(spawn_flags & SPAWN_ENV_NONE) {
         res = environment_create(process);
         if(res) {
+            eprintk("Failed to create environment for spawned process! (err=%s)\n",
+                    errnostr(res));
             goto err1;
         }
     } else if(spawn_flags & SPAWN_ENV_CLONE) {
         res = environment_clone(parent->environ, process);
         if(res) {
+            eprintk("Failed to clone environment for spawned process! (err=%s)\n",
+                    errnostr(res));
             goto err1;
         }
     } else {
         res = environment_attach(parent->environ, process);
         if(res) {
+            eprintk("Failed to attach environment to spawned process! (err=%s)\n",
+                    errnostr(res));
             goto err1;
         }
     }
 
     res = process_set_scheduler(process, parent->scheduler);
     if(res) {
+        eprintk("Failed to set spawned process scheduler! (err=%s)\n",
+                errnostr(res));
         goto err1;
     }
 
     res = process_schedule(process);
     if(res) {
+        eprintk("Failed to schedule spawned process! (err=%s)\n",
+                errnostr(res));
         goto err1;
     }
 
