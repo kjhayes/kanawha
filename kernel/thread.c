@@ -260,7 +260,7 @@ thread_deinit(
 int
 thread_schedule(struct thread_state *state)
 {
-    dprintk("thread_schedule\n");
+    dprintk("thread_schedule(state=%p id=%ld)\n", state, state->id);
 
     int irq_flags = disable_save_irqs();
 
@@ -653,8 +653,8 @@ dump_thread_flags(struct thread_state *thread, unsigned long flags, printk_f *pr
 int
 dump_threads(printk_f *printer)
 {
-    int irq_state = disable_save_irqs();
-    spin_lock(&thread_tree_lock);
+    int irq_flags = spin_lock_irq_save(&thread_tree_lock);
+
     (*printer)("--- Threads ---\n");
     struct ptree_node *node = ptree_get_first(&thread_tree);
     for(; node != NULL; node = ptree_get_next(node)) {
@@ -680,13 +680,11 @@ dump_threads(printk_f *printer)
             (*printer)(" PINNED(%ld) PIN-REFS(%ld)", (sl_t)thread->pinned_to, (sl_t)thread->pin_refs);
         }
 
-        (*printer)(" [raw=%p]", thread);
-
         (*printer)("\n");
     }
     (*printer)("---------------\n");
-    spin_unlock(&thread_tree_lock);
-    enable_restore_irqs(irq_state);
+
+    spin_unlock_irq_restore(&thread_tree_lock, irq_flags);
     return 0;
 }
 
