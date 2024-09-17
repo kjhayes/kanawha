@@ -18,7 +18,7 @@ syscall_exit(
                 process, exitcode, errnostr(res));
     }
 
-#ifndef CONFIG_DEBUG_LOG_PROCESS_EXIT
+#ifdef CONFIG_DEBUG_SYSCALL_EXIT
     printk("Exiting PID(%ld) (exitcode=%d)\n", process->id, exitcode);
 #endif
 

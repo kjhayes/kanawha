@@ -79,15 +79,17 @@ exec_elf64_load_segment(
     size_t bsssz = memsz - filesz;
 
     if(ptr_orderof(filesz) < VMEM_MIN_PAGE_ORDER) {
-        wprintk("exec_elf64_load_segment: PT_LOAD segment with file_size=%p not a multiple of the minimum page size!\n",
+        dprintk("exec_elf64_load_segment: PT_LOAD segment with file_size=%p not a multiple of the minimum page size: rounding up\n",
                 (uintptr_t)filesz);
-        return -EINVAL;
+        filesz += ((1ULL<<VMEM_MIN_PAGE_ORDER)-1);
+        filesz &= ~((1ULL<<VMEM_MIN_PAGE_ORDER)-1);
     }
 
     if(ptr_orderof(bsssz) < VMEM_MIN_PAGE_ORDER) {
-        wprintk("exec_elf64_load_segment: PT_LOAD segment with bss_size=%p not a multiple of the minimum page size!\n",
+        dprintk("exec_elf64_load_segment: PT_LOAD segment with bss_size=%p not a multiple of the minimum page size: rounding up\n",
                 (uintptr_t)bsssz);
-        return -EINVAL;
+        bsssz += ((1ULL<<VMEM_MIN_PAGE_ORDER)-1);
+        bsssz &= ~((1ULL<<VMEM_MIN_PAGE_ORDER)-1);
     }
 
     if(phdr->p_flags & PF_R) {
@@ -147,7 +149,7 @@ exec_elf64_handle_segment(
         case PT_NULL:
             return 0;
         default:
-            wprintk("Ignoring Unsupported ELF Segment \"%s\" offset=%p, memsz=%p\n",
+            dprintk("Ignoring Unsupported ELF Segment \"%s\" offset=%p, memsz=%p\n",
                     elf_get_phdr_type_string(phdr->p_type), phdr->p_offset, phdr->p_memsz);
             break;
     }
