@@ -35,6 +35,8 @@ syscall_mmap(
             where,
             sizeof(void __user *));
     if(res) {
+        wprintk("syscall_mmap: Failed to read requested address at %p from usermem (err=%s)\n",
+                where, errnostr(res));
         return res;
     }
 
@@ -63,6 +65,8 @@ syscall_mmap(
                 prot_flags,
                 mmap_flags);
         if(res) {
+            wprintk("syscall_mmap: mmap_map_region_exact returned %s\n",
+                    errnostr(res));
             return res;
         }
     }
@@ -78,6 +82,8 @@ syscall_mmap(
                 prot_flags,
                 mmap_flags);
         if(res) {
+            wprintk("syscall_mmap: mmap_map_region returned %s\n",
+                    errnostr(res));
             return res;
         }
 
@@ -95,7 +101,8 @@ syscall_mmap(
                 // TODO: this is tricky, it's not really possible to
                 // undo the mapping at this point (especially once
                 // we allow over-writing other mappings)
-                wprintk("syscall_mmap: Successfully mapped region, but failed to write address back to user memory!\n");
+                wprintk("syscall_mmap: Successfully mapped region, but failed to write address back to user memory! (err=%s)\n",
+                        errnostr(res));
                 return res;
             }
         }
@@ -122,6 +129,7 @@ syscall_munmap(
     DEBUG_ASSERT(KERNEL_ADDR(process));
     if((uintptr_t)mapping >= mmap->vmem_region->size) 
     {
+        wprintk("syscall_munmap: mapping at (%p) would be outside of user-memory!\n");
         return -EINVAL;
     }
 
@@ -129,6 +137,8 @@ syscall_munmap(
             process,
             (uintptr_t)mapping);
     if(res) {
+        wprintk("syscall_munmap: mmap_unmap_region returned %s\n",
+                errnostr(res));
         return res;
     }
 
@@ -258,7 +268,7 @@ mmap_region_map_page(
     int res;
 
     if(page->flags & MMAP_PAGE_MAPPED) {
-        dprintk("Page is already mapped flags = %p\n", (uintptr_t)page->flags);
+        dprintk("mmap_region_map_page: page is already mapped flags = %p\n", (uintptr_t)page->flags);
         return 0;
     }
 
@@ -303,6 +313,8 @@ mmap_region_map_page(
     }
 
     page->flags |= MMAP_PAGE_MAPPED;
+    dprintk("mmap_region_map_page: mapped page region-offset=[%p-%p)\n",
+            page->tree_node.key, page->tree_node.key + (1ULL<<page->order));
 
     return 0;
 }
@@ -583,11 +595,6 @@ mmap_map_region(
         goto err3;
     }
 
-    dprintk("mmap_region region=%p [%p-%p)\n",
-            region,
-            region->tree_node.key,
-            region->tree_node.key + region->size);
-
     *hint_offset = region->tree_node.key;
 
     res = ptree_insert(
@@ -599,6 +606,10 @@ mmap_map_region(
                 *hint_offset, errnostr(res));
         goto err3;
     }
+
+    dprintk("mmap_map_region_exact mapped region [%p-%p)\n",
+            region->tree_node.key,
+            region->tree_node.key + region->size);
 
     spin_unlock(&mmap->lock);
     return 0;
@@ -712,8 +723,7 @@ mmap_map_region_exact(
         }
     }
 
-    dprintk("mmap_region region=%p [%p-%p)\n",
-            region,
+    dprintk("mmap_map_region_exact mapped region [%p-%p)\n",
             region->tree_node.key,
             region->tree_node.key + region->size);
 
@@ -764,7 +774,16 @@ mmap_unmap_region(
     struct mmap_region *region =
         container_of(pnode, struct mmap_region, tree_node);
 
+    if(mmap_offset >= (region->tree_node.key + region->size)) {
+        spin_unlock(&mmap->lock);
+        return -ENXIO;
+    }
+
     struct fs_node *fs_node = region->fs_node;
+
+    dprintk("mmap_unmap_region: removing region [%p-%p)\n",
+            region->tree_node.key, region->tree_node.key + region->size
+            );
 
     struct ptree_node *removed =
         ptree_remove(&mmap->region_tree, pnode->key);
@@ -1258,8 +1277,11 @@ mmap_not_present_page_fault_handler(
     struct ptree_node *pnode = ptree_get_max_less_or_eq(
             &region->page_tree, region_offset);
 
-    struct mmap_page *page;
-    if(pnode == NULL) {
+    struct mmap_page *page =
+        container_of(pnode, struct mmap_page, tree_node);
+
+    if(pnode == NULL ||
+       ((pnode->key + (1ULL<<page->order)) <= region_offset)) {
         res = mmap_region_load_page(
                 region,
                 region_offset,
@@ -1267,9 +1289,9 @@ mmap_not_present_page_fault_handler(
         if(res) {
             goto unhandled;
         }
-    } else {
-        page = container_of(pnode, struct mmap_page, tree_node);
     }
+    dprintk("mmap_not_present_page_fault_handler: page=%p\n",
+            page);
 
     if(page == NULL) {
         goto unhandled;
@@ -1282,7 +1304,7 @@ mmap_not_present_page_fault_handler(
         goto unhandled;
     }
 
-    dprintk("returning handled\n");
+    dprintk("mmap_not_present_page_fault_handler: mapped page!\n");
     return PAGE_FAULT_HANDLED;
 
 unhandled:

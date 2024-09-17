@@ -18,7 +18,9 @@ syscall_exit(
                 process, exitcode, errnostr(res));
     }
 
-    dprintk("Exiting PID(%ld) (exitcode=%d)\n", process->id, exitcode);
+#ifndef CONFIG_DEBUG_LOG_PROCESS_EXIT
+    printk("Exiting PID(%ld) (exitcode=%d)\n", process->id, exitcode);
+#endif
 
     thread_abandon(force_resched());
 }

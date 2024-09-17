@@ -114,32 +114,35 @@ config DEBUG_SPINLOCK_TRACK_THREADS
       Have each spinlock track which thread is currently holding the lock
       so trivial cases of deadlocks can be detected.
 
-config DEBUG_SYSCALLS
-    bool "Debug syscalls"
-
-menu "syscall Debugging"
-depends on DEBUG_SYSCALLS
+menu "syscall Logging"
 
 config STRACE_LOG_SYSCALL_BEGIN
-    bool "Debug Log syscalls"
-    depends on DEBUGGING && DEBUG_SYSCALLS
+    bool "Debug Log syscall"
+    depends on DEBUGGING
     default n
     help
       Log the beginning of each syscall (process ID and syscall ID)
 
 config STRACE_LOG_SYSCALL_END
-    bool "Debug Log syscall Endings"
-    depends on DEBUGGING && DEBUG_SYSCALLS && STRACE_LOG_SYSCALL_BEGIN
+    bool "Debug Log syscall Completion"
+    depends on DEBUGGING
     default n
     help
       Log the ending of each syscall, useful for debugging kernel bugs during the handling of a specific syscall
 
 config DEBUG_SYSCALL_OPEN
-    bool "Log Opened Files"
-    depends on DEBUGGING && DEBUG_SYSCALLS
+    bool "Debug open"
+    depends on DEBUGGING
     default n
     help
       Log the file-names of each file opened by a process.
+
+config DEBUG_SYSCALL_EXIT
+    bool "Debug exit"
+    depends on DEBUGGING
+    default n
+    help
+      Log process ID and exitcode on exit
 
 endmenu
 

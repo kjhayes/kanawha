@@ -91,10 +91,13 @@ __thread_start_stack_spin_lock:
 
     movq __num_stacks, %rcx
     imulq $STACK_SIZE, %rcx, %rdx
-    addq $STACK_TOP, %rdx // where
-    
+    addq $STACK_TOP, %rdx
+ 
     movq %rdx, %rsp
     addq $STACK_SIZE, %rsp
+
+    movq %rdx, __mmap_where
+    movabsq $__mmap_where, %rdx// where
 
     movq $STACK_SIZE, %r8 // size
     movq $(0b11), %r9 // MMAP_PROT_READ|MMAP_PROT_WRITE
@@ -126,7 +129,7 @@ __thread_start_stack_map_fail:
     movq $0, %rax
     syscall
 
-.data
+.section .data
 
 __mmap_where:
 .quad 0
