@@ -51,7 +51,7 @@
 
 #define XRANGE_16_31(X)\
     XRANGE_16_23(X)\
-    XRANGE_23_32(X)
+    XRANGE_24_31(X)
 
 #define XRANGE_0_31(X)\
     XRANGE_0_15(X)\
@@ -291,5 +291,9 @@
     X(253)\
     X(254)\
     X(255)
+
+#define XRANGE_0_255(X)\
+    XRANGE_0_127(X)\
+    XRANGE_128_255(X)
 
 #endif
