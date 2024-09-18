@@ -38,8 +38,8 @@ acpi_register_table(struct acpi_table_hdr *table)
     buf[4] = '\0';
     node = stree_get(&acpi_table_tree, buf);
     if(node != NULL) {
-        eprintk("Trying to register multiple versions of the ACPI \"%s\" Table!\n", buf);
-        return -EINVAL;
+        wprintk("Trying to register multiple versions of the ACPI \"%s\" Table! (ignoring)\n", buf);
+        return 0;
     }
 
     struct acpi_table_ptr *ptr;
@@ -111,7 +111,7 @@ acpi_load_tables(void)
 
     return 0;
 }
-declare_init_desc(static, acpi_load_tables, "Loading ACPI Tables");
+declare_init_desc(post_vmem, acpi_load_tables, "Loading ACPI Tables");
 
 int
 acpi_provide_rsdp(struct acpi_rsdp *rsdp)

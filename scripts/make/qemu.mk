@@ -4,7 +4,7 @@ QEMU_FLAGS += -serial chardev:chardev0
 QEMU_FLAGS += -m 2G
 QEMU_FLAGS += -device VGA
 QEMU_FLAGS += -M hpet=on
-QEMU_FLAGS += -smp 1
+QEMU_FLAGS += -smp 2
 #QEMU_FLAGS += -display none
 
 ifdef QEMU

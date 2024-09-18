@@ -161,9 +161,9 @@ void x64_init(void *in)
         panic("Failed to handle init stage \"launch\"! err=%s", errnostr(res));
     }
 
-    dump_device_hierarchy(printk);
+    //dump_device_hierarchy(printk);
     //dump_irq_descs(printk);
-    dump_threads(printk);
+    //dump_threads(printk);
 
     printk("CPU (%ld) init thread is idling\n", (sl_t)current_cpu_id());
     idle_loop();

@@ -76,6 +76,7 @@ COMMON_FLAGS += \
 				-nostdinc
 COMMON_DEPS += $(AUTOCONF)
 AFLAGS += -D__ASSEMBLER__
+CFLAGS += -mgeneral-regs-only
 
 ifdef CONFIG_DEBUG_SYMBOLS
 COMMON_FLAGS += -g

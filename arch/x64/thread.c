@@ -30,6 +30,8 @@ arch_thread_run_threadless(
 __attribute__((noreturn)) void
 arch_thread_run_thread(struct thread_state *to_run)
 {
+    dprintk("running thread %p with rsp=%p\n",
+            to_run, to_run->arch_state.stack.rsp);
     __x64_thread_run_thread((void*)to_run->arch_state.stack.rsp);
 }
 

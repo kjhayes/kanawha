@@ -218,10 +218,22 @@ pt_level_shared_mask(int level, uint64_t *out) {
 
 static inline int
 pt_level_entry_can_be_leaf(int level) {
+
     switch(level) {
         case 1: 
+            return 1;
         case 2: 
-        case 3: return 1;
+#ifdef CONFIG_X64_ASSUME_2MB_PAGES
+            return 1;
+#else
+            return 0;
+#endif
+        case 3:
+#ifdef CONFIG_X64_ASSUME_1GB_PAGES
+            return 1;
+#else
+            return 0;
+#endif
         case 4: 
         case 5: return 0; 
         default:

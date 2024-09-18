@@ -72,7 +72,7 @@ x64_ap_entry:
     movw %ax, %ds
 
     // Let the BSP know that we are running
-    lock movb $1, %ds:(x64_ap_trampoline_ap_launched_byte-x64_ap_trampoline_start)
+    movb $1, %ds:(x64_ap_trampoline_ap_launched_byte-x64_ap_trampoline_start)
 
     // Get an absolute pointer to the trampoline page
     movw %ds:(x64_ap_trampoline_self_ptr-x64_ap_trampoline_start), %bx

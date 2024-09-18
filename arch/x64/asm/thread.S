@@ -4,25 +4,28 @@
 .extern thread_switch
 .extern query_resched
 
+.section .text
+.code64
+
 // On entry:
-//   Stack is misaligned by 8 bytes
 //   Top of stack is the function pointer of our thread
 //   %rdi -> our "in" void* argument 
 
 .global __x64_thread_entry
 .type __x64_thread_entry, @function
 __x64_thread_entry:
+
     movq 0(%rsp), %rax // Get our function
 
+    // Align the stack
+    andq $(~0xF), %rsp
+
     callq *%rax // Call our function (%rdi is already set correctly)
-                // (Also aligns the stack)
 
     callq force_resched 
     movq %rax, %rdi // If this is NULL we will run the idle thread
 
-    callq thread_abandon // Aligns the stack
-    // This should never happen...
-    // Stack is misaligned
+    callq thread_abandon
 
 __x64_returned_from_thread_abandon:
     jmp __x64_returned_from_thread_abandon
@@ -33,6 +36,7 @@ __x64_returned_from_thread_abandon:
 __x64_thread_run_threadless: 
     // Save our flags and disable interrupts
     pushfq
+
     cli 
     // Save all registers (this isn't strictly necessary but we'll be safe for now)
     PUSH_CALLER_REGS()
@@ -45,16 +49,10 @@ __x64_thread_stack_save:
     // We are now effectively "threadless"
 
     // Align the stack
-    movq %rsp, %rdx
     andq $(~0xF), %rsp
-    pushq %rdx
    
     // %rdi already has our "in" argument
     callq *%rsi
-
-    // Undo stack alignment
-    popq %rdx
-    movq %rdx, %rsp
 
     // the threadless_f* we just called should be noreturn,
     // so we never reach this loop.

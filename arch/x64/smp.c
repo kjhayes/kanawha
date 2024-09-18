@@ -138,7 +138,7 @@ x64_bsp_bringup_aps(void)
 
         printk("Sent INIT IPI to APIC %ld\n", (sl_t)ap->apic.id);
 
-        // Intel says to wait for 10ms after an SIPI
+        // Intel says to wait for 10ms after an INIT IPI
         res = clk_delay(msec_to_duration(10));
         if(res) {
             eprintk("Failed to delay after INIT IPI! (err=%s)\n",
@@ -155,16 +155,21 @@ x64_bsp_bringup_aps(void)
                 1, // assert
                 LAPIC_TRIGGER_MODE_EDGE);
 
-        printk("Sending SIPI\n");
+        if(res) {
+            panic("Failed to Send SIPI (err=%s)\n",
+                    errnostr(res));
+        } else {
+            printk("Sent SIPI\n");
+        }
+
 
         res = clk_delay(msec_to_duration(1));
         if(res) {
-            wprintk("Failed to delay after SIPI (err=%s)\n",
+            panic("Failed to delay after SIPI (err=%s)\n",
                     errnostr(res));
         }
 
         if(*ap_launched_byte == 0) {
-            printk("Sending Second SIPI\n");
             res = lapic_send_ipi(
                 &bsp->apic,
                 ap->apic.id,
@@ -173,10 +178,23 @@ x64_bsp_bringup_aps(void)
                 0, // physical addressing
                 1, // assert
                 LAPIC_TRIGGER_MODE_EDGE);
+            if(res) {
+                panic("Failed to Send Second SIPI (err=%s)\n",
+                        errnostr(res));
+            } else {
+                printk("Sent Second SIPI\n");
+            }
+
+            res = clk_delay(sec_to_duration(1));
+            if(res) {
+                panic("Failed to delay after second SIPI (err=%s)\n",
+                        errnostr(res));
+            }
         }
 
-        while(*ap_launched_byte < 1) {
-            pause();
+        while(*ap_launched_byte != 1) {
+            panic("Failed to Launch AP %ld\n",
+                    ap->cpu.id);
         }
 
         printk("AP %ld Is Running\n", ap->cpu.id);

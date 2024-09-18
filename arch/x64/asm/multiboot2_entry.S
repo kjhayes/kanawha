@@ -26,12 +26,6 @@ x64_multiboot2_entry:
 
   mov $1, %edx
 
-  movl $0xB8000, %edx
-  movb $'T',  20(%edx)
-  movb $0x0F, 21(%edx)
-//    jmp .
-
-
   jmp x64_prot_to_long_mode
 
 .code32

@@ -23,6 +23,15 @@ choice
     bool "Multiboot2"
 endchoice
 
+config X64_ASSUME_2MB_PAGES
+  bool "Assume Support for 2MB Pages"
+  default n
+
+config X64_ASSUME_1GB_PAGES
+  bool "Assume Support for 1GB Pages"
+  depends on X64_ASSUME_2MB_PAGES
+  default n
+
 config X64_BOOT_VGA
   bool "Use Early Platform VGA for printk"
   default y

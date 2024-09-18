@@ -75,7 +75,14 @@ x64_exception_entry_ring_change_entry:
   swapgs
 
   // Get our thread stack
+  
+  movq %rsp, %rdx
+  andq $(~0xF), %rsp
+  subq $16, %rsp
+  movq %rdx, 0(%rsp)
   callq __x64_get_current_thread_kernel_rsp
+  popq %rdx
+  movq %rdx, %rsp
 
   movq $(CALLER_PUSH_SIZE + 16 + IRET_SAVE_SIZE), %rcx // Length (iret structure, error code, vector, and caller regs)
   subq %rcx, %rax // Allocate space on the kernel stack
@@ -91,8 +98,10 @@ no_ring_change_entry:
   // Here we should be running without our correct thread stack
 
   // Stack alignment trickery
+  movq %rsp, %rdx
   andq $(~0xF), %rsp
-  pushq %rdx
+  subq $16, %rsp
+  movq %rdx, 0(%rsp)
 
   movq %rdx, %rdi
   callq x64_handle_exception

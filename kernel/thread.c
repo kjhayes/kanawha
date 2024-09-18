@@ -81,8 +81,7 @@ DECLARE_STATIC_PERCPU_VAR(struct thread_state *, __idle_thread);
 __attribute__((noreturn))
 void
 idle_loop(void) {
-    dprintk("Entered Idle Thread On CPU %d\n", current_cpu_id());
-
+    printk("Entered Idle Thread On CPU %d\n", current_cpu_id());
     enable_irqs();
     while(1) {
     }
@@ -633,6 +632,7 @@ void cpu_start_threading(thread_f *func, void *state)
     dprintk("cpu_start_threading: Activating Thread Virtual Memory Mapping\n");
     vmem_map_activate(current->mem_map);
 
+    dprintk("cpu_start_threading: Running Initial Thread\n");
     arch_thread_run_thread(current);
 }
 
