@@ -40,22 +40,25 @@ syscall_mmap(
         return res;
     }
 
+    uint8_t type = mmap_flags & 0b11;
+
     // Mis-aligned/Mis-sized
-    if(file != NULL_FD && (ptr_orderof(file_offset) < VMEM_MIN_PAGE_ORDER)) {
+
+    if(type != MMAP_ANON && (ptr_orderof(file_offset) < VMEM_MIN_PAGE_ORDER)) {
         wprintk("syscall_mmap: file_offset is not aligned to the minimum vmem page size!\n");
         return -EINVAL;
     }
-    if(ptr_orderof(requested) < VMEM_MIN_PAGE_ORDER) {
-        wprintk("syscall_mmap: virtual address is not aligned to the minimum vmem page size!\n");
-        return -EINVAL;
-    }
     if(ptr_orderof(size) < VMEM_MIN_PAGE_ORDER) {
-        wprintk("syscall_mmap: size is not aligned to the minimum vmem page size!\n");
+        wprintk("syscall_mmap: size is not a multiple of the minimum vmem page size!\n");
         return -EINVAL;
     }
 
     if(mmap_flags & MMAP_EXACT)
     {
+        if(ptr_orderof(requested) < VMEM_MIN_PAGE_ORDER) {
+            wprintk("syscall_mmap: virtual address is not aligned to the minimum vmem page size!\n");
+            return -EINVAL;
+        }
         res = mmap_map_region_exact(
                 process,
                 file,
