@@ -42,14 +42,14 @@ jmp x64_exception_entry_common;\
 
 .global x64_exception_entry_table
 x64_exception_entry_table:
-.p2align EXCP_ENTRY_ORDER, 0xcc;\
+.p2align EXCP_ENTRY_ORDER, 0xcc;
 X64_EXCP_XLIST(X64_DECLARE_EXCP_ENTRY)
 
 // Fake more "INTR" type exception handlers
 #define X64_DECLARE_IRQ_ENTRY(VECTOR, ...) X64_DECLARE_EXCP_ENTRY(VECTOR, INTR, "Interrupt", 0, X64_EXCP_TYPE_INTR)
 .global x64_interrupt_entry_table
 x64_interrupt_entry_table:
-.p2align EXCP_ENTRY_ORDER, 0xcc;\
+.p2align EXCP_ENTRY_ORDER, 0xcc;
 XRANGE_32_63(X64_DECLARE_IRQ_ENTRY)
 XRANGE_64_127(X64_DECLARE_IRQ_ENTRY)
 XRANGE_128_255(X64_DECLARE_IRQ_ENTRY)

@@ -258,12 +258,28 @@ X64_EXCP_XLIST(UNHANDLED_EXCEPTION_CASE)
 #undef UNHANDLED_EXCEPTION_CASE
     }
 
-    printk("\tVECTOR=0x%x", state->vector);
+#undef PRINT
+#define PRINT (*printer)
+
+    PRINT("\tVECTOR=0x%x", state->vector);
     if(errcode_valid) {
         printk(", ERR=0x%x", (unsigned)state->error_code);
     }
-    printk("\tRFLAGS=%p\n", (uintptr_t)state->rflags);
-    printk("\tRIP=%p\n", (uintptr_t)state->rip);
-    printk("\tCS=%p\n", (uintptr_t)state->cs);
+    PRINT("\n");
+    PRINT("\tRFLAGS=%p\n", (uintptr_t)state->rflags);
+    PRINT("\tRIP=%p\n", (uintptr_t)state->rip);
+    PRINT("\tCS=%p\n", (uintptr_t)state->cs);
+
+    PRINT("RAX = %p\n", state->caller_regs[PUSHED_CALLER_REGS_INDEX_RAX]);
+    PRINT("RDI = %p\n", state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDI]);
+    PRINT("RSI = %p\n", state->caller_regs[PUSHED_CALLER_REGS_INDEX_RSI]);
+    PRINT("RDX = %p\n", state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDX]);
+    PRINT("RCX = %p\n", state->caller_regs[PUSHED_CALLER_REGS_INDEX_RCX]);
+    PRINT("R8  = %p\n", state->caller_regs[PUSHED_CALLER_REGS_INDEX_R8]);
+    PRINT("R9  = %p\n", state->caller_regs[PUSHED_CALLER_REGS_INDEX_R9]);
+    PRINT("R10 = %p\n", state->caller_regs[PUSHED_CALLER_REGS_INDEX_R10]);
+    PRINT("R11 = %p\n", state->caller_regs[PUSHED_CALLER_REGS_INDEX_R11]);
+
+#undef PRINT
 }
 

@@ -86,8 +86,8 @@ struct
 x64_excp_state
 {
     union {
-        uint8_t caller_regs_raw[CALLER_PUSH_SIZE];
-    } __caller_regs;
+        uint64_t caller_regs[CALLER_PUSH_SIZE/sizeof(uint64_t)];
+    };
 
     uint64_t vector;
     uint64_t error_code;

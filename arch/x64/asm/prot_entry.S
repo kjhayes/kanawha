@@ -3,6 +3,7 @@
 
 .extern x64_bsp_gdt64
 .extern x64_bsp_tss_data
+.extern x64_prot_mode_idtr
 
 #include<arch/x64/gdt.h>
 
@@ -23,6 +24,8 @@
 x64_prot_to_long_mode:
     // Just to be safe
     cli
+
+//    lidt (x64_prot_mode_idtr)
 
     // %edi is the low-bits of the address to jump to in 64-bit code
     movl %edi, x64_prot_to_long_first_addr_low
@@ -54,6 +57,46 @@ __x64_prot_to_long_page_table_setup:
     movl $(X64_PML4_INDEX_OF_ADDR(CONFIG_VIRTUAL_BASE)), %edi
     movl %esi, 0(%eax,%edi,8)
 
+__x64_prot_to_long_detect_cpuid:
+
+    // Make sure that we can flip the CPUID bit in the FLAGS register
+    pushfl
+    popl %eax
+    mov %ecx, %eax
+    xor $(1<<21), %eax
+    pushl %eax
+    popfl
+
+    pushfl
+    popl %eax
+
+    pushl %ecx
+    popfl
+
+    cmp %eax, %ecx
+    jz __x64_prot_to_long_no_cpuid
+
+__x64_prot_to_long_detect_ext_cpuid_feat:
+
+    // Make sure that the CPUID 0x80000001 exists (if it doesn't long mode can't exist)
+    movl $0x80000000, %eax
+    cpuid
+    cmpl $0x80000001, %eax
+    jb __x64_prot_to_long_no_ext_cpuid_feat
+
+__x64_prot_to_long_detect_long_mode:
+
+    // Check that long mode is supported
+    movl $0x80000001, %eax
+    cpuid
+    testl $(1<<29), %edx
+    jz __x64_prot_to_long_no_long_mode
+
+__x64_prot_to_long_check_pml:
+    movl %cr4, %edx
+    testl $(1<<12), %edx
+    jnz __x64_prot_to_long_pml5_enabled
+
 __x64_prot_to_long_ap_skip_page_table_setup:
     // Enable PAE
     movl %cr4, %ebx
@@ -74,6 +117,11 @@ __x64_prot_to_long_paging_enable:
     movl %cr0, %eax
     orl  $(1 << 31), %eax
     movl %eax, %cr0
+
+    movl $0xB8000, %edx
+    movb $'$',  0(%edx)
+    movb $0xCA, 1(%edx)
+    jmp .
 
     // Set the TSS Segment Base (Would be nice to get the compiler/linker to do this for us)
 
@@ -128,6 +176,13 @@ x64_prot_to_long_begin_long_mode:
 __x64_prot_to_long_hlt_loop:
     cli
     hlt
+    jmp __x64_prot_to_long_hlt_loop
+
+
+__x64_prot_to_long_no_cpuid:
+__x64_prot_to_long_no_ext_cpuid_feat:
+__x64_prot_to_long_no_long_mode:
+__x64_prot_to_long_pml5_enabled:
     jmp __x64_prot_to_long_hlt_loop
 
 .section .boot.data, "aw"

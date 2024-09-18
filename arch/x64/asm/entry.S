@@ -19,6 +19,8 @@
 .global x64_kernel_entry
 .type x64_kernel_entry, @function
 x64_kernel_entry:
+    movl $x64_boot_stack_base, %esp
+
 #if defined(CONFIG_X64_MULTIBOOT2_BOOT)
   jmp x64_multiboot2_entry
 #endif

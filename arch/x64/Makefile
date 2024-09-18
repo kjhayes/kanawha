@@ -23,7 +23,8 @@ obj-y += \
 	smp.o \
 	acpi.o \
 	xcall.o \
-	vendor.o
+	vendor.o \
+	gp_fault.o
 
 obj-$(CONFIG_X64_MULTIBOOT2_BOOT) += mb2_boot.o
 
