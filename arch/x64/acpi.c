@@ -24,7 +24,21 @@ parse_madt_lapic(
         struct acpi_madt_entry_hdr *hdr)
 {
     struct acpi_madt_entry_lapic *entry = (void*)hdr;
-    printk("MADT APIC: id=0x%lx\n", (apic_id_t)entry->apic_id);
+    printk("MADT APIC: id=0x%lx", (apic_id_t)entry->apic_id);
+    if(entry->flags & 0b01) {
+        printk(" [ENABLED]");
+    } else {
+        printk(" [DISABLED]");
+    }
+    if(entry->flags & 0b10) {
+        printk("[ONLINE-CAPABLE]");
+    }
+    printk("\n");
+
+    if((entry->flags & 0b1) == 0) {
+        wprintk("APIC is DISABLED: Ignoring\n");
+        return 0;
+    }
 
     struct x64_cpu *cpu = kmalloc(sizeof(struct x64_cpu));
     if(cpu == NULL) {
@@ -328,7 +342,7 @@ x64_parse_acpi_madt(void) {
     for(size_t i = 0; i < 16; i++) {
         // This ISA IRQ has already been mapped by an override entry
         if((overriden_isa_irqs >> i) & 1) {
-            printk("ISA IRQ 0x%x was overriden\n", i);
+            dprintk("ISA IRQ 0x%x was overriden\n", i);
             continue;
         }
 
@@ -366,7 +380,7 @@ x64_parse_acpi_madt(void) {
             continue;
         }
 
-        printk("Linked ISA 0x%x to IOAPIC 0x%x\n",
+        dprintk("Linked ISA 0x%x to IOAPIC 0x%x\n",
                 i, i);
     }
 
