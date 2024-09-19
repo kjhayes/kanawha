@@ -11,6 +11,7 @@ typedef struct rlock {
     size_t readers;
     spinlock_t read_lock;
     spinlock_t full_lock;
+    int full_lock_irq_flags;
 } rlock_t;
 
 static inline void
@@ -35,22 +36,12 @@ rlock_read_unlock(rlock_t *lock) {
 
 static inline void
 rlock_write_lock(rlock_t *lock) {
-    spin_lock(&lock->full_lock);
+    lock->full_lock_irq_flags = spin_lock_irq_save(&lock->full_lock);
 }
 
 static inline void
 rlock_write_unlock(rlock_t *lock) {
-    spin_unlock(&lock->full_lock);
-}
-
-static inline int
-rlock_write_lock_irq_save(rlock_t *lock) {
-    return spin_lock_irq_save(&lock->full_lock);
-}
-
-static inline void
-rlock_write_unlock_irq_restore(rlock_t *lock, int irq_state) {
-    spin_unlock_irq_restore(&lock->full_lock, irq_state);
+    spin_unlock_irq_restore(&lock->full_lock, lock->full_lock_irq_flags);
 }
 
 static inline void

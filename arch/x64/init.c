@@ -106,6 +106,8 @@ void x64_init(void *in)
     printk("Started threading on CPU (%ld)\n",
             (long)current_cpu_id());
 
+    enable_irqs();
+
     res = handle_init_stage__topo();
     if(res) {
         panic("Failed to handle init stage \"topo\"! err=%s", errnostr(res));

@@ -36,7 +36,8 @@ obj-y += \
 	xcall.o \
 	timer.o \
 	spinlock.o \
-	clk.o
+	clk.o \
+	kbd.o
 
 obj-y += fs/
 obj-y += syscall/

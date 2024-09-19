@@ -164,7 +164,7 @@ init_process_kernel_entry(void *in)
                 binary_path, errnostr(res));
     }
 
-    printk("init_process_kernel_entry(%p)\n",
+    dprintk("init_process_kernel_entry(%p)\n",
             NULL);
 
     enter_usermode(NULL,NULL);

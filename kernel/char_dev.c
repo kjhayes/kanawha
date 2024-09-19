@@ -134,16 +134,6 @@ char_dev_fs_node_flush(
     return char_dev_flush(dev);
 }
 
-static ssize_t
-char_dev_fs_node_seek(
-        struct file *file,
-        ssize_t offset,
-        int whence)
-{
-    // Can only seek to zero on a chardev
-    return 0;
-}
-
 static struct fs_node_ops
 char_dev_fs_node_ops = {
     .lookup = fs_node_cannot_lookup,
@@ -159,7 +149,7 @@ char_dev_fs_file_ops = {
     .read = char_dev_fs_node_read,
     .write = char_dev_fs_node_write,
     .flush = char_dev_fs_node_flush,
-    .seek = char_dev_fs_node_seek,
+    .seek = fs_file_seek_pinned_zero,
 };
 
 static int

@@ -113,6 +113,12 @@ ilist_remove(ilist_t *list, ilist_node_t *node)
     node->next = node;
 }
 
+static inline void
+ilist_remove_all(ilist_t *list) {
+    list->next = list;
+    list->prev = list;
+}
+
 static inline int
 ilist_empty(ilist_t *list)
 {

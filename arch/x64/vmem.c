@@ -70,6 +70,7 @@ x64_install_page_fault_handler(void)
         irq_install_handler(
             x64_vector_irq_desc(14),
             NULL, // Device
+            NULL, // priv_state
             x64_vmem_page_fault_handler);
 
     if(x64_pf_action == NULL) {

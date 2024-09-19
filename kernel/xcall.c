@@ -127,7 +127,7 @@ xcall_provide_ipi_irq(cpu_id_t cpu, irq_t irq)
 
         DEBUG_ASSERT(desc->irq == irq);
 
-        state->action = irq_install_handler(desc, NULL, xcall_ipi_handler);
+        state->action = irq_install_handler(desc, NULL, NULL, xcall_ipi_handler);
         if(state->action == NULL) {
             spin_unlock_irq_restore(&state->lock, irq_state);
             return -EINVAL;

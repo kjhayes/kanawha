@@ -61,7 +61,11 @@ irq_to_desc(irq_t irq)
 }
 
 struct irq_action *
-irq_install_handler(struct irq_desc *desc, struct device *device, irq_handler_f *handler)
+irq_install_handler(
+        struct irq_desc *desc,
+        struct device *device,
+        void *priv_data,
+        irq_handler_f *handler)
 {
     struct irq_action *action;
     action = kmalloc(sizeof(struct irq_action));
@@ -72,13 +76,14 @@ irq_install_handler(struct irq_desc *desc, struct device *device, irq_handler_f 
 
     action->desc = desc;
     action->type = IRQ_ACTION_HANDLER;
+    action->handler_data.priv_data = priv_data;
     action->handler_data.device = device;
     action->handler_data.handler = handler;
 
-    int irq_state = rlock_write_lock_irq_save(&desc->lock);
+    rlock_write_lock(&desc->lock);
     ilist_push_tail(&desc->actions, &action->list_node);
     desc->num_actions++;
-    rlock_write_unlock_irq_restore(&desc->lock, irq_state);
+    rlock_write_unlock(&desc->lock);
 
     dprintk("Installed irq handler (0x%lx)\n", (ul_t)desc->irq);
     return action;
@@ -136,10 +141,10 @@ irq_install_percpu_link(
         return NULL;
     }
 
-    int irq_state = rlock_write_lock_irq_save(&desc->lock);
+    rlock_write_lock(&desc->lock);
     ilist_push_tail(&desc->actions, &action->list_node);
     desc->num_actions++;
-    rlock_write_unlock_irq_restore(&desc->lock, irq_state);
+    rlock_write_unlock(&desc->lock);
 
     return action;
 }
@@ -185,10 +190,10 @@ irq_uninstall_action(struct irq_action *action)
 {
     int res = 0;
     struct irq_desc *desc = action->desc;
-    int irq_state = rlock_write_lock_irq_save(&desc->lock);
+    rlock_write_lock(&desc->lock);
     ilist_remove(&desc->actions, &action->list_node);
     desc->num_actions--;
-    rlock_write_unlock_irq_restore(&desc->lock, irq_state);
+    rlock_write_unlock(&desc->lock);
 
     if(action->type == IRQ_ACTION_PERCPU_LINK) {
         percpu_free(action->percpu_link_data.link, sizeof(struct irq_desc*));
@@ -443,11 +448,11 @@ alloc_irq_domain_linear(
     }
     memset(domain->domain.irq_descs, 0, sizeof(struct irq_desc) * num_irq);
 
-    int irq_state = rlock_write_lock_irq_save(&irq_domain_map_lock);
+    rlock_write_lock(&irq_domain_map_lock);
 
     res = alloc_free_irq_region(num_irq, &domain->domain.base_irq);
     if(res) {
-        rlock_write_unlock_irq_restore(&irq_domain_map_lock, irq_state);
+        rlock_write_unlock(&irq_domain_map_lock);
         kfree(domain->domain.irq_descs);
         kfree(domain);
         return NULL;
@@ -468,7 +473,7 @@ alloc_irq_domain_linear(
         ilist_init(&desc->direct_links);
     }
 
-    rlock_write_unlock_irq_restore(&irq_domain_map_lock, irq_state);
+    rlock_write_unlock(&irq_domain_map_lock);
     return &domain->domain;
 }
 
@@ -495,6 +500,8 @@ dump_irq_descs(printk_f *printer)
 {
     char dev_name_buf[64];
     dev_name_buf[63] = '\0';
+
+    int irq_flags = disable_save_irqs();
 
     rlock_read_lock(&irq_domain_map_lock);
     struct ptree_node *node;
@@ -572,6 +579,7 @@ dump_irq_descs(printk_f *printer)
         node = ptree_get_next(node);
     }
     rlock_read_unlock(&irq_domain_map_lock);
+    enable_restore_irqs(irq_flags);
     return 0;
 }
 

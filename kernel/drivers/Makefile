@@ -3,5 +3,7 @@ obj-y += \
 	blk/ \
 	pci/ \
 	serial/ \
-	clk/
+	clk/ \
+
+obj-$(CONFIG_PS2) += ps2/
 

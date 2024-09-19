@@ -29,6 +29,17 @@ config MAX_CPUS
   help
     Maximum number of CPU(s) in the system.
 
+choice
+  prompt "Unhandled Interrupt Reaction"
+  default PANIC
+  config PANIC
+    bool "Panic"
+  config WARN
+    bool "Warn"
+  config IGNORE
+    bool "Ignore"
+endchoice
+
 menu "Kernel Memory Layout"
 config KERNEL_LOAD_ADDR
   hex "Kernel Load Address"

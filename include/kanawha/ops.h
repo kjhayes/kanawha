@@ -2,6 +2,8 @@
 #define __KERNEL__OPS_H__
 
 #include <kanawha/printk.h>
+#include <kanawha/assert.h>
+#include <kanawha/vmem.h>
 
 /*
  * API Overview
@@ -153,6 +155,7 @@
     NAMESPACE ## STRUCT_NAME ## _ ## FUNC(struct STRUCT_NAME * __ ## STRUCT_NAME SIG_ARG_DECLS(SIG)) \
     {\
         if(__ ## STRUCT_NAME OP_FIELD_ACCESSOR FUNC) {\
+            DEBUG_ASSERT(KERNEL_ADDR(__ ## STRUCT_NAME OP_FIELD_ACCESSOR FUNC));\
             return (*__ ## STRUCT_NAME OP_FIELD_ACCESSOR FUNC)(\
                     __ ## STRUCT_NAME THIS_FIELD_ACCESSOR\
                     SIG_ARG_NAMES(SIG));\

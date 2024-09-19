@@ -193,9 +193,8 @@ vga_serial_driver = {
 
 #ifdef CONFIG_X64
 
-#define X64_SERIAL_VGA_ATTR_FG_WHITE 0x0F
-#define X64_SERIAL_VGA_ATTR_FG_ORANGE 0x06
-#define X64_SERIAL_VGA_ATTR_BG_BLACK 0x00
+#define X64_SERIAL_VGA_ATTR_FG 0x09
+#define X64_SERIAL_VGA_ATTR_BG 0x00
 
 static struct vga_serial
 x64_platform_vga = {
@@ -204,7 +203,7 @@ x64_platform_vga = {
     .cursor_x = 0,
     .cursor_y = 0,
     .framebuffer = NULL,
-    .default_attr = (X64_SERIAL_VGA_ATTR_FG_ORANGE | X64_SERIAL_VGA_ATTR_BG_BLACK),
+    .default_attr = (X64_SERIAL_VGA_ATTR_FG | X64_SERIAL_VGA_ATTR_BG),
 };
 
 static int

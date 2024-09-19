@@ -83,6 +83,7 @@ apic_timer_init_current(void)
         irq_install_handler(
             irq_to_desc(timer_irq),
             &cpu->apic_timer.device,
+            NULL,
             apic_timer_handler);
 
     if(timer_action == NULL) {

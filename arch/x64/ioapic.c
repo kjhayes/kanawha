@@ -49,10 +49,10 @@ ioapic_read_iored(
     size_t irq_offset = irq - ioapic->base_irq;
     uint32_t low, high;
 
-    mmio_writel(ioapic->ioregsel, IOAPIC_REG_IOREDTBL_BASE + irq_offset);
+    mmio_writel(ioapic->ioregsel, IOAPIC_REG_IOREDTBL_BASE + (irq_offset * 2));
     low = mmio_readl(ioapic->iowin);
 
-    mmio_writel(ioapic->ioregsel, IOAPIC_REG_IOREDTBL_BASE + irq_offset + 1);
+    mmio_writel(ioapic->ioregsel, IOAPIC_REG_IOREDTBL_BASE + (irq_offset * 2) + 1);
     high = mmio_readl(ioapic->iowin);
 
     return (((uint64_t)high) << 32) | low;
@@ -65,13 +65,13 @@ ioapic_write_iored(
         uint64_t value)
 {
     size_t irq_offset = irq - ioapic->base_irq;
-    uint32_t low = value >> 32;
-    uint32_t high = value & ((1ULL<<32)-1);
+    uint32_t high = (value >> 32);
+    uint32_t low = (value & ((1ULL<<32)-1));
 
-    mmio_writel(ioapic->ioregsel, IOAPIC_REG_IOREDTBL_BASE + irq_offset);
+    mmio_writel(ioapic->ioregsel, IOAPIC_REG_IOREDTBL_BASE + (irq_offset * 2));
     mmio_writel(ioapic->iowin, low);
 
-    mmio_writel(ioapic->ioregsel, IOAPIC_REG_IOREDTBL_BASE + irq_offset + 1);
+    mmio_writel(ioapic->ioregsel, IOAPIC_REG_IOREDTBL_BASE + (irq_offset * 2) + 1);
     mmio_writel(ioapic->iowin, high);
 }
 
@@ -142,6 +142,7 @@ ioapic_unmask_irq(
 
     uint64_t iored = ioapic_read_iored(ioapic, hwirq);
     iored &= ~(1ULL<<16);
+    dprintk("ioapic_unmask_irq: IORED=%p\n", iored);
     ioapic_write_iored(ioapic, hwirq, iored);
 
     return 0;
@@ -294,6 +295,8 @@ x64_register_ioapic(
         iored &= ~(0xFFULL<<56); // Set the physical APIC ID
         iored |= (uint64_t)(0xF & apic_id) << 56;
 
+        dprintk("IOAPIC IORED = %p\n", iored);
+
         ioapic_write_iored(ioapic, hwirq, iored);
 
         struct irq_action *link =
@@ -306,6 +309,9 @@ x64_register_ioapic(
             kfree(ioapic);
             return -EINVAL;
         }
+
+        printk("Mapped I/OAPIC IRQ %ld to CPU %ld Vector IRQ 0x%x\n",
+                hwirq, next_to_assign, vector_desc->hwirq);
 
         // Get the next CPU to assign an interrupt to
         next_to_assign++;

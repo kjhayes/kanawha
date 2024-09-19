@@ -204,6 +204,8 @@ void x64_handle_exception(struct x64_excp_state *state)
     if(res == IRQ_UNHANDLED) {
         eprintk("Failed to handle IRQ 0x%lx (vector=0x%lx) on CPU (%ld)\n",
                 (ul_t)desc->irq, (ul_t)state->vector, (sl_t)current_cpu_id());
+        eprintk("desc=%p, desc->num_actions=%p\n",
+                desc, desc->num_actions);
         if(state->vector < 32) {
             x64_unhandled_exception(state);
         } else {
