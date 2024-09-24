@@ -6,6 +6,8 @@
 #include <kanawha/list.h>
 #include <kanawha/process.h>
 
+#define FILE_STATUS_CLOSED (1ULL<<0)
+
 struct file
 {
     struct ptree_node table_node;
@@ -14,6 +16,8 @@ struct file
 
     size_t seek_offset;
     size_t dir_offset;
+
+    unsigned long status_flags;
 
     unsigned long access_flags;
     unsigned long mode_flags;
@@ -35,6 +39,11 @@ struct file_table
 
 int
 file_table_create(
+        struct process *process);
+
+int
+file_table_clone(
+        struct file_table *table,
         struct process *process);
 
 int
@@ -76,5 +85,11 @@ file_table_put_file(
         struct file_table *table,
         struct process *process,
         struct file *file);
+
+int
+file_table_swap(
+        struct file_table *table,
+        fd_t f0,
+        fd_t f1);
 
 #endif

@@ -221,6 +221,14 @@ x64_route_syscall(struct x64_syscall_state *state)
                         (size_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDX] // buflen
                         );
             break;
+        case SYSCALL_ID_FSWAP:
+            *ret_val = (uint64_t)(int)
+                syscall_fswap(
+                        process,
+                        (fd_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDI], // fd0
+                        (fd_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RSI]  // fd1
+                        );
+            break;
         default:
             syscall_unknown(process, id);
     }

@@ -118,6 +118,11 @@ ARG(fd_t, dir)\
 ARG(char __user *, namebuf)\
 ARG(size_t, buflen)
 
+#define SYSCALL_SIG_FSWAP(RET,ARG)\
+RET(int)\
+ARG(fd_t, f0)\
+ARG(fd_t, f1)
+
 #define SYSCALL_XLIST(X)\
 X(exit,      0,  EXIT,       SYSCALL_SIG_EXIT)\
 X(open,      1,  OPEN,       SYSCALL_SIG_OPEN)\
@@ -138,6 +143,7 @@ X(dirbegin,  17, DIRBEGIN,   SYSCALL_SIG_DIRBEGIN)\
 X(dirnext,   18, DIRNEXT,    SYSCALL_SIG_DIRNEXT)\
 X(dirattr,   19, DIRATTR,    SYSCALL_SIG_DIRATTR)\
 X(dirname,   20, DIRNAME,    SYSCALL_SIG_DIRNAME)\
+X(fswap,     21, FSWAP,      SYSCALL_SIG_FSWAP)
 
 #define DECLARE_SYSCALL_ID_CONSTANTS(__name, __id, __NAME, ...)\
 const static syscall_id_t SYSCALL_ID_ ## __NAME = __id;
@@ -163,6 +169,7 @@ SYSCALL_XLIST(DECLARE_SYSCALL_ID_CONSTANTS)
 #undef SYSCALL_SIG_DIRNEXT
 #undef SYSCALL_SIG_DIRATTR
 #undef SYSCALL_SIG_DIRNAME
+#undef SYSCALL_SIG_FSWAP
 #undef SYSCALL_XLIST
 #endif
 

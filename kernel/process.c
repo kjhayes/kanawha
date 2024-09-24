@@ -809,7 +809,7 @@ process_spawn_child(
             goto err1;
         }
     } else if(spawn_flags & SPAWN_FILES_CLONE) {
-        panic("SPAWN_FILES_CLONE is unimplemented!\n");
+        res = file_table_clone(parent->file_table, process);
         if(res) {
             eprintk("Failed to clone file table for spawned process! (err=%s)\n",
                     errnostr(res));

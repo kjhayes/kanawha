@@ -60,7 +60,7 @@ ps2_kbd_recv_callback(
     struct ps2_kbd *kbd = (struct ps2_kbd*)priv_data;
     int res = ps2_kbd_handle_scancode(kbd, recv);
     if(res) {
-        wprintk("ps2_kbd_enqueue_scancode Failed! (lost a key event) (err=%s)\n",
+        dprintk("ps2_kbd_enqueue_scancode Failed! (lost a key event) (err=%s)\n",
                 errnostr(res));
     }
 }

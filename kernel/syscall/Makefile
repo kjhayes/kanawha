@@ -13,5 +13,6 @@ obj-y += \
 	reap.o \
 	getpid.o \
 	mount.o \
-	dir.o
+	dir.o \
+	fswap.o \
 

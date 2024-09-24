@@ -226,7 +226,8 @@ kbd_fs_file_read(
     int res;
     struct kbd_event *event_buf = (struct kbd_event*)buffer;
 
-    while(num_events_written < max_events) {
+    while(num_events_written < max_events)
+    {
         res = kbd_dequeue_event(
             kbd, &event);
         if(res) {
