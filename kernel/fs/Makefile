@@ -7,7 +7,8 @@ obj-y += \
 	file.o \
 	flat.o
 
-obj-y += sys/
+obj-y += \
+	sys/
 
 obj-y += ext2/
 obj-y += cpio/

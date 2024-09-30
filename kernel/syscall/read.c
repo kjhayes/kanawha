@@ -17,6 +17,14 @@ syscall_read(
         size_t size)
 {
     ssize_t res;
+
+#ifdef CONFIG_DEBUG_SYSCALL_READ
+    printk("PID(%ld) syscall_read(file=%ld, size=0x%llx)\n",
+            (sl_t)process->id,
+            (sl_t)file,
+            (ull_t)size);
+#endif
+
     struct file *desc
         = file_table_get_file(
                 process->file_table,
@@ -68,6 +76,12 @@ syscall_read(
 exit:
     file_table_put_file(process->file_table, process, desc);
     kfree(buffer);
+
+#ifdef CONFIG_DEBUG_SYSCALL_READ
+    printk("PID(%lld) syscall_read: returning 0x%llx\n",
+            (sll_t)process->id, (ull_t)res);
+#endif
+
     return res;
 }
 

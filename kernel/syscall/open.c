@@ -32,8 +32,6 @@ syscall_open(
 
     char path_buf[path_len + 1];
 
-    dprintk("syscall_open(parent=%ld, path=%p, path_len=0x%llx, access_flags=0x%llx, mode_flags=0x%llx\n",
-            (sl_t)parent_fd, path, (ull_t)path_len, (ull_t)access_flags, (ull_t)mode_flags);
     res = process_read_usermem(
             process,
             (void*)path_buf,
@@ -48,8 +46,8 @@ syscall_open(
     path_buf[path_len] = '\0';
 
 #ifdef CONFIG_DEBUG_SYSCALL_OPEN
-    printk("PID(%ld) syscall_open(%s)\n",
-            (sl_t)process->id, path_buf);
+    printk("PID(%ld) syscall_open(path=%s, path_len=0x%llx, access_flags=0x%llx, mode_flags=0x%llx)\n",
+            process->id, path_buf, path_len, (ull_t)access_flags, (ull_t)mode_flags);
 #endif
 
     fd_t kernel_fd;

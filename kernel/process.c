@@ -134,7 +134,7 @@ init_process_kernel_entry(void *in)
 
     const char *binary_path = CONFIG_INIT_PROCESS_PATH;
 
-    res = environment_set(process->environ, "ARGV", CONFIG_INIT_PROCESS_ARGV_VALUE);
+    res = environment_set(process->environ, "ARGV", CONFIG_INIT_PROCESS_PATH " " CONFIG_INIT_PROCESS_ARGS);
     if(res) {
         panic("Failed to set init process ARGV! (err=%s)\n",
                 errnostr(res));

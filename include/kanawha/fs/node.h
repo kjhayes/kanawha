@@ -47,6 +47,11 @@ RET(int)\
 ARG(const char *, filename)\
 ARG(unsigned long, flags)
 
+#define FS_NODE_MKFIFO_SIG(RET,ARG)\
+RET(int)\
+ARG(const char *, filename)\
+ARG(unsigned long, flags)
+
 #define FS_NODE_MKDIR_SIG(RET,ARG)\
 RET(int)\
 ARG(const char *, dirname)\
@@ -74,6 +79,7 @@ OP(getattr, FS_NODE_GETATTR_SIG, ##__VA_ARGS__)\
 OP(setattr, FS_NODE_SETATTR_SIG, ##__VA_ARGS__)\
 OP(lookup, FS_NODE_LOOKUP_SIG, ##__VA_ARGS__)\
 OP(mkfile, FS_NODE_MKFILE_SIG, ##__VA_ARGS__)\
+OP(mkfifo, FS_NODE_MKFIFO_SIG, ##__VA_ARGS__)\
 OP(mkdir, FS_NODE_MKDIR_SIG, ##__VA_ARGS__)\
 OP(link, FS_NODE_LINK_SIG, ##__VA_ARGS__)\
 OP(symlink, FS_NODE_SYMLINK_SIG, ##__VA_ARGS__)\

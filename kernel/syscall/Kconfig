@@ -1,0 +1,43 @@
+
+config STRACE_LOG_SYSCALL_BEGIN
+    bool "Debug Log syscall"
+    depends on DEBUGGING
+    default n
+    help
+      Log the beginning of each syscall (process ID and syscall ID)
+
+config STRACE_LOG_SYSCALL_END
+    bool "Debug Log syscall Completion"
+    depends on DEBUGGING
+    default n
+    help
+      Log the ending of each syscall, useful for debugging kernel bugs during the handling of a specific syscall
+
+config DEBUG_SYSCALL_OPEN
+    bool "Debug open"
+    depends on DEBUGGING
+    default n
+    help
+      Log the file-names of each file opened by a process.
+
+config DEBUG_SYSCALL_EXIT
+    bool "Debug exit"
+    depends on DEBUGGING
+    default n
+    help
+      Log process ID and exitcode on exit
+
+config DEBUG_SYSCALL_WRITE
+    bool "Debug write"
+    depends on DEBUGGING
+    default n
+    help
+      Log info about write system calls
+
+config DEBUG_SYSCALL_READ
+    bool "Debug read"
+    depends on DEBUGGING
+    default n
+    help
+      Log info about read system calls
+

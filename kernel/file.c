@@ -48,6 +48,7 @@ file_table_clone(
         struct process *process)
 {
     int res;
+    printk("file_table_clone\n");
 
     struct file_table *child = kmalloc(sizeof(struct file_table));
     if(child == NULL) {
@@ -94,7 +95,7 @@ file_table_clone(
                     errnostr(res));
         }
         child_file->path = parent_file->path;
-        child_file->refs = 0;
+        child_file->refs = 1;
 
         ptree_insert(&child->descriptor_tree, &child_file->table_node, parent_file->table_node.key);
 
@@ -320,10 +321,14 @@ file_table_get_file(
         ptree_get(&table->descriptor_tree, (uintptr_t)fd);
 
     if(node == NULL) {
+        eprintk("PID(%ld) Tried to get non-existant file %ld\n",
+            process->id, fd);
         desc = NULL;
     } else {
         desc = container_of(node, struct file, table_node);
         if(desc->status_flags & FILE_STATUS_CLOSED) {
+            eprintk("PID(%ld) Tried to get closed file %ld\n",
+                    process->id, fd);
             desc = NULL;
         } else {
             desc->refs++;

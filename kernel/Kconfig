@@ -5,11 +5,11 @@ config INIT_PROCESS_PATH
     help
       Path to search for the init process ELF executable
 
-config INIT_PROCESS_ARGV_VALUE
+config INIT_PROCESS_ARGS
     string "init Arguments"
     default ""
     help
-      Value to set the "ARGV" environment variable to on entry to the init process.
+      Value to append to "INIT_PROCESS_PATH" to pass as the "ARGV" environment variable to on entry to the init process.
 
 config ROOT_FS_RAMFILE
     string "Root FS Ramfile"
@@ -115,35 +115,7 @@ config DEBUG_SPINLOCK_TRACK_THREADS
       so trivial cases of deadlocks can be detected.
 
 menu "syscall Logging"
-
-config STRACE_LOG_SYSCALL_BEGIN
-    bool "Debug Log syscall"
-    depends on DEBUGGING
-    default n
-    help
-      Log the beginning of each syscall (process ID and syscall ID)
-
-config STRACE_LOG_SYSCALL_END
-    bool "Debug Log syscall Completion"
-    depends on DEBUGGING
-    default n
-    help
-      Log the ending of each syscall, useful for debugging kernel bugs during the handling of a specific syscall
-
-config DEBUG_SYSCALL_OPEN
-    bool "Debug open"
-    depends on DEBUGGING
-    default n
-    help
-      Log the file-names of each file opened by a process.
-
-config DEBUG_SYSCALL_EXIT
-    bool "Debug exit"
-    depends on DEBUGGING
-    default n
-    help
-      Log process ID and exitcode on exit
-
+source "kernel/syscall/Kconfig"
 endmenu
 
 endmenu

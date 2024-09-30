@@ -15,6 +15,9 @@ syscall_fswap(
     DEBUG_ASSERT(KERNEL_ADDR(process));
     DEBUG_ASSERT(KERNEL_ADDR(process->file_table));
 
+    printk("PID(%ld) fswap (%ld <-> %ld)\n",
+            current_process()->id, fd0, fd1);
+
     res = file_table_swap(
             process->file_table,
             fd0,

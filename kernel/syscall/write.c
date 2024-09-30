@@ -16,12 +16,14 @@ syscall_write(
         void __user *src,
         size_t size)
 {
-    int res;
+    ssize_t res;
 
-    dprintk("PID(%ld) syscall_write(file=%ld, size=0x%llx)\n",
+#ifdef CONFIG_DEBUG_SYSCALL_WRITE
+    printk("PID(%ld) syscall_write(file=%ld, size=0x%llx)\n",
             (sl_t)process->id,
             (sl_t)file,
             (ull_t)size);
+#endif
 
     struct file *desc
         = file_table_get_file(
@@ -77,5 +79,9 @@ syscall_write(
 exit:
     file_table_put_file(process->file_table, process, desc);
     kfree(buffer);
+#ifdef CONFIG_DEBUG_SYSCALL_WRITE
+    printk("PID(%lld) syscall_write: returning 0x%llx\n",
+            (sll_t)process->id, (ull_t)res);
+#endif
     return res;
 }

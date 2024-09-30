@@ -229,6 +229,61 @@ x64_route_syscall(struct x64_syscall_state *state)
                         (fd_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RSI]  // fd1
                         );
             break;
+        case SYSCALL_ID_MKFILE:
+            *ret_val = (uint64_t)(int)
+                syscall_mkfile(
+                        process,
+                        (fd_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDI], // dir
+                        (const char __user *)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RSI], // file_name
+                        (unsigned long)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDX] 
+                        );
+            break;
+        case SYSCALL_ID_MKFIFO:
+            *ret_val = (uint64_t)(int)
+                syscall_mkfifo(
+                        process,
+                        (fd_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDI], // dir
+                        (const char __user *)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RSI], // name
+                        (unsigned long)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDX] // flags
+                        );
+            break;
+        case SYSCALL_ID_MKDIR:
+            *ret_val = (uint64_t)(int)
+                syscall_mkdir(
+                        process,
+                        (fd_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDI], // dir
+                        (const char __user *)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RSI], // name
+                        (unsigned long)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDX] // flags
+                        );
+            break;
+        case SYSCALL_ID_LINK:
+            *ret_val = (uint64_t)(int)
+                syscall_link(
+                        process,
+                        (fd_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDI], // from
+                        (fd_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RSI], // dir
+                        (const char __user *)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDX], // link_name
+                        (unsigned long)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDX] // flags
+                        );
+            break;
+        case SYSCALL_ID_SYMLINK:
+            *ret_val = (uint64_t)(int)
+                syscall_symlink(
+                        process,
+                        (const char __user *)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDI], // path
+                        (fd_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RSI], // dir
+                        (const char __user *)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDX], // link_name
+                        (unsigned long)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDX] // flags
+                        );
+            break;
+        case SYSCALL_ID_UNLINK:
+            *ret_val = (uint64_t)(int)
+                syscall_unlink(
+                        process,
+                        (fd_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDI], // dir
+                        (const char __user *)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RSI] // name
+                        );
+            break;
         default:
             syscall_unknown(process, id);
     }

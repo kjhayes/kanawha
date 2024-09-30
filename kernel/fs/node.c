@@ -118,6 +118,30 @@ fs_node_get_page(
     return page;
 }
 
+static int
+fs_node_flush_page_lockless(
+        struct fs_node *node,
+        struct fs_page *page)
+{
+    int res;
+
+    size_t amount = page->size;
+
+    res = fs_node_write_page(
+            node,
+            (void*)__va(page->paddr),
+            page->tree_node.key);
+
+    if(res) {
+        return res;
+    }
+
+    if(amount < page->size) {
+        return -EAGAIN;
+    }
+
+    return 0;
+}
 
 int
 fs_node_put_page(
@@ -144,7 +168,7 @@ fs_node_put_page(
     if(page->pins == 0) {
         dprintk("freeing fs_page\n");
         if(page->flags & FS_PAGE_FLAG_DIRTY) {
-            res = fs_node_flush_page(
+            res = fs_node_flush_page_lockless(
                     node,
                     page);
             if(res) {
@@ -175,32 +199,6 @@ fs_node_put_page(
     spin_unlock(&node->page_lock);
     return 0;
 }
-
-static int
-fs_node_flush_page_lockless(
-        struct fs_node *node,
-        struct fs_page *page)
-{
-    int res;
-
-    size_t amount = page->size;
-
-    res = fs_node_write_page(
-            node,
-            (void*)__va(page->paddr),
-            page->tree_node.key);
-
-    if(res) {
-        return res;
-    }
-
-    if(amount < page->size) {
-        return -EAGAIN;
-    }
-
-    return 0;
-}
-
 
 int
 fs_node_flush_page(
@@ -288,6 +286,8 @@ fs_node_paged_write(
         size_t buflen)
 {
     int res;
+
+    printk("fs_node_paged_write\n");
 
     size_t original_len = buflen;
     size_t total_read = 0;

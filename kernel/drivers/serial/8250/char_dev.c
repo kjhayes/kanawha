@@ -53,11 +53,16 @@ generic_8250_char_dev_write(
  
     // Just testing for now, this shouldn't be allowed to block
 
-    char c = *(char*)buffer;
-    while((uart_8250_read_reg(uart, UART_8250_LSR) & 0x20) == 0);
-    uart_8250_write_reg(uart, UART_8250_THR, c);
+    size_t written = 0;
+    while(amount > 0) {
+        char c = ((char*)buffer)[written];
+        while((uart_8250_read_reg(uart, UART_8250_LSR) & 0x20) == 0);
+        uart_8250_write_reg(uart, UART_8250_THR, c);
+        written++;
+        amount--;
+    }
 
-    return 1;
+    return written;
 }
 
 int

@@ -123,6 +123,43 @@ RET(int)\
 ARG(fd_t, f0)\
 ARG(fd_t, f1)
 
+#define SYSCALL_SIG_MKFILE(RET,ARG)\
+RET(int)\
+ARG(fd_t, dir)\
+ARG(const char __user *, name)\
+ARG(unsigned long, flags)
+
+#define SYSCALL_SIG_MKFIFO(RET,ARG)\
+RET(int)\
+ARG(fd_t, dir)\
+ARG(const char __user *, name)\
+ARG(unsigned long, flags)
+
+#define SYSCALL_SIG_MKDIR(RET,ARG)\
+RET(int)\
+ARG(fd_t, dir)\
+ARG(const char __user *, name)\
+ARG(unsigned long, flags)
+
+#define SYSCALL_SIG_LINK(RET,ARG)\
+RET(int)\
+ARG(fd_t, from)\
+ARG(fd_t, dir)\
+ARG(const char __user *, link_name)\
+ARG(unsigned long, flags)
+
+#define SYSCALL_SIG_SYMLINK(RET,ARG)\
+RET(int)\
+ARG(const char __user *, sym_path)\
+ARG(fd_t, dir)\
+ARG(const char __user *, link_name)\
+ARG(unsigned long, flags)
+
+#define SYSCALL_SIG_UNLINK(RET,ARG)\
+RET(int)\
+ARG(fd_t, dir)\
+ARG(const char __user *, name)
+
 #define SYSCALL_XLIST(X)\
 X(exit,      0,  EXIT,       SYSCALL_SIG_EXIT)\
 X(open,      1,  OPEN,       SYSCALL_SIG_OPEN)\
@@ -143,7 +180,13 @@ X(dirbegin,  17, DIRBEGIN,   SYSCALL_SIG_DIRBEGIN)\
 X(dirnext,   18, DIRNEXT,    SYSCALL_SIG_DIRNEXT)\
 X(dirattr,   19, DIRATTR,    SYSCALL_SIG_DIRATTR)\
 X(dirname,   20, DIRNAME,    SYSCALL_SIG_DIRNAME)\
-X(fswap,     21, FSWAP,      SYSCALL_SIG_FSWAP)
+X(fswap,     21, FSWAP,      SYSCALL_SIG_FSWAP)\
+X(mkfile,    22, MKFILE,     SYSCALL_SIG_MKFILE)\
+X(mkfifo,    23, MKFIFO,     SYSCALL_SIG_MKFIFO)\
+X(mkdir,     24, MKDIR,      SYSCALL_SIG_MKDIR)\
+X(link,      25, LINK,       SYSCALL_SIG_LINK)\
+X(symlink,   26, SYMLINK,    SYSCALL_SIG_SYMLINK)\
+X(unlink,    27, UNLINK,     SYSCALL_SIG_UNLINK)\
 
 #define DECLARE_SYSCALL_ID_CONSTANTS(__name, __id, __NAME, ...)\
 const static syscall_id_t SYSCALL_ID_ ## __NAME = __id;
