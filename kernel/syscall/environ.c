@@ -58,6 +58,10 @@ env_get(
 
     dprintk("value=%s\n", value);
 
+#ifdef CONFIG_DEBUG_SYSCALL_ENVIRON
+    printk("syscall_env: ENV_GET key=\"%s\", value=\"%s\"\n", key_buf, value);
+#endif
+
     size_t value_len = strlen(value);
     size_t min_len = (value_len+1) <= len ? value_len + 1 : len;
 
@@ -144,6 +148,9 @@ env_set(
         return res;
     }
 
+#ifdef CONFIG_DEBUG_SYSCALL_ENVIRON
+    printk("syscall_env: ENV_SET key=\"%s\", value=\"%s\"\n", key_buf, val_buf);
+#endif
 
     kfree(key_buf);
     kfree(val_buf);
@@ -186,7 +193,9 @@ env_clear(
 
     buffer[keylen] = '\0';
 
-    dprintk("syscall_env: ENV_CLEAR key=%s\n", buffer);
+#ifdef CONFIG_DEBUG_SYSCALL_ENVIRON
+    printk("syscall_env: ENV_CLEAR key=%s\n", buffer);
+#endif
 
     res = environment_clear_var(
             process->environ, buffer);
