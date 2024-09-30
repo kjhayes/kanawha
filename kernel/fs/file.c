@@ -264,7 +264,7 @@ fs_file_paged_seek(
             file->seek_offset = data_size + offset;
             break;
         case FS_FILE_SEEK_SET:
-            file->seek_offset = data_size;
+            file->seek_offset = 0 + offset;
             break;
         default:
             return -EINVAL;
