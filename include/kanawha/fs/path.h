@@ -12,6 +12,7 @@ struct fs_mount;
 struct fs_path
 {
     char *name;
+
     struct fs_node *fs_node;
 
     unsigned long refs;

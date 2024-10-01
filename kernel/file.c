@@ -48,7 +48,7 @@ file_table_clone(
         struct process *process)
 {
     int res;
-    printk("file_table_clone\n");
+    dprintk("file_table_clone\n");
 
     struct file_table *child = kmalloc(sizeof(struct file_table));
     if(child == NULL) {

@@ -243,6 +243,8 @@ fs_node_paged_read(
 {
     int res;
 
+    dprintk("fs_node_paged_read\n");
+
     size_t original_len = buflen;
     size_t total_read = 0;
 
@@ -287,7 +289,7 @@ fs_node_paged_write(
 {
     int res;
 
-    printk("fs_node_paged_write\n");
+    dprintk("fs_node_paged_write\n");
 
     size_t original_len = buflen;
     size_t total_read = 0;
@@ -376,6 +378,14 @@ fs_node_cannot_lookup(
 }
 int
 fs_node_cannot_mkfile(
+        struct fs_node *node,
+        const char *name,
+        unsigned long flags)
+{
+    return -EINVAL;
+}
+int
+fs_node_cannot_mkfifo(
         struct fs_node *node,
         const char *name,
         unsigned long flags)

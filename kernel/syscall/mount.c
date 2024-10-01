@@ -60,6 +60,9 @@ syscall_mount(
                 (sl_t)process->id, fs_type_buf);
           kfree(fs_type_buf);
           return -ENXIO;
+      } else {
+          dprintk("PID(%ld) syscall_mount: Found fs_type \"%s\"\n",
+                  process->id, fs_type_buf);
       }
 
 
@@ -148,6 +151,8 @@ syscall_mount(
                   src_fd);
 
           if(res) {
+              eprintk("PID(%ld) syscall_mount: fs_type_mount_file returned %s!\n",
+                      process->id, errnostr(res));
               kfree(src_buf);
               return res;
           }

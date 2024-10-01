@@ -208,6 +208,7 @@ fs_path_mount_dir(
 
     mntpoint->fs_node = fs_mount_get_node(mnt, root_index);
     if(mntpoint->fs_node == NULL) {
+        eprintk("fs_path_mount_dir: failed to get root node!\n");
         kfree(mntpoint);
         return res;
     }

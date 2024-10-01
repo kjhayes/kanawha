@@ -223,6 +223,11 @@ fs_node_cannot_mkfile(
         const char *name,
         unsigned long flags);
 int
+fs_node_cannot_mkfifo(
+        struct fs_node *node,
+        const char *name,
+        unsigned long flags);
+int
 fs_node_cannot_mkdir(
         struct fs_node *node,
         const char *name,

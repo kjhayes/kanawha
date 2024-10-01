@@ -3,6 +3,9 @@
 #include <kanawha/fs/mount.h>
 #include <kanawha/fs/type.h>
 #include <kanawha/fs/ext2/ext2.h>
+#include <kanawha/fs/ext2/mount.h>
+#include <kanawha/fs/ext2/node.h>
+#include <kanawha/fs/ext2/group.h>
 #include <kanawha/kmalloc.h>
 #include <kanawha/string.h>
 #include <kanawha/stddef.h>
@@ -13,7 +16,85 @@ ext2_mount_load_node(
         struct fs_mount *fs_mount,
         size_t node_index)
 {
-    return NULL;
+    int res;
+
+    struct ext2_mount *mnt =
+        container_of(fs_mount, struct ext2_mount, fs_mount);
+
+    if(node_index >= mnt->num_inodes) {
+        return NULL;
+    }
+
+    size_t group_index = (node_index-1) / mnt->inodes_per_group;
+    size_t index_in_group = (node_index-1) % mnt->inodes_per_group;
+
+    struct ext2_group *group = ext2_get_group(mnt, group_index);
+    if(group == NULL) {
+        return NULL;
+    }
+
+    struct ext2_fs_node *node = kmalloc(sizeof(struct ext2_fs_node));
+    if(node == NULL) {
+        ext2_put_group(mnt, group);
+        return NULL;
+    }
+
+    node->mount = mnt;
+
+    int is_inode_alloced;
+    res = ext2_group_inode_bitmap_check(group, index_in_group, &is_inode_alloced);
+    if(res) {
+        eprintk("ext2_mount_load_node: Failed to read from block group inode bitmap! (err=%s)\n",
+                errnostr(res));
+        ext2_put_group(mnt, group);
+        kfree(node);
+        return NULL;
+    }
+    else if(!is_inode_alloced) {
+        eprintk("ext2_mount_load_node: Tried to load unallocated node 0x%llx!\n",
+                (ull_t)node_index);
+        ext2_put_group(mnt, group);
+        kfree(node);
+        return NULL;
+    }
+
+    res = ext2_group_read_inode(
+            group,
+            index_in_group,
+            &node->inode);
+    if(res) {
+        ext2_put_group(mnt, group);
+        kfree(node);
+        return NULL;
+    }
+    node->inode_dirty = 0;
+
+    // TODO: Switch on inode type,
+    // and assign the file_ops and inode_ops
+
+    printk("inode->mode = 0x%x\n", node->inode.mode);
+
+    switch(node->inode.mode & 0xF000) {
+      case 0x8000:
+        node->fs_node.file_ops = &ext2_file_file_ops;
+        node->fs_node.node_ops = &ext2_file_node_ops;
+        break;
+      case 0x4000:
+        node->fs_node.file_ops = &ext2_dir_file_ops;
+        node->fs_node.node_ops = &ext2_dir_node_ops;
+        break;
+      default:
+        ext2_put_group(mnt, group);
+        kfree(node);
+        return NULL;
+    }
+
+    printk("EXT2 Loaded Node (0x%llx)\n",
+            (ull_t)node_index);
+
+    ext2_put_group(mnt, group);
+
+    return &node->fs_node;
 }
 
 static int
@@ -29,7 +110,8 @@ ext2_mount_root_index(
         struct fs_mount *fs_mount,
         size_t *root_index)
 {
-    return -EUNIMPL;
+    *root_index = EXT2_ROOT_INODE;
+    return 0;
 }
 
 static struct fs_mount_ops
@@ -47,32 +129,23 @@ ext2_mount_file(
 {
     int res;
 
-    struct ext2_mount *mount = kmalloc(sizeof(struct ext2_mount));
-    if(mount == NULL) {
-        return -ENOMEM;
-    }
-    memset(mount, 0, sizeof(struct ext2_mount));
-
     res = fs_node_get(fs_node);
     if(res) {
         goto err1;
     }
 
     struct ext2_superblock superblock;
+
     ssize_t amount_to_read = sizeof(struct ext2_superblock);
     ssize_t amount_read;
 
-    amount_read = fs_node_paged_read(
+    res = fs_node_paged_read(
             fs_node,
-            1024,
+            EXT2_SUPERBLOCK_OFFSET,
             &superblock,
             amount_to_read);
-    if(amount_read < 0) {
-        return amount_read;
-    }
-
-    if(amount_read < offsetof(struct ext2_superblock, extended)) {
-        res = -EINVAL;
+    if(res) {
+        eprintk("Invalid EXT2 Filesystem: failed to read minimum sized ext2 superblock!\n");
         goto err2;
     }
 
@@ -96,11 +169,13 @@ ext2_mount_file(
 
     if(superblock.blocks_per_group == 0) {
         eprintk("Invalid EXT2 Filesystem: blocks_per_group == 0\n");
-        return -EINVAL;
+        res = -EINVAL;
+        goto err2;
     }
     if(superblock.inodes_per_group == 0) {
         eprintk("Invalid EXT2 Filesystem: inodes_per_group == 0\n");
-        return -EINVAL;
+        res = -EINVAL;
+        goto err2;
     }
 
     uint32_t num_groups_from_blocks = superblock.total_blocks / superblock.blocks_per_group;
@@ -114,15 +189,59 @@ ext2_mount_file(
     if(num_groups_from_blocks != num_groups_from_inodes) {
         eprintk("Possibly Corrupt EXT2 Filesystem: # Block Groups Differs for Blocks and iNodes (blk=%u, inode=%u)\n",
                 num_groups_from_blocks, num_groups_from_inodes);
-        return -EINVAL;
+        res = -EINVAL;
+        goto err2;
     }
 
-    return -EUNIMPL;
+    struct ext2_mount *mnt = kmalloc(sizeof(struct ext2_mount));
+    if(mnt == NULL) {
+        res = -ENOMEM;
+        goto err2;
+    }
+    memset(mnt, 0, sizeof(struct ext2_mount));
 
+    mnt->backing_node = fs_node;
+    res = init_fs_mount_struct(
+            &mnt->fs_mount,
+            &ext2_mount_ops);
+    if(res) {
+        eprintk("EXT2: Failed to initialize mount struct! (err=%s)\n",
+                errnostr(res));
+        goto err3;
+    }
+
+    mnt->num_blocks = superblock.total_blocks;
+    mnt->num_inodes = superblock.total_inodes;
+
+    mnt->num_groups = num_groups_from_blocks;
+    mnt->group_cache = kmalloc(sizeof(struct ext2_group*) * mnt->num_groups);
+    if(mnt->group_cache == NULL) {
+        res = -ENOMEM;
+        goto err3;
+    }
+    memset(mnt->group_cache, 0, sizeof(struct ext2_group*) * mnt->num_groups);
+    spinlock_init(&mnt->group_cache_lock);
+
+    mnt->blks_per_group = superblock.blocks_per_group;
+    mnt->inodes_per_group = superblock.inodes_per_group;
+
+    mnt->block_order = 10 + superblock.log2_blksize_min_10;
+    mnt->block_size = 1024 << superblock.log2_blksize_min_10;
+    mnt->frag_size = 1024 << superblock.log2_fragsize_min_10;
+    mnt->inode_size = superblock.extended.inode_size;
+
+    printk("EXT2 Volume: Block Size 0x%llx\n", (ull_t)mnt->block_size);
+    printk("EXT2 Volume: Fragment Size 0x%llx\n", (ull_t)mnt->frag_size);
+
+    *out = &mnt->fs_mount;
+
+    return 0;
+
+err3:
+    kfree(mnt);
 err2:
     fs_node_put(fs_node);
 err1:
-    kfree(mount);
     return res;
 }
 

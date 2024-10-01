@@ -33,6 +33,7 @@ obj-y += \
 	module.o \
 	string.o \
 	waitqueue.o \
+	pipe.o \
 	xcall.o \
 	timer.o \
 	spinlock.o \

@@ -5,6 +5,7 @@
 #include <kanawha/fs/mount.h>
 #include <kanawha/fs/type.h>
 #include <kanawha/endian.h>
+#include <kanawha/assert.h>
 
 #define EXT2_SIGNATURE 0xEF53
 
@@ -81,13 +82,57 @@ _Static_assert(sizeof(struct ext2_superblock) == 236, "struct ext2_superblock ha
 #define EXT2_READONLY_FEAT_64_BIT_SIZE  (1ULL<<1)
 #define EXT2_READONLY_FEAT_DIR_BIN_TREE (1ULL<<2)
 
-struct ext2_mount {
-    struct fs_mount fs_mount;
-    struct fs_node *backing_node;
-};
+#define EXT2_NULL_INODE (0)
+#define EXT2_BAD_INODE  (1)
+#define EXT2_ROOT_INODE (2)
 
-struct ext2_node {
-    struct fs_node fs_node;
+#define EXT2_NULL_BLOCK        (0)
+#define EXT2_SUPERBLOCK_INDEX  (1)
+#define EXT2_SUPERBLOCK_OFFSET (1024)
+#define EXT2_BLOCK_OFFSET(index, blksize) \
+    ({\
+        ((index)*blksize);\
+     })
+
+struct ext2_group_desc
+{
+	le32_t block_bitmap;	/* Blocks bitmap block */
+	le32_t inode_bitmap;	/* Inodes bitmap block */
+	le32_t inode_table;		/* Inodes table block */
+	le16_t free_blocks_count;	/* Free blocks count */
+	le16_t free_inodes_count;	/* Free inodes count */
+	le16_t used_dirs_count;	/* Directories count */
+	le16_t pad;
+	le32_t reserved[3];
+};
+_Static_assert(sizeof(struct ext2_group_desc) == 0x20, "struct ext2_group_desc is the wrong size!");
+
+#define	EXT2_INODE_DIRECT_BLOCKS         12
+#define	EXT2_INODE_INDIRECT_BLOCK        EXT2_INODE_DIRECT_BLOCKS
+#define	EXT2_INODE_DOUBLE_INDIRECT_BLOCK (EXT2_INODE_INDIRECT_BLOCK+1)
+#define	EXT2_INODE_TRIPLE_INDIRECT_BLOCK (EXT2_INODE_DOUBLE_INDIRECT_BLOCK+1)
+#define	EXT2_INODE_TOTAL_BLOCKS          (EXT2_INODE_TRIPLE_INDIRECT_BLOCK + 1)
+
+struct ext2_inode {
+    le16_t mode;
+    le16_t uid;
+    le32_t size;
+    le32_t atime;
+    le32_t ctime;
+    le32_t mtime;
+    le32_t dtime;
+    le16_t gid;
+    le16_t links_count;
+    le32_t blocks;
+    le32_t flags;
+    le32_t osd1;
+	le32_t block[EXT2_INODE_TOTAL_BLOCKS];
+    le32_t generation;
+    le32_t file_acl;
+    le32_t dir_acl;
+    le32_t faddr;
+    le32_t osd2;
+
 };
 
 #endif

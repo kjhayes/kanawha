@@ -276,3 +276,11 @@ fs_file_paged_seek(
     return file->seek_offset;
 }
 
+int
+fs_file_node_flush(
+        struct file *file,
+        unsigned long offset)
+{
+    return fs_node_flush(file->path->fs_node);
+}
+

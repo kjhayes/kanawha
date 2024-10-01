@@ -168,4 +168,10 @@ fs_file_paged_seek(
         ssize_t offset,
         int whence);
 
+// Flush file by flushing the underlying fs_node
+int
+fs_file_node_flush(
+        struct file *file,
+        unsigned long offset);
+
 #endif
