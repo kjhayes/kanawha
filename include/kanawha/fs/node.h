@@ -26,6 +26,13 @@ RET(int)
 
 #define FS_NODE_ATTR_PAGE_ORDER 0
 #define FS_NODE_ATTR_DATA_SIZE  1
+#define FS_NODE_ATTR_TYPE       2
+
+#define FS_NODE_TYPE_UNKNOWN (0)
+#define FS_NODE_TYPE_FILE    (1)
+#define FS_NODE_TYPE_DIR     (2)
+#define FS_NODE_TYPE_FIFO    (3)
+#define FS_NODE_TYPE_SPECIAL (4)
 
 #define FS_NODE_GETATTR_SIG(RET,ARG)\
 RET(int)\

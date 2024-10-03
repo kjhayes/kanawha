@@ -14,6 +14,8 @@ syscall_mkfile(
         unsigned long user_flags)
 {
     int res;
+    dprintk("syscall_mkfile: dir_fd=%ld, name=%p, userflags=%p\n",
+            dir_fd, name, user_flags);
 
     struct file *dir_file
         = file_table_get_file(
@@ -23,13 +25,24 @@ syscall_mkfile(
     if(dir_file == NULL) {
         return -ENXIO;
     }
- 
-    size_t namelen = process_strlen_usermem(
+
+    size_t namelen;
+    res = process_strlen_usermem(
             process,
             name,
             SYSCALL_MKFILE_MAX_NAMELEN+1,
             &namelen);
-
+    if(res) {
+        eprintk("PID(%ld) syscall_mkfile: could not get namelen! (err=%s)\n",
+                process->id, errnostr(res));
+        return res;
+    }
+    if(namelen <= 0) {
+        eprintk("PID(%ld) syscall_mkfile: name length cannot be <= 0! len=%llu\n",
+                (sl_t)process->id,
+                (ull_t)namelen);
+        return -EINVAL;
+    }
     if(namelen > SYSCALL_MKFILE_MAX_NAMELEN) {
         // Path is too long
         file_table_put_file(

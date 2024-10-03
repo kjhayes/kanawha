@@ -1,6 +1,7 @@
 #ifndef __KANAWHA_STDINT_H__
 #define __KANAWHA_STDINT_H__
 
+#undef NULL
 #define NULL (void*)0
 
 #define PAGE_SIZE_4KB (1ULL<<12)

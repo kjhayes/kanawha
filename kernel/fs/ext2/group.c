@@ -5,6 +5,7 @@
 #include <kanawha/fs/ext2/ext2.h>
 #include <kanawha/fs/ext2/mount.h>
 #include <kanawha/fs/ext2/group.h>
+#include <kanawha/string.h>
 
 static int
 ext2_mount_read_group_desc(
@@ -18,6 +19,8 @@ ext2_mount_read_group_desc(
     size_t desc_list_offset = EXT2_BLOCK_OFFSET(table_block_index, mnt->block_size);
     size_t desc_offset = desc_list_offset + (sizeof(struct ext2_group_desc) * grp_index);
 
+    printk("ext2_mount_read_group_desc(mnt=%p, grp_index=0x%lx) desc_offset=%p\n",
+            mnt, grp_index, desc_offset);
     res = fs_node_paged_read(
             mnt->backing_node,
             desc_offset,
@@ -99,8 +102,8 @@ ext2_get_group(
             return NULL;
         }
 
-        printk("Loaded EXT2 Group 0x%llx Descriptor\n",
-                (ull_t)index);
+        printk("Loaded EXT2 Group 0x%llx Descriptor (mnt=%p)\n",
+                (ull_t)index, mnt);
         printk("\tFree inodes: 0x%llx\n", (ull_t)group->desc.free_inodes_count);
         printk("\tFree blocks: 0x%llx\n", (ull_t)group->desc.free_blocks_count);
         printk("\tinode Bitmap Block: 0x%llx\n", (ull_t)group->desc.inode_bitmap);
@@ -108,10 +111,13 @@ ext2_get_group(
         printk("\tinode Table Block: 0x%llx\n", (ull_t)group->desc.inode_table);
 
         mnt->group_cache[index] = group;
-    } 
+    } else {
+        mnt->group_cache[index]->refs++;
+    }
 
     spin_unlock(&mnt->group_cache_lock);
 
+    DEBUG_ASSERT(mnt->group_cache[index]->mnt == mnt);
     return mnt->group_cache[index];
 }
 
@@ -133,6 +139,10 @@ ext2_group_populate_blk_bitmap(
     }
 
     grp->blk_bitmap = kmalloc(grp->mnt->block_size);
+    if(grp->blk_bitmap == NULL) {
+        spin_unlock(&grp->blk_lock);
+        return -ENOMEM;
+    }
 
     size_t bitmap_offset =
         EXT2_BLOCK_OFFSET(grp->desc.block_bitmap, grp->mnt->block_size);
@@ -209,6 +219,10 @@ ext2_group_populate_inode_bitmap(
     }
 
     grp->inode_bitmap = kmalloc(grp->mnt->block_size);
+    if(grp->inode_bitmap == NULL) {
+        spin_unlock(&grp->inode_lock);
+        return -ENOMEM;
+    }
 
     size_t bitmap_offset =
         EXT2_BLOCK_OFFSET(grp->desc.inode_bitmap, grp->mnt->block_size);
@@ -276,6 +290,9 @@ ext2_put_group(
 
     spin_lock(&mnt->group_cache_lock);
 
+    printk("ext2_put_group(0x%lx)\n",
+            (ul_t)group->index);
+
     group->refs--;
     if(group->refs <= 0) {
 
@@ -333,6 +350,10 @@ ext2_group_blk_bitmap_check(
         int *value)
 {
     int res;
+
+    DEBUG_ASSERT(KERNEL_ADDR(group));
+    DEBUG_ASSERT(KERNEL_ADDR(group->mnt));
+
     if(rel_index > group->mnt->blks_per_group) {
         return -EINVAL;
     }
@@ -343,6 +364,7 @@ ext2_group_blk_bitmap_check(
     }
 
     spin_lock(&group->blk_lock);
+    DEBUG_ASSERT(KERNEL_ADDR(group->blk_bitmap));
     *value = bitmap_check(group->blk_bitmap, rel_index);
     spin_unlock(&group->blk_lock);
 
@@ -392,6 +414,11 @@ ext2_group_blk_bitmap_free_specific(
     group->blk_dirty = 1;
     spin_unlock(&group->blk_lock);
 
+    spin_lock(&group->desc_lock);
+    group->desc.free_blocks_count++;
+    group->desc_dirty = 1;
+    spin_unlock(&group->desc_lock);
+
     return 0;
 }
 
@@ -403,6 +430,10 @@ ext2_group_inode_bitmap_check(
         int *value)
 {
     int res;
+
+    DEBUG_ASSERT(KERNEL_ADDR(group));
+    DEBUG_ASSERT(KERNEL_ADDR(group->mnt));
+
     if(rel_index > group->mnt->inodes_per_group) {
         return -EINVAL;
     }
@@ -411,11 +442,13 @@ ext2_group_inode_bitmap_check(
     if(res) {
         return res;
     }
+    DEBUG_ASSERT(KERNEL_ADDR(group->inode_bitmap));
 
     spin_lock(&group->inode_lock);
     *value = bitmap_check(group->inode_bitmap, rel_index);
     spin_unlock(&group->inode_lock);
 
+    printk("ext2_group_inode_bitmap_check DONE\n");
     return 0;
 }
 
@@ -462,6 +495,11 @@ ext2_group_inode_bitmap_free_specific(
     group->inode_dirty = 1;
     spin_unlock(&group->inode_lock);
 
+    spin_lock(&group->desc_lock);
+    group->desc.free_inodes_count++;
+    group->desc_dirty = 1;
+    spin_unlock(&group->desc_lock);
+
     return 0;
 }
 
@@ -485,11 +523,13 @@ ext2_group_read_inode(
     printk("fs_node_paged_read(offset=%p, size=%p)\n",
             inode_offset, sizeof(struct ext2_group_desc));
 
+    size_t size = group->mnt->inode_size < sizeof(struct ext2_inode) ? group->mnt->inode_size : sizeof(struct ext2_inode);
+
     res = fs_node_paged_read(
             group->mnt->backing_node,
             inode_offset,
             inode,
-            group->mnt->inode_size);
+            size);
     if(res) {
         return res;
     }
@@ -512,14 +552,125 @@ ext2_group_write_inode(
         EXT2_BLOCK_OFFSET(group->desc.inode_table, group->mnt->block_size);
     size_t inode_offset = table_offset + (group->mnt->inode_size * rel_index);
 
+    size_t size = group->mnt->inode_size < sizeof(struct ext2_inode) ? group->mnt->inode_size : sizeof(struct ext2_inode);
+
     res = fs_node_paged_write(
             group->mnt->backing_node,
             inode_offset,
             inode,
-            group->mnt->inode_size);
+            size);
     if(res) {
         return res;
     }
+
+    return 0;
+}
+
+int
+ext2_group_alloc_inode(
+        struct ext2_group *group,
+        size_t *inode_out)
+{
+    int res;
+
+    res = ext2_group_populate_inode_bitmap(group);
+    if(res) {
+        return res;
+    }
+
+    spin_lock(&group->inode_lock);
+
+    int found = 0;
+
+    size_t bit;
+    size_t base_inode = (group->index * group->mnt->inodes_per_group)+1;
+    if(base_inode < group->mnt->resv_inodes) {
+        bit = group->mnt->resv_inodes - (base_inode-1);
+    } else {
+        bit = 0;
+    }
+
+    for(; bit < group->mnt->inodes_per_group; bit++) {
+        // Linear scan of bits (not ideal but we'll keep it simple for now)
+        if(bitmap_check(group->inode_bitmap, bit)) {
+            continue;
+        }
+        found = 1;
+        bitmap_set(group->inode_bitmap, bit);
+        break;
+    }
+
+    if(found == 0) {
+         // Invalid inode number (to be safe)
+        *inode_out = 0;
+        spin_unlock(&group->inode_lock);
+        return -ENOMEM;
+    }
+
+    *inode_out = (group->index*group->mnt->inodes_per_group) + (bit + 1);
+
+    // Clear the inode
+    struct ext2_inode inode;
+    res = ext2_group_read_inode(
+            group,
+            bit,
+            &inode);
+    if(res) {
+        spin_unlock(&group->inode_lock);
+        return res;
+    }
+
+    // Clear the inode
+    memset(&inode, 0, sizeof(struct ext2_inode));
+
+    res = ext2_group_write_inode(
+            group,
+            bit,
+            &inode);
+    if(res) {
+        spin_unlock(&group->inode_lock);
+        return res;
+    }
+
+    spin_unlock(&group->inode_lock);
+
+    spin_lock(&group->desc_lock);
+    group->desc.free_inodes_count--;
+    group->desc_dirty = 1;
+    spin_unlock(&group->desc_lock);
+
+    return 0;
+}
+
+int
+ext2_group_alloc_block(
+        struct ext2_group *group,
+        size_t *blk_out)
+{
+    int res;
+
+    res = ext2_group_populate_blk_bitmap(group);
+    if(res) {
+        return res;
+    }
+
+    spin_lock(&group->blk_lock);
+
+    // TODO: ensure this is little endian
+    size_t bit = bitmap_find_set_range(group->blk_bitmap, group->mnt->blks_per_group, 1);
+    if(bit < 0 || bit >= group->mnt->blks_per_group) {
+        spin_unlock(&group->blk_lock);
+        return -ENOMEM;
+    }
+
+    *blk_out = (group->index*group->mnt->blks_per_group) + bit;
+
+    spin_unlock(&group->blk_lock);
+
+    spin_lock(&group->desc_lock);
+    group->desc.free_blocks_count--;
+    group->desc_dirty = 1;
+    spin_unlock(&group->desc_lock);
 
     return 0;
 }

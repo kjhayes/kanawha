@@ -33,7 +33,6 @@ ext2_file_file_ops = {
     .seek = fs_file_paged_seek,
     .flush = fs_file_node_flush,
 
-
     .dir_next = fs_file_cannot_dir_next,
     .dir_begin = fs_file_cannot_dir_begin,
     .dir_readattr = fs_file_cannot_dir_readattr,

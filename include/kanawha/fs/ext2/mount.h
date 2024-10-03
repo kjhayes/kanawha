@@ -9,6 +9,7 @@ struct ext2_mount {
 
     size_t num_blocks;
     size_t num_inodes;
+    size_t resv_inodes;
 
     spinlock_t group_cache_lock;
     size_t num_groups;
@@ -22,5 +23,15 @@ struct ext2_mount {
     size_t frag_size;
     size_t inode_size;
 };
+
+int
+ext2_mount_alloc_inode(
+        struct ext2_mount *mnt,
+        size_t pref_group,
+        size_t *inode_out);
+int
+ext2_mount_free_inode(
+        struct ext2_mount *mnt,
+        size_t inode);
 
 #endif

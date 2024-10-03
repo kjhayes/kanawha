@@ -1,6 +1,11 @@
 #ifndef __KANAWHA__BITMAP_H__
 #define __KANAWHA__BITMAP_H__
 
+/*
+ * These bitmap routines should all be "little-endian",
+ * meaning byte n has bits (8n) to (8(n+1))-1
+ */
+
 #include <kanawha/stdint.h>
 #include <kanawha/assert.h>
 

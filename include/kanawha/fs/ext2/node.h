@@ -9,7 +9,10 @@
 struct ext2_fs_node
 {
     struct fs_node fs_node;
+
     struct ext2_mount *mount;
+
+    spinlock_t lock;
 
     struct ext2_inode inode;
     unsigned inode_dirty : 1;
@@ -18,8 +21,9 @@ struct ext2_fs_node
 extern struct fs_node_ops ext2_file_node_ops;
 extern struct fs_file_ops ext2_file_file_ops;
 
-extern struct fs_node_ops ext2_dir_node_ops;
-extern struct fs_file_ops ext2_dir_file_ops;
+size_t
+ext2_fs_node_to_group_num(
+        struct ext2_fs_node *node);
 
 int
 ext2_fs_node_read_page(

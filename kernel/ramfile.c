@@ -44,8 +44,6 @@ ramfile_read_page(
 {
     int res;
 
-    dprintk("ramfile_read_page\n");
-
     struct ramfile *ramfile =
         RAMFILE_FROM_FS_NODE(fs_node);
 
@@ -64,7 +62,7 @@ ramfile_read_page(
         page_end_offset = ramfile->size;
     }
 
-    dprintk("offset=%p, page_end_offset=%p\n",
+    dprintk("ramfile_read_page: offset=%p, page_end_offset=%p\n",
             offset, page_end_offset);
 
     ssize_t copy_size = page_end_offset - offset;

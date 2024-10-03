@@ -3,6 +3,7 @@
 #include <kanawha/fs/file.h>
 #include <kanawha/fs/ext2/ext2.h>
 #include <kanawha/fs/ext2/node.h>
+#include <kanawha/fs/ext2/mount.h>
 #include <kanawha/stddef.h>
 #include <kanawha/string.h>
 
@@ -21,6 +22,17 @@ struct ext2_linked_dir_entry {
     uint8_t name_len;
     uint8_t file_type;
 };
+
+static int
+ext2_dir_add_linked_entry(
+        struct fs_node *fs_node,
+        size_t inode,
+        uint8_t file_type,
+        const char *name)
+{
+    // We should begin by traversing the linked list to the end
+    return -EUNIMPL;
+}
 
 static int
 ext2_dir_read_at(
@@ -183,11 +195,89 @@ ext2_dir_node_lookup(
             {
                 // This is the node
                 *inode = entry.inode;
+                printk("ext2_dir_lookup \"%s\" FOUND inode=%p\n", name, entry.inode);
                 return 0;
             }
         }
         offset += entry.rec_len;
     }
+}
+
+static int
+ext2_dir_mkfile(
+        struct fs_node *fs_node,
+        const char *filename,
+        unsigned long flags)
+{
+    int res;
+
+    struct ext2_fs_node *node =
+        container_of(fs_node, struct ext2_fs_node, fs_node);
+
+    printk("ext2_dir_mkfile: %s\n",
+            filename);
+
+    size_t inode;
+    res = ext2_mount_alloc_inode(
+            node->mount,
+            ext2_fs_node_to_group_num(node),
+            &inode);
+    if(res) {
+        eprintk("EXT2: Failed to allocate inode! (err=%s)\n",
+                errnostr(res));
+        return res;
+    }
+
+    printk("Allocated inode: 0x%lx\n", inode);
+
+    return -EUNIMPL;
+}
+
+static int
+ext2_dir_mkdir(
+        struct fs_node *fs_node,
+        const char *filename,
+        unsigned long flags)
+{
+    int res;
+
+    struct ext2_fs_node *node =
+        container_of(fs_node, struct ext2_fs_node, fs_node);
+
+    printk("ext2_dir_mkdir: %s\n",
+            filename);
+
+    size_t inode;
+    res = ext2_mount_alloc_inode(
+            node->mount,
+            ext2_fs_node_to_group_num(node),
+            &inode);
+    if(res) {
+        eprintk("EXT2: Failed to allocate inode! (err=%s)\n",
+                errnostr(res));
+        return res;
+    }
+
+    printk("Allocated inode: 0x%lx\n", inode);
+
+    spin_lock(&node->lock);
+
+    res = ext2_dir_add_linked_entry(
+            fs_node,
+            inode,
+            EXT2_DIR_FT_DIR,
+            filename);
+    if(res) {
+        spin_unlock(&node->lock);
+        ext2_mount_free_inode(
+                node->mount,
+                inode);
+        return res;
+    }
+
+    spin_unlock(&node->lock);
+
+    return 0;
 }
 
 struct fs_node_ops
@@ -200,9 +290,10 @@ ext2_dir_node_ops = {
 
     .lookup = ext2_dir_node_lookup,
 
-    .mkfile = fs_node_cannot_mkfile,
+    .mkfile = ext2_dir_mkfile,
+    .mkdir = ext2_dir_mkdir,
+
     .mkfifo = fs_node_cannot_mkfifo,
-    .mkdir = fs_node_cannot_mkdir,
     .link = fs_node_cannot_link,
     .symlink = fs_node_cannot_symlink,
     .unlink = fs_node_cannot_unlink,

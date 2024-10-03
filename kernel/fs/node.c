@@ -273,6 +273,8 @@ fs_node_paged_read(
         buflen -= to_read;
         total_read += to_read;
         offset += to_read;
+
+        fs_node_put_page(fs_node, page, 0);
     }
 
     DEBUG_ASSERT(total_read == original_len);
@@ -319,6 +321,8 @@ fs_node_paged_write(
         buflen -= to_read;
         total_read += to_read;
         offset += to_read;
+
+        fs_node_put_page(fs_node, page, 1);
     }
 
     DEBUG_ASSERT(total_read == original_len);

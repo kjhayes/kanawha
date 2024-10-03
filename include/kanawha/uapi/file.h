@@ -8,4 +8,8 @@ typedef unsigned long fd_t;
 #define FILE_PERM_WRITE (1ULL<<1)
 #define FILE_PERM_EXEC  (1ULL<<2)
 
+// Writing past the current end of this file should
+// extend the size of the file
+#define FILE_MODE_WRITE_EXTEND (1ULL<<0)
+
 #endif

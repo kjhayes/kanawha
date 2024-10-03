@@ -85,4 +85,14 @@ ext2_group_write_inode(
         size_t rel_index,
         struct ext2_inode *inode);
 
+// Allocate inode/block
+int
+ext2_group_alloc_inode(
+        struct ext2_group *group,
+        size_t *abs_inode);
+int
+ext2_group_alloc_block(
+        struct ext2_group *group,
+        size_t *abs_block);
+
 #endif

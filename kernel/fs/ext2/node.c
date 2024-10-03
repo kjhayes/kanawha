@@ -45,6 +45,16 @@ ext2_node_pfn_to_block(
     return -EINVAL;
 }
 
+size_t
+ext2_fs_node_to_group_num(
+        struct ext2_fs_node *node)
+{
+    struct ext2_mount *mnt = node->mount;
+    size_t inode_index = node->fs_node.cache_node.key;
+
+    return (inode_index-1) / mnt->inodes_per_group;
+}
+
 int
 ext2_fs_node_read_page(
         struct fs_node *fs_node,

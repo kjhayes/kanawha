@@ -536,57 +536,65 @@ free_phys_mem(void)
 {
     int res;
     struct mem_flags *map = get_phys_mem_flags();
-    for(size_t i = 0; i < map->num_entries; i++) {
-        struct mem_flags_entry *entry = &map->entries[i];
-        if(!(entry->flags & PHYS_MEM_FLAGS_AVAIL)) {
-            continue;
-        }
-        if(!(entry->flags & PHYS_MEM_FLAGS_RAM)) {
-            continue;
-        }
-        
-        // Free this region
-        dprintk("Registering Buddy Allocator for region [%p - %p)\n",
-                (void*)entry->base, (void*)(entry->base + entry->size));
 
-        unsigned long page_alloc_flags = 0;
-        if(entry->flags & PHYS_MEM_FLAGS_16_BIT) {
-            page_alloc_flags |= PAGE_ALLOC_16BIT;
-        }
-        if(entry->flags & PHYS_MEM_FLAGS_32_BIT) {
-            page_alloc_flags |= PAGE_ALLOC_32BIT;
-        }
+    int freed_something;
+    do {
+      freed_something = 0;
 
-        res = register_buddy_page_allocator(entry->base, entry->size, page_alloc_flags);
-        if(res) {
-            eprintk("Failed to register buddy allocator for region [%p - %p) (err=%s)\n",
-                    (void*)entry->base, (void*)(entry->base + entry->size), errnostr(res));
-            continue;
-        }
+      for(size_t i = 0; i < map->num_entries; i++) {
+          struct mem_flags_entry *entry = &map->entries[i];
+          if(!(entry->flags & PHYS_MEM_FLAGS_AVAIL)) {
+              continue;
+          }
+          if(!(entry->flags & PHYS_MEM_FLAGS_RAM)) {
+              continue;
+          }
+          
+          // Free this region
+          dprintk("Registering Buddy Allocator for region [%p - %p)\n",
+                  (void*)entry->base, (void*)(entry->base + entry->size));
 
-        res = mem_flags_clear_flags(
-                map,
-                entry->base,
-                entry->size,
-                PHYS_MEM_FLAGS_AVAIL);
-        if(res) {
-            eprintk("Failed to mark page_alloc region as unavailable in physical memory map!\n");
-            return res;
-        }
+          unsigned long page_alloc_flags = 0;
+          if(entry->flags & PHYS_MEM_FLAGS_16_BIT) {
+              page_alloc_flags |= PAGE_ALLOC_16BIT;
+          }
+          if(entry->flags & PHYS_MEM_FLAGS_32_BIT) {
+              page_alloc_flags |= PAGE_ALLOC_32BIT;
+          }
 
-        res = mem_flags_set_flags(
-                map,
-                entry->base,
-                entry->size,
-                PHYS_MEM_FLAGS_PAGE_ALLOC);
-        if(res) {
-            eprintk("Failed to mark page_alloc region as allocatable in physical memory map!\n");
-            return res;
-        }
+          res = register_buddy_page_allocator(entry->base, entry->size, page_alloc_flags);
+          if(res) {
+              eprintk("Failed to register buddy allocator for region [%p - %p) (err=%s)\n",
+                      (void*)entry->base, (void*)(entry->base + entry->size), errnostr(res));
+              continue;
+          }
 
-        dprintk("Registered Buddy Allocator for region [%p - %p)\n",
-                (void*)entry->base, (void*)(entry->base + entry->size));
-    }
+          res = mem_flags_clear_flags(
+                  map,
+                  entry->base,
+                  entry->size,
+                  PHYS_MEM_FLAGS_AVAIL);
+          if(res) {
+              eprintk("Failed to mark page_alloc region as unavailable in physical memory map!\n");
+              return res;
+          }
+
+          res = mem_flags_set_flags(
+                  map,
+                  entry->base,
+                  entry->size,
+                  PHYS_MEM_FLAGS_PAGE_ALLOC);
+          if(res) {
+              eprintk("Failed to mark page_alloc region as allocatable in physical memory map!\n");
+              return res;
+          }
+
+          dprintk("Registered Buddy Allocator for region [%p - %p)\n",
+                  (void*)entry->base, (void*)(entry->base + entry->size));
+          freed_something = 1;
+          break;
+      }
+    } while(freed_something);
 
     return 0;
 }

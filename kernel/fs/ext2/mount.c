@@ -5,6 +5,7 @@
 #include <kanawha/fs/ext2/ext2.h>
 #include <kanawha/fs/ext2/mount.h>
 #include <kanawha/fs/ext2/node.h>
+#include <kanawha/fs/ext2/dir.h>
 #include <kanawha/fs/ext2/group.h>
 #include <kanawha/kmalloc.h>
 #include <kanawha/string.h>
@@ -21,6 +22,8 @@ ext2_mount_load_node(
     struct ext2_mount *mnt =
         container_of(fs_mount, struct ext2_mount, fs_mount);
 
+    printk("ext2_mount_load_node (inode=0x%lx)\n", node_index);
+
     if(node_index >= mnt->num_inodes) {
         return NULL;
     }
@@ -32,6 +35,7 @@ ext2_mount_load_node(
     if(group == NULL) {
         return NULL;
     }
+    DEBUG_ASSERT(group->mnt == mnt);
 
     struct ext2_fs_node *node = kmalloc(sizeof(struct ext2_fs_node));
     if(node == NULL) {
@@ -40,6 +44,7 @@ ext2_mount_load_node(
     }
 
     node->mount = mnt;
+    spinlock_init(&node->lock);
 
     int is_inode_alloced;
     res = ext2_group_inode_bitmap_check(group, index_in_group, &is_inode_alloced);
@@ -102,7 +107,31 @@ ext2_mount_unload_node(
         struct fs_mount *fs_mount,
         struct fs_node *fs_node)
 {
-    return -EUNIMPL;
+    int res;
+
+    struct ext2_mount *mnt =
+        container_of(fs_mount, struct ext2_mount, fs_mount);
+    struct ext2_fs_node *node =
+        container_of(fs_node, struct ext2_fs_node, fs_node);
+
+    if(node->inode_dirty) {
+        size_t grp_index = ext2_fs_node_to_group_num(node);
+        struct ext2_group *group = ext2_get_group(mnt, grp_index);
+        if(group == NULL) {
+            eprintk("Could not get EXT2 Block Group while unloading inode!\n");
+            res = -EINVAL;
+            goto err;
+        }
+        ext2_group_write_inode(group, (node->fs_node.cache_node.key-1)%mnt->inodes_per_group, &node->inode);
+        node->inode_dirty = 0;
+    }
+
+    kfree(node);
+
+    return 0;
+
+err:
+    return res;
 }
 
 int
@@ -212,6 +241,7 @@ ext2_mount_file(
 
     mnt->num_blocks = superblock.total_blocks;
     mnt->num_inodes = superblock.total_inodes;
+    mnt->resv_inodes = superblock.extended.first_non_resv_inode;
 
     mnt->num_groups = num_groups_from_blocks;
     mnt->group_cache = kmalloc(sizeof(struct ext2_group*) * mnt->num_groups);
@@ -220,6 +250,7 @@ ext2_mount_file(
         goto err3;
     }
     memset(mnt->group_cache, 0, sizeof(struct ext2_group*) * mnt->num_groups);
+
     spinlock_init(&mnt->group_cache_lock);
 
     mnt->blks_per_group = superblock.blocks_per_group;
@@ -270,4 +301,58 @@ ext2_register_fs_type(void) {
     return 0;
 }
 declare_init_desc(fs, ext2_register_fs_type, "Registering Ext2 Filesystem");
+
+int
+ext2_mount_alloc_inode(
+        struct ext2_mount *mnt,
+        size_t pref_group,
+        size_t *inode_out)
+{
+    int res;
+
+    struct ext2_group *group;
+    group = ext2_get_group(mnt, pref_group);
+    if(group != NULL) {
+        res = ext2_group_alloc_inode(group, inode_out);  
+        ext2_put_group(mnt, group);
+        if(!res) {
+            return 0;
+        }
+    }
+
+    for(size_t group_id = 0; group_id < mnt->num_groups; group_id++) {
+        if(group_id == pref_group) {
+            continue;
+        }
+        group = ext2_get_group(mnt, group_id);
+        res = ext2_group_alloc_inode(group, inode_out);  
+        ext2_put_group(mnt, group);
+        if(!res) {
+            return 0;
+        }
+    }
+    return -ENOMEM;
+}
+
+int
+ext2_mount_free_inode(
+        struct ext2_mount *mnt,
+        size_t inode)
+{
+    int res;
+
+    size_t grp_index = (inode-1) / mnt->inodes_per_group;
+
+    struct ext2_group *group;
+    group = ext2_get_group(mnt, grp_index);
+    if(group == NULL) {
+        return -ENXIO;
+    }
+
+    ext2_group_inode_bitmap_free_specific(group, (inode-1) % mnt->inodes_per_group);
+
+    ext2_put_group(mnt, group);
+
+    return 0;
+}
 
