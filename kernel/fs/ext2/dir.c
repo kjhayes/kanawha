@@ -24,17 +24,6 @@ struct ext2_linked_dir_entry {
 };
 
 static int
-ext2_dir_add_linked_entry(
-        struct fs_node *fs_node,
-        size_t inode,
-        uint8_t file_type,
-        const char *name)
-{
-    // We should begin by traversing the linked list to the end
-    return -EUNIMPL;
-}
-
-static int
 ext2_dir_read_at(
         struct fs_node *fs_node,
         size_t offset,
@@ -48,8 +37,110 @@ ext2_dir_read_at(
             fs_node,
             offset,
             out,
-            sizeof(struct ext2_linked_dir_entry));
+            sizeof(struct ext2_linked_dir_entry),
+            0);
     if(res) {
+        return res;
+    }
+
+    return 0;
+}
+
+static int
+ext2_dir_add_linked_entry(
+        struct ext2_fs_node *node,
+        struct fs_node *fs_node,
+        size_t inode,
+        uint8_t file_type,
+        const char *name)
+{
+    int res;
+
+    size_t namelen = strlen(name);
+
+    struct ext2_linked_dir_entry entry;
+
+    int offset = 0;
+
+    size_t room_needed = namelen + 8;
+    size_t room_avail  = 0;
+
+    size_t cur_offset = 0;
+    while(1) {
+        res = ext2_dir_read_at(fs_node, cur_offset, &entry);
+        if(res) {
+            eprintk("Failed to traverse EXT2 directory! (err=%s)\n",
+                    errnostr(res));
+            return res;
+        }
+
+        if(entry.rec_len <= 0) {
+            // End of the list
+            return -ENOMEM;
+        }
+        else if(entry.rec_len < entry.name_len + 8) {
+            // Invalid entry
+            return -EINVAL;
+        }
+
+        size_t extra_room_offset = cur_offset + entry.name_len + 8;
+        size_t extra_room = entry.rec_len - (entry.name_len + 8);
+
+        if(extra_room > 8) {
+            // Round up to the nearest 4-byte alignment if necessary
+            if(extra_room_offset & 0b11) {
+                extra_room -= (0b100 - (extra_room_offset & 0b11));
+                extra_room_offset = (extra_room_offset + 0b11) & ~0b11;
+            }
+
+            if(extra_room >= room_needed) {
+                entry.rec_len = (entry.name_len + 8 + 0b11) & ~0b11;
+                res = fs_node_paged_write(
+                        fs_node,
+                        cur_offset,
+                        &entry,
+                        sizeof(struct ext2_linked_dir_entry),
+                        0);
+                if(res) {
+                    return res;
+                }
+                offset = extra_room_offset;
+                room_avail = extra_room;
+                break;
+            }
+        }
+ 
+        printk("Could not use: offset=%p, reclen=%p, namelen=%p extra_room=%p to fit entry of size=%p\n",
+                cur_offset,
+                entry.rec_len,
+                entry.name_len,
+                extra_room,
+                room_needed);
+        cur_offset += entry.rec_len;
+    }
+
+    entry.name_len = namelen;
+    entry.file_type = file_type;
+    entry.rec_len = room_avail;
+    entry.inode = inode;
+    entry.name_len = namelen;
+
+    printk("Writing directory entry to offset: %p\n",
+            offset);
+    res = fs_node_paged_write(fs_node, offset, &entry, sizeof(struct ext2_linked_dir_entry), 0);
+    if(res) {
+        eprintk("Failed to write directory entry to EXT2 directory! (err=%s)\n");
+        return res;
+    }
+
+    size_t name_offset = offset + 8;
+    printk("Writing name \"%s\" to offset: %p\n",
+            name, name_offset);
+
+    res = fs_node_paged_write(fs_node, name_offset, (void*)name, namelen, 0);
+    if(res) {
+        eprintk("Failed to write file-name to EXT2 directory! (err=%s)\n",
+                errnostr(res));
         return res;
     }
 
@@ -87,20 +178,21 @@ ext2_dir_next(
     if(res) {
         return res;
     }
-    if(entry.name_len == 0) {
+    if(entry.rec_len == 0) {
         // Tried to call "next" again after a failure
         // without calling "begin"
         return -EINVAL;
     }
 
-    file->dir_offset += entry.rec_len;
+    size_t next_offset = file->dir_offset + entry.rec_len;
+    file->dir_offset = next_offset;
 
     // Read the next entry
     res = ext2_dir_read_cur(file, &entry);
     if(res) {
         return res;
     }
-    if(entry.name_len == 0) {
+    if(entry.rec_len == 0) {
         // Final entry
         return -ENXIO;
     }
@@ -142,7 +234,8 @@ ext2_dir_readname(
             fs_node,
             file->dir_offset + sizeof(struct ext2_linked_dir_entry),
             buf,
-            minlen);
+            minlen,
+            0);
     if(res) {
         return res;
     }
@@ -166,6 +259,8 @@ ext2_dir_node_lookup(
     size_t offset = 0;
     struct ext2_linked_dir_entry entry;
     while(1) {
+        printk("ext2_dir_node_lookup: checking directory entry at offset=%p\n",
+                offset);
         res = ext2_dir_read_at(
                 fs_node,
                 offset,
@@ -174,7 +269,7 @@ ext2_dir_node_lookup(
             return res;
         }
 
-        if(entry.name_len == 0) {
+        if(entry.rec_len == 0) {
             return -ENXIO;
         }
 
@@ -184,7 +279,8 @@ ext2_dir_node_lookup(
                     fs_node,
                     offset + sizeof(struct ext2_linked_dir_entry),
                     buffer,
-                    len);
+                    len,
+                    0);
             if(res) {
                 // Hmmmmmm Something is wrong...
                 return res;
@@ -247,10 +343,12 @@ ext2_dir_mkdir(
     printk("ext2_dir_mkdir: %s\n",
             filename);
 
+    size_t group_num = ext2_fs_node_to_group_num(node);
+
     size_t inode;
     res = ext2_mount_alloc_inode(
             node->mount,
-            ext2_fs_node_to_group_num(node),
+            group_num,
             &inode);
     if(res) {
         eprintk("EXT2: Failed to allocate inode! (err=%s)\n",
@@ -260,9 +358,39 @@ ext2_dir_mkdir(
 
     printk("Allocated inode: 0x%lx\n", inode);
 
+    // TODO: We need to initialize the inode
+    struct ext2_inode inode_data;
+    res = ext2_mount_read_inode(
+            node->mount,
+            inode,
+            &inode_data);
+    if(res) {
+        eprintk("EXT2: Failed to read allocated inode! (err=%s)\n",
+                errnostr(res));
+        return res;
+    }
+
+    memset(&inode_data, 0, sizeof(struct ext2_inode));
+    inode_data.links_count = 1;
+    inode_data.mode =
+        0x4000 // directory
+        | (0666); // R/W for everyone
+    inode_data.links_count = 1;
+
+    res = ext2_mount_write_inode(
+            node->mount,
+            inode,
+            &inode_data);
+    if(res) {
+        eprintk("EXT2: Failed to write allocated inode! (err=%s)\n",
+                errnostr(res));
+        return res;
+    }
+
     spin_lock(&node->lock);
 
     res = ext2_dir_add_linked_entry(
+            node,
             fs_node,
             inode,
             EXT2_DIR_FT_DIR,

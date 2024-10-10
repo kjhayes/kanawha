@@ -12,6 +12,66 @@
 #include <kanawha/stddef.h>
 #include <kanawha/init.h>
 
+int
+ext2_mount_read_inode(
+        struct ext2_mount *mnt,
+        size_t inode_index,
+        struct ext2_inode *inode_data)
+{
+    int res;
+
+    size_t group_index = (inode_index-1) / mnt->inodes_per_group;
+    size_t index_in_group = (inode_index-1) % mnt->inodes_per_group;
+
+    struct ext2_group *group = ext2_get_group(mnt, group_index);
+    if(group == NULL) {
+        return -ENXIO;
+    }
+    DEBUG_ASSERT(group->mnt == mnt);
+
+    res = ext2_group_read_inode(
+            group,
+            index_in_group,
+            inode_data);
+    if(res) {
+        ext2_put_group(mnt, group);
+        return res;
+    }
+
+    ext2_put_group(mnt, group);
+    return 0;
+}
+
+int
+ext2_mount_write_inode(
+        struct ext2_mount *mnt,
+        size_t inode_index,
+        struct ext2_inode *inode_data)
+{
+    int res;
+
+    size_t group_index = (inode_index-1) / mnt->inodes_per_group;
+    size_t index_in_group = (inode_index-1) % mnt->inodes_per_group;
+
+    struct ext2_group *group = ext2_get_group(mnt, group_index);
+    if(group == NULL) {
+        return -ENXIO;
+    }
+    DEBUG_ASSERT(group->mnt == mnt);
+
+    res = ext2_group_write_inode(
+            group,
+            index_in_group,
+            inode_data);
+    if(res) {
+        ext2_put_group(mnt, group);
+        return res;
+    }
+
+    ext2_put_group(mnt, group);
+    return 0;
+}
+
 static struct fs_node *
 ext2_mount_load_node(
         struct fs_mount *fs_mount,
@@ -172,7 +232,8 @@ ext2_mount_file(
             fs_node,
             EXT2_SUPERBLOCK_OFFSET,
             &superblock,
-            amount_to_read);
+            amount_to_read,
+            0);
     if(res) {
         eprintk("Invalid EXT2 Filesystem: failed to read minimum sized ext2 superblock!\n");
         goto err2;

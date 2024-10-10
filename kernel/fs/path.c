@@ -51,6 +51,8 @@ __fs_path_traverse(
             child_name,
             &mount_index);
     if(res) {
+        eprintk("fs_node_lookup: %s returned (%s)\n",
+                child_name, errnostr(res));
         spin_unlock(&fs_path_global_lock);
         return res;
     }
@@ -64,6 +66,8 @@ __fs_path_traverse(
                 mount_index);
     if(child_fs_node == NULL) {
         spin_unlock(&fs_path_global_lock);
+        eprintk("fs_mount_get_node(0x%llx) returned NULL!\n",
+                (ull_t)mount_index);
         return -EINVAL;
     }
 

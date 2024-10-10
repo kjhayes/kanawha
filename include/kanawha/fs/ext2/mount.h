@@ -34,4 +34,15 @@ ext2_mount_free_inode(
         struct ext2_mount *mnt,
         size_t inode);
 
+int
+ext2_mount_read_inode(
+        struct ext2_mount *mnt,
+        size_t inode_index,
+        struct ext2_inode *inode_data);
+int
+ext2_mount_write_inode(
+        struct ext2_mount *mnt,
+        size_t inode_index,
+        struct ext2_inode *inode_data);
+
 #endif

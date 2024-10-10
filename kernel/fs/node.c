@@ -56,7 +56,8 @@ fs_node_page_order(
 struct fs_page *
 fs_node_get_page(
         struct fs_node *node,
-        uintptr_t pfn)
+        uintptr_t pfn,
+        unsigned long flags)
 {
     int res;
 
@@ -68,6 +69,7 @@ fs_node_get_page(
     struct ptree_node *pnode;
     pnode = ptree_get(&node->page_cache, pfn);
     if(pnode == NULL) {
+
         page = kmalloc(sizeof(struct fs_page));
         if(page == NULL) {
             spin_unlock(&node->page_lock);
@@ -91,13 +93,16 @@ fs_node_get_page(
             return NULL;
         }
 
-        size_t amount = 1ULL<<order;
-        fs_node_read_page(
+        unsigned long read_page_flags =
+            flags & FS_NODE_GET_PAGE_MAY_CREATE ? FS_NODE_READ_PAGE_MAY_CREATE : 0;
+
+        res = fs_node_read_page(
                 node,
                 (void*)__va(page->paddr),
-                pfn);
+                pfn,
+                read_page_flags);
 
-        if(amount == 0) {
+        if(res) {
             spin_unlock(&node->page_lock);
             page_free(order, page->paddr);
             kfree(page);
@@ -105,7 +110,7 @@ fs_node_get_page(
         }
 
         page->order = order;
-        page->size = amount;
+        page->size = 1ULL<<order;
         page->flags = 0;
 
         ptree_insert(&node->page_cache, &page->tree_node, pfn);
@@ -130,8 +135,8 @@ fs_node_flush_page_lockless(
     res = fs_node_write_page(
             node,
             (void*)__va(page->paddr),
-            page->tree_node.key);
-
+            page->tree_node.key,
+            FS_NODE_WRITE_PAGE_MAY_CREATE);
     if(res) {
         return res;
     }
@@ -172,7 +177,10 @@ fs_node_put_page(
                     node,
                     page);
             if(res) {
+                eprintk("fs_node_put_page failed because fs_node_flush_page_lockless returned (%s) with dirty page!\n",
+                        errnostr(res));
                 page->pins++;
+                spin_unlock(&node->page_lock);
                 return res;
             }
         }
@@ -239,7 +247,8 @@ fs_node_paged_read(
         struct fs_node *fs_node,
         uintptr_t offset,
         void *buffer,
-        size_t buflen)
+        size_t buflen,
+        unsigned long flags)
 {
     int res;
 
@@ -254,15 +263,18 @@ fs_node_paged_read(
         return res;
     }
 
+    unsigned long get_page_flags =
+        flags & FS_NODE_PAGED_READ_MAY_EXTEND ? FS_NODE_GET_PAGE_MAY_CREATE : 0;
+
     while(buflen > 0)
     {
         uintptr_t offset_pfn = offset >> order;
         uintptr_t page_offset = offset & ((1ULL<<order)-1);
         uintptr_t room_left = (1ULL<<order) - page_offset;
 
-        struct fs_page *page = fs_node_get_page(fs_node, offset_pfn);
+        struct fs_page *page = fs_node_get_page(fs_node, offset_pfn, get_page_flags);
         if(page == NULL) {
-            return -EINVAL;
+            return -ENXIO;
         }
 
         ssize_t to_read = buflen < room_left ? buflen : room_left;
@@ -277,6 +289,31 @@ fs_node_paged_read(
         fs_node_put_page(fs_node, page, 0);
     }
 
+    size_t page_end = offset + buflen;
+
+    // Attempt to increase the size of the file
+    if(flags & FS_NODE_PAGED_READ_MAY_EXTEND) {
+        size_t cur_size;
+        res = fs_node_getattr(
+                fs_node,
+                FS_NODE_ATTR_DATA_SIZE,
+                &cur_size);
+        if(!res) {
+            if(cur_size < page_end) {
+                res = fs_node_setattr(
+                        fs_node,
+                        FS_NODE_ATTR_DATA_SIZE,
+                        page_end);
+                if(res) {
+                    // Ignore the error, we'll only try to change the file size
+                    // as a "best-effort" attempt
+                    //
+                    // (Special files may not allow us to)
+                }
+            }
+        }
+    }
+
     DEBUG_ASSERT(total_read == original_len);
 
     return 0;
@@ -287,7 +324,8 @@ fs_node_paged_write(
         struct fs_node *fs_node,
         uintptr_t offset,
         void *buffer,
-        size_t buflen)
+        size_t buflen,
+        unsigned long flags)
 {
     int res;
 
@@ -302,13 +340,16 @@ fs_node_paged_write(
         return res;
     }
 
+    unsigned long get_page_flags =
+        flags & FS_NODE_PAGED_WRITE_MAY_EXTEND ? FS_NODE_GET_PAGE_MAY_CREATE : 0;
+
     while(buflen > 0)
     {
         uintptr_t offset_pfn = offset >> order;
         uintptr_t page_offset = offset & ((1ULL<<order)-1);
         uintptr_t room_left = (1ULL<<order) - page_offset;
 
-        struct fs_page *page = fs_node_get_page(fs_node, offset_pfn);
+        struct fs_page *page = fs_node_get_page(fs_node, offset_pfn, get_page_flags);
         if(page == NULL) {
             return -EINVAL;
         }
@@ -325,6 +366,31 @@ fs_node_paged_write(
         fs_node_put_page(fs_node, page, 1);
     }
 
+    size_t page_end = offset + buflen;
+
+    // Attempt to increase the size of the file
+    if(flags & FS_NODE_PAGED_WRITE_MAY_EXTEND) {
+        size_t cur_size;
+        res = fs_node_getattr(
+                fs_node,
+                FS_NODE_ATTR_DATA_SIZE,
+                &cur_size);
+        if(!res) {
+            if(cur_size < page_end) {
+                res = fs_node_setattr(
+                        fs_node,
+                        FS_NODE_ATTR_DATA_SIZE,
+                        page_end);
+                if(res) {
+                    // Ignore the error, we'll only try to change the file size
+                    // as a "best-effort" attempt
+                    //
+                    // (Special files may not allow us to)
+                }
+            }
+        }
+    }
+
     DEBUG_ASSERT(total_read == original_len);
 
     return 0;
@@ -338,7 +404,8 @@ int
 fs_node_cannot_read_page(
         struct fs_node *node,
         void *page,
-        uintptr_t pfn)
+        uintptr_t pfn,
+        unsigned long flags)
 {
     return -EINVAL;
 }
@@ -346,7 +413,8 @@ int
 fs_node_cannot_write_page(
         struct fs_node *node,
         void *page,
-        uintptr_t pfn)
+        uintptr_t pfn,
+        unsigned long flags)
 {
     return -EINVAL;
 }

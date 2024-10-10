@@ -25,7 +25,8 @@ ext2_mount_read_group_desc(
             mnt->backing_node,
             desc_offset,
             desc,
-            sizeof(struct ext2_group_desc));
+            sizeof(struct ext2_group_desc),
+            0);
     if(res) {
         return res;
     }
@@ -49,7 +50,8 @@ ext2_mount_write_group_desc(
             mnt->backing_node,
             desc_offset,
             desc,
-            sizeof(struct ext2_group_desc));
+            sizeof(struct ext2_group_desc),
+            0);
     if(res) {
         return res;
     }
@@ -151,7 +153,8 @@ ext2_group_populate_blk_bitmap(
             grp->mnt->backing_node,
             bitmap_offset,
             grp->blk_bitmap,
-            grp->mnt->block_size);
+            grp->mnt->block_size,
+            0);
     if(res) {
         kfree(grp->blk_bitmap);
         grp->blk_bitmap = NULL;
@@ -189,7 +192,8 @@ ext2_group_flush_blk_bitmap(
             grp->mnt->backing_node,
             bitmap_offset,
             grp->blk_bitmap,
-            grp->mnt->block_size);
+            grp->mnt->block_size,
+            0);
     if(res) {
         spin_unlock(&grp->blk_lock);
         return res;
@@ -231,7 +235,8 @@ ext2_group_populate_inode_bitmap(
             grp->mnt->backing_node,
             bitmap_offset,
             grp->inode_bitmap,
-            grp->mnt->block_size);
+            grp->mnt->block_size,
+            0);
     if(res) {
         kfree(grp->inode_bitmap);
         grp->inode_bitmap = NULL;
@@ -269,7 +274,8 @@ ext2_group_flush_inode_bitmap(
             grp->mnt->backing_node,
             bitmap_offset,
             grp->inode_bitmap,
-            grp->mnt->block_size);
+            grp->mnt->block_size,
+            0);
     if(res) {
         spin_unlock(&grp->inode_lock);
         return res;
@@ -529,7 +535,8 @@ ext2_group_read_inode(
             group->mnt->backing_node,
             inode_offset,
             inode,
-            size);
+            size,
+            0);
     if(res) {
         return res;
     }
@@ -558,7 +565,8 @@ ext2_group_write_inode(
             group->mnt->backing_node,
             inode_offset,
             inode,
-            size);
+            size,
+            0);
     if(res) {
         return res;
     }

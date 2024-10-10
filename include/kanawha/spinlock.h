@@ -37,6 +37,9 @@ static inline void spin_unlock(spinlock_t *lock);
 static inline void
 spinlock_init(spinlock_t *lock) {
     atomic_bool_set_relaxed(&lock->held, 0);
+#ifdef CONFIG_DEBUG_SPINLOCK_TRACK_THREADS
+    lock->held_by = NULL;
+#endif
 }
 
 // Returns 0 on success

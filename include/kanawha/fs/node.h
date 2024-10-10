@@ -11,15 +11,21 @@ struct fs_type;
 struct fs_mount;
 struct fs_node;
 
+#define FS_NODE_READ_PAGE_MAY_CREATE (1ULL<<0)
+
 #define FS_NODE_READ_PAGE_SIG(RET,ARG)\
 RET(int)\
 ARG(void *, page)\
-ARG(uintptr_t, pfn)
+ARG(uintptr_t, pfn)\
+ARG(unsigned long, flags)
+
+#define FS_NODE_WRITE_PAGE_MAY_CREATE (1ULL<<0)
 
 #define FS_NODE_WRITE_PAGE_SIG(RET,ARG)\
 RET(int)\
 ARG(void *, page)\
-ARG(uintptr_t, pfn)
+ARG(uintptr_t, pfn)\
+ARG(unsigned long, flags)
 
 #define FS_NODE_FLUSH_SIG(RET,ARG)\
 RET(int)
@@ -158,10 +164,12 @@ fs_node_page_order(
         struct fs_node *node,
         order_t *order);
 
+#define FS_NODE_GET_PAGE_MAY_CREATE (1ULL<<0)
 struct fs_page *
 fs_node_get_page(
         struct fs_node *node,
-        uintptr_t pfn);
+        uintptr_t pfn,
+        unsigned long flags);
 
 int
 fs_node_put_page(
@@ -178,19 +186,23 @@ int
 fs_node_flush_all_pages(
         struct fs_node *node);
 
+#define FS_NODE_PAGED_READ_MAY_EXTEND (1ULL<<0)
 int
 fs_node_paged_read(
         struct fs_node *node,
         uintptr_t offset,
         void *buffer,
-        size_t buflen);
+        size_t buflen,
+        unsigned long flags);
 
+#define FS_NODE_PAGED_WRITE_MAY_EXTEND (1ULL<<0)
 int
 fs_node_paged_write(
         struct fs_node *node,
         uintptr_t offset,
         void *buffer,
-        size_t buflen);
+        size_t buflen,
+        unsigned long flags);
 
 /*
  * Error fs_node Method Implementations
@@ -200,12 +212,14 @@ int
 fs_node_cannot_read_page(
         struct fs_node *node,
         void *page,
-        uintptr_t pfn);
+        uintptr_t pfn,
+        unsigned long flags);
 int
 fs_node_cannot_write_page(
         struct fs_node *node,
         void *page,
-        uintptr_t pfn);
+        uintptr_t pfn,
+        unsigned long flags);
 int
 fs_node_cannot_flush(
         struct fs_node *node);

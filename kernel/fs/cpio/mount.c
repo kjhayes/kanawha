@@ -47,7 +47,8 @@ cpio_read_header(struct cpio_mount *mnt, size_t offset, struct cpio_header *hdr)
         mnt->backing_file,
         offset,
         (void*)hdr,
-        size);
+        size,
+        0);
 
     if(res) {
         eprintk("cpio_read_header: fs_node_paged_read -> %s (paged_read=%p)\n",

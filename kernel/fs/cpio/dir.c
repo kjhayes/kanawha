@@ -42,8 +42,8 @@ cpio_dir_begin(
             mount->backing_file,
             file->dir_offset + sizeof(struct cpio_header),
             (void*)name_buf,
-            namesize
-            );
+            namesize,
+            0);
     if(res) {
         return res;
     }
@@ -110,8 +110,8 @@ cpio_dir_next(
             mount->backing_file,
             file->dir_offset + sizeof(struct cpio_header),
             (void*)name_buf,
-            namesize
-            );
+            namesize,
+            0);
     if(res) {
         return res;
     }
@@ -164,8 +164,8 @@ cpio_dir_readname(
             mount->backing_file,
             file->dir_offset + sizeof(struct cpio_header),
             (void*)name_buf,
-            namesize
-            );
+            namesize,
+            0);
     if(res) {
         return res;
     }
@@ -209,8 +209,8 @@ cpio_dir_node_lookup(
                 mount->backing_file,
                 offset + sizeof(struct cpio_header),
                 (void*)name_buf,
-                namesize
-                );
+                namesize,
+                0);
         if(res) {
             eprintk("Failed to read CPIO file name! (err=%s)\n",
                     errnostr(res));

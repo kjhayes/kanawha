@@ -40,7 +40,8 @@ static int
 ramfile_read_page(
         struct fs_node *fs_node,
         void *buffer,
-        uintptr_t pfn)
+        uintptr_t pfn,
+        unsigned long flags)
 {
     int res;
 
@@ -83,7 +84,8 @@ static int
 ramfile_write_page(
         struct fs_node *fs_node,
         void *buffer,
-        uintptr_t pfn)
+        uintptr_t pfn,
+        unsigned long flags)
 {
     int res;
 

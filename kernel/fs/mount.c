@@ -11,6 +11,7 @@ init_fs_mount_struct(
         struct fs_mount_ops *ops)
 {
     mnt->ops = ops;
+    spinlock_init(&mnt->cache_lock);
     ptree_init(&mnt->node_cache);
     return 0;
 }

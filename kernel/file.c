@@ -233,6 +233,8 @@ file_table_open(
             &desc->path);
     if(res) {
         kfree(desc);
+        eprintk("file_table_open: fs_path_lookup_for_process returned: %s\n",
+                errnostr(res));
         return res;
     }
 

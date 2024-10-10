@@ -29,13 +29,15 @@ int
 ext2_fs_node_read_page(
         struct fs_node *node,
         void *page,
-        uintptr_t pfn);
+        uintptr_t pfn,
+        unsigned long flags);
 
 int
 ext2_fs_node_write_page(
         struct fs_node *node,
         void *page,
-        uintptr_t pfn);
+        uintptr_t pfn,
+        unsigned long flags);
 
 int
 ext2_fs_node_getattr(

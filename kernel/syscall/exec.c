@@ -177,7 +177,7 @@ process_exec_elf64(
     Elf64_Ehdr elf_hdr;
     size_t amount = sizeof(Elf64_Ehdr);
 
-    res = fs_node_paged_read(elf_node, 0, &elf_hdr, amount);
+    res = fs_node_paged_read(elf_node, 0, &elf_hdr, amount, 0);
     if(res) {
         return res;
     }
@@ -193,7 +193,7 @@ process_exec_elf64(
     for(size_t i = 0; i < elf_hdr.e_phnum; i++)
     {
         amount = elf_hdr.e_phentsize;
-        res = fs_node_paged_read(elf_node, elf_hdr.e_phoff + (i * elf_hdr.e_phentsize), &phdr, amount);
+        res = fs_node_paged_read(elf_node, elf_hdr.e_phoff + (i * elf_hdr.e_phentsize), &phdr, amount, 0);
         if(res) {
             return res;
         }

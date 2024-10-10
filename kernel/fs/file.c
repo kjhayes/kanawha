@@ -158,7 +158,7 @@ fs_file_paged_read(
     uintptr_t page_offset = seek_loc & ((1ULL<<order)-1);
     uintptr_t room_left = (1ULL<<order) - page_offset;
 
-    struct fs_page *page = fs_node_get_page(fs_node, seek_pfn);
+    struct fs_page *page = fs_node_get_page(fs_node, seek_pfn, 0);
     if(page == NULL) {
         return -EINVAL;
     }
@@ -188,56 +188,17 @@ fs_file_paged_write(
         return -EINVAL;
     }
 
-    order_t order;
-    res = fs_node_page_order(fs_node, &order);
-    if(res) {
-        return res;
-    }
-
-    size_t file_size;
-    res = fs_node_getattr(
+    res = fs_node_paged_write(
             fs_node,
-            FS_NODE_ATTR_DATA_SIZE,
-            &file_size);
+            file->seek_offset,
+            buf,
+            buflen,
+            FS_NODE_PAGED_WRITE_MAY_EXTEND);
     if(res) {
         return res;
     }
 
-    // Only writes a page at a time
-
-    uintptr_t seek_loc = file->seek_offset;
-
-    if(seek_loc > file_size) {
-        return -ERANGE;
-    }
-    if(seek_loc == file_size) {
-        // EOF
-        return 0;
-    }
-
-    if(seek_loc + buflen > file_size) {
-        buflen = file_size - seek_loc;
-    }
-
-    uintptr_t seek_pfn = seek_loc >> order;
-    uintptr_t page_offset = seek_loc & ((1ULL<<order)-1);
-    uintptr_t room_left = (1ULL<<order) - page_offset;
-
-    struct fs_page *page = fs_node_get_page(fs_node, seek_pfn);
-    if(page == NULL) {
-        return -EINVAL;
-    }
-
-    ssize_t to_write = buflen < room_left ? buflen : room_left;
-
-    memcpy((void*)__va(page->paddr) + page_offset, buf, to_write);
-
-    res = fs_node_put_page(fs_node, page, 1);
-    if(res) {
-        return res;
-    }
-
-    return to_write;
+    return buflen;
 }
 
 // Seek using fs_node_getattr and FS_NODE_ATTR_DATA_SIZE

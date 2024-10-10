@@ -900,7 +900,8 @@ mmap_region_load_page(
 
         fs_page = fs_node_get_page(
                 region->fs_node,
-                pfn);
+                pfn,
+                FS_NODE_GET_PAGE_MAY_CREATE);
         if(fs_page == NULL) {
             return -EINVAL;
         }

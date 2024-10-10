@@ -31,7 +31,8 @@ ext2_node_pfn_to_block(
                 EXT2_BLOCK_OFFSET(indirect_block, node->mount->block_size)
                     + (sizeof(le32_t) * (pfn-EXT2_INODE_DIRECT_BLOCKS)),
                 &entry,
-                sizeof(le32_t));
+                sizeof(le32_t),
+                0);
         if(res) {
             return res;
         }
@@ -59,7 +60,8 @@ int
 ext2_fs_node_read_page(
         struct fs_node *fs_node,
         void *page,
-        uintptr_t pfn)
+        uintptr_t pfn,
+        unsigned long flags)
 {
     int res;
 
@@ -72,7 +74,7 @@ ext2_fs_node_read_page(
         return res;
     }
 
-    if(block_no == 0) {
+    if(block_no == 0 && (flags & FS_NODE_READ_PAGE_MAY_CREATE)) {
         memset(page, 0, node->mount->block_size);
         return 0;
     } else {
@@ -80,7 +82,8 @@ ext2_fs_node_read_page(
                 node->mount->backing_node,
                 EXT2_BLOCK_OFFSET(block_no, node->mount->block_size),
                 page,
-                node->mount->block_size);
+                node->mount->block_size,
+                0);
         if(res) {
             return res;
         }
@@ -92,7 +95,8 @@ int
 ext2_fs_node_write_page(
         struct fs_node *fs_node,
         void *page,
-        uintptr_t pfn)
+        uintptr_t pfn,
+        unsigned long flags)
 {
     int res;
 
@@ -105,7 +109,7 @@ ext2_fs_node_write_page(
         return res;
     }
 
-    if(block_no == 0) {
+    if(block_no == 0 && (flags & FS_NODE_WRITE_PAGE_MAY_CREATE)) {
         // TODO: Need to allocate the page from disk
         return -ENOMEM;
     } else {
@@ -113,7 +117,8 @@ ext2_fs_node_write_page(
                 node->mount->backing_node,
                 EXT2_BLOCK_OFFSET(block_no, node->mount->block_size),
                 page,
-                node->mount->block_size);
+                node->mount->block_size,
+                0);
         if(res) {
             return res;
         }

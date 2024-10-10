@@ -69,7 +69,8 @@ cpio_node_read_page(
             cpio_file->mnt->backing_file,
             backing_offset,
             buf,
-            to_read);
+            to_read,
+            0);
     if(res) {
         return res;
     }
@@ -109,7 +110,8 @@ cpio_node_write_page(
             cpio_file->mnt->backing_file,
             backing_offset,
             buf,
-            to_read);
+            to_read,
+            0);
     if(res) {
         return res;
     }
