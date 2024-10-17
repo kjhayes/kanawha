@@ -29,11 +29,13 @@ fs_path_get(struct fs_path *path);
 int
 fs_path_put(struct fs_path *path);
 
+// Returns a root mount point with a single reference
 int
 fs_path_mount_root(
         struct fs_mount *mnt,
         struct fs_path **out);
 
+// Returns a child mount point with a single reference
 int
 fs_path_mount_dir(
         struct fs_path *parent,

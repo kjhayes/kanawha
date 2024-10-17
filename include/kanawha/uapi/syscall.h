@@ -160,6 +160,10 @@ RET(int)\
 ARG(fd_t, dir)\
 ARG(const char __user *, name)
 
+#define SYSCALL_SIG_CHROOT(RET,ARG)\
+RET(int)\
+ARG(fd_t, root)
+
 #define SYSCALL_XLIST(X)\
 X(exit,      0,  EXIT,       SYSCALL_SIG_EXIT)\
 X(open,      1,  OPEN,       SYSCALL_SIG_OPEN)\
@@ -187,6 +191,7 @@ X(mkdir,     24, MKDIR,      SYSCALL_SIG_MKDIR)\
 X(link,      25, LINK,       SYSCALL_SIG_LINK)\
 X(symlink,   26, SYMLINK,    SYSCALL_SIG_SYMLINK)\
 X(unlink,    27, UNLINK,     SYSCALL_SIG_UNLINK)\
+X(chroot,    28, CHROOT,     SYSCALL_SIG_CHROOT)\
 
 #define DECLARE_SYSCALL_ID_CONSTANTS(__name, __id, __NAME, ...)\
 const static syscall_id_t SYSCALL_ID_ ## __NAME = __id;

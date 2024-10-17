@@ -324,9 +324,13 @@ launch_init_process(void)
         return res;
     }
     ramfile_put(backing_file);
-    dprintk("process=%p, &process->root=%p\n",
-            process, &process->root);
-    process->root = root;
+
+    res = process_set_root(process, root);
+    if(res) {
+        eprintk("Failed to set init process root directory! (err=%s)\n",
+                errnostr(res));
+        return res;
+    }
 
     res = mmap_create(PROCESS_LOWMEM_SIZE, process);
     if(process->mmap == NULL) {
@@ -511,6 +515,35 @@ process_set_scheduler(
     }
 
     spin_unlock_irq_restore(&process->status_lock, irq_flags);
+    return 0;
+}
+
+int
+process_set_root(
+        struct process *process,
+        struct fs_path *path)
+{
+    int res;
+
+    res = fs_path_get(path);
+    if(res) {
+        eprintk("process_set_root(%ld): fs_path_get failed: (err=%s)\n",
+                process->id, errnostr(res));
+        return res;
+    }
+
+    if(process->root != NULL) {
+        res = fs_path_put(process->root);
+        if(res) {
+            eprintk("process_set_root(pid=%ld): fs_path_put failed: (err=%s)\n",
+                    process->id, errnostr(res));
+            fs_path_put(path);
+            return res;
+        }
+    }
+
+    process->root = path;
+
     return 0;
 }
 
@@ -781,8 +814,14 @@ process_spawn_child(
     DEBUG_ASSERT(process->status == PROCESS_STATUS_SUSPEND);
 
     DEBUG_ASSERT(KERNEL_ADDR(parent->root));
-    process->root = parent->root;
-    fs_path_get(process->root);
+
+    res = process_set_root(process, parent->root);
+    if(res) {
+        eprintk("process_spawn_child: failed to set root directory! (err=%s)\n",
+                errnostr(res));
+        kfree(state);
+        return NULL;
+    }
 
     if(spawn_flags & SPAWN_MMAP_CLONE) {
         panic("SPAWN_MMAP_CLONE is unimplemented!\n");

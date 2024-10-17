@@ -269,8 +269,8 @@ fs_path_lookup_for_process(
 {
     int res;
 
-    dprintk("fs_path_lookup_for_process(pid=%ld, %s)\n",
-            (sl_t)process->id, path_str);
+    printk("fs_path_lookup_for_process(pid=%ld, %s, root=%p)\n",
+            (sl_t)process->id, path_str, process->root);
 
     char *dup = kstrdup(path_str);
     if(dup == NULL) {
@@ -285,8 +285,12 @@ fs_path_lookup_for_process(
     }
 
     struct fs_path *cur = process->root;
+    DEBUG_ASSERT(KERNEL_ADDR(cur));
+
     res = fs_path_get(cur);
     if(res) {
+        eprintk("fs_path_lookup_for_process: fs_path_get failed for root directory! (err=%s)\n",
+                errnostr(res));
         goto exit;
     }
 

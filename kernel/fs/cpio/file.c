@@ -45,7 +45,8 @@ static int
 cpio_node_read_page(
         struct fs_node *node,
         void *buf,
-        uintptr_t pfn)
+        uintptr_t pfn,
+        unsigned long flags)
 {
     int res;
 
@@ -86,7 +87,8 @@ static int
 cpio_node_write_page(
         struct fs_node *node,
         void *buf,
-        uintptr_t pfn)
+        uintptr_t pfn,
+        unsigned long flags)
 {
     int res;
 

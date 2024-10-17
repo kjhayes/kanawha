@@ -20,5 +20,6 @@ obj-y += \
 	mkdir.o \
 	link.o \
 	symlink.o \
-	unlink.o
+	unlink.o \
+	chroot.o
 

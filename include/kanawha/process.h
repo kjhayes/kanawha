@@ -90,6 +90,11 @@ process_set_scheduler(
         struct scheduler *sched);
 
 int
+process_set_root(
+        struct process *process,
+        struct fs_path *root);
+
+int
 process_write_usermem(
         struct process *process,
         void __user *dst,
