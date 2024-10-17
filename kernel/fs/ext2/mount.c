@@ -304,6 +304,8 @@ ext2_mount_file(
     mnt->num_inodes = superblock.total_inodes;
     mnt->resv_inodes = superblock.extended.first_non_resv_inode;
 
+    mnt->first_data_block = superblock.superblock_index;
+
     mnt->num_groups = num_groups_from_blocks;
     mnt->group_cache = kmalloc(sizeof(struct ext2_group*) * mnt->num_groups);
     if(mnt->group_cache == NULL) {
@@ -411,6 +413,60 @@ ext2_mount_free_inode(
     }
 
     ext2_group_inode_bitmap_free_specific(group, (inode-1) % mnt->inodes_per_group);
+
+    ext2_put_group(mnt, group);
+
+    return 0;
+}
+
+int
+ext2_mount_alloc_block(
+        struct ext2_mount *mnt,
+        size_t pref_group,
+        size_t *block_out)
+{
+    int res;
+
+    struct ext2_group *group;
+    group = ext2_get_group(mnt, pref_group);
+    if(group != NULL) {
+        res = ext2_group_alloc_block(group, block_out);  
+        ext2_put_group(mnt, group);
+        if(!res) {
+            return 0;
+        }
+    }
+
+    for(size_t group_id = 0; group_id < mnt->num_groups; group_id++) {
+        if(group_id == pref_group) {
+            continue;
+        }
+        group = ext2_get_group(mnt, group_id);
+        res = ext2_group_alloc_block(group, block_out);  
+        ext2_put_group(mnt, group);
+        if(!res) {
+            return 0;
+        }
+    }
+    return -ENOMEM;
+}
+
+int
+ext2_mount_free_block(
+        struct ext2_mount *mnt,
+        size_t block)
+{
+    int res;
+
+    size_t grp_index = block / mnt->blks_per_group;
+
+    struct ext2_group *group;
+    group = ext2_get_group(mnt, grp_index);
+    if(group == NULL) {
+        return -ENXIO;
+    }
+
+    ext2_group_blk_bitmap_free_specific(group, block % mnt->blks_per_group);
 
     ext2_put_group(mnt, group);
 

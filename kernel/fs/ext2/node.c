@@ -46,6 +46,25 @@ ext2_node_pfn_to_block(
     return -EINVAL;
 }
 
+static int
+ext2_node_set_pfn_block(
+        struct ext2_fs_node *node,
+        uintptr_t pfn,
+        size_t block_no)
+{
+    int res;
+
+    if(pfn < EXT2_INODE_DIRECT_BLOCKS) {
+        node->inode.block[pfn] = block_no;
+        node->inode_dirty = 1;
+        return 0;
+    }
+
+    // TODO Singly, Doubly and Triply Indirect Blocks
+
+    return -EINVAL;
+}
+
 size_t
 ext2_fs_node_to_group_num(
         struct ext2_fs_node *node)
@@ -100,30 +119,53 @@ ext2_fs_node_write_page(
 {
     int res;
 
+    printk("ext2_fs_node_write_page pfn=%p\n", pfn);
+
     struct ext2_fs_node *node =
         container_of(fs_node, struct ext2_fs_node, fs_node);
 
     size_t block_no;
     res = ext2_node_pfn_to_block(node, pfn, &block_no);
     if(res) {
+        eprintk("ext2_fs_node_write_page: Failed to get block_no of pfn=%p! (err=%s)\n",
+                pfn, errnostr(res));
         return res;
     }
 
     if(block_no == 0 && (flags & FS_NODE_WRITE_PAGE_MAY_CREATE)) {
-        // TODO: Need to allocate the page from disk
-        return -ENOMEM;
-    } else {
-        res = fs_node_paged_write(
-                node->mount->backing_node,
-                EXT2_BLOCK_OFFSET(block_no, node->mount->block_size),
-                page,
-                node->mount->block_size,
-                0);
+        res = ext2_mount_alloc_block(
+                node->mount,
+                ext2_fs_node_to_group_num(node),
+                &block_no);
         if(res) {
+            eprintk("ext2_fs_node_write_page: failed to allocate block (err=%s)\n",
+                    errnostr(res));
             return res;
         }
-        return 0;
+        res = ext2_node_set_pfn_block(node, pfn, block_no);
+        if(res) {
+            eprintk("ext2_fs_node_write_page: failed to set block in inode (err=%s)\n",
+                    errnostr(res));
+            return res;
+        }
+
+        printk("Allocated new block(0x%llx) for ext2_fs_node(%p)\n",
+                (ull_t)block_no,
+                node);
     }
+
+    res = fs_node_paged_write(
+            node->mount->backing_node,
+            EXT2_BLOCK_OFFSET(block_no, node->mount->block_size),
+            page,
+            node->mount->block_size,
+            0);
+    if(res) {
+        eprintk("ext2_fs_node_write_page: failed to write to backing fs_node (err=%s)\n",
+            errnostr(res));
+        return res;
+    }
+    return 0;
 }
 
 int
@@ -157,6 +199,14 @@ ext2_fs_node_setattr(
 {
     struct ext2_fs_node *node =
         container_of(fs_node, struct ext2_fs_node, fs_node);
+
+    switch(attr) {
+        case FS_NODE_ATTR_DATA_SIZE:
+            node->inode.size = value & 0xFFFFFFFF;
+            node->inode.dir_acl = (uint64_t)value >> 32;
+            node->inode_dirty = 1;
+            return 0;
+    }
 
     return -EINVAL;
 }

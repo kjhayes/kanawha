@@ -326,7 +326,53 @@ ext2_dir_mkfile(
 
     printk("Allocated inode: 0x%lx\n", inode);
 
-    return -EUNIMPL;
+    struct ext2_inode inode_data;
+    res = ext2_mount_read_inode(
+            node->mount,
+            inode,
+            &inode_data);
+    if(res) {
+        eprintk("EXT2: Failed to read allocated inode! (err=%s)\n",
+                errnostr(res));
+        return res;
+    }
+
+    memset(&inode_data, 0, sizeof(struct ext2_inode));
+    inode_data.links_count = 1;
+    inode_data.mode =
+        0x8000 // directory
+        | (0666); // R/W for everyone
+    inode_data.links_count = 1;
+
+    res = ext2_mount_write_inode(
+            node->mount,
+            inode,
+            &inode_data);
+    if(res) {
+        eprintk("EXT2: Failed to write allocated inode! (err=%s)\n",
+                errnostr(res));
+        return res;
+    }
+
+    spin_lock(&node->lock);
+
+    res = ext2_dir_add_linked_entry(
+            node,
+            fs_node,
+            inode,
+            EXT2_DIR_FT_REG_FILE,
+            filename);
+    if(res) {
+        spin_unlock(&node->lock);
+        ext2_mount_free_inode(
+                node->mount,
+                inode);
+        return res;
+    }
+
+    spin_unlock(&node->lock);
+
+    return 0;
 }
 
 static int

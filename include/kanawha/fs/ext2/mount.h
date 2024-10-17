@@ -18,6 +18,8 @@ struct ext2_mount {
     size_t blks_per_group;
     size_t inodes_per_group;
 
+    size_t first_data_block;
+
     order_t block_order;
     size_t block_size;
     size_t frag_size;
@@ -33,6 +35,16 @@ int
 ext2_mount_free_inode(
         struct ext2_mount *mnt,
         size_t inode);
+
+int
+ext2_mount_alloc_block(
+        struct ext2_mount *mnt,
+        size_t pref_group,
+        size_t *block_out);
+int
+ext2_mount_free_block(
+        struct ext2_mount *mnt,
+        size_t block);
 
 int
 ext2_mount_read_inode(
