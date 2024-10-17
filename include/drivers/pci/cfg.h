@@ -216,91 +216,91 @@ pci_bus_write32(
 // PCI Device Config Access
 
 static inline int
-pci_device_read8(
-        struct pci_device *dev,
+pci_func_read8(
+        struct pci_func *func,
         uint16_t offset,
         uint8_t *out)
 {
     return pci_domain_read8(
-            dev->domain,
-            dev->bus->bus_index,
-            dev->dev_index,
-            dev->func_index,
+            func->domain,
+            func->device->bus->bus_index,
+            func->device->index,
+            func->index,
             offset,
             out);
 }
 
 static inline int
-pci_device_read16(
-        struct pci_device *dev,
+pci_func_read16(
+        struct pci_func *func,
         uint16_t offset,
         uint16_t *out)
 {
     return pci_domain_read16(
-            dev->domain,
-            dev->bus->bus_index,
-            dev->dev_index,
-            dev->func_index,
+            func->domain,
+            func->device->bus->bus_index,
+            func->device->index,
+            func->index,
             offset,
             out);
 }
 
 static inline int
-pci_device_read32(
-        struct pci_device *dev,
+pci_func_read32(
+        struct pci_func *func,
         uint16_t offset,
         uint32_t *out)
 {
     return pci_domain_read32(
-            dev->domain,
-            dev->bus->bus_index,
-            dev->dev_index,
-            dev->func_index,
+            func->domain,
+            func->device->bus->bus_index,
+            func->device->index,
+            func->index,
             offset,
             out);
 }
 
 static inline int
-pci_device_write8(
-        struct pci_device *dev,
+pci_func_write8(
+        struct pci_func *func,
         uint16_t offset,
         uint8_t in)
 {
     return pci_domain_write8(
-            dev->domain,
-            dev->bus->bus_index,
-            dev->dev_index,
-            dev->func_index,
+            func->domain,
+            func->device->bus->bus_index,
+            func->device->index,
+            func->index,
             offset,
             in);
 }
 
 static inline int
-pci_device_write16(
-        struct pci_device *dev,
+pci_func_write16(
+        struct pci_func *func,
         uint16_t offset,
         uint16_t in)
 {
     return pci_domain_write16(
-            dev->domain,
-            dev->bus->bus_index,
-            dev->dev_index,
-            dev->func_index,
+            func->domain,
+            func->device->bus->bus_index,
+            func->device->index,
+            func->index,
             offset,
             in);
 }
 
 static inline int
-pci_device_write32(
-        struct pci_device *dev,
+pci_func_write32(
+        struct pci_func *func,
         uint16_t offset,
         uint32_t in)
 {
     return pci_domain_write32(
-            dev->domain,
-            dev->bus->bus_index,
-            dev->dev_index,
-            dev->func_index,
+            func->domain,
+            func->device->bus->bus_index,
+            func->device->index,
+            func->index,
             offset,
             in);
 }

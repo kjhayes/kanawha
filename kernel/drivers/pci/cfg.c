@@ -5,72 +5,19 @@
 #include <kanawha/spinlock.h>
 #include <kanawha/kmalloc.h>
 #include <kanawha/stddef.h>
+#include <kanawha/list.h>
 
 static DECLARE_SPINLOCK(pci_domain_list_lock);
 static DECLARE_ILIST(pci_domain_list);
 static size_t __next_domain_id = 0;
 
 static int
-pci_domain_read_name(
-        struct device *dev,
-        char *buf,
-        size_t size)
-{
-    struct pci_domain *domain =
-        container_of(dev, struct pci_domain, dev);
-
-    snprintk(buf, size, "pci-dom-%lu", (unsigned long)domain->domain_id);
-    return 0;
-}
-
-static int
-pci_bus_read_name(
-        struct device *dev,
-        char *buf,
-        size_t size)
-{
-    struct pci_bus *bus =
-        container_of(dev, struct pci_bus, dev);
-
-    snprintk(buf, size, "pci-bus-%u", (unsigned)bus->bus_index);
-    return 0;
-}
-
-static int
-pci_device_read_name(
-        struct device *dev,
-        char *buf,
-        size_t size)
-{
-    struct pci_device *pdev=
-        container_of(dev, struct pci_device, dev);
-
-    snprintk(buf, size, "pci-%u.%u-%x:%x",
-            pdev->dev_index, pdev->func_index,
-            pdev->vendor_id, pdev->device_id);
-    return 0;
-}
-
-static struct device_ops
-pci_domain_dev_ops = {
-    .read_name = pci_domain_read_name,
-};
-
-static struct device_ops
-pci_bus_dev_ops = {
-    .read_name = pci_bus_read_name,
-};
-
-static struct device_ops
-pci_device_ops = {
-    .read_name = pci_device_read_name,
-};
-
-static int
 pci_domain_register_bus(
         struct pci_domain *domain,
         uint8_t bus_index)
 {
+    int res;
+
     printk("Enumerating PCI Domain %lu Bus %u\n",
             domain->domain_id, bus_index);
 
@@ -80,60 +27,66 @@ pci_domain_register_bus(
     }
     bus->bus_index = bus_index;
     bus->domain = domain;
-
-    int res = register_device(
-            &bus->dev,
-            &pci_bus_dev_ops,
-            &domain->dev);
-
-    if(res) {
-        kfree(bus);
-        return res;
-    }
+    ilist_init(&bus->device_list);
+    
+    ilist_push_tail(&domain->bus_list, &bus->domain_node);
 
     res = 0;
     for(size_t dev_index = 0; dev_index < PCI_MAX_DEVICES_PER_BUS; dev_index++) {
-        uint8_t func = 0;
+        uint8_t func_index = 0;
 
         uint16_t vendor_id;
 
+        struct pci_device *device = NULL;
+
         do {
-            pci_bus_read16(bus, dev_index, func, PCI_CFG_VENDOR_ID, &vendor_id);
+            pci_bus_read16(bus, dev_index, func_index, PCI_CFG_VENDOR_ID, &vendor_id);
 
             if(vendor_id != 0xFFFF) {
 
-                struct pci_device *dev = kmalloc(sizeof(struct pci_device));
-                if(dev == NULL) {
+                struct pci_func *func = kmalloc(sizeof(struct pci_func));
+                if(func == NULL) {
                     eprintk("Failed to allocate PCI device struct!\n");
                     res = -ENOMEM;
                     break;
                 }
 
-                dev->domain = domain;
-                dev->bus = bus;
-                dev->dev_index = dev_index;
-                dev->func_index = func;
+                func->domain = domain;
+                func->index = func_index;
 
-                pci_bus_read16(bus, dev_index, func, PCI_CFG_VENDOR_ID, &dev->vendor_id);
-                pci_bus_read16(bus, dev_index, func, PCI_CFG_DEVICE_ID, &dev->device_id);
+                if(device == NULL) {
+                    device = kmalloc(sizeof(struct pci_device));
+                    if(device == NULL) {
+                        kfree(func);
+                        res = -ENOMEM;
+                        break;
+                    }
+                    device->domain = domain;
+                    device->bus = bus;
+                    device->index = dev_index;
+                    ilist_init(&device->function_list);
 
-                res = register_device(
-                        &dev->dev,
-                        &pci_device_ops,
-                        &bus->dev);
-                if(res) {
-                    eprintk("Failed to register PCI device!\n");
-                    break;
+                    ilist_push_tail(&bus->device_list, &device->bus_node);
                 }
 
+                ilist_push_tail(&device->function_list, &func->device_node);
+                func->device = device;
+
+                pci_bus_read16(bus, dev_index, func_index, PCI_CFG_VENDOR_ID, &func->vendor_id);
+                pci_bus_read16(bus, dev_index, func_index, PCI_CFG_DEVICE_ID, &func->device_id);
+
                 uint8_t hdr_type;
-                pci_device_read8(dev, PCI_CFG_HEADER_TYPE, &hdr_type);
+                pci_func_read8(func, PCI_CFG_HEADER_TYPE, &hdr_type);
+
+                printk("PCI Function: 0x%x:0x%x -> ID(0x%x:0x%x)\n",
+                        dev_index, func_index, func->vendor_id, func->device_id);
+
 
                 if((hdr_type & 0x7F) == PCI_HEADER_TYPE_PCI_PCI_BRIDGE) {
                     // Cross the PCI bridge
                     uint8_t sec_bus;
                     printk("Found PCI-to-PCI Bridge\n");
-                    pci_device_read8(dev, PCI_CFG_PCI_BRIDGE_SECONDARY_BUS, &sec_bus);
+                    pci_func_read8(func, PCI_CFG_PCI_BRIDGE_SECONDARY_BUS, &sec_bus);
                     res = pci_domain_register_bus(domain, sec_bus);
                     if(res) {
                         eprintk("Failed to enumerate secondary PCI bus %u of domain %lu\n",
@@ -141,17 +94,17 @@ pci_domain_register_bus(
                     }
                 }
 
-                if(func == 0 && (hdr_type & 0x80) != 0x80) {
+                if(func_index == 0 && (hdr_type & 0x80) != 0x80) {
                     // Not a multifunction device
                     break;
                 }
 
                 // This is a multifunction device, check the next function
-                func++;
+                func_index++;
             } else {
                 break;
             }
-        } while(func < PCI_MAX_FUNC_PER_DEVICE);
+        } while(func_index < PCI_MAX_FUNC_PER_DEVICE);
     }
 
     return res;
@@ -176,17 +129,10 @@ register_pci_domain(
     domain->domain_id = __next_domain_id;
     domain->cam = cam;
     __next_domain_id++;
-    ilist_push_tail(&pci_domain_list, &domain->list_node);
+    ilist_push_tail(&pci_domain_list, &domain->global_node);
     spin_unlock(&pci_domain_list_lock);    
 
-
-    res = register_device(
-            &domain->dev,
-            &pci_domain_dev_ops,
-            NULL);
-    if(res) {
-        return res;
-    }
+    ilist_init(&domain->bus_list);
 
     printk("Registered PCI Domain %lu\n", domain->domain_id);
 
