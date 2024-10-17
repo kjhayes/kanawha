@@ -2,6 +2,7 @@
 #include <kanawha/syscall.h>
 #include <kanawha/process.h>
 #include <kanawha/file.h>
+#include <kanawha/fs/node.h>
 
 #define SYSCALL_OPEN_MAX_PATH_LEN 256
 
@@ -70,7 +71,36 @@ syscall_open(
             &kernel_fd,
             sizeof(fd_t));
     if(res) {
+        file_table_close(process->file_table, process, kernel_fd);
         return res;
+    }
+
+    if(mode_flags & FILE_MODE_OPEN_TRUNC) {
+        struct file *file = file_table_get_file(
+                process->file_table,
+                process,
+                kernel_fd);
+        if(file == NULL) {
+            eprintk("PID(%ld) syscall_open: Failed to open file for truncation! (err=%s)\n",
+                    process->id, errnostr(res));
+            file_table_close(process->file_table, process, kernel_fd);
+            return res;
+        }
+
+        res = fs_node_setattr(
+                file->path->fs_node,
+                FS_NODE_ATTR_DATA_SIZE,
+                0);
+        if(res) {
+            eprintk("PID(%ld) syscall_open: Failed to truncate file! (err=%s)\n",
+                    process->id, errnostr(res));
+            file_table_put_file(
+                    process->file_table,
+                    process,
+                    file);
+            file_table_close(process->file_table, process, kernel_fd);
+            return res;
+        }
     }
 
 #ifdef CONFIG_DEBUG_SYSCALL_OPEN
