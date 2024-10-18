@@ -22,7 +22,7 @@ port_pci_address(
 }
 
 static int
-port_pci_read8(
+port_pci_readb(
         struct pci_domain *domain,
         uint8_t bus,
         uint8_t device,
@@ -38,7 +38,7 @@ port_pci_read8(
 }
 
 static int
-port_pci_read16(
+port_pci_readw(
         struct pci_domain *domain,
         uint8_t bus,
         uint8_t device,
@@ -54,7 +54,7 @@ port_pci_read16(
 }
 
 static int
-port_pci_read32(
+port_pci_readl(
         struct pci_domain *domain,
         uint8_t bus,
         uint8_t device,
@@ -70,7 +70,7 @@ port_pci_read32(
 }
 
 static int
-port_pci_write8(
+port_pci_writeb(
         struct pci_domain *domain,
         uint8_t bus,
         uint8_t device,
@@ -86,7 +86,7 @@ port_pci_write8(
 }
 
 static int
-port_pci_write16(
+port_pci_writew(
         struct pci_domain *domain,
         uint8_t bus,
         uint8_t device,
@@ -102,7 +102,7 @@ port_pci_write16(
 }
 
 static int
-port_pci_write32(
+port_pci_writel(
         struct pci_domain *domain,
         uint8_t bus,
         uint8_t device,
@@ -119,12 +119,12 @@ port_pci_write32(
 
 static struct pci_cam
 port_pci_cam = {
-    .read8   = port_pci_read8,
-    .read16  = port_pci_read16,
-    .read32  = port_pci_read32,
-    .write8  = port_pci_write8,
-    .write16 = port_pci_write16,
-    .write32 = port_pci_write32,
+    .readb   = port_pci_readb,
+    .readw  = port_pci_readw,
+    .readl  = port_pci_readl,
+    .writeb  = port_pci_writeb,
+    .writew = port_pci_writew,
+    .writel = port_pci_writel,
 };
 
 static struct pci_domain

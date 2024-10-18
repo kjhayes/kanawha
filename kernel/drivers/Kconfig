@@ -11,25 +11,7 @@ menu "Serial Devices"
 source "kernel/drivers/serial/Kconfig"
 endmenu
 
-config PCI
-    tristate "PCI Support"
-    default y
-    help
-      Base PCI Bus Support
-
-menu "PCI Devices"
-depends on PCI
 source "kernel/drivers/pci/Kconfig"
-endmenu
-
-config PS2
-    tristate "PS/2 Support"
-    default y
-    help
-      PS/2 Device Support
-
-menu "PS/2 Devices"
-depends on PS2
 source "kernel/drivers/ps2/Kconfig"
-endmenu
+source "kernel/drivers/qemu/Kconfig"
 

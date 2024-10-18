@@ -24,6 +24,8 @@
 #define PCI_CFG_PCI_BRIDGE_PRIMARY_BUS   0x18
 #define PCI_CFG_PCI_BRIDGE_SECONDARY_BUS 0x19
 
+#define PCI_CFG_BAR_BASE 0x10
+
 
 /*
  * "CAM" here refers to any configuration access
@@ -80,12 +82,12 @@ ARG(uint16_t, offset)\
 ARG(uint32_t, in)
 
 #define PCI_CAM_OP_LIST(OP, ...)\
-OP(read8, PCI_CAM_READ8_SIG, ##__VA_ARGS__)\
-OP(read16, PCI_CAM_READ16_SIG, ##__VA_ARGS__)\
-OP(read32, PCI_CAM_READ32_SIG, ##__VA_ARGS__)\
-OP(write8, PCI_CAM_WRITE8_SIG, ##__VA_ARGS__)\
-OP(write16, PCI_CAM_WRITE16_SIG, ##__VA_ARGS__)\
-OP(write32, PCI_CAM_WRITE32_SIG, ##__VA_ARGS__)
+OP(readb, PCI_CAM_READ8_SIG, ##__VA_ARGS__)\
+OP(readw, PCI_CAM_READ16_SIG, ##__VA_ARGS__)\
+OP(readl, PCI_CAM_READ32_SIG, ##__VA_ARGS__)\
+OP(writeb, PCI_CAM_WRITE8_SIG, ##__VA_ARGS__)\
+OP(writew, PCI_CAM_WRITE16_SIG, ##__VA_ARGS__)\
+OP(writel, PCI_CAM_WRITE32_SIG, ##__VA_ARGS__)
 
 struct pci_domain;
 
@@ -112,14 +114,14 @@ DEFINE_OP_LIST_WRAPPERS(
 // PCI Bus Config Access
 
 static inline int
-pci_bus_read8(
+pci_bus_readb(
         struct pci_bus *bus,
         uint8_t device,
         uint8_t func,
         uint16_t offset,
         uint8_t *out)
 {
-    return pci_domain_read8(
+    return pci_domain_readb(
             bus->domain,
             bus->bus_index,
             device,
@@ -129,14 +131,14 @@ pci_bus_read8(
 }
 
 static inline int
-pci_bus_read16(
+pci_bus_readw(
         struct pci_bus *bus,
         uint8_t device,
         uint8_t func,
         uint16_t offset,
         uint16_t *out)
 {
-    return pci_domain_read16(
+    return pci_domain_readw(
             bus->domain,
             bus->bus_index,
             device,
@@ -146,14 +148,14 @@ pci_bus_read16(
 }
 
 static inline int
-pci_bus_read32(
+pci_bus_readl(
         struct pci_bus *bus,
         uint8_t device,
         uint8_t func,
         uint16_t offset,
         uint32_t *out)
 {
-    return pci_domain_read32(
+    return pci_domain_readl(
             bus->domain,
             bus->bus_index,
             device,
@@ -163,14 +165,14 @@ pci_bus_read32(
 }
 
 static inline int
-pci_bus_write8(
+pci_bus_writeb(
         struct pci_bus *bus,
         uint8_t device,
         uint8_t func,
         uint16_t offset,
         uint8_t in)
 {
-    return pci_domain_write8(
+    return pci_domain_writeb(
             bus->domain,
             bus->bus_index,
             device,
@@ -180,14 +182,14 @@ pci_bus_write8(
 }
 
 static inline int
-pci_bus_write16(
+pci_bus_writew(
         struct pci_bus *bus,
         uint8_t device,
         uint8_t func,
         uint16_t offset,
         uint16_t in)
 {
-    return pci_domain_write16(
+    return pci_domain_writew(
             bus->domain,
             bus->bus_index,
             device,
@@ -197,14 +199,14 @@ pci_bus_write16(
 }
 
 static inline int
-pci_bus_write32(
+pci_bus_writel(
         struct pci_bus *bus,
         uint8_t device,
         uint8_t func,
         uint16_t offset,
         uint32_t in)
 {
-    return pci_domain_write32(
+    return pci_domain_writel(
             bus->domain,
             bus->bus_index,
             device,
@@ -216,12 +218,12 @@ pci_bus_write32(
 // PCI Device Config Access
 
 static inline int
-pci_func_read8(
+pci_func_readb(
         struct pci_func *func,
         uint16_t offset,
         uint8_t *out)
 {
-    return pci_domain_read8(
+    return pci_domain_readb(
             func->domain,
             func->device->bus->bus_index,
             func->device->index,
@@ -231,12 +233,12 @@ pci_func_read8(
 }
 
 static inline int
-pci_func_read16(
+pci_func_readw(
         struct pci_func *func,
         uint16_t offset,
         uint16_t *out)
 {
-    return pci_domain_read16(
+    return pci_domain_readw(
             func->domain,
             func->device->bus->bus_index,
             func->device->index,
@@ -246,12 +248,12 @@ pci_func_read16(
 }
 
 static inline int
-pci_func_read32(
+pci_func_readl(
         struct pci_func *func,
         uint16_t offset,
         uint32_t *out)
 {
-    return pci_domain_read32(
+    return pci_domain_readl(
             func->domain,
             func->device->bus->bus_index,
             func->device->index,
@@ -261,12 +263,12 @@ pci_func_read32(
 }
 
 static inline int
-pci_func_write8(
+pci_func_writeb(
         struct pci_func *func,
         uint16_t offset,
         uint8_t in)
 {
-    return pci_domain_write8(
+    return pci_domain_writeb(
             func->domain,
             func->device->bus->bus_index,
             func->device->index,
@@ -276,12 +278,12 @@ pci_func_write8(
 }
 
 static inline int
-pci_func_write16(
+pci_func_writew(
         struct pci_func *func,
         uint16_t offset,
         uint16_t in)
 {
-    return pci_domain_write16(
+    return pci_domain_writew(
             func->domain,
             func->device->bus->bus_index,
             func->device->index,
@@ -291,12 +293,12 @@ pci_func_write16(
 }
 
 static inline int
-pci_func_write32(
+pci_func_writel(
         struct pci_func *func,
         uint16_t offset,
         uint32_t in)
 {
-    return pci_domain_write32(
+    return pci_domain_writel(
             func->domain,
             func->device->bus->bus_index,
             func->device->index,
@@ -305,5 +307,38 @@ pci_func_write32(
             in);
 }
 
+static inline uint32_t
+pci_func_raw_read_bar(
+        struct pci_func *func,
+        int bar_index)
+{
+    int res;
+    uint32_t out = 0;
+    res = pci_func_readl(
+            func,
+            PCI_CFG_BAR_BASE+(bar_index*4),
+            &out);
+    if(res) {
+        eprintk("Failed to read PCI BAR!\n");
+        return 0;
+    }
+    return out;
+}
+
+static inline void
+pci_func_raw_write_bar(
+        struct pci_func *func,
+        int bar_index,
+        uint32_t value)
+{
+    int res;
+    res = pci_func_writel(
+            func,
+            PCI_CFG_BAR_BASE+(bar_index*4),
+            value);
+    if(res) {
+        eprintk("Failed to write PCI BAR!\n");
+    }
+}
 
 #endif

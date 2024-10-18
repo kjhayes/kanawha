@@ -1,4 +1,13 @@
 
+config PS2
+    tristate "PS/2 Support"
+    default y
+    help
+      PS/2 Device Support
+
+menu "PS/2 Devices"
+depends on PS2
+
 config PS2_8042
     tristate "8042 PS/2 Controller"
     depends on PORT_IO && PS2
@@ -8,4 +17,6 @@ config PS2_KBD
     tristate "PS/2 Keyboard Driver"
     depends on PS2
     default y
+
+endmenu
 

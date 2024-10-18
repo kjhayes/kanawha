@@ -1,8 +1,19 @@
 
+config PCI
+    tristate "PCI Support"
+    default y
+    help
+      Base PCI Bus Support
+
+menu "PCI Devices"
+depends on PCI
+
 config PCI_PORT_CAM
     bool "Port Configuration Access"
     depends on PORT_IO && PCI
     default y
     help
       Assume a PCI domain exists which can be accessed using the ports 0xCF8 and 0xCFC
+
+endmenu
 

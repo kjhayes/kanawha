@@ -1,0 +1,12 @@
+
+menu "Qemu Specific Devices"
+
+config QEMU_PCI_TEST_DEVICE
+    tristate "PCI Test Device"
+    default n
+    depends on PCI
+    help
+      Include a driver for the QEMU PCI test device
+
+endmenu
+
