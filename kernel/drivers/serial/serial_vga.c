@@ -129,6 +129,11 @@ vga_serial_putchar(
             spaces--;
         }
         return 0;
+    } else if(c == '\b') {
+        if(serial->cursor_x > 0) {
+            serial->cursor_x--;
+        }
+        return 0;
     }
 
     if(serial->cursor_x >= serial->width) {
