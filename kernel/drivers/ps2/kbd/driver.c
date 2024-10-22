@@ -72,7 +72,7 @@ ps2_kbd_attach(
 {
     int res;
 
-    printk("ps2_kbd_attach\n");
+    dprintk("ps2_kbd_attach\n");
     
     DEBUG_ASSERT(KERNEL_ADDR(port));
     DEBUG_ASSERT(KERNEL_ADDR(port->ops));
@@ -103,6 +103,7 @@ ps2_kbd_attach(
 
     res = ptree_insert_any(&ps2_kbd_tree, &kbd->tree_node);
     if(res) {
+        kbd_deinit_struct(&kbd->kbd);
         kfree(kbd);
         spin_unlock(&ps2_kbd_tree_lock);
         return res;
@@ -115,6 +116,7 @@ ps2_kbd_attach(
     res = register_kbd(&kbd->kbd, kbd->name_buf);
     if(res) {
         ptree_remove(&ps2_kbd_tree, kbd->tree_node.key);
+        kbd_deinit_struct(&kbd->kbd);
         kfree(kbd);
         spin_unlock(&ps2_kbd_tree_lock);
         return res;
@@ -123,6 +125,7 @@ ps2_kbd_attach(
     res = ps2_port_enable_scanning(port);
     if(res) {
         ptree_remove(&ps2_kbd_tree, kbd->tree_node.key);
+        unregister_kbd(&kbd->kbd);
         kfree(kbd);
         spin_unlock(&ps2_kbd_tree_lock);
         return res;

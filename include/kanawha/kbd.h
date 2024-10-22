@@ -3,6 +3,7 @@
 
 #include <kanawha/bitmap.h>
 #include <kanawha/stree.h>
+#include <kanawha/waitqueue.h>
 #include <kanawha/fs/flat.h>
 
 #include <kanawha/uapi/kbd.h>
@@ -17,6 +18,8 @@ struct kbd
     size_t buf_head;
     size_t buf_tail;
     struct kbd_event buffer[KBD_EVENT_BUFLEN];
+
+    struct waitqueue *read_queue;
 };
 
 // Initialize the internal buffer of the kbd,
@@ -24,6 +27,10 @@ struct kbd
 // can safely be fully registered
 int
 kbd_init_struct(
+        struct kbd *kbd);
+
+int
+kbd_deinit_struct(
         struct kbd *kbd);
 
 // Keeps a reference to "name"

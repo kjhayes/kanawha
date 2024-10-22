@@ -5,6 +5,7 @@
 #include <kanawha/stree.h>
 #include <kanawha/stddef.h>
 #include <kanawha/init.h>
+#include <kanawha/kmalloc.h>
 #include <kanawha/fs/flat.h>
 #include <kanawha/fs/node.h>
 #include <kanawha/fs/file.h>
@@ -21,6 +22,8 @@ int
 kbd_init_struct(
         struct kbd *kbd)
 {
+    int res;
+
     for(size_t bit = 0; bit < KBD_NUM_KEYS; bit++) {
         bitmap_clear(kbd->pressed_bitmap, bit);
     }
@@ -28,6 +31,32 @@ kbd_init_struct(
     kbd->buf_head = 0;
     kbd->buf_tail = 0;
 
+    if(kbd->read_queue == NULL) {
+        kbd->read_queue = kmalloc(sizeof(struct waitqueue));
+        if(kbd->read_queue == NULL) {
+            return -ENOMEM;
+        }
+        res = waitqueue_init(kbd->read_queue);
+        if(res) {
+            kfree(kbd->read_queue);
+            kbd->read_queue = NULL;
+            return res;
+        }
+    }
+
+    return 0;
+}
+
+int
+kbd_deinit_struct(
+        struct kbd *kbd)
+{
+    if(kbd->read_queue != NULL) {
+        waitqueue_disable(kbd->read_queue);
+        wake_all(kbd->read_queue);
+        waitqueue_deinit(kbd->read_queue);
+        kfree(kbd->read_queue);
+    }
     return 0;
 }
 
@@ -58,6 +87,7 @@ register_kbd(
 
     kbd->flat_fs_node.fs_node.file_ops = &kbd_fs_file_ops;
     kbd->flat_fs_node.fs_node.node_ops = &kbd_fs_node_ops;
+    kbd->flat_fs_node.fs_node.unload = NULL;
 
 
     // Assign the node a fs_node index
@@ -96,13 +126,19 @@ kbd_enqueue_event(
         struct kbd_event lost;
         kbd_dequeue_event(kbd, &lost);
 
-        printk("Lost Key Event: (%s, %s)\n",
+        dprintk("Lost Key Event: (%s, %s)\n",
                 kbd_key_to_string(lost.key),
                 kbd_motion_to_string(lost.motion));
     }
 
     kbd->buffer[kbd->buf_head] = *event;
     kbd->buf_head = ((kbd->buf_head+1)%KBD_EVENT_BUFLEN);
+
+    if(kbd->read_queue) {
+        dprintk("kbd_enqueue: (WAKING ALL)\n");
+        wake_all(kbd->read_queue);
+    }
+
     return 0;
 }
 
@@ -182,7 +218,7 @@ kbd_init_fs_mount(void)
                 &kbd->flat_fs_node,
                 node->key);
         if(res) {
-            spin_lock(&kbd_tree_lock);
+            spin_unlock(&kbd_tree_lock);
             return res;
         }
     }
@@ -198,7 +234,13 @@ kbd_init_fs_mount(void)
 declare_init_desc(fs, kbd_init_fs_mount, "Registering kbd Sysfs Mount");
 
 static struct fs_node_ops
-kbd_fs_node_ops = {
+kbd_fs_node_ops =
+{
+    .read_page = fs_node_cannot_read_page,
+    .write_page = fs_node_cannot_read_page,
+    .flush = fs_node_cannot_flush,
+    .getattr = fs_node_cannot_getattr,
+    .setattr = fs_node_cannot_setattr,
     .lookup = fs_node_cannot_lookup,
     .mkfile = fs_node_cannot_mkfile,
     .mkdir = fs_node_cannot_mkdir,
@@ -206,7 +248,6 @@ kbd_fs_node_ops = {
     .symlink = fs_node_cannot_symlink,
     .unlink = fs_node_cannot_unlink,
 };
-
 
 static ssize_t 
 kbd_fs_file_read(
@@ -230,7 +271,15 @@ kbd_fs_file_read(
     {
         res = kbd_dequeue_event(
             kbd, &event);
-        if(res) {
+        if(res == -ENXIO 
+        && num_events_written <= 0
+        && kbd->read_queue)
+        {
+            dprintk("kbd_read: (SLEEPING)\n");
+            wait_on(kbd->read_queue);
+            continue;
+        }
+        else if(res) {
             break;
         }
 
