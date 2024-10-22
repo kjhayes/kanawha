@@ -647,6 +647,10 @@ dump_thread_flags(struct thread_state *thread, unsigned long flags, printk_f *pr
         struct process *process =
             container_of(thread, struct process, thread);
         (*printer)("[PROCESS(%ld)]", (sl_t)process->id);
+#ifdef CONFIG_DEBUG_TRACK_PROCESS_EXEC
+        (*printer)("[EXEC(%s)]",
+                process->tracked_exec != NULL ? process->tracked_exec : "UNKNOWN");
+#endif
     }
 }
 

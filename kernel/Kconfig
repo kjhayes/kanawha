@@ -114,6 +114,13 @@ config DEBUG_SPINLOCK_TRACK_THREADS
       Have each spinlock track which thread is currently holding the lock
       so trivial cases of deadlocks can be detected.
 
+config DEBUG_TRACK_PROCESS_EXEC
+    bool "Track Process Exec Path"
+    depends on DEBUGGING
+    default y
+    help
+      Track the path string as a process uses the "exec" system call
+
 menu "syscall Logging"
 source "kernel/syscall/Kconfig"
 endmenu

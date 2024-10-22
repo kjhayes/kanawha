@@ -4,6 +4,8 @@
 #include <kanawha/process.h>
 #include <kanawha/stdint.h>
 #include <kanawha/stddef.h>
+#include <kanawha/kmalloc.h>
+#include <kanawha/string.h>
 #include <kanawha/assert.h>
 #include <kanawha/uapi/mmap.h>
 #include <kanawha/syscall/mmap.h>
@@ -103,6 +105,11 @@ exec_elf64_load_segment(
     }
 
     if(filesz > 0) {
+        dprintk("PID(%ld) syscall_exec: Mapping File Segment [%p-%p) size=0x%lx\n",
+                process->id,
+                phdr->p_vaddr,
+                phdr->p_vaddr + bsssz,
+                bsssz);
         res = mmap_map_region_exact(
                 process,
                 file,
@@ -117,9 +124,14 @@ exec_elf64_load_segment(
     } 
 
     if(bsssz > 0) {
+        dprintk("PID(%ld) syscall_exec: Mapping .bss Segment [%p-%p) size=0x%lx\n",
+                process->id,
+                phdr->p_vaddr,
+                phdr->p_vaddr + bsssz,
+                bsssz);
         res = mmap_map_region_exact(
                 process,
-                NULL_FD,
+                0,
                 0,
                 phdr->p_vaddr + filesz,
                 bsssz,
@@ -226,6 +238,9 @@ syscall_exec(
 {
     int res;
 
+    dprintk("PID(%ld) exec(%ld)\n",
+            process->id, file);
+
     struct file *desc =
         file_table_get_file(process->file_table, process, file);
 
@@ -270,6 +285,15 @@ syscall_exec(
         eprintk("syscall_exec: Failed to flush mmap region!\n");
         return res;
     }
+
+#ifdef CONFIG_DEBUG_TRACK_PROCESS_EXEC
+    if(process->tracked_exec) {
+        kfree((void*)process->tracked_exec);
+    }
+    if(desc->path->name) {
+        process->tracked_exec = kstrdup(desc->path->name);
+    }
+#endif
 
     return 0;
 }

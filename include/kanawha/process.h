@@ -60,6 +60,10 @@ struct process
 
     // Root Directory
     struct fs_path *root;
+
+#ifdef CONFIG_DEBUG_TRACK_PROCESS_EXEC
+    const char *tracked_exec;
+#endif
 };
 
 struct process *

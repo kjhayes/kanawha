@@ -268,8 +268,15 @@ err0:
 static int
 process_free(struct process *process)
 {
+#ifdef CONFIG_DEBUG_TRACK_PROCESS_EXEC
+    if(process->tracked_exec) {
+        kfree((void*)process->tracked_exec);
+    }
+#endif
+
     thread_deinit(&process->thread);
     kfree(process);
+
     return 0;
 }
 
