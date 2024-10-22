@@ -82,7 +82,7 @@ ext2_mount_load_node(
     struct ext2_mount *mnt =
         container_of(fs_mount, struct ext2_mount, fs_mount);
 
-    printk("ext2_mount_load_node (inode=0x%lx)\n", node_index);
+    dprintk("ext2_mount_load_node (inode=0x%lx)\n", node_index);
 
     if(node_index >= mnt->num_inodes) {
         return NULL;
@@ -102,6 +102,7 @@ ext2_mount_load_node(
         ext2_put_group(mnt, group);
         return NULL;
     }
+    memset(node, 0, sizeof(struct ext2_fs_node));
 
     node->mount = mnt;
     spinlock_init(&node->lock);
@@ -137,7 +138,7 @@ ext2_mount_load_node(
     // TODO: Switch on inode type,
     // and assign the file_ops and inode_ops
 
-    printk("inode->mode = 0x%x\n", node->inode.mode);
+    dprintk("inode->mode = 0x%x\n", node->inode.mode);
 
     switch(node->inode.mode & 0xF000) {
       case 0x8000:
@@ -154,7 +155,7 @@ ext2_mount_load_node(
         return NULL;
     }
 
-    printk("EXT2 Loaded Node (0x%llx)\n",
+    dprintk("EXT2 Loaded Node (0x%llx)\n",
             (ull_t)node_index);
 
     ext2_put_group(mnt, group);
@@ -251,11 +252,11 @@ ext2_mount_file(
         superblock.extended.inode_size = 128;
     }
 
-    printk("EXT2 Volume Version %u.%u\n", superblock.version_major, superblock.version_minor);
-    printk("EXT2 Volume Blocks/Group: %u\n", superblock.blocks_per_group);
-    printk("EXT2 Volume iNodes/Group: %u\n", superblock.inodes_per_group);
-    printk("EXT2 Volume Blocks Total: %u\n", superblock.total_blocks);
-    printk("EXT2 Volume iNodes Total: %u\n", superblock.total_inodes);
+    dprintk("EXT2 Volume Version %u.%u\n", superblock.version_major, superblock.version_minor);
+    dprintk("EXT2 Volume Blocks/Group: %u\n", superblock.blocks_per_group);
+    dprintk("EXT2 Volume iNodes/Group: %u\n", superblock.inodes_per_group);
+    dprintk("EXT2 Volume Blocks Total: %u\n", superblock.total_blocks);
+    dprintk("EXT2 Volume iNodes Total: %u\n", superblock.total_inodes);
 
     if(superblock.blocks_per_group == 0) {
         eprintk("Invalid EXT2 Filesystem: blocks_per_group == 0\n");
@@ -273,8 +274,8 @@ ext2_mount_file(
     uint32_t num_groups_from_inodes = superblock.total_inodes / superblock.inodes_per_group;
     num_groups_from_inodes += !!(superblock.total_inodes % superblock.inodes_per_group);
 
-    printk("EXT2 Volume: Block Groups: %u (blk)\n", num_groups_from_blocks);
-    printk("EXT2 Volume: Block Groups: %u (inode)\n", num_groups_from_inodes);
+    dprintk("EXT2 Volume: Block Groups: %u (blk)\n", num_groups_from_blocks);
+    dprintk("EXT2 Volume: Block Groups: %u (inode)\n", num_groups_from_inodes);
 
     if(num_groups_from_blocks != num_groups_from_inodes) {
         eprintk("Possibly Corrupt EXT2 Filesystem: # Block Groups Differs for Blocks and iNodes (blk=%u, inode=%u)\n",
@@ -324,8 +325,8 @@ ext2_mount_file(
     mnt->frag_size = 1024 << superblock.log2_fragsize_min_10;
     mnt->inode_size = superblock.extended.inode_size;
 
-    printk("EXT2 Volume: Block Size 0x%llx\n", (ull_t)mnt->block_size);
-    printk("EXT2 Volume: Fragment Size 0x%llx\n", (ull_t)mnt->frag_size);
+    dprintk("EXT2 Volume: Block Size 0x%llx\n", (ull_t)mnt->block_size);
+    dprintk("EXT2 Volume: Fragment Size 0x%llx\n", (ull_t)mnt->frag_size);
 
     *out = &mnt->fs_mount;
 

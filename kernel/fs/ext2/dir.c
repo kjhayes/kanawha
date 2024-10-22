@@ -110,7 +110,7 @@ ext2_dir_add_linked_entry(
             }
         }
  
-        printk("Could not use: offset=%p, reclen=%p, namelen=%p extra_room=%p to fit entry of size=%p\n",
+        dprintk("Could not use: offset=%p, reclen=%p, namelen=%p extra_room=%p to fit entry of size=%p\n",
                 cur_offset,
                 entry.rec_len,
                 entry.name_len,
@@ -125,7 +125,7 @@ ext2_dir_add_linked_entry(
     entry.inode = inode;
     entry.name_len = namelen;
 
-    printk("Writing directory entry to offset: %p\n",
+    dprintk("Writing directory entry to offset: %p\n",
             offset);
     res = fs_node_paged_write(fs_node, offset, &entry, sizeof(struct ext2_linked_dir_entry), 0);
     if(res) {
@@ -134,7 +134,7 @@ ext2_dir_add_linked_entry(
     }
 
     size_t name_offset = offset + 8;
-    printk("Writing name \"%s\" to offset: %p\n",
+    dprintk("Writing name \"%s\" to offset: %p\n",
             name, name_offset);
 
     res = fs_node_paged_write(fs_node, name_offset, (void*)name, namelen, 0);
@@ -253,13 +253,13 @@ ext2_dir_node_lookup(
         size_t *inode)
 {
     int res;
-    printk("ext2_dir_lookup \"%s\"\n", name);
+    dprintk("ext2_dir_lookup \"%s\"\n", name);
 
     size_t len = strlen(name);
     size_t offset = 0;
     struct ext2_linked_dir_entry entry;
     while(1) {
-        printk("ext2_dir_node_lookup: checking directory entry at offset=%p\n",
+        dprintk("ext2_dir_node_lookup: checking directory entry at offset=%p\n",
                 offset);
         res = ext2_dir_read_at(
                 fs_node,
@@ -291,7 +291,7 @@ ext2_dir_node_lookup(
             {
                 // This is the node
                 *inode = entry.inode;
-                printk("ext2_dir_lookup \"%s\" FOUND inode=%p\n", name, entry.inode);
+                dprintk("ext2_dir_lookup \"%s\" FOUND inode=%p\n", name, entry.inode);
                 return 0;
             }
         }
@@ -310,7 +310,7 @@ ext2_dir_mkfile(
     struct ext2_fs_node *node =
         container_of(fs_node, struct ext2_fs_node, fs_node);
 
-    printk("ext2_dir_mkfile: %s\n",
+    dprintk("ext2_dir_mkfile: %s\n",
             filename);
 
     size_t inode;
@@ -324,7 +324,7 @@ ext2_dir_mkfile(
         return res;
     }
 
-    printk("Allocated inode: 0x%lx\n", inode);
+    dprintk("Allocated inode: 0x%lx\n", inode);
 
     struct ext2_inode inode_data;
     res = ext2_mount_read_inode(
@@ -386,7 +386,7 @@ ext2_dir_mkdir(
     struct ext2_fs_node *node =
         container_of(fs_node, struct ext2_fs_node, fs_node);
 
-    printk("ext2_dir_mkdir: %s\n",
+    dprintk("ext2_dir_mkdir: %s\n",
             filename);
 
     size_t group_num = ext2_fs_node_to_group_num(node);
@@ -402,7 +402,7 @@ ext2_dir_mkdir(
         return res;
     }
 
-    printk("Allocated inode: 0x%lx\n", inode);
+    dprintk("Allocated inode: 0x%lx\n", inode);
 
     // TODO: We need to initialize the inode
     struct ext2_inode inode_data;

@@ -119,7 +119,7 @@ ext2_fs_node_write_page(
 {
     int res;
 
-    printk("ext2_fs_node_write_page pfn=%p\n", pfn);
+    dprintk("ext2_fs_node_write_page pfn=%p\n", pfn);
 
     struct ext2_fs_node *node =
         container_of(fs_node, struct ext2_fs_node, fs_node);
@@ -149,7 +149,7 @@ ext2_fs_node_write_page(
             return res;
         }
 
-        printk("Allocated new block(0x%llx) for ext2_fs_node(%p)\n",
+        dprintk("Allocated new block(0x%llx) for ext2_fs_node(%p)\n",
                 (ull_t)block_no,
                 node);
     }

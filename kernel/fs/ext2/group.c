@@ -162,7 +162,7 @@ ext2_group_populate_blk_bitmap(
         return res;
     }
 
-    printk("Read Block Group %ld's Block Bitmap: 0x%llx\n",
+    dprintk("Read Block Group %ld's Block Bitmap: 0x%llx\n",
             grp->index, *(uint64_t*)(grp->blk_bitmap));
 
     grp->blk_dirty = 0;
