@@ -9,3 +9,5 @@ config EXT2_FS
     tristate "Ext2"
     default n
 
+source "kernel/fs/sys/Kconfig"
+

@@ -1,0 +1,12 @@
+
+menu "sysfs Options"
+
+config SYSFS_PCI
+    tristate "sysfs PCI"
+    default n
+    depends on PCI
+    help
+      Include a "pci" sysfs directory
+
+endmenu
+

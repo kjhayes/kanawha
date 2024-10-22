@@ -9,6 +9,10 @@
 #include <kanawha/pio.h>
 #include <kanawha/mmio.h>
 
+#ifdef CONFIG_SYSFS_PCI
+#include <kanawha/fs/flat.h>
+#endif
+
 #define PCI_MAX_BUSES_PER_DOMAIN (1ULL<<8)
 #define PCI_MAX_DEVICES_PER_BUS  (1ULL<<6)
 #define PCI_MAX_FUNC_PER_DEVICE  (1ULL<<3)
@@ -101,6 +105,10 @@ struct pci_func
     uint16_t device_id;
 
     struct pci_bar bars[6];
+
+#ifdef CONFIG_SYSFS_PCI
+    struct flat_node flat_node;
+#endif
 };
 
 struct pci_id {

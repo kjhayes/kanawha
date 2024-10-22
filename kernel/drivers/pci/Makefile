@@ -11,3 +11,5 @@ pci-y += \
 
 pci-$(CONFIG_PCI_PORT_CAM) += port_cam.o
 
+pci-$(CONFIG_SYSFS_PCI) += sysfs.o
+

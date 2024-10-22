@@ -2,10 +2,14 @@
 #include <drivers/pci/pci.h>
 #include <kanawha/stddef.h>
 
-static DECLARE_SPINLOCK(pci_match_lock);
-static DECLARE_ILIST(pci_driver_list);
-static DECLARE_ILIST(pci_unmatched_func_list);
-static DECLARE_ILIST(pci_matched_func_list);
+#ifdef CONFIG_SYSFS_PCI
+#include <drivers/pci/sysfs.h>
+#endif
+
+DECLARE_SPINLOCK(pci_match_lock);
+DECLARE_ILIST(pci_driver_list);
+DECLARE_ILIST(pci_unmatched_func_list);
+DECLARE_ILIST(pci_matched_func_list);
 
 static int
 pci_try_match(
@@ -72,6 +76,8 @@ int
 register_pci_func(
         struct pci_func *func)
 {
+    int res;
+
     spin_lock(&pci_match_lock);
 
     ilist_push_tail(&pci_unmatched_func_list, &func->global_node);
@@ -87,6 +93,14 @@ register_pci_func(
             break;
         }
     }
+
+#ifdef CONFIG_SYSFS_PCI
+    res = pci_sysfs_on_register_pci_func(func);
+    if(res) {
+        wprintk("Failed to add PCI function to sysfs! (err=%s)\n",
+                errnostr(res));
+    }
+#endif
 
     spin_unlock(&pci_match_lock);
     return 0;
