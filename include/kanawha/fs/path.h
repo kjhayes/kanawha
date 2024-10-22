@@ -7,8 +7,6 @@
 
 struct fs_mount;
 
-#define FS_PATH_MOUNT_POINT (1UL<<0)
-
 struct fs_path
 {
     char *name;
@@ -16,6 +14,12 @@ struct fs_path
     struct fs_node *fs_node;
 
     unsigned long refs;
+
+    enum {
+        FS_PATH_NODE,
+        FS_PATH_MOUNT,
+    } type;
+
     unsigned long flags;
 
     struct fs_path *parent;
@@ -28,6 +32,11 @@ fs_path_get(struct fs_path *path);
 
 int
 fs_path_put(struct fs_path *path);
+
+// Returns an anonymous pipe with no references
+int
+fs_path_create_anon_pipe(
+        struct fs_path **out);
 
 // Returns a root mount point with a single reference
 int

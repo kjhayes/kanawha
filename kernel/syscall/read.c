@@ -32,6 +32,8 @@ syscall_read(
                 file);
 
     if(desc == NULL) {
+        panic("PID(%ld) Could not get file descriptor %ld!\n",
+                process->id, file);
         return -ENXIO;
     }
 

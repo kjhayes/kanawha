@@ -158,6 +158,11 @@ ARG(const char __user *, name)
 RET(int)\
 ARG(fd_t, root)
 
+#define SYSCALL_SIG_PIPE(RET,ARG)\
+RET(int)\
+ARG(unsigned long, flags)\
+ARG(fd_t __user *, out)
+
 #define SYSCALL_XLIST(X)\
 X(exit,      0,  EXIT,       SYSCALL_SIG_EXIT)\
 X(open,      1,  OPEN,       SYSCALL_SIG_OPEN)\
@@ -185,6 +190,7 @@ X(link,      25, LINK,       SYSCALL_SIG_LINK)\
 X(symlink,   26, SYMLINK,    SYSCALL_SIG_SYMLINK)\
 X(unlink,    27, UNLINK,     SYSCALL_SIG_UNLINK)\
 X(chroot,    28, CHROOT,     SYSCALL_SIG_CHROOT)\
+X(pipe,      29, PIPE,       SYSCALL_SIG_PIPE)\
 
 #define DECLARE_SYSCALL_ID_CONSTANTS(__name, __id, __NAME, ...)\
 const static syscall_id_t SYSCALL_ID_ ## __NAME = __id;

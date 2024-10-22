@@ -103,9 +103,9 @@ syscall_mount(
       if(flags & MOUNT_SPECIAL) {
           res = fs_type_mount_special(type, src_buf, &mnt);
           if(res) {
-              kfree(src_buf);
               eprintk("PID(%ld) syscall_mount: Failed to mount special fs mount (id=%s) (err=%s)\n",
                   (sl_t)process->id, src_buf, errnostr(res));
+              kfree(src_buf);
               return res;
           }
       } else {

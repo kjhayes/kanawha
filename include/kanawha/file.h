@@ -30,7 +30,6 @@ struct file_table
     spinlock_t lock;
 
     struct ptree descriptor_tree;
-    struct file null_descriptor;
 
     size_t num_open_files;
 
@@ -55,6 +54,15 @@ int
 file_table_deattach(
         struct file_table *table,
         struct process *process);
+
+int
+file_table_open_path(
+        struct file_table *table,
+        struct process *process,
+        struct fs_path *path,
+        unsigned long access_flags,
+        unsigned long mode_flags,
+        fd_t *fd);
 
 int
 file_table_open(

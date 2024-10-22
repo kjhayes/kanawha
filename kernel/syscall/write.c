@@ -32,12 +32,14 @@ syscall_write(
                 file);
 
     if(desc == NULL) {
-        eprintk("syscall_write: descriptor does not exist!\n");
+        eprintk("PID(%ld) syscall_write: descriptor (%ld) does not exist!\n",
+                process->id, file);
         return -ENXIO;
     }
 
     if((desc->access_flags & FILE_PERM_WRITE) == 0) {
-        eprintk("syscall_write: file descriptor does not have write permissions!\n");
+        eprintk("PID(%ld) syscall_write: file descriptor (%ld) does not have write permissions!\n",
+                process->id, desc->table_node.key);
         file_table_put_file(process->file_table, process, desc);
         return -EPERM;
     }

@@ -153,8 +153,6 @@ init_process_kernel_entry(void *in)
                 binary_path, errnostr(res));
     }
 
-    DEBUG_ASSERT(binary_fd != NULL_FD);
-
     res = syscall_exec(
             process,
             binary_fd,

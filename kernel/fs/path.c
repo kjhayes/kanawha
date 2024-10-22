@@ -9,6 +9,7 @@
 #include <kanawha/string.h>
 #include <kanawha/assert.h>
 #include <kanawha/vmem.h>
+#include <kanawha/pipe.h>
 
 #define FS_PATH_MAX_NAMELEN 256
 
@@ -51,7 +52,7 @@ __fs_path_traverse(
             child_name,
             &mount_index);
     if(res) {
-        eprintk("fs_node_lookup: %s returned (%s)\n",
+        dprintk("fs_node_lookup: %s returned (%s)\n",
                 child_name, errnostr(res));
         spin_unlock(&fs_path_global_lock);
         return res;
@@ -143,6 +144,33 @@ fs_path_put(struct fs_path *path) {
 }
 
 int
+fs_path_create_anon_pipe(
+        struct fs_path **out)
+{
+    struct fs_path *pipe =
+        kmalloc(sizeof(struct fs_path));
+    if(pipe == NULL) {
+        return -ENOMEM;
+    }
+    memset(pipe, 0, sizeof(struct fs_path));
+
+    pipe->fs_node = pipe_fs_get_anon_pipe();
+    if(pipe->fs_node == NULL) {
+        kfree(pipe);
+        return -EINVAL;
+    }
+
+    pipe->type = FS_PATH_NODE;
+    pipe->parent = NULL;
+    pipe->name = NULL;
+    pipe->refs = 1; 
+    ilist_init(&pipe->children);
+
+    *out = pipe;
+    return 0;
+}
+
+int
 fs_path_mount_root(
         struct fs_mount *mnt,
         struct fs_path **out)
@@ -174,7 +202,7 @@ fs_path_mount_root(
         return res;
     }
 
-    mntpoint->flags |= FS_PATH_MOUNT_POINT;
+    mntpoint->type = FS_PATH_MOUNT;
     mntpoint->parent = NULL;
     mntpoint->name = NULL;
     mntpoint->refs = 1; 
@@ -217,7 +245,7 @@ fs_path_mount_dir(
         return res;
     }
 
-    mntpoint->flags |= FS_PATH_MOUNT_POINT;
+    mntpoint->type = FS_PATH_MOUNT;
     mntpoint->parent = NULL;
     mntpoint->name = kstrdup(name);
     if(mntpoint->name == NULL) {
@@ -269,7 +297,7 @@ fs_path_lookup_for_process(
 {
     int res;
 
-    printk("fs_path_lookup_for_process(pid=%ld, %s, root=%p)\n",
+    dprintk("fs_path_lookup_for_process(pid=%ld, %s, root=%p)\n",
             (sl_t)process->id, path_str, process->root);
 
     char *dup = kstrdup(path_str);

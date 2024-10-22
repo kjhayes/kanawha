@@ -27,12 +27,6 @@ file_table_create(
     ptree_init(&table->descriptor_tree);
     ilist_init(&table->process_list);
 
-    // Insert a dummy descriptor to make sure
-    // that we don't assign NULL_FD to an actual
-    // descriptor entry
-    memset(&table->null_descriptor, 0, sizeof(table->null_descriptor));
-    ptree_insert(&table->descriptor_tree, &table->null_descriptor.table_node, NULL_FD);
-
     res = file_table_attach(table, process);
     if(res) {
         kfree(table);
@@ -63,17 +57,10 @@ file_table_clone(
     ptree_init(&child->descriptor_tree);
     ilist_init(&child->process_list);
 
-    memset(&child->null_descriptor, 0, sizeof(child->null_descriptor));
-    ptree_insert(&child->descriptor_tree, &child->null_descriptor.table_node, NULL_FD);
-
     struct ptree_node *node = ptree_get_first(&parent->descriptor_tree);
     while(node != NULL)
     {
         DEBUG_ASSERT(KERNEL_ADDR(node));
-        if(node->key == NULL_FD) {
-            node = ptree_get_next(node);
-            continue;
-        }
 
         struct file *parent_file = container_of(node, struct file, table_node);
         struct file *child_file =
@@ -106,7 +93,6 @@ file_table_clone(
 
     res = file_table_attach(child, process);
     if(res) {
-        ptree_remove(&child->descriptor_tree, NULL_FD);
         struct ptree_node *node = ptree_get_first(&child->descriptor_tree);
         while(node != NULL) {
             file_table_close(child, process, node->key);
@@ -145,12 +131,6 @@ __file_table_free_descriptor(
                 desc->table_node.key);
 
     DEBUG_ASSERT(removed == &desc->table_node);
-
-    if(removed->key == NULL_FD) {
-        // This was the null descriptor of the table
-        return 0;
-    }
-
     DEBUG_ASSERT(KERNEL_ADDR(desc));
     DEBUG_ASSERT(KERNEL_ADDR(desc->path));
 
@@ -208,10 +188,10 @@ file_table_deattach(
 }
 
 int
-file_table_open(
+file_table_open_path(
         struct file_table *table,
         struct process *process,
-        const char *path_str,
+        struct fs_path *path,
         unsigned long access_flags,
         unsigned long mode_flags,
         fd_t *fd)
@@ -225,20 +205,11 @@ file_table_open(
     }
     memset(desc, 0, sizeof(struct file));
 
-    res = fs_path_lookup_for_process(
-            process,
-            path_str,
-            access_flags,
-            mode_flags,
-            &desc->path);
-    if(res) {
-        kfree(desc);
-        eprintk("file_table_open: fs_path_lookup_for_process returned: %s\n",
-                errnostr(res));
-        return res;
-    }
+    fs_path_get(path);
+    desc->path = path;
 
     desc->refs = 1;
+
     // Done by memset above
     //desc->seek_offset = 0;
     //desc->dir_offset = 0;
@@ -268,16 +239,49 @@ file_table_open(
 }
 
 int
+file_table_open(
+        struct file_table *table,
+        struct process *process,
+        const char *path_str,
+        unsigned long access_flags,
+        unsigned long mode_flags,
+        fd_t *fd)
+{
+    int res;
+
+    struct fs_path *path;
+
+    res = fs_path_lookup_for_process(
+            process,
+            path_str,
+            access_flags,
+            mode_flags,
+            &path);
+    if(res) {
+        dprintk("file_table_open: fs_path_lookup_for_process returned: %s\n",
+                errnostr(res));
+        return res;
+    }
+
+    res = file_table_open_path(
+            table,
+            process,
+            path,
+            access_flags,
+            mode_flags,
+            fd);
+
+    fs_path_put(path);
+    return res;
+}
+
+int
 file_table_close(
         struct file_table *table,
         struct process *process,
         fd_t fd)
 {
     int res;
-
-    if(fd == NULL_FD) {
-        return -EINVAL;
-    }
 
     spin_lock(&table->lock);
 
@@ -323,13 +327,13 @@ file_table_get_file(
         ptree_get(&table->descriptor_tree, (uintptr_t)fd);
 
     if(node == NULL) {
-        eprintk("PID(%ld) Tried to get non-existant file %ld\n",
+        dprintk("PID(%ld) Tried to get non-existant file %ld\n",
             process->id, fd);
         desc = NULL;
     } else {
         desc = container_of(node, struct file, table_node);
         if(desc->status_flags & FILE_STATUS_CLOSED) {
-            eprintk("PID(%ld) Tried to get closed file %ld\n",
+            dprintk("PID(%ld) Tried to get closed file %ld\n",
                     process->id, fd);
             desc = NULL;
         } else {

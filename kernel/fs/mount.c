@@ -5,6 +5,18 @@
 #include <kanawha/assert.h>
 #include <kanawha/vmem.h>
 
+static int
+fs_unload_node(
+        struct fs_node *node)
+{
+    if(node->unload != NULL) {
+        DEBUG_ASSERT(KERNEL_ADDR(node->unload));
+        return (*node->unload)(node);
+    } else {
+        return fs_mount_unload_node(node->mount, node);
+    }
+}
+
 int
 init_fs_mount_struct(
         struct fs_mount *mnt,
@@ -53,7 +65,7 @@ fs_mount_get_node(
         int res;
         res = ptree_insert(&mnt->node_cache, &fs_node->cache_node, node_index);
         if(res) {
-            fs_mount_unload_node(mnt, fs_node);
+            fs_unload_node(fs_node);
             fs_node = NULL;
         }
 
@@ -101,7 +113,7 @@ fs_mount_put_node(
                 goto err;
             }
         }
-        res = fs_mount_unload_node(mnt, node);
+        res = fs_unload_node(node);
         if(res) {
             eprintk("Filesystem failed to unload fs_node!\n");
             goto err;

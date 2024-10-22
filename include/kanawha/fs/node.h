@@ -122,6 +122,11 @@ struct fs_node
     // Operate on a file descriptor/node pair
     struct fs_file_ops *file_ops;
 
+    // Unload this node, including freeing this struct
+    // (If NULL, fs_mount_unload_node will be used instead,
+    //  if non-NULL, fs_mount_unload_node will not be invoked)
+    int(*unload)(struct fs_node *node);
+
     struct fs_mount *mount;
 
     spinlock_t page_lock;

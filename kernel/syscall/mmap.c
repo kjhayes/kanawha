@@ -533,7 +533,6 @@ mmap_map_region(
     // syscall_mmap should check these assumptions for user requests,
     // but the kernel might be invoking this function incorrectly
     DEBUG_ASSERT(size > 0);
-    DEBUG_ASSERT((file == NULL_FD) || (ptr_orderof(file_offset) >= VMEM_MIN_PAGE_ORDER));
     DEBUG_ASSERT(ptr_orderof(size) >= VMEM_MIN_PAGE_ORDER);
 
     struct fs_node *fs_node;
@@ -643,7 +642,6 @@ mmap_map_region_exact(
 
     // syscall_mmap should check these assumptions for user requests,
     // but the kernel might be invoking this function incorrectly
-    DEBUG_ASSERT((file == NULL_FD) || (ptr_orderof(file_offset) >= VMEM_MIN_PAGE_ORDER));
     DEBUG_ASSERT(ptr_orderof(mmap_offset) >= VMEM_MIN_PAGE_ORDER);
     DEBUG_ASSERT(ptr_orderof(size) >= VMEM_MIN_PAGE_ORDER);
 
