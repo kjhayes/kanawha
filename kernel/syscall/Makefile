@@ -16,7 +16,6 @@ obj-y += \
 	dir.o \
 	fswap.o \
 	mkfile.o \
-	mkfifo.o \
 	mkdir.o \
 	link.o \
 	symlink.o \

@@ -129,12 +129,6 @@ ARG(fd_t, dir)\
 ARG(const char __user *, name)\
 ARG(unsigned long, flags)
 
-#define SYSCALL_SIG_MKFIFO(RET,ARG)\
-RET(int)\
-ARG(fd_t, dir)\
-ARG(const char __user *, name)\
-ARG(unsigned long, flags)
-
 #define SYSCALL_SIG_MKDIR(RET,ARG)\
 RET(int)\
 ARG(fd_t, dir)\
@@ -186,7 +180,6 @@ X(dirattr,   19, DIRATTR,    SYSCALL_SIG_DIRATTR)\
 X(dirname,   20, DIRNAME,    SYSCALL_SIG_DIRNAME)\
 X(fswap,     21, FSWAP,      SYSCALL_SIG_FSWAP)\
 X(mkfile,    22, MKFILE,     SYSCALL_SIG_MKFILE)\
-X(mkfifo,    23, MKFIFO,     SYSCALL_SIG_MKFIFO)\
 X(mkdir,     24, MKDIR,      SYSCALL_SIG_MKDIR)\
 X(link,      25, LINK,       SYSCALL_SIG_LINK)\
 X(symlink,   26, SYMLINK,    SYSCALL_SIG_SYMLINK)\
