@@ -14,6 +14,7 @@ stree_insert_bst(
 {
     DEBUG_ASSERT(KERNEL_ADDR(tree));
     DEBUG_ASSERT(KERNEL_ADDR(node));
+
     if(tree->root == NULL) {
         tree->root = node;
         node->parent = NULL;
@@ -64,6 +65,10 @@ int stree_insert(
         struct stree_node *node)
 {
     int res;
+
+    node->left = NULL;
+    node->right = NULL;
+
     res = stree_insert_bst(tree, node);
     if(res) {return res;}
     res = stree_rebalance(tree);
