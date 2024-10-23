@@ -1,5 +1,6 @@
 
 #include <kanawha/printk.h>
+#include <kanawha/klog.h>
 #include <kanawha/init.h>
 #include <kanawha/errno.h>
 #include <kanawha/percpu.h>
@@ -33,7 +34,8 @@ void * x64_boot_bsp_init(void)
     x64_init_gdt_bsp();
     x64_init_idt_bsp();
 
-    printk_early_init();
+    klog_init();
+    printk_init();
 
     // boot Init Stages
     res = handle_init_stage__boot();

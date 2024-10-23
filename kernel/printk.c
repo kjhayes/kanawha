@@ -8,6 +8,7 @@
 #include <kanawha/string.h>
 #include <kanawha/thread.h>
 #include <kanawha/process.h>
+#include <kanawha/klog.h>
 #include <kanawha/irq.h>
 
 static DECLARE_SPINLOCK(printk_lock);
@@ -523,13 +524,13 @@ int vprintk(struct vprintk_state *state, const char *fmt, va_list *args_ptr)
  * Early Printk
  */
 
-static printk_early_handler_f *(printk_early_handlers [CONFIG_PRINTK_MAX_EARLY_HANDLERS]) = { NULL };
+static printk_handler_f *(printk_handlers [CONFIG_PRINTK_MAX_HANDLERS]) = { NULL };
 
-int printk_early_add_handler(printk_early_handler_f *handler) 
+int printk_add_handler(printk_handler_f *handler) 
 {
-    for(size_t i = 0; i < CONFIG_PRINTK_MAX_EARLY_HANDLERS; i++) {
-        if(printk_early_handlers[i] == NULL) {
-            printk_early_handlers[i] = handler;
+    for(size_t i = 0; i < CONFIG_PRINTK_MAX_HANDLERS; i++) {
+        if(printk_handlers[i] == NULL) {
+            printk_handlers[i] = handler;
             return 0;
         }
     }
@@ -537,15 +538,15 @@ int printk_early_add_handler(printk_early_handler_f *handler)
 }
 
 static int
-printk_early_print_buffer(void *state, size_t len, char *buffer) 
+printk_print_buffer(void *state, size_t len, char *buffer) 
 {
     for(size_t i = 0; i < len; i++) 
     {
         char c = buffer[i];
 
-        for(size_t handler_i = 0; handler_i < CONFIG_PRINTK_MAX_EARLY_HANDLERS; handler_i++) 
+        for(size_t handler_i = 0; handler_i < CONFIG_PRINTK_MAX_HANDLERS; handler_i++) 
         {
-            printk_early_handler_f *func = printk_early_handlers[handler_i];
+            printk_handler_f *func = printk_handlers[handler_i];
             if(func != NULL) {
                 (*func)(c);
             }
@@ -555,17 +556,19 @@ printk_early_print_buffer(void *state, size_t len, char *buffer)
     return 0;
 }
 
-int printk_early_init(void)
+int printk_init(void)
 {
     printk_state.buffer = printk_state_buffer;
     printk_state.buffer_size = CONFIG_PRINTK_BUFFER_SIZE;
-    printk_state.print_buffer = printk_early_print_buffer;
+    printk_state.print_buffer = printk_print_buffer;
     printk_state.state = NULL;
 
     panic_state.buffer = panic_state_buffer;
     panic_state.buffer_size = CONFIG_PANIC_BUFFER_SIZE;
-    panic_state.print_buffer = printk_early_print_buffer;
+    panic_state.print_buffer = printk_print_buffer;
     panic_state.state = NULL;
+
+    printk_add_handler(klog_putc);
     return 0;
 }
 
@@ -654,7 +657,7 @@ void do_panic(void)
 
 EXPORT_SYMBOL(printk);
 EXPORT_SYMBOL(panic_printk);
-EXPORT_SYMBOL(printk_early_add_handler);
+EXPORT_SYMBOL(printk_add_handler);
 EXPORT_SYMBOL(snprintk);
 EXPORT_SYMBOL(do_panic);
 

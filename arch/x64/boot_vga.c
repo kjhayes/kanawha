@@ -102,16 +102,17 @@ x64_boot_vga_putchar(char c, uint8_t attr)
     x64_boot_vga_cursor_x++;
 }
 
-static void
-x64_boot_vga_printk_early_handler(char c) {
+static int
+x64_boot_vga_printk_handler(char c) {
     x64_boot_vga_putchar(c, X64_BOOT_VGA_PRINTK_EARLY_ATTR);
+    return 0;
 }
 
 int x64_boot_vga_init(void) 
 {
     int res;
     x64_boot_vga_clear(' ', X64_BOOT_VGA_PRINTK_EARLY_ATTR);
-    res = printk_early_add_handler(x64_boot_vga_printk_early_handler);
+    res = printk_add_handler(x64_boot_vga_printk_handler);
     return res;
 }
 

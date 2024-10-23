@@ -7,6 +7,7 @@ obj-y += \
 	kheap.o \
 	kmalloc.o \
 	printk.o \
+	klog.o \
 	mem_flags.o \
 	page_alloc.o \
 	vmem.o \

@@ -4,7 +4,7 @@
 #include <kanawha/common.h>
 #include <kanawha/stdint.h>
 
-typedef void(printk_early_handler_f)(char);
+typedef int(printk_handler_f)(char);
 
 // returns 0 on success, 1 on error
 //
@@ -47,8 +47,8 @@ void do_panic(void);
         do_panic(); \
     } while(0)
 
-int printk_early_init(void);
-int printk_early_add_handler(printk_early_handler_f *handler);
+int printk_init(void);
+int printk_add_handler(printk_handler_f *handler);
 
 int snprintk(char *buf, size_t buf_size, const char *fmt, ...);
 

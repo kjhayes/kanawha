@@ -24,6 +24,15 @@ config ROOT_FS_FILESYSTEM
       Filesystem type to try mounting the root fs as.
 
 menu "printk Options"
+
+config KLOG_FRAMESIZE
+    hex "klog Framesize"
+    default 0x1000
+config KLOG_BOOT_FRAMES
+    hex "klog Boot Frames"
+    default 4
+    help
+      The number of frames statically allocated for klog during boot.
 config PRINTK_BUFFER_SIZE
     hex "printk Buffer Size"
     default 0x1000
@@ -36,11 +45,11 @@ config PANIC_BUFFER_SIZE
     help
       Size of the panic static buffer in bytes
 
-config PRINTK_MAX_EARLY_HANDLERS
-    int "printk Maximum Early Handlers"
+config PRINTK_MAX_HANDLERS
+    int "printk Maximum Handlers"
     default 8
     help
-      Maximum number of "early" printk handlers during boot
+      Maximum number of printk handlers which can be registered
 endmenu
 
 menu "Debug Options"
