@@ -7,39 +7,39 @@
 #include <kanawha/ptree.h>
 #include <kanawha/stdint.h>
 
-//struct elf64_machine_reloc
-//{
-//    int(*apply)(
-//            struct module *mod,
-//            struct file *file,
-//            struct elf64_module_state *state,
-//            size_t section_size,
-//            void *section,
-//            uint32_t type,
-//            uint32_t symbol,
-//            Elf64_Addr offset,
-//            int64_t addend);
-//
-//    const char *(*get_string)(uint32_t reloc_type);
-//
-//    Elf64_Half machine;
-//
-//    struct ptree_node tree_node;
-//};
-//
-//int
-//elf64_register_machine_reloc(struct elf64_machine_reloc *reloc);
-//
-//int
-//elf64_apply_reloc(
-//        struct module *mod,
-//        struct file *file,
-//        struct elf64_module_state *state,
-//        size_t section_size,
-//        void *section,
-//        uint32_t type,
-//        uint32_t symbol,
-//        Elf64_Addr offset,
-//        int64_t addend);
+struct elf64_machine_reloc
+{
+    int(*apply)(
+            struct module *mod,
+            struct fs_node *node,
+            struct elf64_module_state *state,
+            size_t section_size,
+            void *section,
+            uint32_t type,
+            uint32_t symbol,
+            Elf64_Addr offset,
+            int64_t addend);
+
+    const char *(*get_string)(uint32_t reloc_type);
+
+    Elf64_Half machine;
+
+    struct ptree_node tree_node;
+};
+
+int
+elf64_register_machine_reloc(struct elf64_machine_reloc *reloc);
+
+int
+elf64_apply_reloc(
+        struct module *mod,
+        struct fs_node *node,
+        struct elf64_module_state *state,
+        size_t section_size,
+        void *section,
+        uint32_t type,
+        uint32_t symbol,
+        Elf64_Addr offset,
+        int64_t addend);
 
 #endif

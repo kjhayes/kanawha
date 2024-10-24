@@ -3,7 +3,7 @@
 
 #include <kanawha/refcount.h>
 #include <kanawha/stree.h>
-//#include <kanawha/file.h>
+#include <kanawha/fs/node.h>
 #include <kanawha/vmem.h>
 
 #define MODULE_FLAG_FIXED (1ULL<<0) // This module cannot be unloaded
@@ -30,9 +30,6 @@ struct module
     size_t symtab_count;
     struct ksymbol *symtab;
 
-    size_t init_event_count;
-    struct init_stage_event *init_events;
-
     size_t section_count;
     struct module_section *sections;
 
@@ -52,10 +49,13 @@ module_get(const char *name);
 int
 module_put(struct module *mod);
 
-//struct module *
-//load_module(struct file *module_file);
-//int
-//unload_module(struct module *mod);
+struct module *
+load_module(
+        struct fs_node *module_node,
+        const char *name,
+        unsigned long flags);
+int
+unload_module(struct module *mod);
 
 // Creates a link from the module to a kernel symbol,
 // can also create a dependency from "mod" to the module

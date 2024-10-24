@@ -49,3 +49,5 @@ obj-y += elf/
 obj-y += mb2/
 obj-$(CONFIG_ACPI) += acpi/
 
+obj-m += memdump.o
+

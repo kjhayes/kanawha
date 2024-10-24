@@ -11,6 +11,16 @@
 #include <kanawha/kmalloc.h>
 #include <kanawha/assert.h>
 #include <kanawha/vmem.h>
+#include <kanawha/export.h>
+
+EXPORT_SYMBOL(register_page_allocator);
+
+EXPORT_SYMBOL(page_alloc);
+EXPORT_SYMBOL(page_free);
+
+EXPORT_SYMBOL(page_alloc_amount_free);
+EXPORT_SYMBOL(page_alloc_amount_cached);
+EXPORT_SYMBOL(page_alloc_amount_matching);
 
 // Define the page_allocator Wrapper Functions
 DEFINE_OP_LIST_WRAPPERS(
@@ -259,6 +269,24 @@ page_alloc_amount_free(void)
 }
 
 size_t
+page_alloc_amount_matching(unsigned long flags) 
+{
+    size_t amount = 0;
+    ilist_node_t *node;
+    struct page_allocator *alloc;
+
+    ilist_for_each(node, &page_allocator_list) {
+        alloc = container_of(node, struct page_allocator, list_node);
+        if((alloc->flags & flags) != flags) {
+            continue;
+        }
+        amount += page_allocator_amount_free(alloc);
+    }
+
+    return amount;
+}
+
+size_t
 page_alloc_amount_cached(void) {
     size_t amount = 0;
     ilist_node_t *node;
@@ -271,24 +299,4 @@ page_alloc_amount_cached(void) {
 
     return amount;
 }
-
-static int
-dump_page_alloc_amounts(void)
-{
-    size_t amt_free = page_alloc_amount_free();
-    size_t amt_cached = page_alloc_amount_cached();
-
-    printk("Free Memory:   %ld MiB %ld KiB %ld Bytes\n",
-            amt_free >> 20,
-            (amt_free & (1ULL<<20)-1) >> 12,
-            (amt_free & (1ULL<<12)-1));
-    printk("Cached Memory: %ld MiB %ld KiB %ld Bytes\n",
-            amt_cached >> 20,
-            (amt_cached & (1ULL<<20)-1) >> 12,
-            (amt_cached & (1ULL<<12)-1));
-
-    return 0;
-}
-declare_init(dynamic, dump_page_alloc_amounts);
-declare_init(late, dump_page_alloc_amounts);
 

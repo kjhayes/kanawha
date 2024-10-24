@@ -21,5 +21,6 @@ obj-y += \
 	link.o \
 	symlink.o \
 	unlink.o \
-	chroot.o
+	chroot.o \
+	mod.o
 

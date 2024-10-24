@@ -290,6 +290,23 @@ x64_route_syscall(struct x64_syscall_state *state)
                         (fd_t __user *)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RSI]
                         );
             break;
+        case SYSCALL_ID_INSMOD:
+            *ret_val = (uint64_t)(int)
+                syscall_insmod(
+                        process,
+                        (fd_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDI],
+                        (const char __user *)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RSI],
+                        (unsigned long)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDX]
+                        );
+            break;
+        case SYSCALL_ID_RMMOD:
+            *ret_val = (uint64_t)(int)
+                syscall_rmmod(
+                        process,
+                        (const char __user *)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDI],
+                        (unsigned long)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RSI]
+                        );
+            break;
         default:
             syscall_unknown(process, id);
     }

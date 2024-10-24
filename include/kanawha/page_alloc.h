@@ -70,6 +70,7 @@ int register_page_allocator(
 
 int page_alloc(order_t order, paddr_t *addr, unsigned long flags);
 int page_free(order_t order, paddr_t addr);
+
 size_t page_alloc_amount_free(void);
 size_t page_alloc_amount_cached(void);
 size_t page_alloc_amount_matching(unsigned long flags);

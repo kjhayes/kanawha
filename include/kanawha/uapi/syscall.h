@@ -163,6 +163,17 @@ RET(int)\
 ARG(unsigned long, flags)\
 ARG(fd_t __user *, out)
 
+#define SYSCALL_SIG_INSMOD(RET,ARG)\
+RET(int)\
+ARG(fd_t, modfile)\
+ARG(const char __user *, modname)\
+ARG(unsigned long, flags)
+
+#define SYSCALL_SIG_RMMOD(RET,ARG)\
+RET(int)\
+ARG(const char __user *, modname)\
+ARG(unsigned long, flags)
+
 #define SYSCALL_XLIST(X)\
 X(exit,      0,  EXIT,       SYSCALL_SIG_EXIT)\
 X(open,      1,  OPEN,       SYSCALL_SIG_OPEN)\
@@ -191,6 +202,8 @@ X(symlink,   26, SYMLINK,    SYSCALL_SIG_SYMLINK)\
 X(unlink,    27, UNLINK,     SYSCALL_SIG_UNLINK)\
 X(chroot,    28, CHROOT,     SYSCALL_SIG_CHROOT)\
 X(pipe,      29, PIPE,       SYSCALL_SIG_PIPE)\
+X(insmod,    30, INSMOD,     SYSCALL_SIG_INSMOD)\
+X(rmmod,     31, RMMOD,      SYSCALL_SIG_RMMOD)\
 
 #define DECLARE_SYSCALL_ID_CONSTANTS(__name, __id, __NAME, ...)\
 const static syscall_id_t SYSCALL_ID_ ## __NAME = __id;
@@ -217,6 +230,14 @@ SYSCALL_XLIST(DECLARE_SYSCALL_ID_CONSTANTS)
 #undef SYSCALL_SIG_DIRATTR
 #undef SYSCALL_SIG_DIRNAME
 #undef SYSCALL_SIG_FSWAP
+#undef SYSCALL_SIG_MKFILE
+#undef SYSCALL_SIG_MKDIR
+#undef SYSCALL_SIG_LINK
+#undef SYSCALL_SIG_UNLINK
+#undef SYSCALL_SIG_CHROOT
+#undef SYSCALL_SIG_PIPE
+#undef SYSCALL_SIG_INSMOD
+#undef SYSCALL_SIG_RMMOD
 #undef SYSCALL_XLIST
 #endif
 

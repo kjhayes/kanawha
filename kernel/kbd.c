@@ -126,7 +126,7 @@ kbd_enqueue_event(
         struct kbd_event lost;
         kbd_dequeue_event(kbd, &lost);
 
-        dprintk("Lost Key Event: (%s, %s)\n",
+        printk("Lost Key Event: (%s, %s)\n",
                 kbd_key_to_string(lost.key),
                 kbd_motion_to_string(lost.motion));
     }
