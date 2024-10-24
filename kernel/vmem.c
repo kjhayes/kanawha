@@ -587,8 +587,14 @@ vmem_map_unhandled_user_page_fault(
     // TODO: Signal something like SIGSEGV once we have
     // signalling implemented
 
+#ifdef CONFIG_DEBUG_TRACK_PROCESS_EXEC
+    eprintk("Terminating PID(%ld) [EXEC(%s)] for Invalid Memory Access!\n",
+            (sl_t)process->id,
+            process->tracked_exec == NULL ? "???" : process->tracked_exec);
+#else
     eprintk("Terminating PID(%ld) for Invalid Memory Access!\n",
             (sl_t)process->id);
+#endif
 
     res = process_terminate(process, 1);
     if(res) {
