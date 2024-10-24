@@ -48,8 +48,7 @@ ext2_dir_read_at(
 
 static int
 ext2_dir_add_linked_entry(
-        struct ext2_fs_node *node,
-        struct fs_node *fs_node,
+        struct ext2_fs_node *parent_node,
         size_t inode,
         uint8_t file_type,
         const char *name)
@@ -65,18 +64,23 @@ ext2_dir_add_linked_entry(
     size_t room_needed = namelen + 8;
     size_t room_avail  = 0;
 
+    struct fs_node *parent_fs_node = &parent_node->fs_node;
+
     size_t cur_offset = 0;
     while(1) {
-        res = ext2_dir_read_at(fs_node, cur_offset, &entry);
+        res = ext2_dir_read_at(parent_fs_node, cur_offset, &entry);
         if(res) {
-            eprintk("Failed to traverse EXT2 directory! (err=%s)\n",
-                    errnostr(res));
-            return res;
+            // End of the list
+            offset = cur_offset;
+            room_avail = room_needed;
+            break;
         }
 
         if(entry.rec_len <= 0) {
             // End of the list
-            return -ENOMEM;
+            offset = cur_offset;
+            room_avail = room_needed;
+            break;
         }
         else if(entry.rec_len < entry.name_len + 8) {
             // Invalid entry
@@ -96,7 +100,7 @@ ext2_dir_add_linked_entry(
             if(extra_room >= room_needed) {
                 entry.rec_len = (entry.name_len + 8 + 0b11) & ~0b11;
                 res = fs_node_paged_write(
-                        fs_node,
+                        parent_fs_node,
                         cur_offset,
                         &entry,
                         sizeof(struct ext2_linked_dir_entry),
@@ -127,7 +131,7 @@ ext2_dir_add_linked_entry(
 
     dprintk("Writing directory entry to offset: %p\n",
             offset);
-    res = fs_node_paged_write(fs_node, offset, &entry, sizeof(struct ext2_linked_dir_entry), 0);
+    res = fs_node_paged_write(parent_fs_node, offset, &entry, sizeof(struct ext2_linked_dir_entry), FS_NODE_PAGED_WRITE_MAY_EXTEND);
     if(res) {
         eprintk("Failed to write directory entry to EXT2 directory! (err=%s)\n");
         return res;
@@ -137,7 +141,7 @@ ext2_dir_add_linked_entry(
     dprintk("Writing name \"%s\" to offset: %p\n",
             name, name_offset);
 
-    res = fs_node_paged_write(fs_node, name_offset, (void*)name, namelen, 0);
+    res = fs_node_paged_write(parent_fs_node, name_offset, (void*)name, namelen, FS_NODE_PAGED_WRITE_MAY_EXTEND);
     if(res) {
         eprintk("Failed to write file-name to EXT2 directory! (err=%s)\n",
                 errnostr(res));
@@ -327,15 +331,6 @@ ext2_dir_mkfile(
     dprintk("Allocated inode: 0x%lx\n", inode);
 
     struct ext2_inode inode_data;
-    res = ext2_mount_read_inode(
-            node->mount,
-            inode,
-            &inode_data);
-    if(res) {
-        eprintk("EXT2: Failed to read allocated inode! (err=%s)\n",
-                errnostr(res));
-        return res;
-    }
 
     memset(&inode_data, 0, sizeof(struct ext2_inode));
     inode_data.links_count = 1;
@@ -358,7 +353,6 @@ ext2_dir_mkfile(
 
     res = ext2_dir_add_linked_entry(
             node,
-            fs_node,
             inode,
             EXT2_DIR_FT_REG_FILE,
             filename);
@@ -377,23 +371,23 @@ ext2_dir_mkfile(
 
 static int
 ext2_dir_mkdir(
-        struct fs_node *fs_node,
+        struct fs_node *parent_fs_node,
         const char *filename,
         unsigned long flags)
 {
     int res;
 
-    struct ext2_fs_node *node =
-        container_of(fs_node, struct ext2_fs_node, fs_node);
+    struct ext2_fs_node *parent_node =
+        container_of(parent_fs_node, struct ext2_fs_node, fs_node);
 
     dprintk("ext2_dir_mkdir: %s\n",
             filename);
 
-    size_t group_num = ext2_fs_node_to_group_num(node);
+    size_t group_num = ext2_fs_node_to_group_num(parent_node);
 
     size_t inode;
     res = ext2_mount_alloc_inode(
-            node->mount,
+            parent_node->mount,
             group_num,
             &inode);
     if(res) {
@@ -407,12 +401,13 @@ ext2_dir_mkdir(
     // TODO: We need to initialize the inode
     struct ext2_inode inode_data;
     res = ext2_mount_read_inode(
-            node->mount,
+            parent_node->mount,
             inode,
             &inode_data);
     if(res) {
         eprintk("EXT2: Failed to read allocated inode! (err=%s)\n",
                 errnostr(res));
+        ext2_mount_free_inode(parent_node->mount, inode);
         return res;
     }
 
@@ -424,32 +419,73 @@ ext2_dir_mkdir(
     inode_data.links_count = 1;
 
     res = ext2_mount_write_inode(
-            node->mount,
+            parent_node->mount,
             inode,
             &inode_data);
     if(res) {
         eprintk("EXT2: Failed to write allocated inode! (err=%s)\n",
                 errnostr(res));
+        ext2_mount_free_inode(parent_node->mount, inode);
         return res;
     }
 
-    spin_lock(&node->lock);
+    // Load the newly created directory
+    struct fs_node *child_fs_node =
+        fs_mount_get_node(&parent_node->mount->fs_mount, inode);
+
+    if(child_fs_node == NULL) {
+        eprintk("EXT2: Failed to get fs_node of newly created directory! (err=%s)\n",
+                errnostr(res));
+        ext2_mount_free_inode(parent_node->mount, inode);
+        return res;
+    }
+
+    struct ext2_fs_node *child_node =
+        container_of(child_fs_node, struct ext2_fs_node, fs_node);
 
     res = ext2_dir_add_linked_entry(
-            node,
-            fs_node,
+            child_node,
             inode,
             EXT2_DIR_FT_DIR,
-            filename);
+            ".");
     if(res) {
-        spin_unlock(&node->lock);
         ext2_mount_free_inode(
-                node->mount,
+                parent_node->mount,
                 inode);
         return res;
     }
 
-    spin_unlock(&node->lock);
+    res = ext2_dir_add_linked_entry(
+            child_node,
+            parent_node->fs_node.cache_node.key,
+            EXT2_DIR_FT_DIR,
+            "..");
+    if(res) {
+        ext2_mount_free_inode(
+                parent_node->mount,
+                inode);
+        return res;
+    }
+
+    // Create a link from the parent directory to the new directory
+    spin_lock(&parent_node->lock);
+
+    res = ext2_dir_add_linked_entry(
+            parent_node,
+            inode,
+            EXT2_DIR_FT_DIR,
+            filename);
+    if(res) {
+        eprintk("EXT2: mkdir failed to add linked entry to directory! (err=%s)\n",
+                errnostr(res));
+        spin_unlock(&parent_node->lock);
+        ext2_mount_free_inode(
+                parent_node->mount,
+                inode);
+        return res;
+    }
+
+    spin_unlock(&parent_node->lock);
 
     return 0;
 }
