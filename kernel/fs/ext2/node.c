@@ -96,7 +96,7 @@ ext2_fs_node_read_page(
     if(block_no == 0 && (flags & FS_NODE_READ_PAGE_MAY_CREATE)) {
         memset(page, 0, node->mount->block_size);
         return 0;
-    } else {
+    } else if(block_no != 0) {
         res = fs_node_paged_read(
                 node->mount->backing_node,
                 EXT2_BLOCK_OFFSET(block_no, node->mount->block_size),
@@ -107,6 +107,8 @@ ext2_fs_node_read_page(
             return res;
         }
         return 0;
+    } else {
+        return -ENXIO;
     }
 }
 
@@ -152,6 +154,8 @@ ext2_fs_node_write_page(
         dprintk("Allocated new block(0x%llx) for ext2_fs_node(%p)\n",
                 (ull_t)block_no,
                 node);
+    } else if(block_no == 0) {
+        return -ENXIO;
     }
 
     res = fs_node_paged_write(
