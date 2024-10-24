@@ -60,7 +60,44 @@ ext2_node_set_pfn_block(
         return 0;
     }
 
-    // TODO Singly, Doubly and Triply Indirect Blocks
+    size_t entries_per_block = node->mount->block_size / sizeof(le32_t);
+
+    size_t num_singly_indirect = entries_per_block + EXT2_INODE_DIRECT_BLOCKS;
+    if(pfn < num_singly_indirect) { 
+
+        size_t indirect_block = node->inode.block[EXT2_INODE_INDIRECT_BLOCK];
+        if(indirect_block == 0)
+        {
+            res = ext2_mount_alloc_block(
+                    node->mount,
+                    ext2_fs_node_to_group_num(node),
+                    &indirect_block);
+            if(res) {
+                eprintk("ext2_fs_node_write_page: failed to allocate block (err=%s)\n",
+                        errnostr(res));
+                return res;
+            }
+
+            node->inode.block[EXT2_INODE_INDIRECT_BLOCK] = indirect_block;
+            node->inode_dirty = 1;
+        }
+
+        le32_t entry = block_no;
+        res = fs_node_paged_write(
+                node->mount->backing_node,
+                EXT2_BLOCK_OFFSET(indirect_block, node->mount->block_size)
+                    + (sizeof(le32_t) * (pfn-EXT2_INODE_DIRECT_BLOCKS)),
+                &entry,
+                sizeof(le32_t),
+                0);
+        if(res) {
+            return res;
+        }
+
+        return 0;
+    }
+ 
+    // TODO Doubly and Triply Indirect Blocks
 
     return -EINVAL;
 }
@@ -146,7 +183,9 @@ ext2_fs_node_write_page(
         }
         res = ext2_node_set_pfn_block(node, pfn, block_no);
         if(res) {
-            eprintk("ext2_fs_node_write_page: failed to set block in inode (err=%s)\n",
+            eprintk("ext2_fs_node_write_page: failed to set block %ld, to pfn=0x%lx in inode (err=%s)\n",
+                    block_no,
+                    pfn,
                     errnostr(res));
             return res;
         }
@@ -219,9 +258,22 @@ int
 ext2_fs_node_flush(
         struct fs_node *fs_node)
 {
+    int res;
+
     struct ext2_fs_node *node =
         container_of(fs_node, struct ext2_fs_node, fs_node);
 
-    return -EUNIMPL;
+    if(node->inode_dirty) {
+        res = ext2_mount_write_inode(
+                node->mount,
+                node->fs_node.cache_node.key,
+                &node->inode);
+        if(res) {
+            return res;
+        }
+        node->inode_dirty = 0;
+    }
+
+    return 0;
 }
 
