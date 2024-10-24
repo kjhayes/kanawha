@@ -120,6 +120,10 @@ qwerty_2_scanset_handler(
         return 0;
     }
 
+    // Clear E0 and F0
+    *flags &= ~FLAG_F0;
+    *flags &= ~FLAG_E0;
+
     return -EINVAL;
 }
 
