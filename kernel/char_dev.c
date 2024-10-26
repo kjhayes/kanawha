@@ -134,6 +134,36 @@ char_dev_fs_node_flush(
     return char_dev_flush(dev);
 }
 
+static int
+char_dev_fs_node_setattr(
+        struct fs_node *fs_node,
+        int attr,
+        size_t value)
+{
+    switch(attr) {
+        case FS_NODE_ATTR_DATA_SIZE:
+            // We'll accept any value here and ignore it
+            return 0;
+    }
+    return -EINVAL;
+}
+
+static int
+char_dev_fs_node_getattr(
+        struct fs_node *fs_node,
+        int attr,
+        size_t *value)
+{
+    struct char_dev *dev =
+        container_of(fs_node, struct char_dev, flat_fs_node.fs_node);
+
+    switch(attr) {
+        case FS_NODE_ATTR_DATA_SIZE:
+            *value = 0;
+            return 0;
+    }
+    return -EINVAL;
+}
 static struct fs_node_ops
 char_dev_fs_node_ops = {
     .lookup = fs_node_cannot_lookup,
@@ -142,6 +172,8 @@ char_dev_fs_node_ops = {
     .link = fs_node_cannot_link,
     .symlink = fs_node_cannot_symlink,
     .unlink = fs_node_cannot_unlink,
+    .setattr = char_dev_fs_node_setattr,
+    .getattr = char_dev_fs_node_getattr,
 };
 
 static struct fs_file_ops
