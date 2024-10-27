@@ -1,13 +1,12 @@
 #ifndef __KANAWHA__PCI_PCI_H__
 #define __KANAWHA__PCI_PCI_H__
 
-#include <kanawha/device.h>
 #include <kanawha/stdint.h>
 #include <kanawha/list.h>
 #include <kanawha/ops.h>
 #include <kanawha/ptree.h>
-#include <kanawha/pio.h>
-#include <kanawha/mmio.h>
+
+#include <drivers/pci/bar.h>
 
 #ifdef CONFIG_SYSFS_PCI
 #include <kanawha/fs/flat.h>
@@ -52,44 +51,6 @@ struct pci_device
     uint8_t index;
 };
 
-struct pci_bar
-{
-    size_t size;
-    uint64_t phys_addr;
-
-    enum
-    {
-        PCI_BAR_NONE = 0,
-        PCI_BAR_MMIO,
-        PCI_BAR_PIO,
-    } type;
-
-    union
-    {
-        struct
-        {
-            void __mmio *base;
-            unsigned prefetch : 1;
-            unsigned type : 2;
-        } mmio;
-
-        struct
-        {
-            pio_t base;
-        } pio;
-    };
-};
-
-uint8_t  pci_bar_readb(struct pci_bar *bar, size_t offset);
-uint16_t pci_bar_readw(struct pci_bar *bar, size_t offset);
-uint32_t pci_bar_readl(struct pci_bar *bar, size_t offset);
-uint64_t pci_bar_readq(struct pci_bar *bar, size_t offset);
-
-void pci_bar_writeb(struct pci_bar *bar, size_t offset, uint8_t  val);
-void pci_bar_writew(struct pci_bar *bar, size_t offset, uint16_t val);
-void pci_bar_writel(struct pci_bar *bar, size_t offset, uint32_t val);
-void pci_bar_writeq(struct pci_bar *bar, size_t offset, uint64_t val);
-
 struct pci_func
 {
     struct pci_domain *domain;
@@ -105,6 +66,18 @@ struct pci_func
     uint16_t device_id;
 
     struct pci_bar bars[6];
+
+    enum {
+        PCI_IRQ_NONE,
+        PCI_IRQ_INTX,
+        PCI_IRQ_MSI,
+        PCI_IRQ_MSIX,
+    } irq_mode;
+
+    struct pci_msi_info *msi_info;
+    struct pci_msix_info *msix_info;
+
+    ilist_t cap_list;
 
 #ifdef CONFIG_SYSFS_PCI
     struct flat_node flat_node;

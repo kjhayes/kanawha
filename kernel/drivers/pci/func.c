@@ -4,6 +4,8 @@
 #include <kanawha/string.h>
 #include <drivers/pci/cfg.h>
 #include <drivers/pci/pci.h>
+#include <drivers/pci/cap.h>
+#include <drivers/pci/irq.h>
 
 static int
 pci_probe_bridge(
@@ -149,10 +151,49 @@ pci_probe_func(
 
     pci_probe_bridge(func);
 
-    pci_setup_bars(func);
+    uint8_t hdr_type;
+    pci_func_readb(func, PCI_CFG_HEADER_TYPE, &hdr_type);
+
+    ilist_init(&func->cap_list);
+
+    if((hdr_type & 0x7F) == PCI_HEADER_TYPE_DEVICE) {
+        res = pci_setup_bars(func);
+        if(res) {
+            eprintk("Failed to initialize PCI device BAR(s)! (err=%s)\n",
+                    errnostr(res));
+            ilist_remove(&device->function_list, &func->device_node);
+            kfree(func);
+            return res;
+        }
+
+        res = pci_func_init_caps(func);
+        if(res) {
+            eprintk("Failed to initialize PCI device capabilities! (err=%s)\n",
+                    errnostr(res));
+            // TODO deinit bars
+            ilist_remove(&device->function_list, &func->device_node);
+            kfree(func);
+            return res;
+        }
+
+    } else {
+        for(int i = 0; i < 6; i++) {
+            func->bars[i].type = PCI_BAR_NONE;
+        }
+    }
+
+    res = pci_func_init_irqs(func);
+    if(res) {
+        pci_func_deinit_caps(func);
+        ilist_remove(&device->function_list, &func->device_node);
+        kfree(func);
+        return res;
+    }
 
     res = register_pci_func(func);
     if(res) {
+        // TODO deinit bars
+        pci_func_deinit_caps(func);
         ilist_remove(&device->function_list, &func->device_node);
         kfree(func);
         return res;
