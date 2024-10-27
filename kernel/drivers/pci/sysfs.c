@@ -5,20 +5,75 @@
 #include <kanawha/fs/sys/sysfs.h>
 #include <drivers/pci/match.h>
 #include <drivers/pci/pci.h>
+#include <drivers/pci/cfg.h>
 #include <kanawha/stddef.h>
 #include <kanawha/init.h>
+#include <kanawha/string.h>
 
 static struct flat_mount *pci_fs_mount = NULL;
 static struct fs_node_ops pci_fs_node_ops;
 static struct fs_file_ops pci_fs_file_ops;
 
+#define PCI_SYSFS_PAGE_ORDER (12)
+
+static int
+pci_cfg_fs_node_read_page(
+        struct fs_node *fs_node,
+        void *buffer,
+        uintptr_t pfn,
+        unsigned long flags)
+{
+    int res;
+
+    struct flat_node *flat_node =
+        container_of(fs_node, struct flat_node, fs_node);
+    struct pci_func *func =
+        container_of(flat_node, struct pci_func, flat_node);
+
+    if(pfn != 0) {
+        return -ENXIO;
+    }
+
+    memset(buffer, 0, (1ULL<<PCI_SYSFS_PAGE_ORDER));
+
+    for(size_t offset = 0; offset < 0x100; offset += 4) {
+        res = pci_func_readl(func, offset, buffer+offset);
+        if(res) {
+            return res;
+        }
+    }
+
+    return 0;
+}
+
+static int
+pci_cfg_fs_node_getattr(
+        struct fs_node *fs_node,
+        int attr,
+        size_t *value)
+{
+    int res;
+
+    switch(attr) {
+        case FS_NODE_ATTR_DATA_SIZE:
+            *value = 0x100;
+            break;
+        case FS_NODE_ATTR_PAGE_ORDER:
+            *value = PCI_SYSFS_PAGE_ORDER;
+            break;
+        default:
+            return -EINVAL;
+    }
+    return 0;
+}
+
 static struct fs_node_ops
 pci_fs_node_ops =
 {
-    .read_page = fs_node_cannot_read_page,
-    .write_page = fs_node_cannot_read_page,
+    .read_page = pci_cfg_fs_node_read_page,
+    .write_page = fs_node_cannot_write_page,
     .flush = fs_node_cannot_flush,
-    .getattr = fs_node_cannot_getattr,
+    .getattr = pci_cfg_fs_node_getattr,
     .setattr = fs_node_cannot_setattr,
     .lookup = fs_node_cannot_lookup,
     .mkfile = fs_node_cannot_mkfile,
@@ -30,7 +85,7 @@ pci_fs_node_ops =
 
 static struct fs_file_ops
 pci_fs_file_ops = {
-    .read = fs_file_eof_read,
+    .read = fs_file_paged_read,
     .write = fs_file_eof_write,
     .flush = fs_file_nop_flush,
     .seek = fs_file_seek_pinned_zero,
