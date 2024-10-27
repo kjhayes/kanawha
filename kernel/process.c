@@ -891,6 +891,14 @@ process_spawn_child(
         }
     }
 
+#ifdef CONFIG_DEBUG_TRACK_PROCESS_EXEC
+    if(parent->tracked_exec) {
+        process->tracked_exec = kstrdup(parent->tracked_exec);
+    } else {
+        process->tracked_exec = NULL;
+    }
+#endif
+
     res = process_set_scheduler(process, parent->scheduler);
     if(res) {
         eprintk("Failed to set spawned process scheduler! (err=%s)\n",
