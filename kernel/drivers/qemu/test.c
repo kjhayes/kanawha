@@ -50,8 +50,6 @@ qemu_test_init_device(
         printk("TEST[%d]: \"%s\"\n", test, name_buf);
     }
 
-    panic("Oi");
-
     return 0;
 }
 

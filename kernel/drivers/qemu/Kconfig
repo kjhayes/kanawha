@@ -8,5 +8,12 @@ config QEMU_PCI_TEST_DEVICE
     help
       Include a driver for the QEMU PCI test device
 
+config QEMU_PCI_EDU_DEVICE
+    tristate "PCI EDU Device"
+    default n
+    depends on PCI
+    help
+      Include a driver for the QEMU PCI EDU device
+
 endmenu
 
