@@ -119,7 +119,7 @@ mmio_map(paddr_t paddr, size_t size)
 
     void * addr = (void*)(mmio_region_base + region_offset);
 
-    printk("mmio_map(%p, 0x%lx) -> %p)\n",
+    dprintk("mmio_map(%p, 0x%lx) -> %p)\n",
             paddr, size, addr);
 
     return (void __mmio *)addr;
