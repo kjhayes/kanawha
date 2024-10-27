@@ -193,6 +193,7 @@ pci_probe_func(
     res = register_pci_func(func);
     if(res) {
         // TODO deinit bars
+        // TODO deinit irqs
         pci_func_deinit_caps(func);
         ilist_remove(&device->function_list, &func->device_node);
         kfree(func);

@@ -10,8 +10,6 @@ obj-y += \
 	cpu.o \
 	percpu.o \
 	pic.o \
-	lapic.o \
-	xapic.o \
 	apic_timer.o \
 	ioapic.o \
 	vmem.o \
@@ -24,7 +22,8 @@ obj-y += \
 	acpi.o \
 	xcall.o \
 	vendor.o \
-	gp_fault.o
+	gp_fault.o \
+	lapic/ \
 
 obj-$(CONFIG_X64_MULTIBOOT2_BOOT) += mb2_boot.o
 

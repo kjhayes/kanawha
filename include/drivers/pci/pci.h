@@ -7,6 +7,8 @@
 #include <kanawha/ptree.h>
 
 #include <drivers/pci/bar.h>
+#include <kanawha/irq_domain.h>
+#include <kanawha/irq_dev.h>
 
 #ifdef CONFIG_SYSFS_PCI
 #include <kanawha/fs/flat.h>
@@ -68,14 +70,17 @@ struct pci_func
     struct pci_bar bars[6];
 
     enum {
-        PCI_IRQ_NONE,
-        PCI_IRQ_INTX,
-        PCI_IRQ_MSI,
-        PCI_IRQ_MSIX,
+        PCI_IRQ_MODE_NONE = 0,
+        PCI_IRQ_MODE_INTX,
+        PCI_IRQ_MODE_MSI,
+        PCI_IRQ_MODE_MSIX,
     } irq_mode;
 
     struct pci_msi_info *msi_info;
     struct pci_msix_info *msix_info;
+
+    struct irq_domain *irq_domain;
+    struct irq_dev *irq_dev;
 
     ilist_t cap_list;
 

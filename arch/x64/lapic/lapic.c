@@ -14,6 +14,10 @@
 #include <kanawha/thread.h>
 #include <kanawha/assert.h>
 
+#ifdef CONFIG_PCI
+#include <arch/x64/lapic/pci_mailbox.h>
+#endif
+
 #define LAPIC_MAX_LVT_ENTRIES 7
 
 #define LAPIC_SPURRIOUS_VECTOR 255
@@ -435,6 +439,13 @@ bsp_register_cpu_lapic(
     if(res) {
         return res;
     }
+
+#ifdef CONFIG_PCI
+    res = register_cpu_lapic_pci_mailbox(apic);
+    if(res) {
+        return res;
+    }
+#endif
 
     return 0;
 }

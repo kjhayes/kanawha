@@ -341,4 +341,116 @@ pci_func_raw_write_bar(
     }
 }
 
+// Command Register
+static inline uint16_t
+pci_func_raw_read_command(
+        struct pci_func *func)
+{
+    uint16_t val;
+    if(pci_func_readw(func, 0x4, &val))
+    {
+        return 0;
+    }
+    return val;
+}
+static inline int
+pci_func_raw_write_command(
+        struct pci_func *func,
+        uint16_t value)
+{
+    return pci_func_writew(func, 0x4, value);
+}
+
+// Status Register
+static inline uint16_t
+pci_func_raw_read_status(
+        struct pci_func *func)
+{
+    uint16_t val;
+    if(pci_func_readw(func, 0x6, &val))
+    {
+        return 0;
+    }
+    return val;
+}
+static inline int
+pci_func_raw_write_status(
+        struct pci_func *func,
+        uint16_t value)
+{
+    return pci_func_writew(func, 0x6, value);
+}
+
+// INT-X State
+static inline int
+pci_func_raw_disable_intx(
+        struct pci_func *func)
+{
+    uint16_t cmd = pci_func_raw_read_command(func);
+    cmd |= (1ULL<<10);
+    return pci_func_raw_write_command(func, cmd);
+}
+static inline int
+pci_func_raw_enable_intx(
+        struct pci_func *func)
+{
+    uint16_t cmd = pci_func_raw_read_command(func);
+    cmd &= ~(1ULL<<10);
+    return pci_func_raw_write_command(func, cmd);
+}
+
+// I/O Access
+static inline int
+pci_func_raw_enable_pio(
+        struct pci_func *func)
+{
+    uint16_t cmd = pci_func_raw_read_command(func);
+    cmd |= (1ULL<<0);
+    return pci_func_raw_write_command(func, cmd);
+}
+static inline int
+pci_func_raw_disable_pio(
+        struct pci_func *func)
+{
+    uint16_t cmd = pci_func_raw_read_command(func);
+    cmd &= ~(1ULL<<0);
+    return pci_func_raw_write_command(func, cmd);
+}
+
+// Memory Access
+static inline int
+pci_func_raw_enable_mmio(
+        struct pci_func *func)
+{
+    uint16_t cmd = pci_func_raw_read_command(func);
+    cmd |= (1ULL<<1);
+    return pci_func_raw_write_command(func, cmd);
+}
+static inline int
+pci_func_raw_disable_mmio(
+        struct pci_func *func)
+{
+    uint16_t cmd = pci_func_raw_read_command(func);
+    cmd &= ~(1ULL<<1);
+    return pci_func_raw_write_command(func, cmd);
+}
+
+// Bus Mastering 
+static inline int
+pci_func_raw_enable_bus_master(
+        struct pci_func *func)
+{
+    uint16_t cmd = pci_func_raw_read_command(func);
+    cmd |= (1ULL<<2);
+    return pci_func_raw_write_command(func, cmd);
+}
+static inline int
+pci_func_raw_disable_bus_master(
+        struct pci_func *func)
+{
+    uint16_t cmd = pci_func_raw_read_command(func);
+    cmd &= ~(1ULL<<2);
+    return pci_func_raw_write_command(func, cmd);
+}
+
 #endif

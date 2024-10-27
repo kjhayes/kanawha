@@ -6,6 +6,10 @@
 #include <kanawha/irq_dev.h>
 #include <kanawha/ops.h>
 
+#ifdef CONFIG_PCI
+#include <drivers/pci/mailbox.h>
+#endif
+
 #define LAPIC_BASE_ADDR_MSR 0x0000001B
 #define LAPIC_BASE_ADDR_MSR_BSP         (1ULL<<8)
 #define LAPIC_BASE_ADDR_MSR_APIC_ENABLE (1ULL<<11)
@@ -137,6 +141,10 @@ struct lapic {
 
     struct irq_dev lvt_dev; // Local Vector Table IRQ Controller
     struct irq_domain *lvt_domain;
+
+#ifdef CONFIG_PCI
+    struct pci_mailbox pci_mailbox;
+#endif
 };
 
 DEFINE_OP_LIST_WRAPPERS(

@@ -21,6 +21,13 @@ int
 pci_func_deinit_msix_info(
         struct pci_func *func);
 
+int
+pci_func_start_msix(
+        struct pci_func *func);
+int
+pci_func_stop_msix(
+        struct pci_func *func);
+
 // maximum number of supported IRQ(s) (zero if MSI or MSI-X is not supported)
 size_t
 pci_func_msix_max_num_irqs(

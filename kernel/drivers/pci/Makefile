@@ -12,6 +12,7 @@ pci-y += \
 	irq.o \
 	msi.o \
 	msix.o \
+	mailbox.o
 
 pci-$(CONFIG_PCI_PORT_CAM) += port_cam.o
 
