@@ -14,4 +14,5 @@ endmenu
 source "kernel/drivers/pci/Kconfig"
 source "kernel/drivers/ps2/Kconfig"
 source "kernel/drivers/qemu/Kconfig"
+source "kernel/drivers/virtio/Kconfig"
 

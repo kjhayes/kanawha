@@ -61,6 +61,7 @@ struct pci_func
 
     ilist_node_t global_node;
     ilist_node_t device_node;
+    ilist_node_t driver_node;
 
     uint8_t index;
 

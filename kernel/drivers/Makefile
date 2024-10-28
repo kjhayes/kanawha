@@ -5,6 +5,7 @@ obj-y += \
 	serial/ \
 	clk/ \
 	qemu/ \
+	virtio/ \
 
 
 obj-$(CONFIG_PS2) += ps2/

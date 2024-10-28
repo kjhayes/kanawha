@@ -5,7 +5,7 @@ config PCI
     help
       Base PCI Bus Support
 
-menu "PCI Devices"
+menu "PCI Configuration Space Access Mechanisms"
 depends on PCI
 
 config PCI_PORT_CAM

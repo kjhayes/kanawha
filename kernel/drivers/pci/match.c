@@ -44,6 +44,7 @@ pci_try_match(
     }
 
     func->driver = driver;
+    ilist_push_tail(&driver->devices, &func->driver_node);
 
     return 0;
 }
@@ -52,6 +53,10 @@ int
 register_pci_driver(
         struct pci_driver *driver)
 {
+    int res;
+
+    ilist_init(&driver->devices);
+
     spin_lock(&pci_match_lock);
 
     ilist_push_tail(&pci_driver_list, &driver->global_node);
@@ -60,12 +65,17 @@ register_pci_driver(
     ilist_for_each(node, &pci_unmatched_func_list) {
         struct pci_func *func =
             container_of(node, struct pci_func, global_node);
-        int res = pci_try_match(driver, func);
-        if(res == 0) {
-            ilist_remove(&pci_unmatched_func_list, &func->global_node); 
-            ilist_push_tail(&pci_matched_func_list, &func->global_node);
-            break;
+        res = pci_try_match(driver, func);
+        if(res) {
+            continue;
         }
+    }
+
+    ilist_for_each(node, &driver->devices) {
+        struct pci_func *func =
+            container_of(node, struct pci_func, driver_node);
+        ilist_remove(&pci_unmatched_func_list, &func->global_node);
+        ilist_push_tail(&pci_matched_func_list, &func->global_node);
     }
 
     spin_unlock(&pci_match_lock);

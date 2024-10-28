@@ -12,5 +12,10 @@ config DEBUG_VGA_SERIAL
     help
       Place a simple pseudo terminal on the platform VGA serial device
 
+config VIRTIO_CONSOLE
+    bool "Virtio Console"
+    default n
+    depends on VIRTIO
+
 source "kernel/drivers/serial/8250/Kconfig"
 

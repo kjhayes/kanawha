@@ -1,0 +1,18 @@
+
+config VIRTIO
+    tristate "Virtio Support"
+    default y
+    help
+      Base Virtio Support
+
+menu "Virtio Transports"
+depends on VIRTIO
+
+config VIRTIO_PCI
+    bool "PCI"
+    depends on PCI && VIRTIO
+    default y
+
+endmenu
+
+
