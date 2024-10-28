@@ -38,18 +38,24 @@ pci_setup_bars(
     for(int i = 0; i < 6; i++)
     {
         struct pci_bar *bar = &func->bars[i];
+        int bar_index = i;
+        int upper_bar_index = i+1;
 
-        uint64_t original = (uint32_t)pci_func_raw_read_bar(func, i);
+        uint64_t original = (uint32_t)pci_func_raw_read_bar(func, bar_index);
         if(original & 1) {
             bar->type = PCI_BAR_PIO;
         } else {
             bar->type = PCI_BAR_MMIO;
-            bar->mmio.type = (original & 0x6) >> 1;
-            bar->mmio.prefetch = (original & 0x8) >> 3;
+            bar->mmio.type = (original & 0x6ULL) >> 1;
+            bar->mmio.prefetch = (original & 0x8ULL) >> 3;
+
             if(bar->mmio.type == 2) {
-                original |= (((uint64_t)pci_func_raw_read_bar(func, i+1)) << 32);
+
+                original |= (((uint64_t)pci_func_raw_read_bar(func, upper_bar_index)) << 32);
+
                 i++; // Skip a BAR
-                if(i >= 6) {
+
+                if(upper_bar_index >= 6) {
                     bar->type = PCI_BAR_NONE;
                     eprintk("PCI BAR 5 was marked as a 64-bit BAR!\n");
                     break;
@@ -59,29 +65,35 @@ pci_setup_bars(
         }
 
         dprintk("original=0x%llx\n", (ull_t)original);
-        pci_func_raw_write_bar(func, i, 0xFFFFFFFFULL); 
-        uint64_t masked = pci_func_raw_read_bar(func, i);
+        pci_func_raw_write_bar(func, bar_index, 0xFFFFFFFFULL); 
+        uint64_t masked = pci_func_raw_read_bar(func, bar_index);
         if(bar->type == PCI_BAR_MMIO && bar->mmio.type == 2) {
-            pci_func_raw_write_bar(func, i+1, 0xFFFFFFFFULL);
-            masked |= (((uint64_t)pci_func_raw_read_bar(func, i+1)) << 32);
+            pci_func_raw_write_bar(func, upper_bar_index, 0xFFFFFFFFULL);
+            uint64_t upper_masked = (uint64_t)pci_func_raw_read_bar(func, upper_bar_index);
+            masked |= (upper_masked << 32);
         }
 
         dprintk("masked=0x%llx\n", (ull_t)masked);
         masked &= ~(bar->type == PCI_BAR_PIO ? 0x3ULL : 0xFULL);
         dprintk("masked=0x%llx\n", (ull_t)masked);
-        uint64_t size_mask = 0xFFFFFFFF;
+        uint64_t size_mask = 0xFFFFFFFFULL;
         if(bar->type == PCI_BAR_MMIO) {
             if(bar->mmio.type == 2) {
-                size_mask = 0xFFFFFFFFFFFFFFFF;
+                size_mask = 0xFFFFFFFFFFFFFFFFULL;
             } else if(bar->mmio.type == 1) {
-                size_mask = 0xFFFF;
+                size_mask = 0xFFFFULL;
             }
         }
-        size_t size = (((~masked) & size_mask)+1) & size_mask;
 
-        pci_func_raw_write_bar(func, i, (uint32_t)original);
+        size_t size = (((~masked) & size_mask)+1) & size_mask;
+        dprintk("masked = %p, size_mask = %p, size = %p\n",
+                (void*)masked,
+                (void*)size_mask,
+                (void*)size);
+
+        pci_func_raw_write_bar(func, bar_index, (uint32_t)original);
         if(bar->type == PCI_BAR_MMIO && bar->mmio.type == 2) {
-            pci_func_raw_write_bar(func, i+1, (uint32_t)(original>>32));
+            pci_func_raw_write_bar(func, upper_bar_index, (uint32_t)(original>>32));
         }
 
         if(size == 0) {
@@ -97,12 +109,12 @@ pci_setup_bars(
             eprintk("Found PCI Port I/O Bar with CONFIG_PORT_IO disabled!\n");
             continue;
 #else
-            bar->phys_addr = original & ~0x3;
+            bar->phys_addr = original & ~0x3ULL;
             bar->pio.base = bar->phys_addr;
 #endif
         } else {
             // MMIO
-            bar->phys_addr = original & ~0xF;
+            bar->phys_addr = original & ~0xFULL;
 
             bar->mmio.base = mmio_map(bar->phys_addr, size);
             if(bar->mmio.base == NULL) {

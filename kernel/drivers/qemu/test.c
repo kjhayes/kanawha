@@ -32,22 +32,34 @@ qemu_test_init_device(
 {
     printk("QEMU PCI Test: init\n");
 
-    for(int test = 0; test < 16; test++) {
+    for(int bar_index = 0; bar_index < 6; bar_index++) {
+
+      struct pci_bar *bar = &dev->bars[bar_index];
+      if(bar->type == PCI_BAR_NONE) {
+          printk("BAR(%ld) -> NONE\n",
+                  bar_index);
+          continue;
+      } else {
+          printk("BAR(%ld) -> size=%p\n",
+                  bar_index, bar->size);
+      }
+
+      for(int test = 0; test < 16; test++) {
 #define NAME_BUFLEN 0x100
-        char name_buf[0x100];
+          char name_buf[0x100];
 
-        pci_bar_writeb(&dev->bars[0], offsetof(struct pci_test_dev_hdr, test), test);
+          pci_bar_writeb(bar, offsetof(struct pci_test_dev_hdr, test), test);
 
-        for(size_t i = 0; i < NAME_BUFLEN; i++) {
-            name_buf[i] = pci_bar_readb(&dev->bars[0], offsetof(struct pci_test_dev_hdr, name) + i);
-            if(name_buf[i] == '\0') {
-                break;
-            }
-        }
-        name_buf[NAME_BUFLEN-1] = '\0';
+          for(size_t i = 0; i < NAME_BUFLEN; i++) {
+              name_buf[i] = pci_bar_readb(bar, offsetof(struct pci_test_dev_hdr, name) + i);
+              if(name_buf[i] == '\0') {
+                  break;
+              }
+          }
+          name_buf[NAME_BUFLEN-1] = '\0';
 #undef NAME_BUFLEN
-
-        printk("TEST[%d]: \"%s\"\n", test, name_buf);
+          printk("BAR(%ld) TEST[%d]: \"%s\"\n", bar_index, test, name_buf);
+      }
     }
 
     return 0;

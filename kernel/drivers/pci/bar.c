@@ -17,6 +17,7 @@ uint8_t pci_bar_readb(struct pci_bar *bar, size_t offset)
             return inb(bar->pio.base + offset);
 #endif
         case PCI_BAR_NONE:
+            panic("pci_bar_readb on PCI_BAR_NONE!");
             return 0;
     }
 }
@@ -24,12 +25,15 @@ uint16_t pci_bar_readw(struct pci_bar *bar, size_t offset)
 {
     switch(bar->type) {
         case PCI_BAR_MMIO:
+            printk("pci_bar_readw mmio_base=%p, offset=%p\n",
+                    bar->mmio.base, offset);
             return mmio_readw(bar->mmio.base + offset);
 #ifdef CONFIG_PORT_IO
         case PCI_BAR_PIO:
             return inw(bar->pio.base + offset);
 #endif
         case PCI_BAR_NONE:
+            panic("pci_bar_readw on PCI_BAR_NONE!");
             return 0;
     }
 }
@@ -43,6 +47,7 @@ uint32_t pci_bar_readl(struct pci_bar *bar, size_t offset)
             return inl(bar->pio.base + offset);
 #endif
         case PCI_BAR_NONE:
+            panic("pci_bar_readl on PCI_BAR_NONE!");
             return 0;
     }
 }
@@ -57,6 +62,7 @@ uint64_t pci_bar_readq(struct pci_bar *bar, size_t offset)
             return 0;
 #endif
         case PCI_BAR_NONE:
+            panic("pci_bar_readq on PCI_BAR_NONE!");
             return 0;
     }
 }
@@ -73,6 +79,7 @@ void pci_bar_writeb(struct pci_bar *bar, size_t offset, uint8_t val)
             break;
 #endif
         case PCI_BAR_NONE:
+            panic("pci_bar_writeb on PCI_BAR_NONE!");
             break;
     }
 }
@@ -88,6 +95,7 @@ void pci_bar_writew(struct pci_bar *bar, size_t offset, uint16_t val)
             break;
 #endif
         case PCI_BAR_NONE:
+            panic("pci_bar_writew on PCI_BAR_NONE!");
             break;
     }
 }
@@ -103,6 +111,7 @@ void pci_bar_writel(struct pci_bar *bar, size_t offset, uint32_t val)
             break;
 #endif
         case PCI_BAR_NONE:
+            panic("pci_bar_writel on PCI_BAR_NONE!");
             break;
     }
 }
@@ -118,6 +127,7 @@ void pci_bar_writeq(struct pci_bar *bar, size_t offset, uint64_t val)
             break;
 #endif
         case PCI_BAR_NONE:
+            panic("pci_bar_writeq on PCI_BAR_NONE!");
             break;
     }
 }
