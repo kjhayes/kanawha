@@ -25,8 +25,6 @@ uint16_t pci_bar_readw(struct pci_bar *bar, size_t offset)
 {
     switch(bar->type) {
         case PCI_BAR_MMIO:
-            printk("pci_bar_readw mmio_base=%p, offset=%p\n",
-                    bar->mmio.base, offset);
             return mmio_readw(bar->mmio.base + offset);
 #ifdef CONFIG_PORT_IO
         case PCI_BAR_PIO:

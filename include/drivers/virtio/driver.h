@@ -10,6 +10,10 @@ struct virtio_device;
 RET(int)\
 ARG(struct virtio_device *, dev)
 
+#define VIRTIO_DRIVER_NEGOTIATE_SIG(RET,ARG)\
+RET(int)\
+ARG(struct virtio_device *, dev)
+
 #define VIRTIO_DRIVER_INIT_SIG(RET,ARG)\
 RET(int)\
 ARG(struct virtio_device *, dev)
@@ -20,6 +24,7 @@ ARG(struct virtio_device *, dev)
 
 #define VIRTIO_DRIVER_OP_LIST(OP, ...)\
 OP(probe, VIRTIO_DRIVER_PROBE_SIG, ##__VA_ARGS__)\
+OP(negotiate, VIRTIO_DRIVER_NEGOTIATE_SIG, ##__VA_ARGS__)\
 OP(init_device, VIRTIO_DRIVER_INIT_SIG, ##__VA_ARGS__)\
 OP(deinit_device, VIRTIO_DRIVER_DEINIT_SIG, ##__VA_ARGS__)\
 

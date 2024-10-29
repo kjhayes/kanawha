@@ -5,6 +5,10 @@
 #include <drivers/pci/cfg.h>
 #include <drivers/pci/pci.h>
 
+#define PCI_CAP_ID_MSI             0x5
+#define PCI_CAP_ID_MSIX            0x11
+#define PCI_CAP_ID_VENDOR_SPECIFIC 0x9
+
 struct pci_cap
 {
     ilist_node_t list_node;
@@ -24,6 +28,12 @@ pci_func_deinit_caps(
 struct pci_cap *
 pci_func_find_cap(
         struct pci_func *func,
+        uint8_t cap_id);
+
+struct pci_cap *
+pci_func_find_next_cap(
+        struct pci_func *func,
+        struct pci_cap *cap,
         uint8_t cap_id);
 
 // Capability Read/Write Config Space Utils

@@ -1,7 +1,7 @@
 #ifndef __KANAWHA__VIRTIO_VIRTIO_H__
 #define __KANAWHA__VIRTIO_VIRTIO_H__
 
-#include <drivers/virtio/transport.h>
+#include <drivers/virtio/device.h>
 
 #define VIRTIO_STATUS_ACKNOWLEDGE        (1ULL<<0)
 #define VIRTIO_STATUS_DRIVER             (1ULL<<1)

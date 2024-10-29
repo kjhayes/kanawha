@@ -3,6 +3,7 @@ obj-y += \
 	blk/ \
 	pci/ \
 	serial/ \
+	rand/ \
 	clk/ \
 	qemu/ \
 	virtio/ \

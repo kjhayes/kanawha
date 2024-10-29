@@ -1,12 +1,21 @@
 
 #include <drivers/virtio/pci.h>
 #include <drivers/pci/pci.h>
+#include <drivers/pci/cap.h>
 #include <kanawha/init.h>
 #include <kanawha/string.h>
 #include <kanawha/kmalloc.h>
 
 static DECLARE_SPINLOCK(virtio_pci_device_list_lock);
 static DECLARE_ILIST(virtio_pci_device_list);
+
+#define VIRTIO_PCI_CAP_COMMON_CFG        0x1
+#define VIRTIO_PCI_CAP_NOTIFY_CFG        0x2
+#define VIRTIO_PCI_CAP_ISR_CFG           0x3
+#define VIRTIO_PCI_CAP_DEVICE_CFG        0x4
+#define VIRTIO_PCI_CAP_PCI_CFG           0x5
+#define VIRTIO_PCI_CAP_SHARED_MEMORY_CFG 0x8
+#define VIRTIO_PCI_CAP_VENDOR_CFG        0x9
 
 static inline uint16_t
 virtio_pci_get_id(struct pci_func *func)
@@ -35,20 +44,133 @@ virtio_pci_get_id(struct pci_func *func)
 }
 
 static int
-virtio_pci_transport_probe(
-        struct pci_driver *driver,
-        struct pci_func *func)
+virtio_pci_deinit_capabilities(
+        struct virtio_pci_device *vpci_dev)
 {
-    printk("virtio-pci: Probed Device\n");
+    do
+    {
+        ilist_node_t *node = ilist_pop_head(&vpci_dev->cap_list);
+        if(node == NULL) {
+            break;
+        }
+        struct virtio_pci_cap *cap =
+            container_of(node, struct virtio_pci_cap, list_node);
+
+        kfree(cap);
+
+    } while(1);
     return 0;
 }
 
 static int
-virtio_pci_transport_init_device(
+virtio_pci_init_capabilities(
+        struct virtio_pci_device *vpci_dev)
+{
+    int res;
+
+    ilist_init(&vpci_dev->cap_list);
+
+    struct pci_func *func = vpci_dev->func;
+
+    size_t num_found = 0;
+
+    struct pci_cap *cap = pci_func_find_cap(
+            vpci_dev->func,
+            PCI_CAP_ID_VENDOR_SPECIFIC);
+
+    while(cap != NULL)
+    {
+        num_found++;
+
+        struct virtio_pci_cap *vcap =
+            kmalloc(sizeof(struct virtio_pci_cap));
+        if(vcap == NULL) {
+            res = -ENOMEM;
+            break;
+        }
+        memset(vcap, 0, sizeof(struct virtio_pci_cap));
+
+        vcap->cap = cap;
+        vcap->cap_len =     pci_cap_readb(func, cap, 0x2);
+        vcap->type =        pci_cap_readb(func, cap, 0x3);
+        uint8_t bar_index = pci_cap_readb(func, cap, 0x4);
+        vcap->id =          pci_cap_readb(func, cap, 0x5);
+        vcap->offset =      pci_cap_readl(func, cap, 0x8);
+        vcap->length =      pci_cap_readl(func, cap, 0xC);
+
+        dprintk("vcap->bar=0x%x, offset=0x%lx, length=0x%lx, type=0x%x\n",
+                (uint32_t)bar_index, (uint32_t)vcap->offset, (uint32_t)vcap->length, (uint32_t)vcap->type);
+
+        vcap->bar = &func->bars[bar_index];
+
+        ilist_push_tail(&vpci_dev->cap_list, &vcap->list_node);
+
+        cap = pci_func_find_next_cap(
+                vpci_dev->func,
+                cap,
+                PCI_CAP_ID_VENDOR_SPECIFIC);
+    }
+
+    if(res) {
+        virtio_pci_deinit_capabilities(vpci_dev);
+        return res;
+    }
+    
+    return 0;
+}
+
+static struct virtio_pci_cap *
+virtio_pci_find_cap(
+        struct virtio_pci_device *device,
+        uint8_t type)
+{
+    ilist_node_t *node;
+    ilist_for_each(node, &device->cap_list) {
+        struct virtio_pci_cap *vcap =
+            container_of(node, struct virtio_pci_cap, list_node);
+        if(vcap->type == type) {
+            return vcap;
+        }
+    }
+    return NULL;
+}
+
+static int
+virtio_pci_init_queues(
+        struct virtio_pci_device *device)
+{
+    uint32_t num_queues =
+        virtio_pci_cap_bar_readl(
+                device,
+                device->common_cfg_cap,
+                VIRTIO_PCI_COMMON_CFG_NUM_QUEUES);
+    printk("num_queues=0x%lx\n",
+            num_queues);
+    return 0;
+}
+
+static int
+virtio_pci_deinit_queues(
+        struct virtio_pci_device *device)
+{
+    return -EUNIMPL;
+}
+
+static int
+virtio_pci_probe(
         struct pci_driver *driver,
         struct pci_func *func)
 {
-    printk("virtio-pci: Init Device\n");
+    dprintk("virtio-pci: Probed Device\n");
+    return 0;
+}
+
+static int
+virtio_pci_init_device(
+        struct pci_driver *driver,
+        struct pci_func *func)
+{
+    dprintk("virtio-pci: Init Device\n");
 
     int res;
 
@@ -59,10 +181,31 @@ virtio_pci_transport_init_device(
     memset(vpci_dev, 0, sizeof(struct virtio_pci_device));
 
     vpci_dev->func = func;
-    vpci_dev->virtio_dev.transport = &virtio_pci_transport;
+    vpci_dev->virtio_dev.ops = &virtio_pci_device_ops;
     vpci_dev->virtio_dev.virtio_id = virtio_pci_get_id(func);
 
     if(vpci_dev->virtio_dev.virtio_id == 0) {
+        kfree(vpci_dev);
+        return -EINVAL;
+    }
+
+    res = virtio_pci_init_capabilities(vpci_dev);
+    if(res) {
+        return res;
+    }
+
+    vpci_dev->common_cfg_cap =
+        virtio_pci_find_cap(vpci_dev, VIRTIO_PCI_CAP_COMMON_CFG);
+    if(vpci_dev->common_cfg_cap == NULL) {
+        virtio_pci_deinit_capabilities(vpci_dev);
+        kfree(vpci_dev);
+        return -EINVAL;
+    }
+
+    vpci_dev->notify_cap =
+        virtio_pci_find_cap(vpci_dev, VIRTIO_PCI_CAP_NOTIFY_CFG);
+    if(vpci_dev->common_cfg_cap == NULL) {
+        virtio_pci_deinit_capabilities(vpci_dev);
         kfree(vpci_dev);
         return -EINVAL;
     }
@@ -72,6 +215,7 @@ virtio_pci_transport_init_device(
     res = register_virtio_device(&vpci_dev->virtio_dev);
     if(res) {
         spin_unlock(&virtio_pci_device_list_lock);
+        virtio_pci_deinit_capabilities(vpci_dev);
         kfree(vpci_dev);
         return res;
     }
@@ -84,11 +228,11 @@ virtio_pci_transport_init_device(
 }
 
 static int
-virtio_pci_transport_deinit_device(
+virtio_pci_deinit_device(
         struct pci_driver *driver,
         struct pci_func *func)
 {
-    printk("virtio-pci: Deinit Device\n");
+    dprintk("virtio-pci: Deinit Device\n");
     return -EUNIMPL;
 }
 
@@ -170,23 +314,23 @@ virtio_pci_ids[] = {
 };
 
 static struct pci_driver_ops
-virtio_pci_transport_driver_ops = {
-    .probe = &virtio_pci_transport_probe,
-    .init_device = &virtio_pci_transport_init_device,
-    .deinit_device = &virtio_pci_transport_deinit_device,
+virtio_pci_driver_ops = {
+    .probe = &virtio_pci_probe,
+    .init_device = &virtio_pci_init_device,
+    .deinit_device = &virtio_pci_deinit_device,
 };
 
 static struct pci_driver 
-virtio_pci_transport_driver = {
-    .ops = &virtio_pci_transport_driver_ops,
+virtio_pci_driver = {
+    .ops = &virtio_pci_driver_ops,
     .num_ids = sizeof(virtio_pci_ids) / sizeof(struct pci_id),
     .ids = virtio_pci_ids,
 };
 
 static int
-virtio_pci_transport_driver_register(void)
+virtio_pci_driver_register(void)
 {
-    return register_pci_driver(&virtio_pci_transport_driver);
+    return register_pci_driver(&virtio_pci_driver);
 }
-declare_init(bus, virtio_pci_transport_driver_register);
+declare_init(bus, virtio_pci_driver_register);
 

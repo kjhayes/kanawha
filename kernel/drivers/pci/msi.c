@@ -46,7 +46,7 @@ int
 pci_func_init_msi_info(
         struct pci_func *func)
 {
-    struct pci_cap *cap = pci_func_find_cap(func, 0x05);
+    struct pci_cap *cap = pci_func_find_cap(func, PCI_CAP_ID_MSI);
     if(cap == NULL) {
         func->msi_info = NULL;
         return 0;

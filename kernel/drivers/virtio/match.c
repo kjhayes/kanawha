@@ -16,11 +16,11 @@ virtio_try_match(
 {
     int res;
 
-    printk("virtio_try_match\n");
+    dprintk("virtio_try_match\n");
 
     int matched_id = 0;
     for(size_t i = 0; i < driver->num_ids; i++) {
-        printk("Checking: driver 0x%x, device 0x%x\n",
+        dprintk("Checking: driver 0x%x, device 0x%x\n",
                 driver->ids[i], device->virtio_id);
         if(driver->ids[i] == device->virtio_id)
         {
@@ -33,8 +33,33 @@ virtio_try_match(
         return -EINVAL;
     }
 
+    DEBUG_ASSERT(device->driver == NULL);
+
     res = virtio_driver_probe(driver, device);
     if(res) {
+        return res;
+    }
+
+    virtio_device_set_status(device, VIRTIO_STATUS_DRIVER);
+
+    res = virtio_driver_negotiate(driver, device);
+    if(res) {
+        return res;
+    }
+
+    virtio_device_set_status(device, VIRTIO_STATUS_FEATURES_OK);
+    uint8_t status = virtio_device_read_status(device);
+    if(!(status & VIRTIO_STATUS_FEATURES_OK)) {
+        eprintk("virtio_try_match: Device Rejected Subset of Features After Negotiation\n");
+        return -EINVAL;
+    }
+
+    printk("Virtio Device Negotiation Accepted!\n");
+
+    res = virtio_device_init_queues(device);
+    if(res) {
+        eprintk("virtio_try_match: Failed to initialize device queues! (err=%s)\n",
+                errnostr(res));
         return res;
     }
 
@@ -42,6 +67,7 @@ virtio_try_match(
     if(res) {
         return res;
     }
+
 
     device->driver = driver;
     ilist_push_tail(&driver->device_list, &device->driver_node);
@@ -55,6 +81,13 @@ register_virtio_device(
 {
     int res;
 
+    res = virtio_device_reset(device);
+    if(res) {
+        eprintk("register_virtio_device: Failed to reset the device (err=%s)\n",
+                errnostr(res));
+        return res;
+    }
+
     uint64_t status = virtio_device_read_status(device);
     if(status) {
         eprintk("register_virtio_device: Device Status is non-zero! (status=0x%lx)\n",
@@ -62,21 +95,11 @@ register_virtio_device(
         return -EINVAL; // Nothing should have configured the device at this point
     }
 
-
     // Acknowledge the device as a virtio device
     res = virtio_device_set_status(device, VIRTIO_STATUS_ACKNOWLEDGE);
     if(res) {
         return res;
     }
-
-    // Make sure the acknowledge bit was set correctly
-    status = virtio_device_read_status(device);
-    if(!(status & VIRTIO_STATUS_ACKNOWLEDGE)) {
-        eprintk("register_virtio_device: Failed to acknowledge virtio device! (status=0x%lx)\n",
-                status);
-        return -EINVAL;
-    }
-
 
     spin_lock(&virtio_match_lock);
 

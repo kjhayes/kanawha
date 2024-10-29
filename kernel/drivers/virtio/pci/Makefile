@@ -1,5 +1,6 @@
 
 virtio-y += \
 	pci.o \
-	transport.o
+	device.o \
+	queue.o \
 

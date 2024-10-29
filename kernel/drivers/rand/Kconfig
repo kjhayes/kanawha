@@ -1,0 +1,5 @@
+
+config VIRTIO_RNG
+    tristate "Virtio RNG Source"
+    default n
+

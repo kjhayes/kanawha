@@ -8,7 +8,15 @@ virtio_console_probe(
         struct virtio_driver *driver,
         struct virtio_device *device)
 {
-    printk("virtio_console_probe\n");
+    dprintk("virtio_console_probe\n");
+    return 0;
+}
+
+static int
+virtio_console_negotiate(
+        struct virtio_driver *driver,
+        struct virtio_device *device)
+{
     return 0;
 }
 
@@ -17,7 +25,6 @@ virtio_console_init_device(
         struct virtio_driver *driver,
         struct virtio_device *device)
 {
-    printk("virtio_console_init_device\n");
     return -EUNIMPL;
 }
 
@@ -26,13 +33,13 @@ virtio_console_deinit_device(
         struct virtio_driver *driver,
         struct virtio_device *device)
 {
-    printk("virtio_console_deinit_device\n");
     return -EUNIMPL;
 }
 
 static struct virtio_driver_ops
 virtio_console_driver_ops = {
     .probe = virtio_console_probe,
+    .negotiate = virtio_console_negotiate,
     .init_device = virtio_console_init_device,
     .deinit_device = virtio_console_deinit_device,
 };

@@ -105,3 +105,25 @@ pci_func_find_cap(
     return NULL;
 }
 
+struct pci_cap *
+pci_func_find_next_cap(
+        struct pci_func *func,
+        struct pci_cap *cap,
+        uint8_t cap_id)
+{
+    cap = container_of(
+            cap->list_node.next,
+            struct pci_cap,
+            list_node);
+    while(&cap->list_node != &func->cap_list) {
+        cap = container_of(
+            cap->list_node.next,
+            struct pci_cap,
+            list_node);
+        if(cap->cap_id == cap_id) {
+            return cap;
+        }
+    }
+    return NULL;
+}
+

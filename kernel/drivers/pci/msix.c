@@ -143,7 +143,7 @@ int
 pci_func_init_msix_info(
         struct pci_func *func)
 {
-    struct pci_cap *cap = pci_func_find_cap(func, 0x11);
+    struct pci_cap *cap = pci_func_find_cap(func, PCI_CAP_ID_MSIX);
     if(cap == NULL) {
         func->msix_info = NULL;
         return 0;
