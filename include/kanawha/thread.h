@@ -191,12 +191,12 @@ idle_loop(void);
 // we are a multiprocessor), then any thread which is running should be able to access
 // "region" at virtual_addr safely.
 int
-thread_force_mapping(struct vmem_region *region, vaddr_t virtual_addr);
+thread_force_mapping(struct vmem_region *region, void * virtual_addr);
 
 // Stops forcing the vmem region containing "virtual_addr" to
 // be mapped in all threads, (does not undo the mapping in
 // threads which contain it already though)
 int
-thread_relax_mapping(vaddr_t virtual_addr);
+thread_relax_mapping(void * virtual_addr);
 
 #endif

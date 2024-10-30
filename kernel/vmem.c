@@ -145,7 +145,7 @@ vmem_map_destroy(struct vmem_map *map)
 
 struct vmem_region *
 vmem_region_create_direct(
-        paddr_t paddr,
+        void __phys * paddr,
         size_t size,
         unsigned long flags)
 {
@@ -250,18 +250,18 @@ vmem_region_destroy(
 }
 
 struct vmem_region_ref *
-vmem_map_get_region(struct vmem_map *map, vaddr_t addr) 
+vmem_map_get_region(struct vmem_map *map, void * addr) 
 {
     dprintk("vmem_map_get_region(map=%p, addr=%p)\n",
             map, addr);
 
-    struct ptree_node *node = ptree_get_max_less_or_eq(&map->mapping_root, addr);
+    struct ptree_node *node = ptree_get_max_less_or_eq(&map->mapping_root, (uintptr_t)addr);
     if(node == NULL) {
         return NULL;
     }
 
     struct vmem_region_ref *ref = container_of(node, struct vmem_region_ref, map_node);
-    vaddr_t end = ref->virt_addr + ref->region->size;
+    void * end = ref->virt_addr + ref->region->size;
     if(addr >= end) {
         return NULL;
     }
@@ -272,10 +272,10 @@ int
 vmem_map_map_region(
         struct vmem_map *map,
         struct vmem_region *region,
-        vaddr_t base)
+        void * base)
 {
     int res;
-    vaddr_t end = base + region->size;
+    void * end = base + region->size;
 
     DEBUG_ASSERT(KERNEL_ADDR(map));
     DEBUG_ASSERT(KERNEL_ADDR(region));
@@ -284,11 +284,11 @@ vmem_map_map_region(
     spin_lock(&map->lock);
 
     { // Checking for overlap
-    struct ptree_node *overlap_check_node = ptree_get_max_less_or_eq(&map->mapping_root, end-1);
+    struct ptree_node *overlap_check_node = ptree_get_max_less_or_eq(&map->mapping_root, (uintptr_t)end-1);
     if(overlap_check_node != NULL) {
         struct vmem_region_ref *overlap_check_region =
             container_of(overlap_check_node, struct vmem_region_ref, map_node);
-        vaddr_t overlap_end = overlap_check_region->virt_addr + overlap_check_region->region->size;
+        void * overlap_end = overlap_check_region->virt_addr + overlap_check_region->region->size;
         if(overlap_end > base) {
             // We overlap with this region in virtual memory
             eprintk("Found overlapping region when trying to map vmem_region into vmem_map!\n");
@@ -312,7 +312,7 @@ vmem_map_map_region(
     ref->virt_addr = base; 
 
     ilist_push_tail(&region->ref_list, &ref->region_node);
-    res = ptree_insert(&map->mapping_root, &ref->map_node, base);
+    res = ptree_insert(&map->mapping_root, &ref->map_node, (uintptr_t)base);
     if(res) {
         eprintk("Failed to insert vmem_region_ref into vmem_map ptree tree! Region [%p - %p)\n",
                 base, base + region->size);
@@ -331,7 +331,7 @@ vmem_map_map_region(
     return 0;
 
 err3:
-    ptree_remove(&map->mapping_root, base);
+    ptree_remove(&map->mapping_root, (uintptr_t)base);
 err2:
     ilist_remove(&region->ref_list, &ref->region_node);
     free_vmem_region_ref(ref);
@@ -360,7 +360,7 @@ vmem_map_unmap_region(
 
     struct vmem_region *region = ref->region;
 
-    struct ptree_node *removed = ptree_remove(&map->mapping_root, ref->virt_addr);
+    struct ptree_node *removed = ptree_remove(&map->mapping_root, (uintptr_t)ref->virt_addr);
     DEBUG_ASSERT(removed == &ref->map_node);
 
     region->num_refs--;
@@ -484,7 +484,7 @@ int
 vmem_paged_region_map(
         struct vmem_region *region,
         size_t offset,
-        paddr_t phys_addr,
+        void __phys * phys_addr,
         size_t size,
         unsigned long flags)
 {
@@ -539,7 +539,7 @@ vmem_get_default_map(void) {
 }
 
 int
-vmem_force_mapping(struct vmem_region *region, vaddr_t virtual_address)
+vmem_force_mapping(struct vmem_region *region, void * virtual_address)
 {
     int res;
 
@@ -564,14 +564,14 @@ vmem_force_mapping(struct vmem_region *region, vaddr_t virtual_address)
     return 0;
 }
 int
-vmem_relax_mapping(vaddr_t virtual_address)
+vmem_relax_mapping(void * virtual_address)
 {
     return -EUNIMPL;
 }
 
 static int
 vmem_map_unhandled_user_page_fault(
-        vaddr_t faulting_address,
+        void * faulting_address,
         unsigned long access_flags,
         struct vmem_map *map)
 {
@@ -610,7 +610,7 @@ vmem_map_unhandled_user_page_fault(
 
 int
 vmem_map_handle_page_fault(
-        vaddr_t faulting_address,
+        void * faulting_address,
         unsigned long access_flags,
         struct vmem_map *map)
 {
@@ -691,7 +691,7 @@ vmem_create_default_kernel_map(void)
 
     res = vmem_force_mapping(
             identity_map_region,
-            CONFIG_VIRTUAL_BASE);
+            (void*)CONFIG_VIRTUAL_BASE);
     if(res) {
         eprintk("Failed to map identity map vmem_region into default vmem_map! (err=%s)\n", errnostr(res));
         return res;

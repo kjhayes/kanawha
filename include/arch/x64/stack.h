@@ -13,7 +13,7 @@ struct x64_thread_stack
     order_t virt_order;
 
     order_t order;
-    paddr_t page;
+    void __phys * page;
 
     uintptr_t rsp;
 

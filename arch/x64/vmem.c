@@ -40,7 +40,7 @@ x64_vmem_page_fault_handler(
     pf_flags |= excp_state->error_code & (1ULL<<2) ? PF_FLAG_USERMODE : 0;
     pf_flags |= excp_state->error_code & (1ULL<<4) ? PF_FLAG_EXEC : 0;
 
-    res = vmem_map_handle_page_fault(faulting_address, pf_flags, current);
+    res = vmem_map_handle_page_fault((void*)faulting_address, pf_flags, current);
 
     if(res) {
         
@@ -125,13 +125,13 @@ x64_virt_flags_static_init(void) {
 declare_init_desc(mem_flags, x64_virt_flags_static_init, "Setting x64 Virtual Memory Types");
 
 static inline size_t
-pt_level_table_index(int level, vaddr_t addr) {
+pt_level_table_index(int level, void * addr) {
     switch(level) {
-        case 1: return X64_PT_INDEX_OF_ADDR(addr);
-        case 2: return X64_PD_INDEX_OF_ADDR(addr);;
-        case 3: return X64_PDPT_INDEX_OF_ADDR(addr);
-        case 4: return X64_PML4_INDEX_OF_ADDR(addr);
-        case 5: return X64_PML5_INDEX_OF_ADDR(addr);
+        case 1: return X64_PT_INDEX_OF_ADDR((uintptr_t)addr);
+        case 2: return X64_PD_INDEX_OF_ADDR((uintptr_t)addr);;
+        case 3: return X64_PDPT_INDEX_OF_ADDR((uintptr_t)addr);
+        case 4: return X64_PML4_INDEX_OF_ADDR((uintptr_t)addr);
+        case 5: return X64_PML5_INDEX_OF_ADDR((uintptr_t)addr);
         default:
             panic("pt_level_table_index: invalid pt_level (%d)\n", level);
     }
@@ -264,7 +264,7 @@ pt_level_entry_is_leaf(int level, uint64_t entry)
 
 static inline int
 __x64_verify_page_table(
-        paddr_t table,
+        void __phys * table,
         int level)
 {
     int res;
@@ -289,7 +289,7 @@ __x64_verify_page_table(
             continue;
         }
 
-        paddr_t addr = entry & addr_mask;
+        void __phys * addr = (void __phys *)(entry & addr_mask);
         void *entry_vaddr = (void*)__va(addr);
 
         if(!(KERNEL_ADDR(entry_vaddr))) {
@@ -311,7 +311,7 @@ __x64_verify_page_table(
 
 static inline void
 x64_verify_page_table(
-        paddr_t table,
+        void __phys * table,
         int level)
 {
 #ifndef CONFIG_DEBUG_ASSERTIONS
@@ -369,7 +369,7 @@ static int
 create_pt_leaf_entry(
         uint64_t *entry,
         int pt_level,
-        paddr_t base,
+        void __phys * base,
         unsigned long flags)
 {
     *entry = 0;
@@ -416,7 +416,7 @@ static int
 create_permissive_pt_table_entry(
         uint64_t *entry,
         int pt_level,
-        paddr_t next_table)
+        void __phys * next_table)
 {
     x64_verify_page_table(next_table, pt_level-1);
 
@@ -454,7 +454,7 @@ static int
 create_shared_pt_table_entry(
         uint64_t *entry,
         int pt_level,
-        paddr_t next_table)
+        void __phys * next_table)
 {
     x64_verify_page_table(next_table, pt_level-1);
 
@@ -486,13 +486,13 @@ static int
 create_pt_table_entry(
         uint64_t *entry,
         int pt_level,
-        paddr_t next_table,
+        void __phys * next_table,
         unsigned long flags)
 {
     x64_verify_page_table(next_table, pt_level-1);
 
     *entry = 0;
-    *entry |= next_table;
+    *entry |= (uintptr_t)next_table;
 
     switch(pt_level) {
         case 2:
@@ -522,7 +522,7 @@ create_pt_table_entry(
 
 static int
 create_empty_pt_table(
-        paddr_t *table_ptr,
+        void __phys * *table_ptr,
         int table_level) 
 {
     int res;
@@ -553,7 +553,7 @@ create_empty_pt_table(
 
 static int
 create_paged_pt_table(
-        paddr_t *table_ptr,
+        void __phys * *table_ptr,
         int table_level,
         size_t size)
 {
@@ -580,7 +580,7 @@ create_paged_pt_table(
 
     for(size_t i = 0; i < num_whole_entries; i++) {
         // Map the middle entries
-        paddr_t subtable;
+        void __phys * subtable;
         res = create_empty_pt_table(
                 &subtable,
                 table_level-1);
@@ -599,7 +599,7 @@ create_paged_pt_table(
     size_t final_entry_size = size - (num_whole_entries*entry_region_size);
     if(final_entry_size > 0) 
     {
-      paddr_t subtable;
+      void __phys * subtable;
       res = create_paged_pt_table(
               &subtable,
               table_level-1,
@@ -623,9 +623,9 @@ create_paged_pt_table(
 
 static int
 create_direct_pt_table(
-        paddr_t *table_ptr,
+        void __phys * *table_ptr,
         int table_level,
-        paddr_t base,
+        void __phys * base,
         size_t size,
         unsigned long flags) 
 {
@@ -660,7 +660,7 @@ create_direct_pt_table(
                 return res;
             }
         } else {
-            paddr_t subtable;
+            void __phys * subtable;
             res = create_direct_pt_table(
                     &subtable,
                     table_level-1,
@@ -685,7 +685,7 @@ create_direct_pt_table(
 
     if(final_entry_size > 0) {
       // We need to map the first entry as a table
-      paddr_t subtable;
+      void __phys * subtable;
       res = create_direct_pt_table(
               &subtable,
               table_level-1,
@@ -715,7 +715,7 @@ arch_vmem_region_init_direct(struct vmem_region *region)
 {
     int res;
 
-    if(region->direct.phys_base % X64_PT_ENTRY_REGION_SIZE != 0) {
+    if((uintptr_t)region->direct.phys_base % X64_PT_ENTRY_REGION_SIZE != 0) {
         eprintk("Tried to initialize direct region with physical base unaligned from smallest page size!\n"
                 "    region_base=%p, min_page_size=%p\n", region->direct.phys_base, (uintptr_t)X64_PT_ENTRY_REGION_SIZE);
         return -EINVAL;
@@ -726,8 +726,8 @@ arch_vmem_region_init_direct(struct vmem_region *region)
         return -EINVAL;
     }
 
-    paddr_t base = region->direct.phys_base;
-    paddr_t end = base + (region->size-1);
+    uintptr_t base = (uintptr_t)region->direct.phys_base;
+    uintptr_t end = (uintptr_t)(base + (region->size-1));
 
     region->arch_state.pt_level = -1;
     size_t pt_level_entry_size = -1;
@@ -771,7 +771,7 @@ arch_vmem_region_init_direct(struct vmem_region *region)
         res = create_pt_leaf_entry(
             &region->arch_state.pt_entry,
             region->arch_state.pt_level,
-            base,
+            region->direct.phys_base,
             region->direct.flags);
         if(res) {
             return res;
@@ -781,7 +781,7 @@ arch_vmem_region_init_direct(struct vmem_region *region)
         res = create_direct_pt_table(
                 &region->arch_state.pt_table,
                 region->arch_state.pt_level,
-                base,
+                region->direct.phys_base,
                 region->size,
                 region->direct.flags);
         if(res) {
@@ -816,8 +816,8 @@ arch_vmem_region_init_paged(struct vmem_region *region)
         return -EINVAL;
     }
 
-    paddr_t base = 0;
-    paddr_t end = (region->size-1);
+    uintptr_t base = 0;
+    uintptr_t end = (region->size-1);
 
     region->arch_state.pt_level = -1;
     size_t pt_level_entry_size = -1;
@@ -882,10 +882,10 @@ arch_vmem_region_init(struct vmem_region *region)
 
 static int
 map_region_tables(
-        paddr_t map_table,
-        paddr_t region_table,
+        void __phys * map_table,
+        void __phys * region_table,
         int table_level,
-        vaddr_t vbase,
+        void * vbase,
         struct vmem_map *map,
         struct vmem_region *region)
 {
@@ -979,13 +979,13 @@ map_region_tables(
             return -EINVAL;
         }
 
-        paddr_t region_next_addr = *region_entry & next_table_addr_mask;
-        paddr_t map_next_addr = *map_entry & next_table_addr_mask;
+        void __phys * region_next_addr = (void __phys *)(*region_entry & next_table_addr_mask);
+        void __phys * map_next_addr = (void __phys *)(*map_entry & next_table_addr_mask);
 
         // They are both tables
         if(!(*map_entry & shared_table_mask)) {
             // the map entry points to some other region's page table
-            paddr_t shared_table;
+            void __phys * shared_table;
             res = page_alloc(ptr_orderof(level_below_size), &shared_table, 0);
             if(res) {
                 return -ENOMEM;
@@ -1004,7 +1004,7 @@ map_region_tables(
             }
         }
 
-        map_next_addr = *map_entry & next_table_addr_mask;
+        map_next_addr = (void __phys *)(*map_entry & next_table_addr_mask);
         
         // Already was or is now a shared page,
         // so we can recursively call ourselves on it
@@ -1026,7 +1026,7 @@ map_region_tables(
 
 static int
 free_page_tables(
-        paddr_t table,
+        void __phys * table,
         int level)
 {
     int res;
@@ -1053,7 +1053,7 @@ free_page_tables(
         }
 
         // This must be a present table
-        paddr_t subtable = pt_level_addr_mask(level) & entry;
+        void __phys * subtable = (void __phys *)(pt_level_addr_mask(level) & entry);
         res = free_page_tables(subtable, level-1);
         if(res) {
             return res;
@@ -1088,8 +1088,8 @@ arch_vmem_map_map_region(
     int pt_level = map->arch_state.pt_level;
 
     uint64_t *map_entry = NULL;
-    paddr_t map_table = map->arch_state.pt_root;
-    paddr_t region_table = ref->region->arch_state.pt_table;
+    void __phys * map_table = map->arch_state.pt_root;
+    void __phys * region_table = ref->region->arch_state.pt_table;
 
     if(pt_level < ref->region->arch_state.pt_level) {
         eprintk("arch_vmem_map_map_region: invalid map->pt_level < region->pt_level (%d < %d)\n",
@@ -1115,17 +1115,17 @@ arch_vmem_map_map_region(
 
         if(present_mask & *map_entry) {
             if(*map_entry & shared_mask) {
-                map_table = addr_mask & *map_entry;
+                map_table = (void __phys *)(addr_mask & *map_entry);
             } else {
                 // the map entry points to some other region's page table
-                paddr_t shared_table;
+                void __phys * shared_table;
                 res = page_alloc(ptr_orderof(next_table_size), &shared_table, 0);
                 if(res) {
                     return -ENOMEM;
                 }
 
                 // Make a copy of the other region's top level table
-                map_table = addr_mask & *map_entry;
+                map_table = (void __phys *)(addr_mask & *map_entry);
                 memcpy((void*)__va(shared_table), (void*)__va(map_table), next_table_size);
 
                 // Create a shared table entry
@@ -1140,7 +1140,7 @@ arch_vmem_map_map_region(
                 map_table = shared_table;
             }
         } else {
-            paddr_t shared_table;
+            void __phys * shared_table;
             res = page_alloc(ptr_orderof(next_table_size), &shared_table, 0);
             if(res) {
                 return -ENOMEM;
@@ -1201,10 +1201,10 @@ arch_vmem_map_map_region(
 
 static int
 unmap_region_tables(
-        paddr_t map_table,
-        paddr_t region_table,
+        void __phys * map_table,
+        void __phys * region_table,
         int table_level,
-        vaddr_t vbase)
+        void * vbase)
 {
     int res;
 
@@ -1228,7 +1228,7 @@ unmap_region_tables(
             entry_region_size = X64_PT_ENTRY_REGION_SIZE;
             num_possible_entries = X64_PT_ENTRIES;
             level_below_num_possible_entries = 0;
-            vindex = X64_PT_INDEX_OF_ADDR(vbase);
+            vindex = X64_PT_INDEX_OF_ADDR((uintptr_t)vbase);
             entry_must_be_leaf = 1;
             entry_can_be_leaf = 1;
             present_mask = X64_PT_LEAF_PRESENT;
@@ -1239,7 +1239,7 @@ unmap_region_tables(
             entry_region_size = X64_PD_ENTRY_REGION_SIZE;
             num_possible_entries = X64_PD_ENTRIES;
             level_below_num_possible_entries = X64_PT_ENTRIES;
-            vindex = X64_PD_INDEX_OF_ADDR(vbase);
+            vindex = X64_PD_INDEX_OF_ADDR((uintptr_t)vbase);
             page_size_mask = X64_PD_LEAF_PAGE_SIZE;
             entry_can_be_leaf = 1;
             present_mask = X64_PD_LEAF_PRESENT;
@@ -1251,7 +1251,7 @@ unmap_region_tables(
             entry_region_size = X64_PDPT_ENTRY_REGION_SIZE;
             num_possible_entries = X64_PDPT_ENTRIES;
             level_below_num_possible_entries = X64_PD_ENTRIES;
-            vindex = X64_PDPT_INDEX_OF_ADDR(vbase);
+            vindex = X64_PDPT_INDEX_OF_ADDR((uintptr_t)vbase);
             page_size_mask = X64_PDPT_LEAF_PAGE_SIZE;
             entry_can_be_leaf = 1;
             present_mask = X64_PDPT_LEAF_PRESENT;
@@ -1263,7 +1263,7 @@ unmap_region_tables(
             entry_region_size = X64_PML4_ENTRY_REGION_SIZE;
             num_possible_entries = X64_PML4_ENTRIES;
             level_below_num_possible_entries = X64_PDPT_ENTRIES;
-            vindex = X64_PML4_INDEX_OF_ADDR(vbase);
+            vindex = X64_PML4_INDEX_OF_ADDR((uintptr_t)vbase);
             present_mask = X64_PML4_ENTRY_PRESENT;
             next_table_addr_mask = X64_PML4_ENTRY_ADDR_MASK;
             break;
@@ -1295,8 +1295,8 @@ unmap_region_tables(
             *map_entry = 0;
         } else {
             // They are both tables
-            paddr_t map_next_addr = *map_entry & next_table_addr_mask;
-            paddr_t region_next_addr = *region_entry & next_table_addr_mask;
+            void __phys * map_next_addr = (void __phys *)(*map_entry & next_table_addr_mask);
+            void __phys * region_next_addr = (void __phys *)(*region_entry & next_table_addr_mask);
             if(map_next_addr == region_next_addr) {
                 // The region owns this page
                 *map_entry = 0;
@@ -1342,8 +1342,8 @@ arch_vmem_map_unmap_region(
     int pt_level = map->arch_state.pt_level;
 
     uint64_t *map_entry = NULL;
-    paddr_t map_table = map->arch_state.pt_root;
-    paddr_t region_table = ref->region->arch_state.pt_table;
+    void __phys * map_table = map->arch_state.pt_root;
+    void __phys * region_table = ref->region->arch_state.pt_table;
 
     if(pt_level < ref->region->arch_state.pt_level) {
         eprintk("arch_vmem_map_unmap_region: map->pt_level < region->pt_level (%d < %d)\n",
@@ -1362,7 +1362,7 @@ arch_vmem_map_unmap_region(
             eprintk("arch_vmem_map_unmap_region: found not-present page table in region!\n");
             return -EINVAL;
         }
-        map_table = *map_entry & addr_mask;
+        map_table = (void __phys *)(*map_entry & addr_mask);
         pt_level--;
     }
 
@@ -1426,7 +1426,7 @@ int
 arch_vmem_paged_region_map(
         struct vmem_region *region,
         size_t offset,
-        paddr_t phys_addr,
+        void __phys * phys_addr,
         size_t size,
         unsigned long flags)
 {
@@ -1444,7 +1444,7 @@ arch_vmem_paged_region_map(
         return -EINVAL;
     }
 
-    if(phys_addr % X64_PT_ENTRY_REGION_SIZE) 
+    if((uintptr_t)phys_addr % X64_PT_ENTRY_REGION_SIZE) 
     {
         eprintk("Cannot map paged area to physical address (%p)"
                 " (No page size small enough to align)\n",
@@ -1460,7 +1460,7 @@ arch_vmem_paged_region_map(
         size_t page_size;
         int entry_level;
         if(size >= X64_PDPT_ENTRY_REGION_SIZE
-           && (phys_addr % X64_PDPT_ENTRY_REGION_SIZE == 0)
+           && ((uintptr_t)phys_addr % X64_PDPT_ENTRY_REGION_SIZE == 0)
            && max_entry_level >= 3)
         {
             page_size = X64_PDPT_ENTRY_REGION_SIZE;
@@ -1468,7 +1468,7 @@ arch_vmem_paged_region_map(
             entry_level = 3;
         }
         else if(size >= X64_PD_ENTRY_REGION_SIZE
-           && (phys_addr % X64_PD_ENTRY_REGION_SIZE == 0)
+           && ((uintptr_t)phys_addr % X64_PD_ENTRY_REGION_SIZE == 0)
            && max_entry_level >= 2)
         {
             page_size = X64_PD_ENTRY_REGION_SIZE;
@@ -1476,7 +1476,7 @@ arch_vmem_paged_region_map(
             entry_level = 2;
         }
         else if(size >= X64_PT_ENTRY_REGION_SIZE
-           && (phys_addr % X64_PT_ENTRY_REGION_SIZE == 0)
+           && ((uintptr_t)phys_addr % X64_PT_ENTRY_REGION_SIZE == 0)
            && max_entry_level >= 1)
         {
             page_size = X64_PT_ENTRY_REGION_SIZE;
@@ -1490,7 +1490,7 @@ arch_vmem_paged_region_map(
 
         // Drill the mapping
         
-        paddr_t cur_table = region->arch_state.pt_table;
+        void __phys * cur_table = region->arch_state.pt_table;
         int cur_level = region->arch_state.pt_level;
 
         x64_verify_page_table(
@@ -1514,7 +1514,7 @@ arch_vmem_paged_region_map(
                 DEBUG_ASSERT(!pt_level_entry_is_leaf(cur_level, *cur_entry));
 
                 uint64_t addr_mask = pt_level_addr_mask(cur_level);
-                cur_table = *cur_entry & addr_mask;
+                cur_table = (void __phys *)(*cur_entry & addr_mask);
 
                 DEBUG_ASSERT_MSG(KERNEL_ADDR((void*)__va(cur_table)),
                         "table paddr=%p, vaddr=%p, cur_entry=%p",
@@ -1526,7 +1526,7 @@ arch_vmem_paged_region_map(
             }
             else {
                 // The entry isn't present
-                paddr_t subtable;
+                void __phys * subtable;
                 res = create_empty_pt_table(
                         &subtable,
                         cur_level-1);
@@ -1621,7 +1621,7 @@ arch_vmem_paged_region_unmap(
 
         // Drill the mapping
         
-        paddr_t cur_table = region->arch_state.pt_table;
+        void __phys * cur_table = region->arch_state.pt_table;
         int cur_level = region->arch_state.pt_level;
 
         do {
@@ -1637,12 +1637,12 @@ arch_vmem_paged_region_unmap(
             if(present_mask & *cur_entry) {
                 // This must be a page table (TODO check this in an assertion)
                 uint64_t addr_mask = pt_level_addr_mask(cur_level);
-                cur_table = *cur_entry & addr_mask;
+                cur_table = (void __phys *)(*cur_entry & addr_mask);
                 cur_level--;
             }
             else {
                 // The entry isn't present
-                paddr_t subtable;
+                void __phys * subtable;
                 res = create_empty_pt_table(
                         &subtable,
                         cur_level-1);
@@ -1686,12 +1686,12 @@ arch_vmem_map_activate(
     DEBUG_ASSERT(KERNEL_ADDR(map));
     DEBUG_ASSERT(ptr_orderof(map->arch_state.pt_root) >= 12);
 
-    write_cr3(map->arch_state.pt_root);
+    write_cr3((uint64_t)map->arch_state.pt_root);
     return 0;
 }
 
 static int
-dump_page_table(printk_f *printer, paddr_t table_phys_addr, int level, vaddr_t virt_base)
+dump_page_table(printk_f *printer, void __phys * table_phys_addr, int level, void * virt_base)
 {
     int res = 0;
 
@@ -1715,9 +1715,9 @@ dump_page_table(printk_f *printer, paddr_t table_phys_addr, int level, vaddr_t v
 
     int leaf_pending = 0;
 
-    paddr_t pending_next_paddr;
-    paddr_t pending_paddr;
-    vaddr_t pending_vaddr;
+    void __phys * pending_next_paddr;
+    void __phys * pending_paddr;
+    void * pending_vaddr;
     size_t pending_size;
     uint64_t pending_flags;
 
@@ -1730,7 +1730,7 @@ dump_page_table(printk_f *printer, paddr_t table_phys_addr, int level, vaddr_t v
     for(size_t entry_index = 0; entry_index < num_entries; entry_index++)
     {
         uint64_t entry = table[entry_index];
-        paddr_t addr = entry & addr_mask;
+        void __phys * addr = (void __phys *)(entry & addr_mask);
         uint64_t flags = entry & ~addr_mask;
 
         if((entry & present_mask) == 0) {
@@ -1826,7 +1826,7 @@ arch_vmem_map_flush(struct vmem_map *map)
 void
 arch_dump_vmem_map(printk_f *printer, struct vmem_map *map)
 {
-    paddr_t root = map->arch_state.pt_root;
+    void __phys * root = map->arch_state.pt_root;
     (*printer)("--- x64 Virtual Memory Mapping (Root Level = %d) ---\n", map->arch_state.pt_level);
     int res = dump_page_table(printer, map->arch_state.pt_root, map->arch_state.pt_level, 0x0);
     if(res) {

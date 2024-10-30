@@ -2,10 +2,11 @@
 #define __KANAWHA__MMIO_H__
 
 #include <kanawha/stdint.h>
+#include <kanawha/aspace.h>
 
 #define __mmio __attribute__((noderef))
 
-void __mmio *mmio_map(paddr_t paddr, size_t size);
+void __mmio *mmio_map(void __phys * paddr, size_t size);
 int mmio_unmap(void __mmio *addr, size_t size);
 
 struct vmem_region *

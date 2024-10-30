@@ -96,7 +96,7 @@ parse_madt_ioapic(
             entry->gsi_base);
     int res = x64_register_ioapic(
             entry->ioapic_id,
-            entry->ioapic_addr,
+            (void __phys *)(uintptr_t)entry->ioapic_addr,
             entry->gsi_base);
     return res;
 }
@@ -283,7 +283,7 @@ x64_parse_acpi_madt(void) {
     }
 
     printk("MADT xAPIC Physical Address = %p\n", (void*)lapic_address);
-    int res = xapic_provide_mmio_base(lapic_address);
+    int res = xapic_provide_mmio_base((void __phys *)lapic_address);
     if(res) {
         eprintk("MADT Failed to provide xAPIC physical base address! (continuing...)\n");
     }

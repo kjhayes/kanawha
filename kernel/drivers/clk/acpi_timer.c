@@ -108,7 +108,7 @@ init_acpi_pm_timer_clk(void)
         printk("Using Generic Address Structure for PM Timer Block\n");
         switch(fadt->x_pm_tmr_blk.asid) {
             case ACPI_GAS_ASID_MMIO:
-                clk->mmio.blk = mmio_map(fadt->x_pm_tmr_blk.address, 4);
+                clk->mmio.blk = mmio_map((void __phys *)fadt->x_pm_tmr_blk.address, 4);
                 if(clk->mmio.blk == NULL) {
                     eprintk("Failed to map MMIO register for ACPI PM Timer!\n");
                     kfree(clk);

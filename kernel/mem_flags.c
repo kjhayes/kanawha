@@ -562,7 +562,7 @@ free_phys_mem(void)
               page_alloc_flags |= PAGE_ALLOC_32BIT;
           }
 
-          res = register_buddy_page_allocator(entry->base, entry->size, page_alloc_flags);
+          res = register_buddy_page_allocator((void __phys *)entry->base, entry->size, page_alloc_flags);
           if(res) {
               eprintk("Failed to register buddy allocator for region [%p - %p) (err=%s)\n",
                       (void*)entry->base, (void*)(entry->base + entry->size), errnostr(res));

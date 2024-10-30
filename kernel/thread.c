@@ -29,7 +29,7 @@ static uint8_t global_vmem_regions_slab_buffer[GLOBAL_VMEM_REGIONS_SLAB_BUFFER_S
 
 struct thread_global_vmem_region
 {
-    vaddr_t virtual_addr;
+    void * virtual_addr;
     struct vmem_region *region;
     ilist_node_t list_node;
 };
@@ -741,7 +741,7 @@ thread_force_mapping_visitor(struct ptree_node *node, void *state)
 int
 thread_force_mapping(
         struct vmem_region *region,
-        vaddr_t virtual_addr)
+        void * virtual_addr)
 {
     int res;
 
@@ -771,7 +771,7 @@ thread_force_mapping(
 }
 
 int
-thread_relax_mapping(vaddr_t virtual_addr)
+thread_relax_mapping(void * virtual_addr)
 {
     return -EUNIMPL;
 }

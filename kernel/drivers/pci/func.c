@@ -116,7 +116,7 @@ pci_setup_bars(
             // MMIO
             bar->phys_addr = original & ~0xFULL;
 
-            bar->mmio.base = mmio_map(bar->phys_addr, size);
+            bar->mmio.base = mmio_map((void __phys *)bar->phys_addr, size);
             if(bar->mmio.base == NULL) {
                 eprintk("Failed to map PCI MMIO BAR (phys_addr=%p)\n",
                         bar->phys_addr);

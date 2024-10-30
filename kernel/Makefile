@@ -30,6 +30,7 @@ obj-y += \
 	cpu.o \
 	percpu.o \
 	mmio.o \
+	dma.o \
 	symbol.o \
 	module.o \
 	string.o \

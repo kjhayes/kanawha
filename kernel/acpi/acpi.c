@@ -81,7 +81,7 @@ acpi_load_tables(void)
         printk("Loading %lu Tables from XSDT\n", num_tables);
         for(size_t i = 0; i < num_tables; i++) {
             uint64_t phys_ptr = global_xsdt->table_ptrs[i];
-            void *table = (void*)__va(phys_ptr);
+            void *table = (void*)__va((void __phys *)phys_ptr);
             int res = acpi_register_table(table);
             if(res) {
                 eprintk("Failed to register APCI table at address (%p)!\n",
@@ -96,7 +96,7 @@ acpi_load_tables(void)
         printk("Loading %lu Tables from RSDT\n", num_tables);
         for(size_t i = 0; i < num_tables; i++) {
             uint32_t phys_ptr = global_rsdt->table_ptrs[i];
-            void *table = (void*)__va(phys_ptr);
+            void *table = (void*)__va((void __phys *)(uintptr_t)phys_ptr);
             int res = acpi_register_table(table);
             if(res) {
                 eprintk("Failed to register APCI table at address (%p)!\n",
@@ -125,7 +125,7 @@ acpi_provide_rsdp(struct acpi_rsdp *rsdp)
 
     memcpy(&global_rsdp, rsdp, sizeof(struct acpi_rsdp));
     found_global_rsdp = 1;
-    global_rsdt = (void*)__va(rsdp->rsdt_ptr);
+    global_rsdt = (void*)__va((void __phys *)(uintptr_t)rsdp->rsdt_ptr);
     printk("ACPI RSDT: %p\n", global_rsdt);
 
     spin_unlock(&acpi_table_lock);
@@ -144,7 +144,7 @@ acpi_provide_xsdp(struct acpi_xsdp *xsdp)
 
     memcpy(&global_xsdp, xsdp, sizeof(struct acpi_xsdp));
     found_global_xsdp = 1;
-    global_xsdt = (void*)__va(xsdp->xsdt_ptr);
+    global_xsdt = (void*)__va((void __phys *)xsdp->xsdt_ptr);
     printk("ACPI XSDT: %p\n", global_xsdt);
 
     spin_unlock(&acpi_table_lock);

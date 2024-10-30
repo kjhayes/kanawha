@@ -17,18 +17,16 @@
 #include <kanawha/printk.h>
 #include <kanawha/list.h>
 #include <kanawha/stdint.h>
+#include <kanawha/aspace.h>
 
-#define __phys \
-    __attribute__((address_space(4)))
-
-static inline vaddr_t
-__va(paddr_t paddr) {
-    return paddr + CONFIG_VIRTUAL_BASE;
+static inline void *
+__va(void __phys * paddr) {
+    return (void *)(paddr + CONFIG_VIRTUAL_BASE);
 }
 
-static inline paddr_t
-__pa(vaddr_t vaddr) {
-    return vaddr - CONFIG_VIRTUAL_BASE;
+static inline void __phys *
+__pa(void * vaddr) {
+    return (void __phys *)(vaddr - CONFIG_VIRTUAL_BASE);
 }
 
 // The architecture can define a more strict or lax version
@@ -73,7 +71,7 @@ struct vmem_region_ref
     ilist_node_t region_node;
 
     unsigned long flags;
-    vaddr_t virt_addr;
+    void * virt_addr;
 };
 
 typedef enum
@@ -101,7 +99,7 @@ struct vmem_region
     vmem_region_type_t type;
     union {
         struct {
-            paddr_t phys_base;
+            void __phys * phys_base;
             unsigned long flags;
         } direct;
         struct {
@@ -121,7 +119,7 @@ vmem_map_destroy(struct vmem_map *map);
 
 struct vmem_region *
 vmem_region_create_direct(
-        paddr_t paddr,
+        void __phys * paddr,
         size_t size,
         unsigned long flags);
 
@@ -135,13 +133,13 @@ int
 vmem_region_destroy(struct vmem_region *region);
 
 struct vmem_region_ref *
-vmem_map_get_region(struct vmem_map *map, vaddr_t addr);
+vmem_map_get_region(struct vmem_map *map, void * addr);
 
 int
 vmem_map_map_region(
         struct vmem_map *map,
         struct vmem_region *region,
-        vaddr_t base);
+        void * base);
 
 int
 vmem_map_unmap_region(
@@ -169,7 +167,7 @@ int
 vmem_paged_region_map(
         struct vmem_region *region,
         size_t offset,
-        paddr_t phys_addr,
+        void __phys * phys_addr,
         size_t size,
         unsigned long flags);
 
@@ -185,12 +183,12 @@ vmem_get_default_map(void);
 // Forces "region" to appear at "virtual_address" in the default map,
 // and in all thread vmem mappings
 int
-vmem_force_mapping(struct vmem_region *region, vaddr_t virtual_address);
+vmem_force_mapping(struct vmem_region *region, void * virtual_address);
 int
-vmem_relax_mapping(vaddr_t virtual_address);
+vmem_relax_mapping(void * virtual_address);
 
 int vmem_map_handle_page_fault(
-        vaddr_t faulting_address,
+        void * faulting_address,
         unsigned long flags,
         struct vmem_map *map);
 
@@ -212,7 +210,7 @@ int arch_vmem_map_flush(struct vmem_map *map);
 int arch_vmem_paged_region_map(
         struct vmem_region *region,
         size_t offset,
-        paddr_t phys_addr,
+        void __phys * phys_addr,
         size_t size,
         unsigned long flags);
 int arch_vmem_paged_region_unmap(

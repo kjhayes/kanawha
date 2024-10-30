@@ -160,7 +160,7 @@ ioapic_irq_driver = {
 int
 x64_register_ioapic(
         ioapic_id_t id,
-        paddr_t reg_base,
+        void __phys * reg_base,
         hwirq_t irq_base)
 {
     int res;

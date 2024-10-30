@@ -27,7 +27,7 @@ static DECLARE_BITMAP(kmalloc_debug_bitmap, (1ULL<<CONFIG_HEAP_SIZE_ORDER));
 
 static struct kheap kmalloc_heap = {
     .heap_size = 0,
-    .vbase = (vaddr_t)NULL,
+    .vbase = (void *)NULL,
     .mapped = 0,
     .region = NULL,
     .num_free_regions = 0,
@@ -55,7 +55,7 @@ kmalloc_init(void)
 
     virt_mem_flags_dump();
 
-    return kheap_init(&kmalloc_heap, vbase, (1ULL<<CONFIG_HEAP_SIZE_ORDER));
+    return kheap_init(&kmalloc_heap, (void*)vbase, (1ULL<<CONFIG_HEAP_SIZE_ORDER));
 }
 declare_init_desc(kmalloc, kmalloc_init, "Initializing Kernel Heap");
 
@@ -91,7 +91,7 @@ void * kmalloc(size_t size)
 #ifdef CONFIG_DEBUG_KMALLOC_BITMAP
     for(size_t i = 0; i < req_size; i++)
     {
-        uintptr_t byte_offset = ((uintptr_t)alloc - kmalloc_heap.vbase) + i;
+        uintptr_t byte_offset = (alloc - kmalloc_heap.vbase) + i;
         DEBUG_ASSERT(byte_offset < KMALLOC_BITMAP_NUM_BITS);
         if(bitmap_check(kmalloc_debug_bitmap, byte_offset)) {
             panic_printk("kheap_alloc_specific allocated the same byte twice (heap_offset=%p, vaddr=%p)!\n",
@@ -132,7 +132,7 @@ void kfree(void *addr)
 #ifdef CONFIG_DEBUG_KMALLOC_BITMAP
     for(size_t i = 0; i < size; i++)
     {
-        uintptr_t byte_offset = ((uintptr_t)size_ptr - kmalloc_heap.vbase) + i;
+        uintptr_t byte_offset = ((void *)size_ptr - kmalloc_heap.vbase) + i;
         DEBUG_ASSERT(byte_offset < KMALLOC_BITMAP_NUM_BITS);
         if(!bitmap_check(kmalloc_debug_bitmap, byte_offset)) {
             panic("kfree double free detected (heap_offset=%p, vaddr=%p, alloc_offset=%p)!\n",

@@ -39,14 +39,14 @@ kheap_grow(
         return -ENOMEM;
     }
 
-    paddr_t page_phys;
+    void __phys * page_phys;
     res = page_alloc(KHEAP_GROWTH_ORDER, &page_phys, 0);
     if(res) {
         eprintk("kheap_grow: failed to allocate heap page! (err=%s)\n", errnostr(res));
         return res;
     }
 
-    vaddr_t page_virt = heap->vbase + heap->mapped;
+    void * page_virt = heap->vbase + heap->mapped;
 
     res = vmem_paged_region_map(
             heap->region,
@@ -337,7 +337,7 @@ kheap_page_fault(
 int
 kheap_init(
         struct kheap *heap,
-        vaddr_t base,
+        void * base,
         size_t size)
 {
     int res;

@@ -109,7 +109,7 @@ x64_thread_stack_init(
 
     res = vmem_force_mapping(
             stack->region,
-            stack->virt_base);
+            (void*)stack->virt_base);
     if(res) {
         eprintk("Failed to force mapping of x64 thread stack! (err=%s)\n",
                 errnostr(res));
@@ -121,7 +121,7 @@ x64_thread_stack_init(
     return 0;
 
 err4:
-    vmem_relax_mapping(stack->virt_base);
+    vmem_relax_mapping((void*)stack->virt_base);
 err3:
     mem_flags_set_flags(
         get_virt_mem_flags(),
@@ -144,7 +144,7 @@ x64_thread_stack_deinit(
 
     struct x64_thread_stack *stack = &state->arch_state.stack;
 
-    res = vmem_relax_mapping(stack->virt_base);
+    res = vmem_relax_mapping((void*)stack->virt_base);
     if(res) {
         return res;
     }

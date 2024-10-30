@@ -23,7 +23,7 @@ struct ramfile
 
     size_t page_refs;
 
-    paddr_t paddr;
+    void __phys * paddr;
     size_t size;
     order_t page_order;
 };
@@ -242,7 +242,7 @@ ramfile_fs_file_ops =
 int
 create_ramfile(
         const char *ramfile_name,
-        paddr_t paddr,
+        void __phys * paddr,
         size_t size)
 {
     int res;

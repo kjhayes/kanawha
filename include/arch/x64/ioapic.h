@@ -18,7 +18,7 @@ typedef uint8_t ioapic_id_t;
 struct ioapic
 {
     ioapic_id_t id;
-    paddr_t phys_regs_base;
+    void __phys * phys_regs_base;
 
     struct device device;
     struct irq_dev dev;
@@ -38,7 +38,7 @@ struct ioapic
 int
 x64_register_ioapic(
         ioapic_id_t id,
-        paddr_t reg_base,
+        void __phys * reg_base,
         hwirq_t irq_base);
 
 uint32_t

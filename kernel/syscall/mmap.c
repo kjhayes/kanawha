@@ -841,7 +841,7 @@ mmap_region_load_page(
     int res;
 
     struct fs_page *fs_page = NULL;
-    paddr_t paddr = 0;
+    void __phys * paddr = 0;
     order_t order = 0;
     unsigned long page_flags = 0;
 
@@ -970,7 +970,7 @@ mmap_page_do_copy_on_write(
         return res;
     }
     // The process tried to write to a "copy-on-write" page
-    paddr_t new_page;
+    void __phys * new_page;
 
     dprintk("unmapped page\n");
 
@@ -1123,7 +1123,7 @@ mmap_read(
             return -EINVAL;
         }
 
-        paddr_t page_paddr = page->phys_addr;
+        void __phys * page_paddr = page->phys_addr;
         void *page_data = (void*)__va(page_paddr);
 
         uintptr_t page_offset = page->tree_node.key;
@@ -1235,7 +1235,7 @@ mmap_write(
             }
         }
  
-        paddr_t page_paddr = page->phys_addr;
+        void __phys * page_paddr = page->phys_addr;
         void *page_data = (void*)__va(page_paddr);
 
         uintptr_t page_offset = page->tree_node.key;
@@ -1485,7 +1485,7 @@ mmap_user_strlen(
 
         DEBUG_ASSERT(ptr_orderof(page->phys_addr) >= VMEM_MIN_PAGE_ORDER);
 
-        paddr_t page_paddr = page->phys_addr;
+        void __phys * page_paddr = page->phys_addr;
         void *page_data = (void*)__va(page_paddr);
 
         uintptr_t page_offset = page->tree_node.key;

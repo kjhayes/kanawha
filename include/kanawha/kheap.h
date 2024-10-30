@@ -12,7 +12,7 @@
 
 struct kheap {
     size_t heap_size;
-    vaddr_t vbase;
+    void * vbase;
     size_t mapped;
     struct vmem_region *region;
 
@@ -23,7 +23,7 @@ struct kheap {
 int
 kheap_init(
         struct kheap *heap,
-        vaddr_t base,
+        void * base,
         size_t size);
 
 size_t kheap_amount_free(struct kheap *heap);

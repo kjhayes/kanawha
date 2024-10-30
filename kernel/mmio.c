@@ -6,7 +6,7 @@
 #include <kanawha/vmem.h>
 #include <kanawha/bitmap.h>
 
-static vaddr_t mmio_region_base;
+static void * mmio_region_base;
 #define MMIO_REGION_BITMAP_NUM_ENTRIES (1ULL<<(CONFIG_MMIO_RESERVE_SIZE_ORDER - VMEM_MIN_PAGE_ORDER)) 
 static DECLARE_BITMAP(mmio_region_bitmap, MMIO_REGION_BITMAP_NUM_ENTRIES);
 static struct vmem_region *__mmio_vmem_region;
@@ -28,7 +28,7 @@ mmio_reserve_virt_mem_region(void)
             VIRT_MEM_FLAGS_NONCANON,
             VIRT_MEM_FLAGS_MMIO,
             VIRT_MEM_FLAGS_AVAIL,
-            &mmio_region_base);
+            (uintptr_t*)&mmio_region_base);
 
     if(res) {
         return res;
@@ -75,11 +75,11 @@ mmio_create_mmio_map(void)
 declare_init_desc(post_vmem, mmio_create_mmio_map, "Creating MMIO Virtual Memory Region");
 
 void __mmio *
-mmio_map(paddr_t paddr, size_t size)
+mmio_map(void __phys * paddr, size_t size)
 {
     int res;
 
-    size_t pad_below = paddr & ((1ULL<<VMEM_MIN_PAGE_ORDER)-1);
+    size_t pad_below = (uintptr_t)paddr & ((1ULL<<VMEM_MIN_PAGE_ORDER)-1);
     size_t pad_above = (1ULL<<VMEM_MIN_PAGE_ORDER) - (size + pad_below);
     size_t total_size = size + pad_below + pad_above;
 
@@ -89,7 +89,7 @@ mmio_map(paddr_t paddr, size_t size)
     }
 
     size_t num_pages = total_size >> VMEM_MIN_PAGE_ORDER;
-    paddr_t page_base = paddr & ~((1ULL<<VMEM_MIN_PAGE_ORDER)-1);
+    void __phys * page_base = (void __phys *)((uintptr_t)paddr & ~((1ULL<<VMEM_MIN_PAGE_ORDER)-1));
 
     size_t page_bit = bitmap_find_clear_range(mmio_region_bitmap, MMIO_REGION_BITMAP_NUM_ENTRIES, num_pages);
     if(page_bit == MMIO_REGION_BITMAP_NUM_ENTRIES) {

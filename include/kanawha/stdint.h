@@ -2,7 +2,7 @@
 #define __KANAWHA_STDINT_H__
 
 #undef NULL
-#define NULL (void*)0
+#define NULL ((void*)0)
 
 #define PAGE_SIZE_4KB (1ULL<<12)
 #define PAGE_SIZE_2MB (1ULL<<20)
@@ -37,8 +37,6 @@ typedef int64_t ssize_t;
 
 _Static_assert(sizeof(void*) <= sizeof(uintptr_t), "sizeof(void*) is greater than sizeof(uintptr_t)!");
 
-typedef uintptr_t paddr_t;
-typedef uintptr_t vaddr_t;
 typedef unsigned int order_t;
 
 // Shorthand (Really should only be used in printk format casting)

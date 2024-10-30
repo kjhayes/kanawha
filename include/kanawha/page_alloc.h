@@ -18,13 +18,13 @@
 #define PAGE_ALLOCATOR_ALLOC_SIG(RET,ARG)\
 RET(int)\
 ARG(order_t, order)\
-ARG(paddr_t*, out)
+ARG(void __phys **, out)
 
 // Must have previously called "alloc" and recevied addr the from this region
 #define PAGE_ALLOCATOR_FREE_SIG(RET,ARG)\
 RET(int)\
 ARG(order_t, order)\
-ARG(paddr_t, addr)
+ARG(void __phys *, addr)
 
 // Returns the total number of bytes which are free in this page allocator
 // (This could take some time depending on the type of allocator)
@@ -49,7 +49,7 @@ struct page_allocator
     unsigned long flags;
     spinlock_t lock;
 
-    paddr_t base;
+    void __phys * base;
     size_t size;
     struct ptree_node ptree_node;
 
@@ -64,12 +64,12 @@ struct page_allocator
 int register_page_allocator(
         struct page_allocator_ops *ops,
         void *state,
-        paddr_t base,
+        void __phys * base,
         size_t size,
         unsigned long flags);
 
-int page_alloc(order_t order, paddr_t *addr, unsigned long flags);
-int page_free(order_t order, paddr_t addr);
+int page_alloc(order_t order, void __phys * *addr, unsigned long flags);
+int page_free(order_t order, void __phys * addr);
 
 size_t page_alloc_amount_free(void);
 size_t page_alloc_amount_cached(void);
@@ -80,7 +80,7 @@ size_t page_alloc_amount_matching(unsigned long flags);
 struct page_allocator *
 page_alloc_get_allocator(
         order_t order,
-        paddr_t *addr,
+        void __phys * *addr,
         unsigned long flags);
 
 #ifndef __PAGE_ALLOCATOR__KEEP_OP_LIST

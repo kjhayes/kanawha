@@ -489,17 +489,17 @@ buddy_region_init(
  */
 
 static int
-buddy_page_allocator_alloc(void *state, order_t order, paddr_t *addr)
+buddy_page_allocator_alloc(void *state, order_t order, void __phys * *addr)
 {
     struct buddy_region *region = (struct buddy_region*)state;
     void *vaddr;
     int res = buddy_region_alloc(region, order, &vaddr);
-    *addr = __pa((vaddr_t)vaddr);
+    *addr = __pa((void *)vaddr);
     return res;
 }
 
 static int
-buddy_page_allocator_free(void *state, order_t order, paddr_t addr)
+buddy_page_allocator_free(void *state, order_t order, void __phys * addr)
 {
     struct buddy_region *region = (struct buddy_region*)state;
     return buddy_region_free(region, order, (void*)__va(addr));
@@ -520,7 +520,7 @@ static struct page_allocator_ops buddy_page_allocator_ops = {
 
 int
 register_buddy_page_allocator(
-        paddr_t phys_base,
+        void __phys * phys_base,
         size_t size,
         unsigned long flags)
 {

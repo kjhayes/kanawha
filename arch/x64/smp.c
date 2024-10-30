@@ -50,7 +50,7 @@ x64_bsp_bringup_aps(void)
 
     size_t num_brought_up = 0;
 
-    paddr_t trampoline_paddr;
+    void __phys * trampoline_paddr;
 
     res = page_alloc(AP_TRAMPOLINE_PAGE_ORDER, &trampoline_paddr, PAGE_ALLOC_16BIT);
     if(res) {
@@ -59,7 +59,7 @@ x64_bsp_bringup_aps(void)
         return res;
     }
 
-    paddr_t stack_paddr;
+    void __phys * stack_paddr;
     res = page_alloc(AP_BOOT_STACK_ORDER, &stack_paddr, 0x0); // the AP won't use this before long mode,
                                                               // so we don't need 16-bit addresses
     if(res) {
@@ -85,14 +85,14 @@ x64_bsp_bringup_aps(void)
             (ull_t)trampoline_size,
             trampoline_paddr);
 
-    size_t trampoline_pfn = trampoline_paddr >> 12;
+    size_t trampoline_pfn = (uintptr_t)trampoline_paddr >> 12;
 
     volatile uint8_t *ap_launched_byte =
         trampoline + ((uintptr_t)x64_ap_trampoline_ap_launched_byte - (uintptr_t)x64_ap_trampoline_start);
 
     volatile uint16_t *trampoline_self_ptr =
         trampoline + ((uintptr_t)x64_ap_trampoline_self_ptr- (uintptr_t)x64_ap_trampoline_start);
-    *trampoline_self_ptr = (uint16_t)trampoline_paddr;
+    *trampoline_self_ptr = (uint16_t)(uintptr_t)trampoline_paddr;
 
     volatile void **trampoline_virtual_stack_base =
         trampoline + ((uintptr_t)x64_ap_trampoline_virtual_stack_base- (uintptr_t)x64_ap_trampoline_start);

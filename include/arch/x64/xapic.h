@@ -5,7 +5,7 @@
 #include <arch/x64/lapic.h>
 
 int
-xapic_provide_mmio_base(paddr_t base);
+xapic_provide_mmio_base(void __phys * base);
 
 int
 xapic_setup_lapic(struct lapic *apic);

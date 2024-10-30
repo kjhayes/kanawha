@@ -11,11 +11,11 @@
 static struct lapic_ops xapic_ops;
 
 static int xapic_phys_base_valid = 0;
-static paddr_t xapic_phys_base = 0;
+static void __phys * xapic_phys_base = 0;
 static void __mmio *xapic_mmio_base = NULL;
 
 int
-xapic_provide_mmio_base(paddr_t base)
+xapic_provide_mmio_base(void __phys * base)
 {
     if(xapic_phys_base_valid) {
         if(xapic_phys_base == base) {

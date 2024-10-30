@@ -87,7 +87,7 @@ int
 register_page_allocator(
         struct page_allocator_ops *ops,
         void *state,
-        paddr_t region_base,
+        void __phys * region_base,
         size_t region_size,
         unsigned long flags) 
 {
@@ -110,8 +110,8 @@ register_page_allocator(
 
     spinlock_init(&allocator->lock);
 
-    uintptr_t paddr_start = region_base;
-    uintptr_t paddr_end = region_base + region_size;
+    uintptr_t paddr_start = (uintptr_t)region_base;
+    uintptr_t paddr_end = (uintptr_t)region_base + region_size;
 
     struct ptree_node *region_before = ptree_get_max_less(
             &page_allocator_interval_tree,
@@ -119,8 +119,8 @@ register_page_allocator(
 
     if(region_before != NULL) {
         struct page_allocator *other = container_of(region_before, struct page_allocator, ptree_node);
-        size_t other_region_end = other->base + other->size;
-        if(other_region_end > region_base) {
+        size_t other_region_end = (uintptr_t)other->base + other->size;
+        if(other_region_end > (uintptr_t)region_base) {
             // We overlap the region before us
             eprintk("Cannot register page allocator which has lower overlap!\n");
             return -EEXIST;
@@ -160,7 +160,7 @@ register_page_allocator(
 struct page_allocator *
 page_alloc_get_allocator(
         order_t order,
-        paddr_t *addr,
+        void __phys * *addr,
         unsigned long flags) 
 {
     int res;
@@ -217,7 +217,7 @@ page_alloc_get_allocator(
     return NULL;
 }
 int
-page_alloc(order_t order, paddr_t *addr, unsigned long flags) 
+page_alloc(order_t order, void __phys * *addr, unsigned long flags) 
 {
     struct page_allocator *alloc =
         page_alloc_get_allocator(
@@ -240,12 +240,12 @@ page_alloc(order_t order, paddr_t *addr, unsigned long flags)
 }
 
 int
-page_free(order_t order, paddr_t addr) 
+page_free(order_t order, void __phys * addr) 
 {
     dprintk("page_free -> %p\n", addr);
     struct ptree_node *alloc_ptree_node = ptree_get_max_less(
                 &page_allocator_interval_tree,
-                addr);
+                (uintptr_t)addr);
     if(alloc_ptree_node == NULL) {
         return -EINVAL;
     }

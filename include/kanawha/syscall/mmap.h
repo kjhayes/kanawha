@@ -19,7 +19,7 @@ struct mmap_region;
 #define MMAP_PAGE_COPY_ON_WRITE (1ULL<<2)
 struct mmap_page
 {
-    paddr_t phys_addr;
+    void __phys * phys_addr;
     order_t order;
 
     unsigned long flags;

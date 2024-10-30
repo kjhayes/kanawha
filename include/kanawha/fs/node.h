@@ -107,7 +107,7 @@ struct fs_page
 {
     size_t pins;
 
-    paddr_t paddr;
+    void __phys * paddr;
     order_t order;
     size_t size;
 

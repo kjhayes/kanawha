@@ -48,7 +48,7 @@ void * x64_boot_bsp_init(void)
         panic("Failed to handle init stage \"static\"! err=%s", errnostr(res));
     }
 
-    return (void*)__va((uintptr_t)x64_boot_stack_base);
+    return (void*)__va((void __phys *)x64_boot_stack_base);
 }
 
 // Virtual Stack

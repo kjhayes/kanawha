@@ -159,7 +159,7 @@ create_dynamic_slab_allocator(
     int res;
     // Just allocate a page "buffer" and initialize it as if
     // the page was statically allocated
-    paddr_t page_paddr;
+    void __phys * page_paddr;
 
     res = page_alloc(SLAB_ALLOC_BLOCK_PAGE_ORDER,
                      &page_paddr,
@@ -214,7 +214,7 @@ recurse:
     }
 
     // TODO allocate another block using page_alloc
-    paddr_t new_block;
+    void __phys * new_block;
     res = page_alloc(SLAB_ALLOC_BLOCK_PAGE_ORDER, &new_block, 0);
     if(res) {
         return NULL;

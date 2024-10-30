@@ -49,7 +49,7 @@ void buddy_region_debug_print(struct buddy_region *region, printk_f *printer);
 
 int
 register_buddy_page_allocator(
-        paddr_t phys_base,
+        void __phys * phys_base,
         size_t size,
         unsigned long flags);
 

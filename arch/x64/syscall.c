@@ -367,14 +367,14 @@ x64_setup_syscall_xcall(void *in)
     write_msr(X64_MSR_SFMASK, (uint64_t)(X64_RFLAGS_IF_MASK | X64_RFLAGS_RF_MASK | X64_RFLAGS_VM_MASK));
 
     // Allocate Trampoline Stack
-    paddr_t stack_paddr;
+    void __phys * stack_paddr;
     int res = page_alloc(X64_SYSCALL_TRAMPOLINE_STACK_ORDER, &stack_paddr, 0);
     if(res) {
         state->res = res;
         state->done = 1;
         return;
     }
-    vaddr_t stack_vaddr = __va(stack_paddr);
+    void * stack_vaddr = __va(stack_paddr);
     struct x64_syscall_trampoline *trampoline;
     trampoline = percpu_ptr(percpu_addr(x64_local_syscall_trampoline));
     //printk("CPU (%ld) syscall Trampoline %p\n",

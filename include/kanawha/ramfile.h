@@ -2,11 +2,12 @@
 #define __KANAWHA__RAMFILE_H__
 
 #include <kanawha/stdint.h>
+#include <kanawha/aspace.h>
 
 int
 create_ramfile(
         const char *ramfile_name,
-        paddr_t paddr,
+        void __phys * paddr,
         size_t size); 
 
 int

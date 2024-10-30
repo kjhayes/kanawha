@@ -138,13 +138,13 @@ percpu_heap_set_size(struct percpu_heap *heap, size_t size)
     if(num_pages > heap->num_pages) {
         // Growing
         for(size_t page = heap->num_pages; page < num_pages; page++) {
-            paddr_t page_phys;
+            void __phys * page_phys;
             int res = page_alloc(VMEM_MIN_PAGE_ORDER, &page_phys, 0);
             if(res) {
                 return res;
             }
 
-            vaddr_t page_virt = __va(page_phys);
+            void * page_virt = __va(page_phys);
             memset((void*)page_virt, 0, (1ULL<<VMEM_MIN_PAGE_ORDER));
 
             res = vmem_paged_region_map(
@@ -230,7 +230,7 @@ init_cpu_percpu_data(struct cpu *cpu)
         return -ENOMEM;
     }
     
-    res = vmem_force_mapping(heap->region, (vaddr_t)heap->vbase);
+    res = vmem_force_mapping(heap->region, (void *)heap->vbase);
     if(res) {
         vmem_region_destroy(heap->region);
         kfree(heap);
