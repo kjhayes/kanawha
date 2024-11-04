@@ -6,6 +6,11 @@
 
 #ifdef CONFIG_DEBUG_ASSERTIONS
 
+#ifdef CONFIG_X64 
+#include <arch/x64/assert.h>
+#else
+#endif
+
 #define DEBUG_ASSERT(__COND)\
     do {\
     if(!(__COND)) {\
@@ -23,6 +28,15 @@
 #else
 #define DEBUG_ASSERT(...)
 #define DEBUG_ASSERT_MSG(...)
+#endif
+
+// The architecture can define a more strict or lax version
+// of this check if needed
+//
+// At minimum, this needs to always return 0 if ptr==NULL
+#ifndef KERNEL_ADDR 
+#define KERNEL_ADDR(ptr) \
+    (((uintptr_t)ptr & (1ULL<<((sizeof(void*)*8)-1))) != 0)
 #endif
 
 #endif
