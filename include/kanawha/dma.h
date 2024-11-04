@@ -4,10 +4,7 @@
 #include <kanawha/stdint.h>
 #include <kanawha/vmem.h>
 
-typedef struct {
-    void __phys *phys;
-    struct dma_region *region;
-} dma_addr_t;
+typedef void __phys * dma_addr_t;
 
 #define DMA_PHYS_16 (1ULL<<0)
 #define DMA_PHYS_32 (1ULL<<1)
@@ -22,8 +19,8 @@ dma_alloc(
 
 int
 dma_free(
-        size_t size,
-        dma_addr_t dma);
+        dma_addr_t dma,
+        size_t size);
 
 void __phys *
 dma_phys_addr(dma_addr_t dma_addr);
