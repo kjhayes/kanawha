@@ -103,6 +103,9 @@ mmio_map(void __phys * paddr, size_t size)
     if(page_bit == MMIO_REGION_BITMAP_NUM_ENTRIES) {
         return NULL;
     }
+    printk("bitmap_find_clear_range(num_bits=0x%lx) -> bit=0x%lx\n",
+            num_pages,
+            page_bit);
 
     size_t region_offset = (page_bit << VMEM_MIN_PAGE_ORDER);
 
