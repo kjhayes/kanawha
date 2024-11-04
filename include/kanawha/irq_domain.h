@@ -107,6 +107,9 @@ irq_to_domain(irq_t irq);
 
 irq_t irq_domain_revmap(struct irq_domain *domain, hwirq_t hwirq);
 
+irq_t irq_domain_base_irq(struct irq_domain *domain);
+size_t irq_domain_num_irqs(struct irq_domain *domain);
+
 struct irq_desc *
 irq_to_desc(irq_t irq);
 
@@ -211,5 +214,7 @@ free_irq_domain_linear(struct irq_domain *domain);
 
 int
 dump_irq_descs(printk_f *printer);
+int
+irq_domain_dump(printk_f *printer, struct irq_domain *domain);
 
 #endif

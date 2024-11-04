@@ -29,6 +29,17 @@ struct irq_domain
     irq_t(*revmap)(struct irq_domain *domain, hwirq_t hwirq);
 };
 
+irq_t irq_domain_base_irq(
+        struct irq_domain *domain)
+{
+    return domain->base_irq;
+}
+size_t irq_domain_num_irqs(
+        struct irq_domain *domain)
+{
+    return domain->num_irq;
+}
+
 struct irq_domain *
 irq_to_domain(irq_t irq)
 {
@@ -510,71 +521,8 @@ dump_irq_descs(printk_f *printer)
 
         struct irq_domain *domain =
             container_of(node, struct irq_domain, tree_node);
-        (*printer)("Domain: [0x%x - 0x%x] {\n",
-                domain->base_irq, (domain->base_irq + domain->num_irq)-1);
-        for(size_t index = 0; index < domain->num_irq; index++) {
-            irq_t irq = domain->base_irq + index;
-            (*printer)("\tIRQ(0x%x) -> ", irq);
-            struct irq_desc *desc = &domain->irq_descs[index];
-            if(desc == NULL) {
-                (*printer)("NULL");
-            } else {
-                (*printer)("HWIRQ(0x%x)",
-                        desc->hwirq);
-            }
 
-            if(desc->dev != NULL) {
-                device_read_name(desc->dev->device, dev_name_buf, 63);
-                (*printer)(" DEVICE(%s)",
-                        dev_name_buf);
-            }
-
-            (*printer)("\n");
-
-            ilist_node_t *action_node;
-            ilist_for_each(action_node, &desc->actions) {
-                (*printer)("\t\t");
-                struct irq_action *action =
-                    container_of(action_node, struct irq_action, list_node);
-
-                switch(action->type) {
-                    case IRQ_ACTION_HANDLER:
-                        if(action->handler_data.device) {
-                            device_read_name(action->handler_data.device, dev_name_buf, 63);
-                        } else {
-                            strncpy(dev_name_buf, "NULL", 63);
-                        }
-                        (*printer)("HANDLER(%p) DEVICE(%s)\n",
-                                action->handler_data.handler,
-                                dev_name_buf);
-                        break;
-                    case IRQ_ACTION_DIRECT_LINK:
-                        (*printer)("DIRECT-LINK(0x%lx)\n",
-                                (ul_t)action->direct_link_data.link->irq);
-                        break;
-                    case IRQ_ACTION_PERCPU_LINK:
-                        (*printer)("PERCPU-LINK\n");
-                        for(cpu_id_t id = 0; id < total_num_cpus(); id++) {
-                            (*printer)("\t\t\tCPU(%d) DESC(%p)\n",
-                                    id, percpu_ptr_specific(action->percpu_link_data.link, id));
-                        }
-                        break;      
-                    case IRQ_ACTION_RESOLVED_LINK:
-                        (*printer)("RESOLVED-LINK RESOLVER(%p)\n",
-                                action->resolved_link_data.resolver);
-                        break;
-                }
-            }
-
-            ilist_node_t *incoming_node;
-            ilist_for_each(incoming_node, &desc->direct_links) {
-                (*printer)("\t\t");
-                struct irq_action *direct_link =
-                    container_of(incoming_node, struct irq_action, direct_link_data.incoming_node);
-                (*printer)("INCOMING-LINK(0x%lx)\n", (ul_t)direct_link->desc->irq);
-            }
-        }
-        (*printer)("}\n");
+        irq_domain_dump(printer, domain);
 
         node = ptree_get_next(node);
     }
@@ -582,6 +530,87 @@ dump_irq_descs(printk_f *printer)
     enable_restore_irqs(irq_flags);
     return 0;
 }
+
+int
+irq_domain_dump(
+        printk_f *printer,
+        struct irq_domain *domain)
+{
+    char dev_name_buf[64];
+    dev_name_buf[63] = '\0';
+
+    int irq_flags = disable_save_irqs();
+
+    (*printer)("Domain: [0x%x - 0x%x] {\n",
+            domain->base_irq, (domain->base_irq + domain->num_irq)-1);
+    for(size_t index = 0; index < domain->num_irq; index++) {
+        irq_t irq = domain->base_irq + index;
+        (*printer)("\tIRQ(0x%x) -> ", irq);
+        struct irq_desc *desc = &domain->irq_descs[index];
+        if(desc == NULL) {
+            (*printer)("NULL");
+        } else {
+            (*printer)("HWIRQ(0x%x)",
+                    desc->hwirq);
+        }
+
+        if(desc->dev != NULL) {
+            device_read_name(desc->dev->device, dev_name_buf, 63);
+            (*printer)(" DEVICE(%s)",
+                    dev_name_buf);
+        }
+
+        (*printer)("\n");
+
+        ilist_node_t *action_node;
+        ilist_for_each(action_node, &desc->actions) {
+            (*printer)("\t\t");
+            struct irq_action *action =
+                container_of(action_node, struct irq_action, list_node);
+
+            switch(action->type) {
+                case IRQ_ACTION_HANDLER:
+                    if(action->handler_data.device) {
+                        device_read_name(action->handler_data.device, dev_name_buf, 63);
+                    } else {
+                        strncpy(dev_name_buf, "NULL", 63);
+                    }
+                    (*printer)("HANDLER(%p) DEVICE(%s)\n",
+                            action->handler_data.handler,
+                            dev_name_buf);
+                    break;
+                case IRQ_ACTION_DIRECT_LINK:
+                    (*printer)("DIRECT-LINK(0x%lx)\n",
+                            (ul_t)action->direct_link_data.link->irq);
+                    break;
+                case IRQ_ACTION_PERCPU_LINK:
+                    (*printer)("PERCPU-LINK\n");
+                    for(cpu_id_t id = 0; id < total_num_cpus(); id++) {
+                        (*printer)("\t\t\tCPU(%d) DESC(%p)\n",
+                                id, percpu_ptr_specific(action->percpu_link_data.link, id));
+                    }
+                    break;      
+                case IRQ_ACTION_RESOLVED_LINK:
+                    (*printer)("RESOLVED-LINK RESOLVER(%p)\n",
+                            action->resolved_link_data.resolver);
+                    break;
+            }
+        }
+
+        ilist_node_t *incoming_node;
+        ilist_for_each(incoming_node, &desc->direct_links) {
+            (*printer)("\t\t");
+            struct irq_action *direct_link =
+                container_of(incoming_node, struct irq_action, direct_link_data.incoming_node);
+            (*printer)("INCOMING-LINK(0x%lx)\n", (ul_t)direct_link->desc->irq);
+        }
+    }
+    (*printer)("}\n");
+
+    enable_restore_irqs(irq_flags);
+    return 0;
+}
+
 
 EXPORT_SYMBOL(alloc_irq_domain_linear);
 EXPORT_SYMBOL(free_irq_domain_linear);
