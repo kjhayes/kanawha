@@ -11,9 +11,15 @@
 
 #define BITS_PER_LONG (sizeof(unsigned long)*8)
 
+#define BITMAP_ENTRIES(entries)\
+    ((entries)/BITS_PER_LONG) + ((((entries) % BITS_PER_LONG)!=0))
+#define BITMAP_SIZE(entries)\
+    (BITMAP_ENTRIES(entries) * sizeof(unsigned long))
+
+
 #define DECLARE_BITMAP(name, entries)\
     unsigned long (name)[\
-        ((entries)/BITS_PER_LONG) + (((entries) % BITS_PER_LONG)!=0)\
+        BITMAP_ENTRIES(entries)\
     ]
 
 static inline int
