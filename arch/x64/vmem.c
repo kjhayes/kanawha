@@ -1461,6 +1461,7 @@ arch_vmem_paged_region_map(
         int entry_level;
         if(size >= X64_PDPT_ENTRY_REGION_SIZE
            && ((uintptr_t)phys_addr % X64_PDPT_ENTRY_REGION_SIZE == 0)
+           && ((uintptr_t)offset % X64_PDPT_ENTRY_REGION_SIZE == 0)
            && max_entry_level >= 3)
         {
             page_size = X64_PDPT_ENTRY_REGION_SIZE;
@@ -1469,6 +1470,7 @@ arch_vmem_paged_region_map(
         }
         else if(size >= X64_PD_ENTRY_REGION_SIZE
            && ((uintptr_t)phys_addr % X64_PD_ENTRY_REGION_SIZE == 0)
+           && ((uintptr_t)offset % X64_PD_ENTRY_REGION_SIZE == 0)
            && max_entry_level >= 2)
         {
             page_size = X64_PD_ENTRY_REGION_SIZE;
@@ -1477,6 +1479,7 @@ arch_vmem_paged_region_map(
         }
         else if(size >= X64_PT_ENTRY_REGION_SIZE
            && ((uintptr_t)phys_addr % X64_PT_ENTRY_REGION_SIZE == 0)
+           && ((uintptr_t)offset % X64_PT_ENTRY_REGION_SIZE == 0)
            && max_entry_level >= 1)
         {
             page_size = X64_PT_ENTRY_REGION_SIZE;

@@ -80,8 +80,16 @@ mmio_map(void __phys * paddr, size_t size)
     int res;
 
     size_t pad_below = (uintptr_t)paddr & ((1ULL<<VMEM_MIN_PAGE_ORDER)-1);
-    size_t pad_above = (1ULL<<VMEM_MIN_PAGE_ORDER) - (size + pad_below);
+    size_t pad_above = (1ULL<<VMEM_MIN_PAGE_ORDER) - ((size + pad_below) % (1ULL<<VMEM_MIN_PAGE_ORDER));
+    if(pad_above == (1ULL<<VMEM_MIN_PAGE_ORDER)) {
+        pad_above = 0;
+    }
     size_t total_size = size + pad_below + pad_above;
+
+    printk("pad_below = %p, pad_above = %p, total_size = %p\n",
+            pad_below,
+            pad_above,
+            total_size);
 
     // TODO (Remove this check)
     if((total_size & ((1ULL<<VMEM_MIN_PAGE_ORDER)-1)) != 0) {
@@ -95,10 +103,14 @@ mmio_map(void __phys * paddr, size_t size)
     if(page_bit == MMIO_REGION_BITMAP_NUM_ENTRIES) {
         return NULL;
     }
+    printk("bitmap_find_clear_range(num_bits=0x%lx) -> bit=0x%lx\n",
+            num_pages,
+            page_bit);
 
     size_t region_offset = (page_bit << VMEM_MIN_PAGE_ORDER);
 
     for(size_t i = 0; i < num_pages; i++) {
+        DEBUG_ASSERT(bitmap_check(mmio_region_bitmap, page_bit + i) == 0);
         bitmap_set(mmio_region_bitmap, page_bit + i);
     }
 
@@ -119,10 +131,10 @@ mmio_map(void __phys * paddr, size_t size)
 
     void * addr = (void*)(mmio_region_base + region_offset);
 
-    dprintk("mmio_map(%p, 0x%lx) -> %p)\n",
-            paddr, size, addr);
+    printk("mmio_map(%p, 0x%lx) -> %p\n",
+            page_base, total_size, addr);
 
-    return (void __mmio *)addr;
+    return (void __mmio *)addr + pad_below;
 }
 
 int

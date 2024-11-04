@@ -489,6 +489,10 @@ vmem_paged_region_map(
         unsigned long flags)
 {
     int res;
+    dprintk("vmem_paged_region_map: offset=0x%llx, paddr=%p, size=0x%llx\n",
+            (ull_t)offset,
+            phys_addr,
+            (ull_t)size);
     if(offset + size > region->size) {
         eprintk("vmem_paged_region_map: tried to map outside of region bounds!\n");
         return -ERANGE;
