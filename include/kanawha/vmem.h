@@ -29,15 +29,6 @@ __pa(void * vaddr) {
     return (void __phys *)(vaddr - CONFIG_VIRTUAL_BASE);
 }
 
-// The architecture can define a more strict or lax version
-// of this check if needed
-//
-// At minimum, this needs to always return 0 if ptr==NULL
-#ifndef KERNEL_ADDR 
-#define KERNEL_ADDR(ptr) \
-    (((uintptr_t)ptr & (1ULL<<((sizeof(void*)*8)-1))) != 0)
-#endif
-
 _Static_assert((!KERNEL_ADDR(0)), "Architecture defined KERNEL_ADDR must return 0 for NULL!");
 _Static_assert((KERNEL_ADDR(CONFIG_VIRTUAL_BASE)), "Architecture defined KERNEL_ADDR does not return 1 for CONFIG_VIRTUAL_BASE!");
 
