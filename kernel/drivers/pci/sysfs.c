@@ -106,7 +106,9 @@ insert_func_with_match_lock(
     func->flat_node.fs_node.unload = NULL;
 
     char namebuf[32];
-    snprintk(namebuf, 32, "%x:%x", func->vendor_id, func->device_id);
+    snprintk(namebuf, 32, "%d.%d",
+            func->device->index,
+            func->index);
     namebuf[31] = '\0';
     res = flat_mount_insert_node(
             pci_fs_mount,
