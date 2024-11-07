@@ -40,7 +40,7 @@ static int vprintk_putc(struct vprintk_state *state, char c);
 static char printk_state_buffer[CONFIG_PRINTK_BUFFER_SIZE] = { 0 };
 static struct vprintk_state printk_state = { 0 };
 
-int printk(const char *fmt, ...) 
+int do_printk(const char *fmt, ...) 
 {
     int res;
 
@@ -58,7 +58,7 @@ int printk(const char *fmt, ...)
 static char panic_state_buffer[CONFIG_PANIC_BUFFER_SIZE] = { 0 };
 static struct vprintk_state panic_state = { 0 };
 
-int panic_printk(const char *fmt, ...) 
+int do_panic_printk(const char *fmt, ...) 
 {
     int res;
 
@@ -635,19 +635,19 @@ void do_panic(void)
 {
     disable_irqs();
 
-    panic_printk("    THREAD(");
+    do_panic_printk("    THREAD(");
     if(current_thread()) { \
-        panic_printk("%lld", (ull_t)current_thread()->id);
+        do_panic_printk("%lld", (ull_t)current_thread()->id);
     } else {
-        panic_printk("NULL");
+        do_panic_printk("NULL");
     }
-    panic_printk(")");
+    do_panic_printk(")");
     if(current_process()) {
-        panic_printk(" PROCESS(%lld)", (ull_t)current_process()->id);
+        do_panic_printk(" PROCESS(%lld)", (ull_t)current_process()->id);
     }
-    panic_printk("\n");
+    do_panic_printk("\n");
 
-    dump_threads(panic_printk);
+    dump_threads(do_panic_printk);
 
     while(1) {
         disable_irqs();
@@ -655,8 +655,8 @@ void do_panic(void)
     }
 }
 
-EXPORT_SYMBOL(printk);
-EXPORT_SYMBOL(panic_printk);
+EXPORT_SYMBOL(do_printk);
+EXPORT_SYMBOL(do_panic_printk);
 EXPORT_SYMBOL(printk_add_handler);
 EXPORT_SYMBOL(snprintk);
 EXPORT_SYMBOL(do_panic);

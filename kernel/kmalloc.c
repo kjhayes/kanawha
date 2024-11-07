@@ -94,7 +94,7 @@ void * kmalloc(size_t size)
         uintptr_t byte_offset = (alloc - kmalloc_heap.vbase) + i;
         DEBUG_ASSERT(byte_offset < KMALLOC_BITMAP_NUM_BITS);
         if(bitmap_check(kmalloc_debug_bitmap, byte_offset)) {
-            panic_printk("kheap_alloc_specific allocated the same byte twice (heap_offset=%p, vaddr=%p)!\n",
+            do_panic_printk("kheap_alloc_specific allocated the same byte twice (heap_offset=%p, vaddr=%p)!\n",
                     byte_offset, ((uintptr_t)alloc) + i);
             unsigned long *nearby = &kmalloc_debug_bitmap[byte_offset/BITS_PER_LONG];
             panic("Bitmap: 0x%lx, base=%p\n", *nearby, ((void*)nearby - (void*)kmalloc_debug_bitmap)*8);

@@ -526,7 +526,7 @@ int
 phys_mem_flags_dump(void) 
 {
     printk("=== Physical Memory Flags ===\n");
-    mem_flags_print(get_phys_mem_flags(), printk, phys_mem_flags_printer);
+    mem_flags_print(get_phys_mem_flags(), do_printk, phys_mem_flags_printer);
     printk("=============================\n");
     return 0;
 }
@@ -663,7 +663,7 @@ int
 virt_mem_flags_dump(void) 
 {
     printk("=== Virtual Memory Flags ===\n");
-    mem_flags_print(get_virt_mem_flags(), printk, virt_mem_flags_printer);
+    mem_flags_print(get_virt_mem_flags(), do_printk, virt_mem_flags_printer);
     printk("============================\n");
     return 0;
 }

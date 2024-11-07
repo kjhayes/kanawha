@@ -2,12 +2,14 @@
 #define __KANAWHA__APIC_TIMER_H__
 
 #include <kanawha/timer_dev.h>
+#include <kanawha/clk_dev.h>
 
 struct x64_cpu;
 
 struct lapic_timer
 {
     struct timer_dev timer_dev;
+    struct clk_dev clk_dev;
 
     freq_t freq;
     int periodic;

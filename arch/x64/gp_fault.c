@@ -27,7 +27,7 @@ x64_gp_fault_handler(
     eprintk("Killing Process (%ld) for GP Fault! (RIP=%p) (error=%p)\n",
             (sl_t)process->id, excp_state->rip, (uintptr_t)excp_state->error_code);
 
-    arch_excp_dump_state(gen_excp_state, printk);
+    arch_excp_dump_state(gen_excp_state, do_printk);
 
     process_terminate(process, -1);
 

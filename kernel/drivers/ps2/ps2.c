@@ -341,15 +341,6 @@ ps2_register_port(
     }
 #undef IDBUFSIZE
 
-    printk("Registering PS/2 Port with Device ID Bytes {");
-    if(num_id_bytes > 0) {
-        printk("0x%x", id_bytes[0]);
-    }
-    for(size_t i = 1; i < num_id_bytes; i++) {
-        printk(", 0x%x", id_bytes[i]);
-    }
-    printk("}\n");
-
     spin_lock(&ps2_global_lock);
 
     ilist_node_t *driver_node;

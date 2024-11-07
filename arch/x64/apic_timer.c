@@ -9,6 +9,7 @@
 #include <kanawha/irq_domain.h>
 #include <kanawha/cpu.h>
 #include <kanawha/clk.h>
+#include <kanawha/clk_dev.h>
 #include <kanawha/timer.h>
 #include <kanawha/xcall.h>
 
@@ -318,6 +319,52 @@ lapic_timer_driver = {
     .set_alarm_periodic = lapic_timer_set_alarm_periodic,
 };
 
+static freq_t
+lapic_clk_freq(struct clk_dev *clk_dev)
+{
+    struct lapic_timer *lapic_timer =
+        container_of(clk_dev, struct lapic_timer, clk_dev);
+    return lapic_timer->freq;
+}
+
+static void
+lapic_clk_mono_cycles_xcall(void *__cycles_out)
+{
+    struct cpu *gen_cpu = cpu_from_id(current_cpu_id());
+    struct x64_cpu *cpu = container_of(gen_cpu, struct x64_cpu, cpu);
+
+    struct lapic *lapic = &cpu->apic;
+
+    cycles_t cycles = lapic_read_reg(lapic, LAPIC_REG_TMR_CCR);
+
+    *(cycles_t*)__cycles_out = cycles;
+}
+
+static cycles_t 
+lapic_clk_mono_cycles(struct clk_dev *clk_dev)
+{
+    int res;
+
+    struct lapic_timer *lapic_timer =
+        container_of(clk_dev, struct lapic_timer, clk_dev);
+    struct x64_cpu *cpu =
+        container_of(lapic_timer, struct x64_cpu, apic_timer);
+    cycles_t cycles;
+    
+    res = xcall_run(cpu->cpu.id, lapic_clk_mono_cycles_xcall, (void*)&cycles);
+    if(res) {
+        return 0;
+    }
+
+    return cycles;
+}
+
+static struct clk_driver
+lapic_clk_driver = {
+    .freq = lapic_clk_freq,
+    .mono_cycles = lapic_clk_mono_cycles,
+};
+
 int
 register_cpu_lapic_timer(
         struct x64_cpu *cpu)
@@ -330,6 +377,8 @@ register_cpu_lapic_timer(
     timer->timer_dev.alarm_count = 1;
     timer->alarm_func = NULL;
     timer->periodic = 0;
+
+    timer->clk_dev.driver = &lapic_clk_driver;
 
     if(cpu->cpu.is_bsp) {
         printk("Setting BSP APIC Timer as Timer Source\n");

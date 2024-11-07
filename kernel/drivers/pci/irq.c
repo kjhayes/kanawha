@@ -107,7 +107,7 @@ pci_func_get_irq(
         irq_t irq = irq_domain_revmap(func->irq_domain, hwirq);
         if(irq == NULL_IRQ) {
             eprintk("pci_func_get_irq: irq_domain_revmap returned IRQ_NULL!\n");
-            irq_domain_dump(printk, func->irq_domain);
+            irq_domain_dump(do_printk, func->irq_domain);
         }
         return irq;
     }

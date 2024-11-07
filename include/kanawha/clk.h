@@ -2,7 +2,8 @@
 #define __KANAWHA__CLK_H__
 
 #include <kanawha/time.h>
-#include <kanawha/clk_dev.h>
+
+struct clk_dev;
 
 int clk_delay(duration_t duration);
 duration_t clk_mono_current(void);

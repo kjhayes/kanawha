@@ -82,7 +82,7 @@ arch_init_thread_state(struct thread_state *state)
 
     caller_regs[1] = (uint64_t)state->in; //rdi
 
-    //arch_dump_thread(printk, state);
+    //arch_dump_thread(do_printk, state);
 
     return 0;
 }
