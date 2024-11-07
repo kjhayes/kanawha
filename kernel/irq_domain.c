@@ -507,6 +507,17 @@ irq_t irq_domain_revmap(
 }
 
 int
+irq_domain_set_all_irq_dev(
+        struct irq_domain *domain,
+        struct irq_dev *dev)
+{
+    for(size_t i = 0; i < domain->num_irq; i++) {
+        domain->irq_descs[i].dev = dev;
+    }
+    return 0;
+}
+
+int
 dump_irq_descs(printk_f *printer)
 {
     char dev_name_buf[64];
