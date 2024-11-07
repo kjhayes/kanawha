@@ -213,6 +213,11 @@ int
 free_irq_domain_linear(struct irq_domain *domain);
 
 int
+irq_domain_set_all_irq_dev(
+        struct irq_domain *domain,
+        struct irq_dev *dev);
+
+int
 dump_irq_descs(printk_f *printer);
 int
 irq_domain_dump(printk_f *printer, struct irq_domain *domain);
