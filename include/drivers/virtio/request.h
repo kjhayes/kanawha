@@ -2,24 +2,26 @@
 #define __KANAWHA__VIRTIO_REQUEST_H__
 
 #include <kanawha/list.h>
-#include <kanawha/waitqueue.h>
-
-struct virtio_buffer
-{
-    ilist_node_t list_node;
-
-    paddr_t phys_addr;
-    void *virt_addr;
-    size_t size;
-
-    int is_response : 1;
-};
+#include <kanawha/aspace.h>
+#include <drivers/virtio/queue.h>
 
 struct virtio_request
 {
-    ilist_t buffers;
+    enum {
+        VIRTIO_REQUEST_UNLAUNCHED,
+        VIRTIO_REQUEST_LAUNCHED,
+        VIRTIO_REQUEST_COMPLETED,
+    } state;
 
+    uint16_t num_buffers;
+    uint16_t root_descriptor;
+    uint16_t tail_descriptor;
+    uint16_t avail_slot;
+
+    ilist_node_t queue_node;
     struct virtio_queue *queue;
+
+    size_t len_written;
 };
 
 struct virtio_request *
@@ -27,31 +29,54 @@ virtio_request_create(
         struct virtio_queue *queue);
 int
 virtio_request_destroy(
-        struct virtio_request *req);
+        struct virtio_request *request);
 
-// Allocate, populate and append
-// a buffer with the provided data
+// Device Readonly
 int
-virtio_request_append_req_data(
+virtio_request_append_input(
         struct virtio_request *req,
-        void *data,
-        size_t data_len);
+        void __phys *buffer,
+        size_t active_size);
 
-// Allocate and append a response buffer which
-// is device writable
-void *
-virtio_request_append_resp_buf(
-        struct virtio_request *req,
-        size_t buf_len);
-
-// Move this request into the available ring
+// Device Writeable
 int
+virtio_request_append_output(
+        struct virtio_request *req,
+        void __phys *buffer,
+        size_t active_size);
+
+static inline int
 virtio_request_launch(
-        struct virtio_request *req);
+        struct virtio_request *req)
+{
+    int res;
+    DEBUG_ASSERT(KERNEL_ADDR(req->queue));
 
-// Wait for the device to move this request into the used ring
-int
+    res = virtio_queue_launch_request(req->queue, req);
+    if(res) {
+        return res;
+    }
+
+    return 0;
+}
+
+static inline int
 virtio_request_await(
-        struct virtio_request *req);
+        struct virtio_request *req)
+{
+    int res;
+    DEBUG_ASSERT(KERNEL_ADDR(req->queue));
+
+    while(1) {
+        res = virtio_queue_try_finish_request(req->queue, req);
+        if(res) {
+            virtio_queue_notify(req->queue);
+            continue;
+        }
+        break;
+    }
+
+    return 0;
+}
 
 #endif

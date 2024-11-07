@@ -5,6 +5,7 @@
 #include <kanawha/init.h>
 #include <kanawha/string.h>
 #include <kanawha/kmalloc.h>
+#include <drivers/pci/irq.h>
 
 static DECLARE_SPINLOCK(virtio_pci_device_list_lock);
 static DECLARE_ILIST(virtio_pci_device_list);
@@ -66,7 +67,7 @@ static int
 virtio_pci_init_capabilities(
         struct virtio_pci_device *vpci_dev)
 {
-    int res;
+    int res = 0;
 
     ilist_init(&vpci_dev->cap_list);
 
@@ -82,8 +83,10 @@ virtio_pci_init_capabilities(
     {
         num_found++;
 
+        printk("before vcap_kmalloc\n");
         struct virtio_pci_cap *vcap =
             kmalloc(sizeof(struct virtio_pci_cap));
+        printk("after vcap_kmalloc\n");
         if(vcap == NULL) {
             res = -ENOMEM;
             break;
@@ -98,7 +101,7 @@ virtio_pci_init_capabilities(
         vcap->offset =      pci_cap_readl(func, cap, 0x8);
         vcap->length =      pci_cap_readl(func, cap, 0xC);
 
-        dprintk("vcap->bar=0x%x, offset=0x%lx, length=0x%lx, type=0x%x\n",
+        printk("vcap->bar=0x%x, offset=0x%lx, length=0x%lx, type=0x%x\n",
                 (uint32_t)bar_index, (uint32_t)vcap->offset, (uint32_t)vcap->length, (uint32_t)vcap->type);
 
         vcap->bar = &func->bars[bar_index];
@@ -112,6 +115,8 @@ virtio_pci_init_capabilities(
     }
 
     if(res) {
+        eprintk("Failed to initialize virtio_pci capabilities (err=%s)\n",
+                errnostr(res));
         virtio_pci_deinit_capabilities(vpci_dev);
         return res;
     }
@@ -174,6 +179,15 @@ virtio_pci_init_device(
 
     int res;
 
+    res = pci_func_start_irqs(func);
+    if(res) {
+        eprintk("Failed to start IRQ's on virtio-pci device! (err=%s)\n",
+                errnostr(res));
+        return res;
+    }
+
+    DEBUG_ASSERT(KERNEL_ADDR(func->irq_domain));
+
     struct virtio_pci_device *vpci_dev = kmalloc(sizeof(struct virtio_pci_device));
     if(vpci_dev == NULL) {
         return -ENOMEM;
@@ -194,6 +208,7 @@ virtio_pci_init_device(
         return res;
     }
 
+    printk("virito_pci: finding common_cfg_cap\n");
     vpci_dev->common_cfg_cap =
         virtio_pci_find_cap(vpci_dev, VIRTIO_PCI_CAP_COMMON_CFG);
     if(vpci_dev->common_cfg_cap == NULL) {
@@ -202,16 +217,22 @@ virtio_pci_init_device(
         return -EINVAL;
     }
 
+    printk("virito_pci: finding notify_cap\n");
     vpci_dev->notify_cap =
         virtio_pci_find_cap(vpci_dev, VIRTIO_PCI_CAP_NOTIFY_CFG);
-    if(vpci_dev->common_cfg_cap == NULL) {
+    if(vpci_dev->notify_cap == NULL) {
+        eprintk("virtio_pci: Could not find VIRTIO_PCI_CAP_NOTIFY_CFG!\n");
         virtio_pci_deinit_capabilities(vpci_dev);
         kfree(vpci_dev);
         return -EINVAL;
     }
 
+    vpci_dev->notify_multiplier = virtio_pci_cap_ext_cfg_readl(
+            vpci_dev, vpci_dev->notify_cap, 0);
+
     spin_lock(&virtio_pci_device_list_lock);
 
+    printk("virito_pci: registering virito_device\n");
     res = register_virtio_device(&vpci_dev->virtio_dev);
     if(res) {
         spin_unlock(&virtio_pci_device_list_lock);
@@ -332,5 +353,5 @@ virtio_pci_driver_register(void)
 {
     return register_pci_driver(&virtio_pci_driver);
 }
-declare_init(bus, virtio_pci_driver_register);
+declare_init_desc(bus, virtio_pci_driver_register, "Registering Virtio PCI Transport");
 

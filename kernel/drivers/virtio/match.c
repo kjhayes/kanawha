@@ -48,13 +48,12 @@ virtio_try_match(
     }
 
     virtio_device_set_status(device, VIRTIO_STATUS_FEATURES_OK);
+
     uint8_t status = virtio_device_read_status(device);
     if(!(status & VIRTIO_STATUS_FEATURES_OK)) {
         eprintk("virtio_try_match: Device Rejected Subset of Features After Negotiation\n");
         return -EINVAL;
     }
-
-    printk("Virtio Device Negotiation Accepted!\n");
 
     res = virtio_device_init_queues(device);
     if(res) {
@@ -63,11 +62,12 @@ virtio_try_match(
         return res;
     }
 
+    virtio_device_set_status(device, VIRTIO_STATUS_DRIVER_OK);
+
     res = virtio_driver_init_device(driver, device);
     if(res) {
         return res;
     }
-
 
     device->driver = driver;
     ilist_push_tail(&driver->device_list, &device->driver_node);
@@ -147,13 +147,17 @@ register_virtio_driver(
         if(res) {
             continue;
         }
+        matched = 1;
     }
 
-    ilist_for_each(node, &driver->device_list) {
-        struct virtio_device *device =
-            container_of(node, struct virtio_device, global_node);
-        ilist_remove(&virtio_unmatched_device_list, &device->global_node);
-        ilist_push_tail(&virtio_matched_device_list, &device->global_node);
+    if(matched) {
+        ilist_for_each(node, &driver->device_list) {
+            struct virtio_device *device =
+                container_of(node, struct virtio_device, driver_node);
+            DEBUG_ASSERT(ilist_contains(&virtio_unmatched_device_list, &device->global_node));
+            ilist_remove(&virtio_unmatched_device_list, &device->global_node);
+            ilist_push_tail(&virtio_matched_device_list, &device->global_node);
+        }
     }
 
     spin_unlock(&virtio_match_lock);

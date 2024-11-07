@@ -98,6 +98,8 @@ virtio_pci_accept_feature(
     size_t long_index = feat_bit / 32;
     size_t bit_index = feat_bit % 32;
 
+    printk("virtio_pci_accept_feature: bit=0x%lx, long_index=0x%lx, bit_index=0x%lx\n", feat_bit, long_index, bit_index);
+
     virtio_pci_cap_bar_writel(
             vdev,
             vdev->common_cfg_cap,
@@ -157,7 +159,7 @@ virtio_pci_init_queues(
         vdev->queues[i] = &vqueue->queue;
     }
 
-    printk("virtio_pci_init_queues: num_queues=0x%x\n",
+    dprintk("virtio_pci_init_queues: num_queues=0x%x\n",
             vdev->num_queues);
    
     return 0;
@@ -188,6 +190,148 @@ virtio_pci_deinit_queues(
     return 0;
 }
 
+static int
+virtio_pci_device_cfg_writeb(
+        struct virtio_device *virtio_dev,
+        size_t offset,
+        uint8_t value)
+{
+    int res;
+    struct virtio_pci_device *dev =
+        container_of(virtio_dev, struct virtio_pci_device, virtio_dev);
+
+    virtio_pci_cap_bar_writeb(
+            dev,
+            dev->device_cap,
+            offset,
+            value);
+
+    return 0;
+}
+static int
+virtio_pci_device_cfg_writew(
+        struct virtio_device *virtio_dev,
+        size_t offset,
+        uint16_t value)
+{
+    int res;
+    struct virtio_pci_device *dev =
+        container_of(virtio_dev, struct virtio_pci_device, virtio_dev);
+
+    virtio_pci_cap_bar_writew(
+            dev,
+            dev->device_cap,
+            offset,
+            value);
+
+    return 0;
+}
+static int
+virtio_pci_device_cfg_writel(
+        struct virtio_device *virtio_dev,
+        size_t offset,
+        uint32_t value)
+{
+    int res;
+    struct virtio_pci_device *dev =
+        container_of(virtio_dev, struct virtio_pci_device, virtio_dev);
+
+    virtio_pci_cap_bar_writel(
+            dev,
+            dev->device_cap,
+            offset,
+            value);
+
+    return 0;
+}
+static int
+virtio_pci_device_cfg_writeq(
+        struct virtio_device *virtio_dev,
+        size_t offset,
+        uint64_t value)
+{
+    int res;
+    struct virtio_pci_device *dev =
+        container_of(virtio_dev, struct virtio_pci_device, virtio_dev);
+
+    virtio_pci_cap_bar_writeq(
+            dev,
+            dev->device_cap,
+            offset,
+            value);
+
+    return 0;
+}
+
+static int
+virtio_pci_device_cfg_readb(
+        struct virtio_device *virtio_dev,
+        size_t offset,
+        uint8_t *value)
+{
+    int res;
+    struct virtio_pci_device *dev =
+        container_of(virtio_dev, struct virtio_pci_device, virtio_dev);
+
+    *value = virtio_pci_cap_bar_readb(
+            dev,
+            dev->device_cap,
+            offset);
+
+    return 0;
+}
+static int
+virtio_pci_device_cfg_readw(
+        struct virtio_device *virtio_dev,
+        size_t offset,
+        uint16_t *value)
+{
+    int res;
+    struct virtio_pci_device *dev =
+        container_of(virtio_dev, struct virtio_pci_device, virtio_dev);
+
+    *value = virtio_pci_cap_bar_readw(
+            dev,
+            dev->device_cap,
+            offset);
+
+    return 0;
+}
+static int
+virtio_pci_device_cfg_readl(
+        struct virtio_device *virtio_dev,
+        size_t offset,
+        uint32_t *value)
+{
+    int res;
+    struct virtio_pci_device *dev =
+        container_of(virtio_dev, struct virtio_pci_device, virtio_dev);
+
+    *value = virtio_pci_cap_bar_readl(
+            dev,
+            dev->device_cap,
+            offset);
+
+    return 0;
+}
+static int
+virtio_pci_device_cfg_readq(
+        struct virtio_device *virtio_dev,
+        size_t offset,
+        uint64_t *value)
+{
+    int res;
+    struct virtio_pci_device *dev =
+        container_of(virtio_dev, struct virtio_pci_device, virtio_dev);
+
+    *value = virtio_pci_cap_bar_readq(
+            dev,
+            dev->device_cap,
+            offset);
+
+    return 0;
+}
+
 struct virtio_device_ops
 virtio_pci_device_ops = {
     .reset = virtio_pci_reset,
@@ -197,5 +341,16 @@ virtio_pci_device_ops = {
     .accept_feature = virtio_pci_accept_feature,
     .init_queues = virtio_pci_init_queues,
     .deinit_queues = virtio_pci_deinit_queues,
+
+    // Write Device Specific Config
+    .writeb = virtio_pci_device_cfg_writeb,
+    .writew = virtio_pci_device_cfg_writew,
+    .writel = virtio_pci_device_cfg_writel,
+    .writeq = virtio_pci_device_cfg_writeq,
+    // Read Device Specific Config
+    .readb = virtio_pci_device_cfg_readb,
+    .readw = virtio_pci_device_cfg_readw,
+    .readl = virtio_pci_device_cfg_readl,
+    .readq = virtio_pci_device_cfg_readq,
 };
 

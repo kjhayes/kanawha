@@ -5,10 +5,10 @@
 #include <drivers/virtio/virtio.h>
 #include <drivers/virtio/device.h>
 #include <drivers/virtio/queue.h>
+#include <drivers/virtio/request.h>
 #include <drivers/pci/pci.h>
 #include <drivers/pci/cap.h>
 #include <drivers/pci/bar.h>
-
 
 #define VIRTIO_PCI_COMMON_CFG_DEVICE_FEATURE_SELECT 0x00
 #define VIRTIO_PCI_COMMON_CFG_DEVICE_FEATURE        0x04
@@ -50,6 +50,7 @@ struct virtio_pci_device
     struct virtio_device virtio_dev;
 
     struct virtio_pci_cap *common_cfg_cap;
+    struct virtio_pci_cap *device_cap;
     struct virtio_pci_cap *notify_cap;
     uint16_t notify_multiplier;
 
@@ -58,12 +59,23 @@ struct virtio_pci_device
     ilist_node_t global_node;
 };
 
-struct virtio_pci_queue {
+struct virtio_pci_queue
+{
     struct virtio_queue queue;
 
-    uint16_t size;
-    uint16_t msix_vector;
+    hwirq_t msix_vector;
     uint16_t notify_offset;
+    uint16_t notify_data;
+
+    struct irq_action *irq_action;
+};
+
+struct virtio_pci_request
+{
+    struct virtio_request request;
+
+    uint16_t root_desc;
+    uint16_t tail_desc;
 };
 
 extern struct virtio_device_ops virtio_pci_device_ops;
@@ -365,7 +377,7 @@ virtio_pci_device_queue_cfg_set_desc(
     virtio_pci_cap_bar_writeq(
             dev,
             dev->common_cfg_cap,
-            VIRTIO_PCI_COMMON_CFG_QUEUE_ENABLE,
+            VIRTIO_PCI_COMMON_CFG_QUEUE_DESC,
             value);
 }
 
