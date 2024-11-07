@@ -307,7 +307,11 @@ dma_alloc(
     if(size_order < DMA_MIN_REGION_ORDER) {
         region_order = DMA_MIN_REGION_ORDER;
     } else {
-        region_order = size_order;
+        region_order = size_order+1;
+    }
+
+    if(region_order < align_order) {
+        region_order = align_order+1;
     }
 
     struct dma_region *region =
