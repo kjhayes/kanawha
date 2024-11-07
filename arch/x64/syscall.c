@@ -100,6 +100,14 @@ x64_route_syscall(struct x64_syscall_state *state)
                         (size_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDX] // size
                         );
             break;
+        case SYSCALL_ID_FLUSH:
+            *ret_val = (uint64_t)(int)
+                syscall_flush(
+                        process,
+                        (fd_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDI], // file
+                        (unsigned long)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RSI] // flags
+                        );
+            break;
         case SYSCALL_ID_SEEK:
             *ret_val = (uint64_t)(ssize_t)
                 syscall_seek(

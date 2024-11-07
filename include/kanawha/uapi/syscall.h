@@ -33,6 +33,11 @@ ARG(fd_t, file)\
 ARG(void __user *, src)\
 ARG(size_t, size)
 
+#define SYSCALL_SIG_FLUSH(RET,ARG)\
+RET(int)\
+ARG(fd_t, file)\
+ARG(unsigned long, flags)
+
 #define SYSCALL_SIG_SEEK(RET,ARG)\
 RET(ssize_t)\
 ARG(fd_t, file)\
@@ -181,6 +186,7 @@ X(close,     2,  CLOSE,      SYSCALL_SIG_CLOSE)\
 X(read,      3,  READ,       SYSCALL_SIG_READ)\
 X(write,     4,  WRITE,      SYSCALL_SIG_WRITE)\
 X(seek,      5,  SEEK,       SYSCALL_SIG_SEEK)\
+X(flush,     6,  FLUSH,      SYSCALL_SIG_FLUSH)\
 X(mmap,      7,  MMAP,       SYSCALL_SIG_MMAP)\
 X(munmap,    8,  MUNMAP,     SYSCALL_SIG_MUNMAP)\
 X(exec,      9,  EXEC,       SYSCALL_SIG_EXEC)\

@@ -5,6 +5,7 @@ obj-y += \
 	close.o \
 	read.o \
 	write.o \
+	flush.o \
 	seek.o \
 	mmap.o \
 	exec.o \
