@@ -2,7 +2,6 @@
 #include <kanawha/clk_dev.h>
 #include <kanawha/clk.h>
 #include <kanawha/init.h>
-#include <kanawha/device.h>
 #include <kanawha/pio.h>
 #include <kanawha/mmio.h>
 #include <kanawha/kmalloc.h>
@@ -13,21 +12,6 @@
 #include <acpi/gas.h>
 #include <acpi/fadt.h>
 
-static int
-acpi_pm_timer_device_read_name(
-        struct device *dev,
-        char *buf,
-        size_t buf_size)
-{
-    strncpy(buf, "acpi-pm-timer", buf_size);
-    return 0;
-}
-
-static struct device_ops
-acpi_pm_timer_device_ops = {
-    .read_name = acpi_pm_timer_device_read_name,
-};
-
 #define ACPI_PM_TIMER_FREQ_HZ (hz_t)3579545
 
 static freq_t
@@ -37,7 +21,6 @@ acpi_pm_timer_freq(struct clk_dev *dev) {
 
 struct acpi_pm_timer
 {
-    struct device device;
     struct clk_dev clk_dev;
     union {
         struct {
@@ -132,15 +115,6 @@ init_acpi_pm_timer_clk(void)
     }
 
     int res;
-    res = register_device(
-            &clk->device,
-            &acpi_pm_timer_device_ops,
-            NULL);
-    if(res) {
-        eprintk("Failed to register ACPI PM Timer Device!\n");
-        kfree(clk);
-        return res;
-    }
 
     if(clk_source_get() == NULL) {
         printk("Setting Clock Source to ACPI PM Timer\n");

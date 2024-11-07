@@ -30,7 +30,6 @@ DECLARE_OP_LIST_PTRS(DISP_DEV_OP_LIST, struct disp_dev *)
 struct disp_dev
 {
     struct disp_driver *driver;
-    struct device *device;
 
     struct stree_node disp_dev_node;
 

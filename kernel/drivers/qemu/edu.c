@@ -80,7 +80,6 @@ qemu_edu_init_device(
 
     struct irq_action *action = irq_install_handler(
             irq_to_desc(irq),
-            NULL,
             (void*)bar,
             qemu_edu_irq_handler);
     if(action == NULL) {

@@ -1,7 +1,7 @@
 #ifndef __KANAWHA__CPU_H__
 #define __KANAWHA__CPU_H__
 
-#include <kanawha/device.h>
+#include <kanawha/stddef.h>
 
 // CPU ID's must be non-negative and contiguous
 typedef int cpu_id_t;
@@ -9,7 +9,6 @@ typedef int cpu_id_t;
 #define NULL_CPU_ID (cpu_id_t)(-1)
 
 struct cpu {
-    struct device device;
     cpu_id_t id;
 
     int is_bsp;

@@ -47,7 +47,6 @@ x64_install_gp_fault_handler(void)
     x64_gpf_action =
         irq_install_handler(
             x64_vector_irq_desc(13),
-            NULL, // Device
             NULL, // priv_state
             x64_gp_fault_handler);
 

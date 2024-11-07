@@ -37,7 +37,6 @@ DECLARE_OP_LIST_PTRS(TIMER_DEV_OP_LIST, struct timer_dev*)
 struct timer_dev
 {
     struct timer_driver *driver;
-    struct device *device;
 
     size_t alarm_count;
 };

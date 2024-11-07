@@ -1,7 +1,6 @@
 #ifndef __KANAWHA__CHAR_DEV_H__
 #define __KANAWHA__CHAR_DEV_H__
 
-#include <kanawha/device.h>
 #include <kanawha/stdint.h>
 #include <kanawha/ops.h>
 #include <kanawha/stree.h>
@@ -37,7 +36,6 @@ DECLARE_OP_LIST_PTRS(CHAR_DEV_OP_LIST, struct char_dev*)
 
 struct char_dev {
     struct char_driver *driver;
-    struct device *device;
 
     struct stree_node char_dev_node;
     struct flat_node flat_fs_node;
@@ -60,8 +58,7 @@ int
 register_char_dev(
         struct char_dev *chr,
         const char *name,
-        struct char_driver *driver,
-        struct device *dev);
+        struct char_driver *driver);
 
 int
 unregister_char_dev(struct char_dev *dev);

@@ -42,7 +42,6 @@ DECLARE_OP_LIST_PTRS(IRQ_DEV_OP_LIST, struct irq_dev*)
 
 struct irq_dev {
     struct irq_dev_driver *driver;
-    struct device *device;
 };
 
 DEFINE_OP_LIST_WRAPPERS(

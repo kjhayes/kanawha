@@ -63,7 +63,6 @@ DEFINE_OP_LIST_WRAPPERS(
 int
 register_uart_8250(
         const char *name,
-        struct device *device,
         struct uart_8250 *uart_8250,
         struct uart_8250_ops *ops,
         struct char_driver *char_driver,

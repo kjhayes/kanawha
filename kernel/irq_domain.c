@@ -10,7 +10,6 @@
 #include <kanawha/irq_dev.h>
 #include <kanawha/list.h>
 #include <kanawha/stddef.h>
-#include <kanawha/device.h>
 #include <kanawha/percpu.h>
 #include <kanawha/assert.h>
 
@@ -74,7 +73,6 @@ irq_to_desc(irq_t irq)
 struct irq_action *
 irq_install_handler(
         struct irq_desc *desc,
-        struct device *device,
         void *priv_data,
         irq_handler_f *handler)
 {
@@ -88,7 +86,6 @@ irq_install_handler(
     action->desc = desc;
     action->type = IRQ_ACTION_HANDLER;
     action->handler_data.priv_data = priv_data;
-    action->handler_data.device = device;
     action->handler_data.handler = handler;
 
     rlock_write_lock(&desc->lock);
@@ -565,12 +562,6 @@ irq_domain_dump(
                     desc->hwirq);
         }
 
-        if(desc->dev != NULL) {
-            device_read_name(desc->dev->device, dev_name_buf, 63);
-            (*printer)(" DEVICE(%s)",
-                    dev_name_buf);
-        }
-
         (*printer)("\n");
 
         ilist_node_t *action_node;
@@ -581,14 +572,8 @@ irq_domain_dump(
 
             switch(action->type) {
                 case IRQ_ACTION_HANDLER:
-                    if(action->handler_data.device) {
-                        device_read_name(action->handler_data.device, dev_name_buf, 63);
-                    } else {
-                        strncpy(dev_name_buf, "NULL", 63);
-                    }
-                    (*printer)("HANDLER(%p) DEVICE(%s)\n",
-                            action->handler_data.handler,
-                            dev_name_buf);
+                    (*printer)("HANDLER(%p)\n",
+                            action->handler_data.handler);
                     break;
                 case IRQ_ACTION_DIRECT_LINK:
                     (*printer)("DIRECT-LINK(0x%lx)\n",

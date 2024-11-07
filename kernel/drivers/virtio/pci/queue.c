@@ -104,7 +104,6 @@ virtio_pci_create_queue(
     struct irq_desc *irq_desc = irq_to_desc(irq);
     queue->irq_action = irq_install_handler(
             irq_desc,
-            NULL,
             (void*)queue,
             virtio_pci_queue_used_notification_irq_handler);
     if(queue->irq_action == NULL) {

@@ -10,22 +10,6 @@ static DECLARE_SPINLOCK(system_cpus_lock);
 static struct cpu * system_cpus[CONFIG_MAX_CPUS] = { 0 };
 static size_t __num_cpus = 0;
 
-static int
-smp_cpu_read_name(
-        struct device *dev,
-        char *buf,
-        size_t size)
-{
-    struct cpu *cpu = container_of(dev, struct cpu, device);
-    snprintk(buf, size, "cpu%d", cpu->id);
-    return 0;
-}
-
-static struct device_ops
-smp_cpu_ops = {
-    .read_name = smp_cpu_read_name,
-};
-
 int
 bsp_register_smp_cpu(struct cpu *cpu, int is_bsp)
 {
@@ -40,14 +24,6 @@ bsp_register_smp_cpu(struct cpu *cpu, int is_bsp)
         system_cpus[0] = cpu;
         cpu->id = 0;
         cpu->is_bsp = 1;
-
-        int res = register_device(
-                &cpu->device,
-                &smp_cpu_ops,
-                NULL);
-        if(res) {
-            panic("Failed to register BSP CPU device!\n");
-        }
     }
     else {
         for(cpu_id_t id = 1; id < CONFIG_MAX_CPUS; id++) {
@@ -56,16 +32,6 @@ bsp_register_smp_cpu(struct cpu *cpu, int is_bsp)
                 system_cpus[id] = cpu;
                 cpu->id = id;
                 cpu->is_bsp = 0;
-
-                int res = register_device(
-                        &cpu->device,
-                        &smp_cpu_ops,
-                        NULL);
-                if(res) {
-                    eprintk("Failed to register AP CPU device!\n");
-                    spin_unlock(&system_cpus_lock);
-                    return res;
-                }
                 break;
             }
         }
@@ -93,11 +59,6 @@ int
 unregister_smp_cpu(struct cpu *cpu)
 {
     spin_lock(&system_cpus_lock);
-    int res = unregister_device(&cpu->device);
-    if(res) {
-        spin_unlock(&system_cpus_lock);
-        return res;
-    }
     system_cpus[cpu->id] = NULL;
     __num_cpus--;
     spin_unlock(&system_cpus_lock);

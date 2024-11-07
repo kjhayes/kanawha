@@ -10,7 +10,6 @@
 #include <kanawha/string.h>
 #include <kanawha/spinlock.h>
 #include <kanawha/mmio.h>
-#include <kanawha/device.h>
 #include <kanawha/irq_dev.h>
 #include <kanawha/assert.h>
 
@@ -74,24 +73,6 @@ ioapic_write_iored(
     mmio_writel(ioapic->ioregsel, IOAPIC_REG_IOREDTBL_BASE + (irq_offset * 2) + 1);
     mmio_writel(ioapic->iowin, high);
 }
-
-static int
-ioapic_device_read_name(
-        struct device *device,
-        char *buf,
-        size_t size)
-{
-    struct ioapic *ioapic =
-        container_of(device, struct ioapic, device);
-
-    snprintk(buf, size, "ioapic-%d", ioapic->id);
-    return 0;
-}
-
-static struct device_ops
-ioapic_device_ops = {
-    .read_name = ioapic_device_read_name,
-};
 
 static int
 ioapic_ack_irq(
@@ -193,19 +174,6 @@ x64_register_ioapic(
             ioapic->base_irq,
             ioapic->num_irq);
 
-    res = register_device(
-            &ioapic->device,
-            &ioapic_device_ops,
-            NULL);
-    if(res) {
-        eprintk("Failed to register IOAPIC device (err=%s)\n",
-                errnostr(res));
-        mmio_unmap(ioapic->regs, IOAPIC_MMIO_SIZE);
-        kfree(ioapic);
-        return res;
-    }
-
-    ioapic->dev.device = &ioapic->device;
     ioapic->dev.driver = &ioapic_irq_driver;
 
     ioapic->irq_domain =

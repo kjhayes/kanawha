@@ -20,7 +20,6 @@ struct ioapic
     ioapic_id_t id;
     void __phys * phys_regs_base;
 
-    struct device device;
     struct irq_dev dev;
 
     void __mmio *regs;

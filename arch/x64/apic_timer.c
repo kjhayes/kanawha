@@ -19,9 +19,7 @@
 static int
 apic_timer_handler(struct excp_state *excp_state, struct irq_action *action)
 {
-    struct device *dev = action->handler_data.device;
-    struct lapic_timer *apic_timer =
-        container_of(dev, struct lapic_timer, device);
+    struct lapic_timer *apic_timer = action->handler_data.priv_data;
 
     if(apic_timer->alarm_func) {
         alarm_f *func = apic_timer->alarm_func;
@@ -82,8 +80,7 @@ apic_timer_init_current(void)
     struct irq_action *timer_action =
         irq_install_handler(
             irq_to_desc(timer_irq),
-            &cpu->apic_timer.device,
-            NULL,
+            &cpu->apic_timer,
             apic_timer_handler);
 
     if(timer_action == NULL) {
@@ -176,27 +173,6 @@ apic_timer_init_current(void)
 
     return 0;
 }
-
-static int
-lapic_timer_device_read_name(
-        struct device *device,
-        char *buf,
-        size_t buf_size)
-{
-    struct lapic_timer *timer =
-        container_of(device, struct lapic_timer, device);
-    struct x64_cpu *cpu =
-        container_of(timer, struct x64_cpu, apic_timer);
-    
-    snprintk(buf, buf_size, "apic-timer-%ld", cpu->apic.id);
-
-    return 0;
-}
-
-static struct device_ops
-lapic_timer_device_ops = {
-    .read_name = lapic_timer_device_read_name,
-};
 
 static void
 lapic_timer_clear_xcall(void *state)
@@ -350,12 +326,6 @@ register_cpu_lapic_timer(
 
     struct lapic_timer *timer = &cpu->apic_timer;
 
-    res = register_device(
-            &timer->device,
-            &lapic_timer_device_ops,
-            &cpu->cpu.device);
-
-    timer->timer_dev.device = &timer->device;
     timer->timer_dev.driver = &lapic_timer_driver;
     timer->timer_dev.alarm_count = 1;
     timer->alarm_func = NULL;

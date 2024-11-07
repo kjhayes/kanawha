@@ -207,8 +207,7 @@ virtio_console_init_device(
         res = register_char_dev(
                 &port->char_dev,
                 port->name,
-                &virtio_console_port_char_driver,
-                NULL);
+                &virtio_console_port_char_driver);
         if(res) {
             eprintk("Failed to register virtio console port char_dev! (err=%s)\n",
                     errnostr(res));

@@ -27,8 +27,7 @@ int
 register_char_dev(
         struct char_dev *chr,
         const char *name,
-        struct char_driver *driver,
-        struct device *device)
+        struct char_driver *driver)
 {
     int res;
 
@@ -40,7 +39,6 @@ register_char_dev(
         return -EEXIST;
     }
 
-    chr->device = device;
     chr->driver = driver;
     dprintk("Registering char_dev \"%s\" name=%p\n", name, name);
     chr->char_dev_node.key = name;

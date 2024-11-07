@@ -6,7 +6,6 @@
 #include <kanawha/percpu.h>
 #include <kanawha/vmem.h>
 #include <kanawha/thread.h>
-#include <kanawha/device.h>
 #include <kanawha/irq_domain.h>
 #include <kanawha/clk.h>
 #include <kanawha/usermode.h>
@@ -165,7 +164,6 @@ void x64_init(void *in)
         panic("Failed to handle init stage \"launch\"! err=%s", errnostr(res));
     }
 
-    //dump_device_hierarchy(printk);
     //dump_irq_descs(printk);
     //dump_threads(printk);
 

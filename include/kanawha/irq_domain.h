@@ -86,7 +86,6 @@ struct irq_action
     union {
       struct {
           void *priv_data;
-          struct device *device;
           irq_handler_f *handler;
       } handler_data;
       struct {
@@ -144,7 +143,6 @@ int trigger_irq_desc(struct irq_desc *desc);
 struct irq_action *
 irq_install_handler(
         struct irq_desc *desc,
-        struct device *device,
         void *priv_data,
         irq_handler_f *handler);
 

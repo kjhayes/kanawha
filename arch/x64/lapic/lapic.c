@@ -6,7 +6,6 @@
 #include <arch/x64/msr.h>
 #include <arch/x64/cpuid.h>
 #include <kanawha/percpu.h>
-#include <kanawha/device.h>
 #include <kanawha/irq_domain.h>
 #include <kanawha/irq_dev.h>
 #include <kanawha/stddef.h>
@@ -27,30 +26,12 @@ static
 struct irq_action *
 x64_vector_lapic_actions[256-32] = { 0 };
 
-static int
-lapic_device_read_name(
-        struct device *device,
-        char *buf,
-        size_t buf_size)
-{
-    struct lapic *lapic =
-        container_of(device, struct lapic, device);
-
-    snprintk(buf, buf_size, "lapic-%lx", (unsigned long)lapic->id);
-    return 0;
-}
-
 static struct lapic *
 current_lapic(void) {
     struct cpu *gen_cpu = cpu_from_id(current_cpu_id());
     struct x64_cpu *cpu = container_of(gen_cpu, struct x64_cpu, cpu);
     return &cpu->apic;
 }
-
-static struct device_ops
-lapic_device_ops = {
-    .read_name = lapic_device_read_name,
-};
 
 static size_t lapic_hwirq_to_lvt_reg[] = 
 {
@@ -194,7 +175,6 @@ setup_lapic_irq_dev(
 
     dprintk("Setting up CPU (%d) LAPIC Vector IRQ Domain\n",
             cpu->cpu.id);
-    apic->irq_dev.device = &apic->device;
     apic->irq_dev.driver = &lapic_irq_driver;
 
     apic->irq_domain = alloc_irq_domain_linear(
@@ -252,7 +232,6 @@ setup_lapic_lvt_dev(
     dprintk("Setting up CPU (%d) LAPIC LVT IRQ Domain\n",
             cpu->cpu.id);
 
-    apic->lvt_dev.device = &apic->device;
     apic->lvt_dev.driver = &lapic_lvt_irq_driver;
 
     apic->lvt_domain = alloc_irq_domain_linear(
@@ -412,14 +391,6 @@ bsp_register_cpu_lapic(
     int res;
 
     struct lapic *apic = &cpu->apic;
-
-    res = register_device(
-            &apic->device,
-            &lapic_device_ops,
-            &cpu->cpu.device);
-    if(res) {
-        return res;
-    }
 
     // We will use XAPIC mode for all LAPIC(s) for now
     printk("Setting Up LAPIC XAPIC Mode\n");

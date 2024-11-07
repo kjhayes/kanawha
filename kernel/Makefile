@@ -16,7 +16,6 @@ obj-y += \
 	errno.o \
 	common.o \
 	bitmap.o \
-	device.o \
 	ramfile.o \
 	char_dev.o \
 	irq_domain.o \

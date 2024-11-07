@@ -10,7 +10,6 @@ struct pc_com
 {
     int index;
     struct uart_8250 uart_8250;
-    struct device device;
 
     pio_t base_port;
 
@@ -26,20 +25,6 @@ platform_pc_com_ports_base[NUM_PLATFORM_PC_COM_PORTS] =
 {
     0x3F8,
     0x2F8,
-};
-
-static int
-pc_com_device_read_name(
-        struct device *device,
-        char *buffer,
-        size_t size)
-{
-    struct pc_com *com =
-        container_of(device, struct pc_com, device);
-
-    strncpy(buffer, com->name, size);
-
-    return 0;
 };
 
 static void
@@ -135,11 +120,6 @@ pc_com_8250_uart_ops = {
     .write_reg = pc_com_8250_write_reg,
 };
 
-static struct device_ops
-pc_com_device_ops = {
-    .read_name = pc_com_device_read_name,
-};
-
 static int
 pc_com_8250_register(
         struct pc_com *com,
@@ -153,17 +133,8 @@ pc_com_8250_register(
     snprintk(com->name, PC_COM_MAX_NAMELEN, "COM%ld", (sl_t)index);
     com->name[PC_COM_MAX_NAMELEN] = '\0';
 
-    res = register_device(
-            &com->device,
-            &pc_com_device_ops,
-            NULL);
-    if(res) {
-        return res;
-    }
-
     res = register_uart_8250(
             com->name,
-            &com->device,
             &com->uart_8250,
             &pc_com_8250_uart_ops,
             NULL, // Use generic 8250 char dev and uart drivers

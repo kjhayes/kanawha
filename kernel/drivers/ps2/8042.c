@@ -437,7 +437,6 @@ ps2_8042_probe(void)
         ps2->first_port->action =
             irq_install_handler(
                     irq_to_desc(irq),
-                    NULL,
                     (void*)ps2->first_port,
                     ps2_8042_port_irq_handler);
         dprintk("Installed First PS/2 Port Handler on IRQ (%ld)\n",
@@ -495,7 +494,6 @@ first_port_init:
         ps2->second_port->action =
             irq_install_handler(
                     irq_to_desc(irq),
-                    NULL,
                     (void*)ps2->second_port,
                     ps2_8042_port_irq_handler);
         dprintk("Installed Second PS/2 Port Handler on IRQ (%ld)\n",

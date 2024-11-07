@@ -2,7 +2,6 @@
 #define __KANAWHA__X64_LAPIC_H__
 
 #include <kanawha/stdint.h>
-#include <kanawha/device.h>
 #include <kanawha/irq_dev.h>
 #include <kanawha/ops.h>
 
@@ -130,9 +129,8 @@ struct lapic_ops {
 DECLARE_OP_LIST_PTRS(LAPIC_OP_LIST, struct lapic *)
 };
 
-struct lapic {
-    struct device device;
-
+struct lapic
+{
     struct lapic_ops *ops;
     apic_id_t id;
 

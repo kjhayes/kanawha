@@ -38,7 +38,6 @@ struct blk_dev_disk;
 struct blk_dev
 {
     struct blk_driver *driver;
-    struct device *device;
 
     struct stree_node blk_dev_node;
 
@@ -112,7 +111,6 @@ int
 register_blk_dev(struct blk_dev *blk,
         const char *name,
         struct blk_driver *driver,
-        struct device *device,
         order_t sector_order,
         size_t num_disks);
 

@@ -7,7 +7,6 @@
 int
 register_uart_8250(
         const char *name,
-        struct device *device,
         struct uart_8250 *uart_8250,
         struct uart_8250_ops *ops,
         struct char_driver *char_driver,
@@ -16,7 +15,6 @@ register_uart_8250(
     int res;
 
     DEBUG_ASSERT(name);
-    DEBUG_ASSERT(device);
     DEBUG_ASSERT(uart_8250);
     DEBUG_ASSERT(ops);
 
@@ -32,8 +30,7 @@ register_uart_8250(
     res = register_char_dev(
             &uart_8250->char_dev,
             name,
-            char_driver,
-            device);
+            char_driver);
     if(res) {
         return res;
     }

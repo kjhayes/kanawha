@@ -221,8 +221,7 @@ x64_platform_vga_serial_register(void)
     res = register_char_dev(
             &x64_platform_vga.char_dev,
             "vga-serial",
-            &vga_serial_driver,
-            NULL);
+            &vga_serial_driver);
     if(res) {
         return res;
     }
