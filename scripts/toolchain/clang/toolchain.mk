@@ -1,8 +1,9 @@
 
-CC := clang
+# Clang-18 doesn't respect -mcmodel=large for assembly files
+CC := clang-17
 CPP := cpp
-LD := ld.lld
-AS := clang
+LD := ld.lld-17
+AS := clang-17
 
 ifdef CONFIG_X64
 AFLAGS += -mllvm -asm-macro-max-nesting-depth=1024
