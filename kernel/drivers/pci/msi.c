@@ -94,7 +94,7 @@ pci_func_start_msi(
 
     struct pci_msi_info *info = func->msi_info;
     if(info == NULL) {
-        return -EINVAL;
+        return -ENXIO;
     }
 
     struct msi_irq_dev *msi_dev = kmalloc(sizeof(struct msi_irq_dev));
@@ -102,6 +102,8 @@ pci_func_start_msi(
         return -ENOMEM;
     }
     memset(msi_dev, 0, sizeof(struct msi_irq_dev));
+
+    msi_dev->func = func;
 
     uint16_t msg_ctrl = pci_msi_read_msg_ctrl(func, info);
     msg_ctrl &= ~(1ULL<<0); // Disable MSI before we start configuring
@@ -176,6 +178,16 @@ pci_func_start_msi(
         kfree(msi_dev->link_actions);
         kfree(msi_dev);
         return -ENOMEM;
+    }
+
+    res = irq_domain_set_all_irq_dev(
+            domain,
+            &msi_dev->irq_dev);
+    if(res) {
+        free_irq_domain_linear(domain);
+        kfree(msi_dev->link_actions);
+        kfree(msi_dev);
+        return res;
     }
 
     // Install IRQ Links from Mailbox to MSI IRQ Domain

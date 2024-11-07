@@ -47,7 +47,7 @@ pci_msix_bir_writel(
 {
     pci_bar_writel(
             info->bir,
-            offset,
+            info->bir_offset + offset,
             value);
     return 0;
 }
@@ -60,7 +60,7 @@ pci_msix_bir_readl(
 {
     return pci_bar_readl(
             info->bir,
-            offset);
+            info->bir_offset + offset);
 }
 
 static inline int
@@ -91,6 +91,25 @@ pci_msix_bir_write_addr(
     return 0;
 }
 
+static inline uint64_t
+pci_msix_bir_read_addr(
+        struct pci_func *func,
+        struct pci_msix_info *info,
+        hwirq_t hwirq)
+{
+    int res;
+    uint64_t addr;
+    addr = pci_msix_bir_readl(
+            func,
+            info,
+            (hwirq * 0x10) + 0x0);
+    addr |= ((uint64_t)pci_msix_bir_readl(
+            func,
+            info,
+            (hwirq * 0x10) + 0x4)) << 32;
+    return addr;
+}
+
 static inline int
 pci_msix_bir_write_data(
         struct pci_func *func,
@@ -103,6 +122,18 @@ pci_msix_bir_write_data(
             info,
             (hwirq * 0x10) + 0x8,
             data);
+}
+
+static inline uint32_t
+pci_msix_bir_read_data(
+        struct pci_func *func,
+        struct pci_msix_info *info,
+        hwirq_t hwirq)
+{
+    return pci_msix_bir_readl(
+            func,
+            info,
+            (hwirq * 0x10) + 0x8);
 }
 
 static inline int
@@ -159,12 +190,14 @@ pci_func_init_msix_info(
 
     uint32_t bir_info = pci_cap_readb(func, cap, 0x4);
     uint8_t bir = bir_info & 0xFF;
-    uint32_t bir_offset = bir_info & 0xFFFFFF00;
+    uint32_t bir_offset = bir_info & ~(0b111);
 
     if(bir >= 6) {
+        eprintk("pci_func_init_msix_info: Invalid BIR (0x%x) >= 6\n", bir);
         return -EINVAL;
     }
     if(func->bars[bir].type != PCI_BAR_MMIO) {
+        eprintk("pci_func_init_msix_info: Invalid BIR (0x%x) bar_type != MMIO\n", bir);
         return -EINVAL;
     }
     info->bir = &func->bars[bir];
@@ -174,9 +207,11 @@ pci_func_init_msix_info(
     uint8_t pending_bir = pending_bir_info & 0xFF;
     uint32_t pending_bir_offset = pending_bir_info & 0xFFFFFF00;
     if(pending_bir >= 6) {
+        eprintk("pci_func_init_msix_info: Invalid Pending BIR (0x%x) >= 6\n", pending_bir);
         return -EINVAL;
     }
     if(func->bars[pending_bir].type != PCI_BAR_MMIO) {
+        eprintk("pci_func_init_msix_info: Invalid Pending BIR (0x%x) bar_type != MMIO\n", pending_bir);
         return -EINVAL;
     }
     info->pending_bir = &func->bars[bir];
@@ -228,7 +263,7 @@ pci_func_start_msix(struct pci_func *func)
 
     struct pci_msix_info *info = func->msix_info;
     if(info == NULL) {
-        return -EINVAL;
+        return -ENXIO;
     }
 
     struct msix_irq_dev *msix_dev = kmalloc(sizeof(struct msix_irq_dev));
@@ -238,9 +273,11 @@ pci_func_start_msix(struct pci_func *func)
     memset(msix_dev, 0, sizeof(struct msix_irq_dev));
 
     uint16_t msg_ctrl = pci_msix_read_msg_ctrl(func, info);
-    msg_ctrl &= ~(1ULL<<15); // Disable MSI-X before we start configuring
+    msg_ctrl &= ~(1ULL<<15); // Enable MSI-X before we start configuring
+    msg_ctrl |= (1ULL<<14); // Mask all interrupts from this function though
     pci_msix_write_msg_ctrl(func, info, msg_ctrl);
 
+    msix_dev->func = func;
     msix_dev->irq_dev.driver = &msix_irq_driver;
     msix_dev->num_irqs = pci_func_msix_num_irqs(func);
     if(msix_dev->num_irqs == 0) {
@@ -248,12 +285,32 @@ pci_func_start_msix(struct pci_func *func)
         return -EINVAL;
     }
 
-    uint64_t addrs[msix_dev->num_irqs];
+    dprintk("pci_func_start_msix: num_irqs=0x%lx\n", msix_dev->num_irqs);
+
+    uint64_t *addrs = kmalloc(sizeof(uint64_t) * msix_dev->num_irqs);
+    if(addrs == NULL) {
+        kfree(msix_dev);
+        return -ENOMEM;
+    }
     memset(addrs, 0, sizeof(uint64_t) * msix_dev->num_irqs);
-    uint32_t datas[msix_dev->num_irqs];
-    memset(addrs, 0, sizeof(uint32_t) * msix_dev->num_irqs);
-    struct irq_desc *descs[msix_dev->num_irqs];
-    memset(descs, 0, sizeof(struct irq_desc*) * msix_dev->num_irqs);
+    
+    uint32_t *datas = kmalloc(sizeof(uint32_t) * msix_dev->num_irqs);
+    if(datas == NULL) {
+        kfree(msix_dev);
+        kfree(addrs);
+        return -ENOMEM;
+    }
+    memset(datas, 0, sizeof(uint32_t) * msix_dev->num_irqs);
+
+    struct irq_desc **descs = kmalloc(sizeof(struct irq_desc *) * msix_dev->num_irqs);
+    if(descs == NULL) {
+        kfree(msix_dev);
+        kfree(addrs);
+        kfree(datas);
+        return -ENOMEM;
+    }
+    memset(descs, 0, sizeof(struct irq_desc *) * msix_dev->num_irqs);
+
     res = pci_mailbox_find_msix(
         msix_dev->num_irqs,
         addrs,
@@ -261,20 +318,35 @@ pci_func_start_msix(struct pci_func *func)
         descs);
     if(res) {
         kfree(msix_dev);
+        kfree(addrs);
+        kfree(datas);
+        kfree(descs);
+        eprintk("pci_func_start_msix: pci_mailbox_find_msix returned %s!\n",
+                errnostr(res));
         return res;
     }
 
     for(size_t i = 0; i < msix_dev->num_irqs; i++) {
         uint64_t addr = addrs[i];
         uint32_t data = datas[i];
+
+        printk("addrs[%d] = 0x%llx\n", i, addr);
+        printk("data[%d] = 0x%lx\n", i, data);
+
         pci_msix_bir_write_addr(func, info, i, addr);
+        DEBUG_ASSERT(pci_msix_bir_read_addr(func, info, i) == addr);
         pci_msix_bir_write_data(func, info, i, data);
+        DEBUG_ASSERT(pci_msix_bir_read_data(func, info, i) == data);
         pci_msix_bir_mask(func, info, i);
     }
+
+    kfree(addrs);
+    kfree(datas);
 
     msix_dev->link_actions = kmalloc(sizeof(struct irq_action*) * msix_dev->num_irqs);
     if(msix_dev->link_actions == NULL) {
         kfree(msix_dev);
+        kfree(descs);
         return -ENOMEM;
     }
     memset(msix_dev->link_actions, 0, sizeof(struct irq_action*) * msix_dev->num_irqs);
@@ -284,7 +356,19 @@ pci_func_start_msix(struct pci_func *func)
     if(domain == NULL) {
         kfree(msix_dev->link_actions);
         kfree(msix_dev);
+        kfree(descs);
         return -ENOMEM;
+    }
+
+    res = irq_domain_set_all_irq_dev(
+            domain,
+            &msix_dev->irq_dev);
+    if(res) {
+        free_irq_domain_linear(domain);
+        kfree(msix_dev->link_actions);
+        kfree(msix_dev);
+        kfree(descs);
+        return res;
     }
 
     int failed_link = 0;
@@ -301,6 +385,9 @@ pci_func_start_msix(struct pci_func *func)
             break;
         }
 
+        printk("Installing Link from IRQ 0x%lx (hwirq=0x%lx) to IRQ 0x%lx (hwirq=0x%lx)\n",
+                link_from->irq, link_from->hwirq,
+                link_to->irq, link_to->hwirq);
         msix_dev->link_actions[i] = irq_install_direct_link(link_from, link_to);
         if(msix_dev->link_actions[i] == NULL) {
             failed_link = 1;
@@ -315,10 +402,15 @@ pci_func_start_msix(struct pci_func *func)
                 msix_dev->link_actions[i] = NULL;
             }
         }
+        free_irq_domain_linear(domain);
         kfree(msix_dev->link_actions);
         kfree(msix_dev);
+        kfree(descs);
+        eprintk("pci_func_start_msix: Failed to create one or more IRQ link(s)!\n");
         return -EINVAL;
     }
+
+    kfree(descs);
 
     pci_func_raw_disable_intx(func);
     pci_func_raw_enable_bus_master(func);
@@ -326,6 +418,7 @@ pci_func_start_msix(struct pci_func *func)
 
     msg_ctrl = pci_msix_read_msg_ctrl(func, info);
     msg_ctrl |= (1ULL<<15);
+    msg_ctrl &= ~(1ULL<<14);
     pci_msix_write_msg_ctrl(func, info, msg_ctrl);
 
     func->irq_mode = PCI_IRQ_MODE_MSIX;
@@ -359,10 +452,17 @@ msix_unmask_irq(
         struct irq_dev *dev,
         hwirq_t hwirq)
 {
+    DEBUG_ASSERT(KERNEL_ADDR(dev));
+
     struct msix_irq_dev *msix_dev =
         container_of(dev, struct msix_irq_dev, irq_dev);
+    DEBUG_ASSERT(KERNEL_ADDR(msix_dev));
+
     struct pci_func *func = msix_dev->func;
+    DEBUG_ASSERT(KERNEL_ADDR(func));
+
     struct pci_msix_info *info = func->msix_info;
+    DEBUG_ASSERT(KERNEL_ADDR(info));
 
     return pci_msix_bir_unmask(func, info, hwirq);
 }
@@ -371,8 +471,8 @@ static struct irq_dev_driver
 msix_irq_driver = {
     .ack_irq = NULL,
     .eoi_irq = NULL,
-    .mask_irq = msix_unmask_irq,
-    .unmask_irq = msix_mask_irq,
+    .mask_irq = msix_mask_irq,
+    .unmask_irq = msix_unmask_irq,
     .trigger_irq = NULL,
 };
 

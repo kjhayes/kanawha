@@ -146,27 +146,26 @@ static inline int
 pci_single_mailbox_find_msix(
         struct pci_mailbox *mb,
         size_t num_req,
-        uint64_t addr[num_req],
-        uint32_t data[num_req],
+        uint64_t *addrs,
+        uint32_t *datas,
         struct irq_desc *descs[num_req])
 {
     int res;
 
+    res = pci_mailbox_msix_req(
+            mb,
+            num_req,
+            addrs,
+            datas);
+    if(res) {
+        return res;
+    }
+
     for(size_t i = 0; i < num_req; i++) {
-
-        res = pci_mailbox_msix_req(
-                mb,
-                num_req,
-                &addr[i],
-                &data[i]);
-        if(res) {
-            return res;
-        }
-
         descs[i] = pci_mailbox_msix_get_desc(
                 mb,
-                addr[i],
-                data[i],
+                addrs[i],
+                datas[i],
                 i);
         if(descs[i] == NULL) {
             return -ENXIO;
@@ -244,8 +243,8 @@ pci_mailbox_find_msi64(
 int
 pci_mailbox_find_msix(
         size_t num_req,
-        uint64_t addr[num_req],
-        uint32_t data[num_req],
+        uint64_t *addrs,
+        uint32_t *datas,
         struct irq_desc *descs[num_req])
 {
     int res;
@@ -259,8 +258,8 @@ pci_mailbox_find_msix(
         res = pci_single_mailbox_find_msix(
                 iter,
                 num_req,
-                addr,
-                data,
+                addrs,
+                datas,
                 descs);
         if(res) {
             iter = find_and_advance_pci_mailbox();

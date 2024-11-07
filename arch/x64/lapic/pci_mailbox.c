@@ -66,8 +66,8 @@ static int
 lapic_msix_req(
         struct pci_mailbox *mb,
         size_t num_req,
-        uint64_t addr[num_req],
-        uint32_t data[num_req])
+        uint64_t *addrs,
+        uint32_t *datas)
 {
     if(num_req > 256-32) {
         return -EINVAL;
@@ -77,8 +77,8 @@ lapic_msix_req(
         container_of(mb, struct lapic, pci_mailbox);
 
     for(size_t i = 0; i < num_req; i++) {
-        addr[i] = (uint64_t)lapic_msi_msg_addr(lapic) & 0xFFFFFFFFULL;
-        data[i] = lapic_msi_msg_data(lapic, 32+i); // TODO: Don't start every MSI-X
+        addrs[i] = (uint64_t)lapic_msi_msg_addr(lapic) & 0xFFFFFFFFULL;
+        datas[i] = lapic_msi_msg_data(lapic, 32+i); // TODO: Don't start every MSI-X
                                                    //       "Block" on IRQ 32...
     }
 
@@ -132,8 +132,7 @@ lapic_msix_get_desc(
         uint32_t data,
         size_t index)
 {
-    hwirq_t base_hwirq = data & 0xFF;
-    hwirq_t hwirq = base_hwirq + index;
+    hwirq_t hwirq = data & 0xFF;
 
     struct lapic *lapic =
         container_of(mb, struct lapic, pci_mailbox);

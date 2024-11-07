@@ -1,6 +1,7 @@
 
 #include <drivers/pci/msi.h>
 #include <drivers/pci/msix.h>
+#include <kanawha/irq_domain.h>
 
 int
 pci_func_init_irqs(
@@ -58,23 +59,37 @@ pci_func_start_irqs(struct pci_func *func)
     }
 
     int res;
-    if(func->msix_info) {
-        res = pci_func_start_msix(func);
-        if(res == 0) {
-            return 0;
-        }
+    res = pci_func_start_msix(func);
+    if(res == 0) {
+        return 0;
+    } else {
+        dprintk("pci_func_start_irqs: MSI-X Failed (err=%s)\n",
+                errnostr(res));
     }
 
-    if(func->msi_info) {
-        res = pci_func_start_msi(func);
-        if(res == 0) {
-            return 0;
-        }
+    res = pci_func_start_msi(func);
+    if(res == 0) {
+        return 0;
+    } else {
+        dprintk("pci_func_start_irqs: MSI Failed (err=%s)\n",
+                errnostr(res));
     }
 
     // TODO INT-X
 
+    dprintk("pci_func_start_irqs: No suitable IRQ method could be started!\n");
     return -EINVAL;
+}
+
+size_t pci_func_num_irqs(struct pci_func *func)
+{
+    if(func->irq_mode == PCI_IRQ_MODE_NONE) {
+        return 0;
+    }
+    if(func->irq_domain == 0) {
+        return 0;
+    }
+    return irq_domain_num_irqs(func->irq_domain);
 }
 
 int
@@ -89,8 +104,14 @@ pci_func_get_irq(
         hwirq_t hwirq)
 {
     if(func->irq_domain != NULL) {
-        return irq_domain_revmap(func->irq_domain, hwirq);
+        irq_t irq = irq_domain_revmap(func->irq_domain, hwirq);
+        if(irq == NULL_IRQ) {
+            eprintk("pci_func_get_irq: irq_domain_revmap returned IRQ_NULL!\n");
+            irq_domain_dump(printk, func->irq_domain);
+        }
+        return irq;
     }
+    eprintk("pci_func_get_irq: Function has NULL irq_domain!\n");
     return NULL_IRQ;
 }
 
