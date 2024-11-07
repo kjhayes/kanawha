@@ -98,7 +98,7 @@ virtio_pci_accept_feature(
     size_t long_index = feat_bit / 32;
     size_t bit_index = feat_bit % 32;
 
-    printk("virtio_pci_accept_feature: bit=0x%lx, long_index=0x%lx, bit_index=0x%lx\n", feat_bit, long_index, bit_index);
+    dprintk("virtio_pci_accept_feature: bit=0x%lx, long_index=0x%lx, bit_index=0x%lx\n", feat_bit, long_index, bit_index);
 
     virtio_pci_cap_bar_writel(
             vdev,

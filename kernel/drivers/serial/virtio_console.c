@@ -4,6 +4,7 @@
 #include <kanawha/kmalloc.h>
 #include <kanawha/string.h>
 #include <kanawha/stddef.h>
+#include <kanawha/char_dev.h>
 #include <drivers/virtio/driver.h>
 #include <drivers/virtio/virtio.h>
 #include <drivers/virtio/queue.h>
@@ -33,14 +34,14 @@ struct virtio_console_port
     struct virtio_queue *recv_queue;
     struct virtio_queue *xmit_queue;
 
-    size_t recv_bufsize;
-    dma_addr_t recv_buffer;
-
-    size_t xmit_bufsize;
-    dma_addr_t xmit_buffer;
-
     ilist_node_t list_node;
+
+    struct char_dev char_dev;
+
+    char *name;
 };
+
+static struct char_driver virtio_console_port_char_driver;
 
 static int
 virtio_console_probe(
@@ -59,12 +60,12 @@ virtio_console_negotiate(
     if(virtio_device_check_feature(device, VIRTIO_CONSOLE_F_SIZE))
     {
         virtio_device_accept_feature(device, VIRTIO_CONSOLE_F_SIZE);
-        printk("virtio_console: Accepted VIRTIO_CONSOLE_F_SIZE Feature\n");
+        dprintk("virtio_console: Accepted VIRTIO_CONSOLE_F_SIZE Feature\n");
     }
 //    if(virtio_device_check_feature(device, VIRTIO_CONSOLE_F_MULTIPORT))
 //    {
 //        virtio_device_accept_feature(device, VIRTIO_CONSOLE_F_MULTIPORT);
-//        printk("virtio_console: Accepted VIRTIO_CONSOLE_F_MULTIPORT Feature\n");
+//        dprintk("virtio_console: Accepted VIRTIO_CONSOLE_F_MULTIPORT Feature\n");
 //    } else {
 //        return -EINVAL;
 //    }
@@ -78,7 +79,7 @@ virtio_console_init_device(
 {
     int res;
 
-    printk("virtio_console_init_device\n");
+    dprintk("virtio_console_init_device\n");
 
     if(device->num_queues < 4) {
         eprintk("virtio_console: Device must have at least 4 virt queues! (num_queues=0x%lx)\n",
@@ -113,6 +114,7 @@ virtio_console_init_device(
         return res;
     }
 
+    ilist_init(&cdev->port_list);
     cdev->num_ports = 1; // TODO MULTIPORT
 
     int ports_failed = 0;
@@ -144,30 +146,8 @@ virtio_console_init_device(
         port->xmit_queue = xmit_queue;
         port->recv_queue = recv_queue;
 
-        port->xmit_bufsize = VIRTIO_CONSOLE_BUFSIZE;
-        port->recv_bufsize = VIRTIO_CONSOLE_BUFSIZE;
-
-        res = dma_alloc(port->recv_bufsize, 0, DMA_PHYS_64, &port->recv_buffer);
-        if(res) {
-            kfree(port);
-            ports_failed = 1;
-            break;
-        }
-        memset(dma_virt_addr(port->recv_buffer), 0, port->recv_bufsize);
-
-        res = dma_alloc(port->xmit_bufsize, 0, DMA_PHYS_64, &port->xmit_buffer);
-        if(res) {
-            dma_free(port->recv_buffer, port->recv_bufsize);
-            kfree(port);
-            ports_failed = 1;
-            break;
-        }
-        memset(dma_virt_addr(port->xmit_buffer), 0, port->xmit_bufsize);
-
         res = virtio_queue_enable(port->recv_queue);
         if(res) {
-            dma_free(port->recv_buffer, port->recv_bufsize);
-            dma_free(port->xmit_buffer, port->xmit_bufsize);
             kfree(port);
             ports_failed = 1;
             break;
@@ -175,13 +155,27 @@ virtio_console_init_device(
 
         res = virtio_queue_enable(port->xmit_queue);
         if(res) {
-            virtio_queue_disable(port->recv_queue);
-            dma_free(port->recv_buffer, port->recv_bufsize);
-            dma_free(port->xmit_buffer, port->xmit_bufsize);
             kfree(port);
             ports_failed = 1;
             break;
         }
+
+        dprintk("enabled queues\n");
+
+        char namebuf[128];
+        snprintk(namebuf, 128, "virt-cons-%ld", 
+                (sl_t)port_i);
+        namebuf[127] = '\0';
+
+        port->name = kstrdup(namebuf);
+        if(port->name == NULL) {
+            virtio_queue_disable(port->recv_queue);
+            kfree(port);
+            ports_failed = 1;
+            break;
+        }
+
+        ilist_push_tail(&cdev->port_list, &port->list_node);
     }
 
     if(ports_failed) {
@@ -197,14 +191,28 @@ virtio_console_init_device(
             virtio_queue_disable(port->xmit_queue);
             virtio_queue_disable(port->recv_queue);
 
-            dma_free(port->recv_buffer, port->recv_bufsize);
-            dma_free(port->xmit_buffer, port->xmit_bufsize);
+            kfree(port->name);
             kfree(port);
         }
         virtio_queue_disable(cdev->ctrl_xmit_queue);
         virtio_queue_disable(cdev->ctrl_recv_queue);
         kfree(cdev);
         return res;
+    }
+
+    ilist_node_t *node;
+    ilist_for_each(node, &cdev->port_list) {
+        struct virtio_console_port *port =
+            container_of(node, struct virtio_console_port, list_node);
+        res = register_char_dev(
+                &port->char_dev,
+                port->name,
+                &virtio_console_port_char_driver,
+                NULL);
+        if(res) {
+            eprintk("Failed to register virtio console port char_dev! (err=%s)\n",
+                    errnostr(res));
+        }
     }
 
     return 0;
@@ -244,4 +252,142 @@ register_virtio_console_driver(void)
     return register_virtio_driver(&virtio_console_driver);
 }
 declare_init_desc(device, register_virtio_console_driver, "Registering Virtio Console Driver");
+
+static size_t
+virtio_console_char_dev_read(
+        struct char_dev *dev,
+        void *buffer,
+        size_t amount)
+{
+    int res;
+
+    struct virtio_console_port *port =
+        container_of(dev, struct virtio_console_port, char_dev);
+
+    dma_addr_t dma_buffer;
+    res = dma_alloc(
+            amount,
+            0,
+            DMA_PHYS_64,
+            &dma_buffer);
+    if(res) {
+        return res;
+    }
+
+    struct virtio_request *req = virtio_request_create(port->recv_queue);
+    if(req == NULL) {
+        dma_free(dma_buffer, amount);
+    }
+
+    res = virtio_request_append_output(
+            req,
+            dma_phys_addr(dma_buffer),
+            amount);
+    if(res) {
+        virtio_request_destroy(req);
+        dma_free(dma_buffer, amount);
+        return res;
+    }
+
+    res = virtio_request_launch(req);
+    if(res) {
+        virtio_request_destroy(req);
+        dma_free(dma_buffer, amount);
+        return res;
+    }
+
+    res = virtio_request_await(req);
+    if(res) {
+        virtio_request_destroy(req);
+        dma_free(dma_buffer, amount);
+        return res;
+    }
+
+    memcpy(buffer, dma_virt_addr(dma_buffer), req->len_written);
+    amount = req->len_written;
+
+    virtio_request_destroy(req);
+    dma_free(dma_buffer, amount);
+
+    return amount;
+}
+
+static size_t
+virtio_console_char_dev_write(
+        struct char_dev *dev,
+        void *buffer,
+        size_t amount)
+{
+    int res;
+
+    struct virtio_console_port *port =
+        container_of(dev, struct virtio_console_port, char_dev);
+
+    dma_addr_t dma_buffer;
+    res = dma_alloc(
+            amount,
+            0,
+            DMA_PHYS_64,
+            &dma_buffer);
+    if(res) {
+        return res;
+    }
+
+    memcpy(dma_virt_addr(dma_buffer), buffer, amount);
+
+    struct virtio_request *req = virtio_request_create(port->xmit_queue);
+    if(req == NULL) {
+        dma_free(dma_buffer, amount);
+    }
+
+    res = virtio_request_append_input(
+            req,
+            dma_phys_addr(dma_buffer),
+            amount);
+    if(res) {
+        virtio_request_destroy(req);
+        dma_free(dma_buffer, amount);
+        return res;
+    }
+
+    res = virtio_request_launch(req);
+    if(res) {
+        virtio_request_destroy(req);
+        dma_free(dma_buffer, amount);
+        return res;
+    }
+
+    res = virtio_request_await(req);
+    if(res) {
+        virtio_request_destroy(req);
+        dma_free(dma_buffer, amount);
+        return res;
+    }
+
+    virtio_request_destroy(req);
+    dma_free(dma_buffer, amount);
+
+    return amount;
+}
+
+static int
+virtio_console_char_dev_flush(
+        struct char_dev *dev)
+{ 
+    int res;
+
+    struct virtio_console_port *port =
+        container_of(dev, struct virtio_console_port, char_dev);
+
+    // Nothing to do, we aren't buffering
+
+    return 0;
+}
+
+static struct char_driver
+virtio_console_port_char_driver = {
+    .read = virtio_console_char_dev_read,
+    .write = virtio_console_char_dev_write,
+    .flush = virtio_console_char_dev_flush,
+};
 

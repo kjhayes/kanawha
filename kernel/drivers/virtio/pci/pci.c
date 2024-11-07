@@ -83,10 +83,10 @@ virtio_pci_init_capabilities(
     {
         num_found++;
 
-        printk("before vcap_kmalloc\n");
+        dprintk("before vcap_kmalloc\n");
         struct virtio_pci_cap *vcap =
             kmalloc(sizeof(struct virtio_pci_cap));
-        printk("after vcap_kmalloc\n");
+        dprintk("after vcap_kmalloc\n");
         if(vcap == NULL) {
             res = -ENOMEM;
             break;
@@ -101,7 +101,7 @@ virtio_pci_init_capabilities(
         vcap->offset =      pci_cap_readl(func, cap, 0x8);
         vcap->length =      pci_cap_readl(func, cap, 0xC);
 
-        printk("vcap->bar=0x%x, offset=0x%lx, length=0x%lx, type=0x%x\n",
+        dprintk("vcap->bar=0x%x, offset=0x%lx, length=0x%lx, type=0x%x\n",
                 (uint32_t)bar_index, (uint32_t)vcap->offset, (uint32_t)vcap->length, (uint32_t)vcap->type);
 
         vcap->bar = &func->bars[bar_index];
@@ -149,7 +149,7 @@ virtio_pci_init_queues(
                 device,
                 device->common_cfg_cap,
                 VIRTIO_PCI_COMMON_CFG_NUM_QUEUES);
-    printk("num_queues=0x%lx\n",
+    dprintk("num_queues=0x%lx\n",
             num_queues);
     return 0;
 }
@@ -208,7 +208,7 @@ virtio_pci_init_device(
         return res;
     }
 
-    printk("virito_pci: finding common_cfg_cap\n");
+    dprintk("virito_pci: finding common_cfg_cap\n");
     vpci_dev->common_cfg_cap =
         virtio_pci_find_cap(vpci_dev, VIRTIO_PCI_CAP_COMMON_CFG);
     if(vpci_dev->common_cfg_cap == NULL) {
@@ -217,7 +217,7 @@ virtio_pci_init_device(
         return -EINVAL;
     }
 
-    printk("virito_pci: finding notify_cap\n");
+    dprintk("virito_pci: finding notify_cap\n");
     vpci_dev->notify_cap =
         virtio_pci_find_cap(vpci_dev, VIRTIO_PCI_CAP_NOTIFY_CFG);
     if(vpci_dev->notify_cap == NULL) {
@@ -232,7 +232,7 @@ virtio_pci_init_device(
 
     spin_lock(&virtio_pci_device_list_lock);
 
-    printk("virito_pci: registering virito_device\n");
+    dprintk("virito_pci: registering virito_device\n");
     res = register_virtio_device(&vpci_dev->virtio_dev);
     if(res) {
         spin_unlock(&virtio_pci_device_list_lock);
