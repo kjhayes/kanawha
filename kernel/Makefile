@@ -26,6 +26,7 @@ obj-y += \
 	syscall.o \
 	process.o \
 	env.o \
+	mmap/ \
 	cpu.o \
 	percpu.o \
 	mmio.o \

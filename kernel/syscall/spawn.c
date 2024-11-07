@@ -2,7 +2,7 @@
 #include <kanawha/uapi/syscall.h>
 #include <kanawha/uapi/spawn.h>
 #include <kanawha/process.h>
-#include <kanawha/syscall/mmap.h>
+#include <kanawha/mmap.h>
 #include <kanawha/stdint.h>
 #include <kanawha/usermode.h>
 

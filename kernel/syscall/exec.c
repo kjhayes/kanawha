@@ -8,7 +8,7 @@
 #include <kanawha/string.h>
 #include <kanawha/assert.h>
 #include <kanawha/uapi/mmap.h>
-#include <kanawha/syscall/mmap.h>
+#include <kanawha/mmap.h>
 #include <kanawha/fs/node.h>
 
 #include <elf/elf.h>

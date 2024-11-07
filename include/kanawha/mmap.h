@@ -1,5 +1,5 @@
-#ifndef __KANAWHA__SYSCALL_MMAP_H__
-#define __KANAWHA__SYSCALL_MMAP_H__
+#ifndef __KANAWHA__MMAP_H__
+#define __KANAWHA__MMAP_H__
 
 #include <kanawha/syscall.h>
 #include <kanawha/uapi/syscall.h>
@@ -115,5 +115,28 @@ mmap_user_strlen(
         uintptr_t offset,
         size_t max_strlen,
         size_t *strlen);
+
+int
+mmap_region_load_page(
+        struct mmap_region *region,
+        uintptr_t page_offset,
+        struct mmap_page **out);
+
+int
+mmap_region_map_page(
+        struct mmap_region *region,
+        struct mmap_page *page);
+
+int
+mmap_page_do_copy_on_write(
+        struct mmap_region *region,
+        struct mmap_page *page);
+
+int
+mmap_page_fault_handler(
+        struct vmem_region_ref *ref,
+        uintptr_t offset,
+        unsigned long flags,
+        void *priv_state);
 
 #endif

@@ -15,7 +15,7 @@
 #include <kanawha/stddef.h>
 #include <kanawha/timer.h>
 #include <kanawha/assert.h>
-#include <kanawha/syscall/mmap.h>
+#include <kanawha/mmap.h>
 #include <kanawha/uapi/spawn.h>
 
 static DECLARE_SPINLOCK(process_pid_lock);
