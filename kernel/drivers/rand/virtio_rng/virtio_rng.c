@@ -1,14 +1,27 @@
 
 #include <kanawha/init.h>
+#include <kanawha/kmalloc.h>
+#include <kanawha/string.h>
 #include <drivers/virtio/driver.h>
 #include <drivers/virtio/virtio.h>
+#include <drivers/virtio/queue.h>
+#include <drivers/virtio/request.h>
+
+#define VIRTIO_RNG_BUFSIZE 0x1000
+
+struct virtio_rng_device {
+    struct virtio_queue *request_queue;
+
+    size_t bufsize;
+    dma_addr_t buffer;
+};
 
 static int
 virtio_rng_probe(
         struct virtio_driver *driver,
         struct virtio_device *device)
 {
-    printk("virtio_rng_probe\n");
+    dprintk("virtio_rng_probe\n");
     return 0;
 }
 
@@ -17,7 +30,7 @@ virtio_rng_negotiate(
         struct virtio_driver *driver,
         struct virtio_device *device)
 {
-    printk("virtio_rng_negotiate\n");
+    dprintk("virtio_rng_negotiate\n");
     return 0;
 }
 
@@ -26,8 +39,40 @@ virtio_rng_init_device(
         struct virtio_driver *driver,
         struct virtio_device *device)
 {
+    int res;
+
     printk("virtio_rng_init_device\n");
-    return -EUNIMPL;
+
+    if(device->num_queues != 1) {
+        return -EINVAL;
+    }
+
+    struct virtio_rng_device *rng = kmalloc(sizeof(struct virtio_rng_device));
+    if(rng == NULL) {
+        return -ENOMEM;
+    }
+    memset(rng, 0, sizeof(struct virtio_rng_device));
+
+    rng->request_queue = device->queues[0];
+    if(rng->request_queue == NULL) {
+        kfree(rng);
+        return -EINVAL;
+    }
+
+    rng->bufsize = VIRTIO_RNG_BUFSIZE;
+    res = dma_alloc(
+            rng->bufsize,
+            0,
+            DMA_PHYS_64,
+            &rng->buffer);
+    if(res) {
+        kfree(rng);
+        return res;
+    }
+
+    printk("virtio_rng Initialized\n");
+
+    return 0;
 }
 
 static int
