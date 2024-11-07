@@ -19,6 +19,9 @@ typedef struct ilist_head ilist_node_t;
         .prev = &__list,\
     }
 
+#define ilist_for_each(node, list)\
+    for(node = (list)->next; node != (list); node = (node)->next)
+
 static inline void
 ilist_init(ilist_t *list) {
     list->next = list;
@@ -70,13 +73,15 @@ ilist_push_tail(ilist_t *list, ilist_node_t *node)
 static inline ilist_node_t *
 ilist_pop_head(ilist_t *list)
 {
-    DEBUG_ASSERT(list != NULL);
+    DEBUG_ASSERT(KERNEL_ADDR(list));
 
     if(list->next == list) {
         return NULL;
     }
 
+    DEBUG_ASSERT_MSG(KERNEL_ADDR(list->next), "list = %p, list->next = %p", list, list->next);
     ilist_node_t *head = list->next;
+    DEBUG_ASSERT_MSG(KERNEL_ADDR(head->next), "list = %p, head = %p, head->next = %p", list, head, head->next);
     list->next = head->next;
     list->next->prev = list;
 
@@ -125,6 +130,19 @@ ilist_empty(ilist_t *list)
     return list->next == list;
 }
 
+static inline int
+ilist_contains(ilist_t *list, ilist_node_t *node)
+{
+    ilist_node_t *iter;
+    ilist_for_each(iter, list)
+    {
+        if(node == iter) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
 static inline void
 ilist_insert_before(ilist_t *list, ilist_node_t *to_insert, ilist_node_t *ref)
 {
@@ -154,8 +172,5 @@ ilist_insert_before(ilist_t *list, ilist_node_t *to_insert, ilist_node_t *ref)
 
     return;
 }
-
-#define ilist_for_each(node, list)\
-    for(node = (list)->next; node != (list); node = (node)->next)
 
 #endif
