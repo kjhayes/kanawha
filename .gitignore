@@ -6,5 +6,5 @@ compile_commands.json
 .config
 .config.old
 
-serial.log
+*.log
 
