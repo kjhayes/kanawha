@@ -2,7 +2,7 @@
 #define __KANAWHA__FS_FILE_H__
 
 #include <kanawha/ops.h>
-#include <kanawha/file.h>
+#include <kanawha/proc/file_table.h>
 #include <kanawha/fs/node.h>
 
 #define FS_FILE_READ_SIG(RET,ARG)\

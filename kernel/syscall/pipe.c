@@ -1,8 +1,8 @@
 
-#include <kanawha/process.h>
+#include <kanawha/proc/process.h>
 #include <kanawha/uapi/syscall.h>
 #include <kanawha/fs/path.h>
-#include <kanawha/file.h>
+#include <kanawha/proc/file_table.h>
 
 int
 syscall_pipe(

@@ -1,10 +1,10 @@
-#ifndef __KANAWHA__FILE_H__
-#define __KANAWHA__FILE_H__
+#ifndef __KANAWHA__FILE_TABLE_H__
+#define __KANAWHA__FILE_TABLE_H__
 
 #include <kanawha/fs/path.h>
 #include <kanawha/uapi/file.h>
 #include <kanawha/list.h>
-#include <kanawha/process.h>
+#include <kanawha/proc/process.h>
 
 #define FILE_STATUS_CLOSED (1ULL<<0)
 

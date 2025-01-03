@@ -13,7 +13,7 @@
 #include <kanawha/scheduler.h>
 #include <kanawha/vmem.h>
 #include <kanawha/slab.h>
-#include <kanawha/process.h>
+#include <kanawha/proc/process.h>
 #include <kanawha/assert.h>
 
 static DECLARE_SPINLOCK(thread_tree_lock);

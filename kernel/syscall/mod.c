@@ -1,6 +1,6 @@
 
-#include <kanawha/process.h>
-#include <kanawha/file.h>
+#include <kanawha/proc/process.h>
+#include <kanawha/proc/file_table.h>
 #include <kanawha/assert.h>
 #include <kanawha/vmem.h>
 #include <kanawha/module.h>

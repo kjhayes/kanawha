@@ -3,7 +3,6 @@ obj-y += \
 	ptree.o \
 	stree.o \
 	buddy.o \
-	file.o \
 	kheap.o \
 	kmalloc.o \
 	printk.o \
@@ -24,9 +23,6 @@ obj-y += \
 	scheduler.o \
 	usermode.o \
 	syscall.o \
-	process.o \
-	env.o \
-	mmap/ \
 	cpu.o \
 	percpu.o \
 	mmio.o \
@@ -48,6 +44,7 @@ obj-y += drivers/
 obj-y += sched/
 obj-y += elf/
 obj-y += mb2/
+obj-y += proc/
 obj-$(CONFIG_ACPI) += acpi/
 
 obj-m += memdump.o

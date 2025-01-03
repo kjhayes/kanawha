@@ -1,6 +1,6 @@
 
 #include <kanawha/uapi/syscall.h>
-#include <kanawha/file.h>
+#include <kanawha/proc/file_table.h>
 #include <kanawha/assert.h>
 #include <kanawha/vmem.h>
 

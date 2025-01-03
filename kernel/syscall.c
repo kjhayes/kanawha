@@ -1,6 +1,6 @@
 
 #include <kanawha/syscall.h>
-#include <kanawha/process.h>
+#include <kanawha/proc/process.h>
 
 #define __KANAWHA_SYSCALL_KEEP_XLIST
 #include <kanawha/uapi/syscall.h>

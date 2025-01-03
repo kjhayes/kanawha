@@ -1,7 +1,7 @@
 
 #include <kanawha/usermode.h>
 #include <kanawha/thread.h>
-#include <kanawha/process.h>
+#include <kanawha/proc/process.h>
 
 __attribute__((noreturn))
 void enter_usermode(void __user *starting_address, void *arg)

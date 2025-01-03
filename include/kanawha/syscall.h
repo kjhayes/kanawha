@@ -6,7 +6,7 @@
 #include <kanawha/stdint.h>
 #include <kanawha/stddef.h>
 #include <kanawha/ops.h>
-#include <kanawha/file.h>
+#include <kanawha/proc/file_table.h>
 #include <kanawha/uapi/syscall.h>
 
 struct process;

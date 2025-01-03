@@ -5,7 +5,7 @@
 #include <kanawha/ptree.h>
 #include <kanawha/stdint.h>
 #include <kanawha/spinlock.h>
-#include <kanawha/process.h>
+#include <kanawha/proc/process.h>
 #include <kanawha/usermode.h>
 #include <kanawha/kmalloc.h>
 #include <kanawha/fs/flat.h>

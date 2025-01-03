@@ -1,5 +1,5 @@
 
-#include <kanawha/process.h>
+#include <kanawha/proc/process.h>
 #include <kanawha/uapi/syscall.h>
 
 int

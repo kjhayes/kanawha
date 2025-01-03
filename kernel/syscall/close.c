@@ -1,7 +1,7 @@
 
 #include <kanawha/syscall.h>
-#include <kanawha/process.h>
-#include <kanawha/file.h>
+#include <kanawha/proc/process.h>
+#include <kanawha/proc/file_table.h>
 
 #define SYSCALL_OPEN_MAX_PATHLEN 256
 

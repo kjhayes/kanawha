@@ -5,7 +5,7 @@
 #include <kanawha/fs/flat.h>
 #include <kanawha/fs/file.h>
 #include <kanawha/fs/sys/sysfs.h>
-#include <kanawha/file.h>
+#include <kanawha/proc/file_table.h>
 #include <kanawha/stdint.h>
 #include <kanawha/stddef.h>
 #include <kanawha/vmem.h>

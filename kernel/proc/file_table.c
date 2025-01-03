@@ -1,5 +1,5 @@
 
-#include <kanawha/file.h>
+#include <kanawha/proc/file_table.h>
 #include <kanawha/string.h>
 #include <kanawha/kmalloc.h>
 #include <kanawha/page_alloc.h>

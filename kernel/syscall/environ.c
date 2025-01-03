@@ -1,8 +1,8 @@
 
 #include <kanawha/uapi/syscall.h>
 #include <kanawha/uapi/environ.h>
-#include <kanawha/env.h>
-#include <kanawha/process.h>
+#include <kanawha/proc/env.h>
+#include <kanawha/proc/process.h>
 #include <kanawha/kmalloc.h>
 #include <kanawha/string.h>
 #include <kanawha/assert.h>

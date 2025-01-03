@@ -1,5 +1,5 @@
 
-#include <kanawha/process.h>
+#include <kanawha/proc/process.h>
 #include <kanawha/irq.h>
 #include <kanawha/thread.h>
 #include <kanawha/stdint.h>
@@ -15,7 +15,7 @@
 #include <kanawha/stddef.h>
 #include <kanawha/timer.h>
 #include <kanawha/assert.h>
-#include <kanawha/mmap.h>
+#include <kanawha/proc/mmap.h>
 #include <kanawha/uapi/spawn.h>
 
 static DECLARE_SPINLOCK(process_pid_lock);

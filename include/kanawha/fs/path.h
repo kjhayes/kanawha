@@ -2,7 +2,7 @@
 #define __KANAWHA__FS_PATH_H__
 
 #include <kanawha/list.h>
-#include <kanawha/process.h>
+#include <kanawha/proc/process.h>
 #include <kanawha/spinlock.h>
 
 struct fs_mount;

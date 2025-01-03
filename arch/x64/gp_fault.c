@@ -1,7 +1,7 @@
 
 #include <arch/x64/exception.h>
 #include <kanawha/init.h>
-#include <kanawha/process.h>
+#include <kanawha/proc/process.h>
 #include <kanawha/excp.h>
 
 static int

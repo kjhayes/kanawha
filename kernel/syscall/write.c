@@ -1,8 +1,8 @@
 
 #include <kanawha/syscall.h>
-#include <kanawha/process.h>
+#include <kanawha/proc/process.h>
 #include <kanawha/fs/file.h>
-#include <kanawha/file.h>
+#include <kanawha/proc/file_table.h>
 #include <kanawha/kmalloc.h>
 #include <kanawha/assert.h>
 #include <kanawha/fs/node.h>

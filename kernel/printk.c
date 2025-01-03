@@ -7,7 +7,7 @@
 #include <kanawha/spinlock.h>
 #include <kanawha/string.h>
 #include <kanawha/thread.h>
-#include <kanawha/process.h>
+#include <kanawha/proc/process.h>
 #include <kanawha/klog.h>
 #include <kanawha/irq.h>
 

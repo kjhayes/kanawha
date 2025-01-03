@@ -3,7 +3,7 @@
 
 #include <kanawha/syscall.h>
 #include <kanawha/uapi/syscall.h>
-#include <kanawha/file.h>
+#include <kanawha/proc/file_table.h>
 #include <kanawha/uapi/mmap.h>
 #include <kanawha/list.h>
 

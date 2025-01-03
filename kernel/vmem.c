@@ -9,7 +9,7 @@
 #include <kanawha/printk.h>
 #include <kanawha/ptree.h>
 #include <kanawha/thread.h>
-#include <kanawha/process.h>
+#include <kanawha/proc/process.h>
 #include <kanawha/assert.h>
 #include <kanawha/irq.h>
 #include <arch/x64/mmu.h>

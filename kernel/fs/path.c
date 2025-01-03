@@ -2,7 +2,7 @@
 #include <kanawha/fs/path.h>
 #include <kanawha/fs/node.h>
 #include <kanawha/fs/mount.h>
-#include <kanawha/process.h>
+#include <kanawha/proc/process.h>
 #include <kanawha/list.h>
 #include <kanawha/stddef.h>
 #include <kanawha/kmalloc.h>

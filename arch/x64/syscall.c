@@ -7,7 +7,7 @@
 #include <kanawha/page_alloc.h>
 #include <kanawha/syscall.h>
 #include <kanawha/xcall.h>
-#include <kanawha/process.h>
+#include <kanawha/proc/process.h>
 #include <kanawha/assert.h>
 #include <arch/x64/msr.h>
 #include <arch/x64/sysreg.h>

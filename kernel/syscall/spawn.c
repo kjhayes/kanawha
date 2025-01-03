@@ -1,8 +1,8 @@
 
 #include <kanawha/uapi/syscall.h>
 #include <kanawha/uapi/spawn.h>
-#include <kanawha/process.h>
-#include <kanawha/mmap.h>
+#include <kanawha/proc/process.h>
+#include <kanawha/proc/mmap.h>
 #include <kanawha/stdint.h>
 #include <kanawha/usermode.h>
 

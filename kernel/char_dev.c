@@ -9,7 +9,7 @@
 #include <kanawha/fs/node.h>
 #include <kanawha/fs/file.h>
 #include <kanawha/fs/sys/sysfs.h>
-#include <kanawha/file.h>
+#include <kanawha/proc/file_table.h>
 #include <kanawha/init.h>
 #include <kanawha/assert.h>
 #include <kanawha/string.h>

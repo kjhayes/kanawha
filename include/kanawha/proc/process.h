@@ -5,7 +5,7 @@
 #include <kanawha/stdint.h>
 #include <kanawha/vmem.h>
 #include <kanawha/scheduler.h>
-#include <kanawha/env.h>
+#include <kanawha/proc/env.h>
 #include <kanawha/usermode.h>
 #include <kanawha/waitqueue.h>
 #include <kanawha/uapi/process.h>

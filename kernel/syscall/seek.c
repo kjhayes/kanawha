@@ -1,10 +1,10 @@
 
 #include <kanawha/syscall.h>
-#include <kanawha/file.h>
+#include <kanawha/proc/file_table.h>
 #include <kanawha/fs/file.h>
 #include <kanawha/fs/node.h>
 #include <kanawha/uapi/seek.h>
-#include <kanawha/process.h>
+#include <kanawha/proc/process.h>
 
 ssize_t
 syscall_seek(

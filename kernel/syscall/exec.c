@@ -1,14 +1,14 @@
 
 #include <kanawha/syscall.h>
-#include <kanawha/file.h>
-#include <kanawha/process.h>
+#include <kanawha/proc/file_table.h>
+#include <kanawha/proc/process.h>
 #include <kanawha/stdint.h>
 #include <kanawha/stddef.h>
 #include <kanawha/kmalloc.h>
 #include <kanawha/string.h>
 #include <kanawha/assert.h>
 #include <kanawha/uapi/mmap.h>
-#include <kanawha/mmap.h>
+#include <kanawha/proc/mmap.h>
 #include <kanawha/fs/node.h>
 
 #include <elf/elf.h>

@@ -1,6 +1,6 @@
 
 #include <kanawha/uapi/mount.h>
-#include <kanawha/process.h>
+#include <kanawha/proc/process.h>
 #include <kanawha/syscall.h>
 #include <kanawha/kmalloc.h>
 #include <kanawha/fs/type.h>
