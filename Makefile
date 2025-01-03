@@ -124,9 +124,7 @@ default: kanawha
 
 modules: $(KERNEL_MOD_RULES) FORCE
 
--include $(MK_SCRIPTS_DIR)/qemu.mk
 -include $(MK_SCRIPTS_DIR)/asm.mk
--include $(MK_SCRIPTS_DIR)/initrd.mk
 
 clean: FORCE
 	$(Q)find $(OUTPUT_DIR) -name "*.o" -delete $(QPIPE) $(QIGNORE)
