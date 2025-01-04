@@ -1,6 +1,6 @@
 
+#include <kanawha/syscall.h>
 #include <kanawha/proc/process.h>
-#include <kanawha/uapi/syscall.h>
 #include <kanawha/fs/path.h>
 #include <kanawha/proc/file_table.h>
 

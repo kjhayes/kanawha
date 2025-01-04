@@ -1,23 +1,25 @@
-#ifndef __KANAWHA__MMAP_H__
-#define __KANAWHA__MMAP_H__
+#ifndef __KANAWHA__ASPACE_H__
+#define __KANAWHA__ASPACE_H__
 
-#include <kanawha/syscall.h>
-#include <kanawha/uapi/syscall.h>
-#include <kanawha/proc/file_table.h>
+#include <kanawha/uapi/file.h>
 #include <kanawha/uapi/mmap.h>
 #include <kanawha/list.h>
+#include <kanawha/pointer.h>
+#include <kanawha/ptree.h>
+#include <kanawha/spinlock.h>
+#include <kanawha/vmem.h>
 
 struct process;
-struct mmap_region;
+struct aspace_region;
 
 // This page is mapped in
-#define MMAP_PAGE_MAPPED  (1ULL<<0)
+#define ASPACE_PAGE_MAPPED  (1ULL<<0)
 // This page is not backed by the region file_descriptor,
 // reclaiming it would require terminating the process (OOM)
-#define MMAP_PAGE_ANON (1ULL<<1)
+#define ASPACE_PAGE_ANON (1ULL<<1)
 // Make an anonymous copy of this page when we write it
-#define MMAP_PAGE_COPY_ON_WRITE (1ULL<<2)
-struct mmap_page
+#define ASPACE_PAGE_COPY_ON_WRITE (1ULL<<2)
+struct aspace_page
 {
     void __phys * phys_addr;
     order_t order;
@@ -28,9 +30,9 @@ struct mmap_page
     struct ptree_node tree_node;
 };
 
-struct mmap_region
+struct aspace_region
 {
-    struct mmap *mmap;
+    struct aspace *aspace;
 
     struct fs_node *fs_node;
 
@@ -46,7 +48,7 @@ struct mmap_region
     struct ptree_node tree_node;
 };
 
-struct mmap
+struct aspace 
 {
     spinlock_t lock;
 
@@ -56,22 +58,22 @@ struct mmap
     ilist_t process_list;
 };
 
-// Create a new mmap for the process
+// Create a new aspace for the process
 int
-mmap_create(size_t size, struct process *process);
+aspace_create(size_t size, struct process *process);
 
-// Attach a process to the mmap,
+// Attach a process to the aspace,
 int
-mmap_attach(struct mmap *map, struct process *process);
+aspace_attach(struct aspace *map, struct process *process);
 
-// Deattach a process from the mmap,
-// if this is the last process attached, then the mmap will be
+// Deattach a process from the aspace,
+// if this is the last process attached, then the aspace will be
 // freed.
 int
-mmap_deattach(struct mmap *map, struct process *process);
+aspace_deattach(struct aspace *map, struct process *process);
 
 int
-mmap_map_region(
+aspace_map_region(
         struct process *process,
         fd_t file,
         uintptr_t file_offset,
@@ -81,59 +83,59 @@ mmap_map_region(
         unsigned long mmap_flags);
 
 int
-mmap_map_region_exact(
+aspace_map_region_exact(
         struct process *process,
         fd_t file,
         uintptr_t file_offset,
-        uintptr_t mmap_offset,
+        uintptr_t aspace_offset,
         size_t size,
         unsigned long prot_flags,
         unsigned long mmap_flags);
 
 int
-mmap_unmap_region(
+aspace_unmap_region(
         struct process *process,
-        uintptr_t mmap_offset);
+        uintptr_t aspace_offset);
 
 int
-mmap_read(
-        struct process *process,
-        uintptr_t offset,
-        void *dst,
-        size_t length);
-
-int
-mmap_write(
+aspace_read(
         struct process *process,
         uintptr_t offset,
         void *dst,
         size_t length);
 
 int
-mmap_user_strlen(
+aspace_write(
+        struct process *process,
+        uintptr_t offset,
+        void *dst,
+        size_t length);
+
+int
+aspace_user_strlen(
         struct process *process,
         uintptr_t offset,
         size_t max_strlen,
         size_t *strlen);
 
 int
-mmap_region_load_page(
-        struct mmap_region *region,
+aspace_region_load_page(
+        struct aspace_region *region,
         uintptr_t page_offset,
-        struct mmap_page **out);
+        struct aspace_page **out);
 
 int
-mmap_region_map_page(
-        struct mmap_region *region,
-        struct mmap_page *page);
+aspace_region_map_page(
+        struct aspace_region *region,
+        struct aspace_page *page);
 
 int
-mmap_page_do_copy_on_write(
-        struct mmap_region *region,
-        struct mmap_page *page);
+aspace_page_do_copy_on_write(
+        struct aspace_region *region,
+        struct aspace_page *page);
 
 int
-mmap_page_fault_handler(
+aspace_page_fault_handler(
         struct vmem_region_ref *ref,
         uintptr_t offset,
         unsigned long flags,

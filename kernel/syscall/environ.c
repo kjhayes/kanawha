@@ -1,5 +1,5 @@
 
-#include <kanawha/uapi/syscall.h>
+#include <kanawha/syscall.h>
 #include <kanawha/uapi/environ.h>
 #include <kanawha/proc/env.h>
 #include <kanawha/proc/process.h>

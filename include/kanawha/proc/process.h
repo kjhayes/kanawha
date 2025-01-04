@@ -6,6 +6,7 @@
 #include <kanawha/vmem.h>
 #include <kanawha/scheduler.h>
 #include <kanawha/proc/env.h>
+#include <kanawha/proc/aspace.h>
 #include <kanawha/usermode.h>
 #include <kanawha/waitqueue.h>
 #include <kanawha/uapi/process.h>
@@ -46,9 +47,9 @@ struct process
     void __user *forced_ip;
 
     // Virtual Memory
-    struct mmap *mmap;
-    struct vmem_region_ref *mmap_ref;
-    ilist_node_t mmap_list_node;
+    struct aspace *aspace;
+    struct vmem_region_ref *aspace_ref;
+    ilist_node_t aspace_list_node;
 
     // File Descriptor Table
     struct file_table* file_table;

@@ -12,7 +12,8 @@
 #include <kanawha/assert.h>
 #include <kanawha/proc/process.h>
 #include <kanawha/page_alloc.h>
-#include <kanawha/proc/mmap.h>
+#include <kanawha/proc/aspace.h>
+#include <kanawha/uapi/mmap.h>
 #include <kanawha/vmem.h>
 #include <kanawha/fs/node.h>
 
@@ -59,7 +60,7 @@ syscall_mmap(
             wprintk("syscall_mmap: virtual address is not aligned to the minimum vmem page size!\n");
             return -EINVAL;
         }
-        res = mmap_map_region_exact(
+        res = aspace_map_region_exact(
                 process,
                 file,
                 file_offset,
@@ -68,7 +69,7 @@ syscall_mmap(
                 prot_flags,
                 mmap_flags);
         if(res) {
-            wprintk("syscall_mmap: mmap_map_region_exact returned %s\n",
+            wprintk("syscall_mmap: aspace_map_region_exact returned %s\n",
                     errnostr(res));
             return res;
         }
@@ -76,7 +77,7 @@ syscall_mmap(
     else
     { // The kernel can adjust the offset
         uintptr_t hint_offset = (uintptr_t)requested;
-        res = mmap_map_region(
+        res = aspace_map_region(
                 process,
                 file,
                 file_offset,
@@ -85,7 +86,7 @@ syscall_mmap(
                 prot_flags,
                 mmap_flags);
         if(res) {
-            wprintk("syscall_mmap: mmap_map_region returned %s\n",
+            wprintk("syscall_mmap: aspace_map_region returned %s\n",
                     errnostr(res));
             return res;
         }
@@ -111,7 +112,7 @@ syscall_mmap(
         }
     }
 
-    res = vmem_flush_region(process->mmap->vmem_region);
+    res = vmem_flush_region(process->aspace->vmem_region);
     if(res) {
         eprintk("syscall_mmap: Failed to flush mmap region!\n");
         return res;
@@ -127,20 +128,20 @@ syscall_munmap(
         void __user *mapping) 
 {
     int res;
-    struct mmap *mmap = process->mmap;
-    DEBUG_ASSERT(KERNEL_ADDR(mmap));
+    struct aspace *aspace = process->aspace;
+    DEBUG_ASSERT(KERNEL_ADDR(aspace));
     DEBUG_ASSERT(KERNEL_ADDR(process));
-    if((uintptr_t)mapping >= mmap->vmem_region->size) 
+    if((uintptr_t)mapping >= aspace->vmem_region->size) 
     {
         wprintk("syscall_munmap: mapping at (%p) would be outside of user-memory!\n");
         return -EINVAL;
     }
 
-    res = mmap_unmap_region(
+    res = aspace_unmap_region(
             process,
             (uintptr_t)mapping);
     if(res) {
-        wprintk("syscall_munmap: mmap_unmap_region returned %s\n",
+        wprintk("syscall_munmap: aspace_unmap_region returned %s\n",
                 errnostr(res));
         return res;
     }

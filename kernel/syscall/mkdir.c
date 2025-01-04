@@ -1,8 +1,8 @@
 
+#include <kanawha/syscall.h>
 #include <kanawha/proc/process.h>
 #include <kanawha/proc/file_table.h>
 #include <kanawha/fs/node.h>
-#include <kanawha/uapi/syscall.h>
 
 #define SYSCALL_MKDIR_MAX_NAMELEN 128
 
@@ -10,7 +10,7 @@ int
 syscall_mkdir(
         struct process *process,
         fd_t dir_fd,
-        char __user * name,
+        const char __user * name,
         unsigned long user_flags)
 {
     int res;
