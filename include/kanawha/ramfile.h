@@ -2,7 +2,7 @@
 #define __KANAWHA__RAMFILE_H__
 
 #include <kanawha/stdint.h>
-#include <kanawha/aspace.h>
+#include <kanawha/pointer.h>
 
 int
 create_ramfile(

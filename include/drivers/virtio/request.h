@@ -2,7 +2,7 @@
 #define __KANAWHA__VIRTIO_REQUEST_H__
 
 #include <kanawha/list.h>
-#include <kanawha/aspace.h>
+#include <kanawha/pointer.h>
 #include <drivers/virtio/queue.h>
 
 struct virtio_request

@@ -17,7 +17,7 @@
 #include <kanawha/printk.h>
 #include <kanawha/list.h>
 #include <kanawha/stdint.h>
-#include <kanawha/aspace.h>
+#include <kanawha/pointer.h>
 
 static inline void *
 __va(void __phys * paddr) {
