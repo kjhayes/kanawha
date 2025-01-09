@@ -130,6 +130,13 @@ config DEBUG_TRACK_PROCESS_EXEC
     help
       Track the path string as a process uses the "exec" system call
 
+config DEBUG_LOG_USER_ACCESS
+    bool "Log Kernel Accesses to Userspace Memory"
+    depends on DEBUGGING
+    default n
+    help
+      Enable debug prints for kernel read/writes to user space memory
+
 menu "syscall Logging"
 source "kernel/syscall/Kconfig"
 endmenu

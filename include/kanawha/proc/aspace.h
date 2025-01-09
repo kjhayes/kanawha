@@ -95,27 +95,6 @@ aspace_unmap_region(
         uintptr_t aspace_offset);
 
 int
-aspace_read(
-        struct process *process,
-        uintptr_t offset,
-        void *dst,
-        size_t length);
-
-int
-aspace_write(
-        struct process *process,
-        uintptr_t offset,
-        void *dst,
-        size_t length);
-
-int
-aspace_user_strlen(
-        struct process *process,
-        uintptr_t offset,
-        size_t max_strlen,
-        size_t *strlen);
-
-int
 aspace_region_load_page(
         struct aspace_region *region,
         uintptr_t page_offset,

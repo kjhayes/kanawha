@@ -19,6 +19,7 @@
 #include <kanawha/proc/file_table.h>
 #include <kanawha/syscall.h>
 #include <kanawha/uapi/spawn.h>
+#include <kanawha/proc/user_access.h>
 
 static DECLARE_SPINLOCK(process_pid_lock);
 static DECLARE_PTREE(process_pid_tree);
@@ -562,7 +563,7 @@ process_write_usermem(
         size_t length)
 {
     int res;
-    res = aspace_write(
+    res = process_user_write(
             process,
             (uintptr_t)dst - (uintptr_t)process->aspace_ref->virt_addr,
             src,
@@ -581,7 +582,7 @@ process_read_usermem(
         size_t length)
 {
     int res;
-    res = aspace_read(
+    res = process_user_read(
             process,
             (uintptr_t)src - (uintptr_t)process->aspace_ref->virt_addr,
             dst,
@@ -600,7 +601,7 @@ process_strlen_usermem(
         size_t *out)
 {
     int res;
-    res = aspace_user_strlen(
+    res = process_user_strlen(
             process,
             (uintptr_t)str - (uintptr_t)process->aspace_ref->virt_addr,
             max_len,

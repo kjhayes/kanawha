@@ -4,4 +4,5 @@ obj-y += \
 	aspace.o \
 	file_table.o \
 	env.o \
+	user_access.o \
 
