@@ -19,15 +19,22 @@ syscall_open(
     size_t path_len;
     res = process_strlen_usermem(process, path, SYSCALL_OPEN_MAX_PATH_LEN+1, &path_len);
     if(res) {
+#ifdef CONFIG_DEBUG_SYSCALL_OPEN
+        printk("PID(%ld) syscall_open: failed to get the strlen of path from userspace! (err=%s)\n",
+                (sl_t)process->id,
+                errnostr(res));
+#endif
         return res;
     }
 
     if(path_len > SYSCALL_OPEN_MAX_PATH_LEN) {
         // Path is too long
-        dprintk("PID(%ld) syscall_open: path is too long! len=%llu, (>%llu)\n",
+#ifdef CONFIG_DEBUG_SYSCALL_OPEN
+        printk("PID(%ld) syscall_open: path is too long! len=%llu, (>%llu)\n",
                 (sl_t)process->id,
                 (ull_t)path_len,
                 (ull_t)SYSCALL_OPEN_MAX_PATH_LEN);
+#endif
         return -EINVAL;
     }
 
@@ -39,8 +46,10 @@ syscall_open(
             (void __user*)path,
             path_len);
     if(res) {
-        dprintk("syscall_open: failed to read file path! process_read_usermem(%p) -> %s\n",
+#ifdef CONFIG_DEBUG_SYSCALL_OPEN
+        printk("syscall_open: failed to read file path! process_read_usermem(%p) -> %s\n",
                 path, errnostr(res));
+#endif
         return res;
     }
 
@@ -60,8 +69,10 @@ syscall_open(
             mode_flags,
             &kernel_fd);
     if(res) {
-        dprintk("PID(%ld) syscall_open: file_table_open(%s) returned %s\n",
+#ifdef CONFIG_DEBUG_SYSCALL_OPEN
+        printk("PID(%ld) syscall_open: file_table_open(%s) returned %s\n",
                 (sl_t)process->id, path_buf, errnostr(res));
+#endif
         return res;
     }
 
@@ -81,8 +92,10 @@ syscall_open(
                 process,
                 kernel_fd);
         if(file == NULL) {
-            dprintk("PID(%ld) syscall_open: Failed to open file for truncation! (err=%s)\n",
+#ifdef CONFIG_DEBUG_SYSCALL_OPEN
+            printk("PID(%ld) syscall_open: Failed to open file for truncation! (err=%s)\n",
                     process->id, errnostr(res));
+#endif
             file_table_close(process->file_table, process, kernel_fd);
             return res;
         }
@@ -92,8 +105,10 @@ syscall_open(
                 FS_NODE_ATTR_DATA_SIZE,
                 0);
         if(res) {
-            dprintk("PID(%ld) syscall_open: Failed to truncate file! (err=%s)\n",
+#ifdef CONFIG_DEBUG_SYSCALL_OPEN
+            printk("PID(%ld) syscall_open: Failed to truncate file! (err=%s)\n",
                     process->id, errnostr(res));
+#endif
             file_table_put_file(
                     process->file_table,
                     process,
