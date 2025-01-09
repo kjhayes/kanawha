@@ -139,12 +139,12 @@ aspace_region_map_page(
     // Always user by default
     unsigned long vmem_flags = VMEM_REGION_USER;
 
-    if(region->prot_flags & MMAP_PROT_READ)
+    if(region->mmap_flags & MMAP_PROT_READ)
     {
         vmem_flags |= VMEM_REGION_READ;
     }
 
-    if((region->prot_flags & MMAP_PROT_WRITE))
+    if((region->mmap_flags & MMAP_PROT_WRITE))
     {
         if((page->flags & ASPACE_PAGE_COPY_ON_WRITE) == 0) {
             vmem_flags |= VMEM_REGION_WRITE;
@@ -153,7 +153,7 @@ aspace_region_map_page(
         }
     }
 
-    if((region->prot_flags & MMAP_PROT_EXEC))
+    if((region->mmap_flags & MMAP_PROT_EXEC))
     {
         vmem_flags |= VMEM_REGION_EXEC;
     }
@@ -237,7 +237,7 @@ aspace_region_reclaim_page(
     int modified;
 
     // Assume the worst (TODO: actually enable checking page table "dirty" bit)
-    if((region->prot_flags & MMAP_PROT_WRITE)) {
+    if((region->mmap_flags & MMAP_PROT_WRITE)) {
         modified = 1;
     } else {
         modified = 0;
@@ -273,17 +273,16 @@ aspace_region_reclaim_page(
 static int
 aspace_file_prot_check(
         struct file *desc,
-        unsigned long prot_flags,
-        unsigned long aspace_flags)
+        unsigned long mmap_flags)
 {
-    unsigned long aspace_type = aspace_flags & 0b11;
+    unsigned long aspace_type = mmap_flags & 0b11;
 
-    if((prot_flags & MMAP_PROT_READ) &&
+    if((mmap_flags & MMAP_PROT_READ) &&
        (desc->access_flags & FILE_PERM_READ) == 0) {
         eprintk("aspace_file_prot_check: read permission fail!\n");
         return -EPERM;
     }
-    if((prot_flags & MMAP_PROT_WRITE) &&
+    if((mmap_flags & MMAP_PROT_WRITE) &&
        (desc->access_flags & FILE_PERM_WRITE) == 0)
     {
         if((aspace_type == MMAP_PRIVATE) &&
@@ -305,7 +304,7 @@ aspace_file_prot_check(
             return -EPERM;
         }
     }
-    if((prot_flags & MMAP_PROT_EXEC) &&
+    if((mmap_flags & MMAP_PROT_EXEC) &&
        (desc->access_flags & FILE_PERM_EXEC) == 0) {
         eprintk("aspace_file_prot_check: exec permission fail!\n");
         return -EPERM;
@@ -386,8 +385,7 @@ aspace_map_region(
         uintptr_t file_offset,
         uintptr_t *hint_offset,
         size_t size,
-        unsigned long prot_flags,
-        unsigned long aspace_flags)
+        unsigned long mmap_flags)
 {
     int res;
 
@@ -398,13 +396,13 @@ aspace_map_region(
 
     struct fs_node *fs_node;
 
-    unsigned long aspace_type = aspace_flags & 0b11;
+    unsigned long aspace_type = mmap_flags & 0b11;
 
     if(aspace_type != MMAP_ANON) {
         struct file *desc =
             file_table_get_file(process->file_table, process, file);
 
-        res = aspace_file_prot_check(desc, prot_flags, aspace_flags);
+        res = aspace_file_prot_check(desc, mmap_flags);
         if(res) {
             file_table_put_file(process->file_table, process, desc);
             goto err0;
@@ -437,10 +435,10 @@ aspace_map_region(
     memset(region, 0, sizeof(struct aspace_region));
 
     region->aspace = aspace;
-    region->mmap_flags = aspace_flags;
+    region->mmap_flags = mmap_flags;
     region->fs_node = fs_node;
     region->size = size;
-    region->prot_flags = prot_flags;
+    region->mmap_flags = mmap_flags;
     region->file_offset = file_offset;
 
     spinlock_init(&region->page_tree_lock);
@@ -496,8 +494,7 @@ aspace_map_region_exact(
         uintptr_t file_offset,
         uintptr_t aspace_offset,
         size_t size,
-        unsigned long prot_flags,
-        unsigned long aspace_flags)
+        unsigned long mmap_flags)
 {
     int res;
 
@@ -508,13 +505,13 @@ aspace_map_region_exact(
 
     struct fs_node *fs_node;
 
-    unsigned long aspace_type = aspace_flags & 0b11;
+    unsigned long aspace_type = mmap_flags & 0b11;
 
     if(aspace_type != MMAP_ANON) {
         struct file *desc =
             file_table_get_file(process->file_table, process, file);
 
-        res = aspace_file_prot_check(desc, prot_flags, aspace_flags);
+        res = aspace_file_prot_check(desc, mmap_flags);
         if(res) {
             file_table_put_file(process->file_table, process, desc);
             goto err0;
@@ -547,10 +544,10 @@ aspace_map_region_exact(
     memset(region, 0, sizeof(struct aspace_region));
 
     region->aspace = aspace;
-    region->mmap_flags = aspace_flags;
+    region->mmap_flags = mmap_flags;
     region->fs_node = fs_node;
     region->size = size;
-    region->prot_flags = prot_flags;
+    region->mmap_flags = mmap_flags;
     region->file_offset = file_offset;
     region->tree_node.key = aspace_offset;
 
@@ -729,7 +726,7 @@ aspace_region_load_page(
 
         DEBUG_ASSERT_MSG(
                 KERNEL_ADDR(region->fs_node),
-                "MMAP_SHARED or MMAP_PRIVATE region has NULL fs_node! region->aspace_flags=0x%lx, region_offset=%p",
+                "MMAP_SHARED or MMAP_PRIVATE region has NULL fs_node! region->mmap_flags=0x%lx, region_offset=%p",
                 region->mmap_flags, region->tree_node.key);
         
         res = fs_node_page_order(region->fs_node, &order);
@@ -948,7 +945,7 @@ aspace_read(
 
         uintptr_t region_offset = offset - region->tree_node.key;
 
-        if((region->prot_flags & MMAP_PROT_READ) == 0) {
+        if((region->mmap_flags & MMAP_PROT_READ) == 0) {
             // The process is not allowed to read this page
             spin_unlock(&region->page_tree_lock);
             spin_unlock_irq_restore(&aspace->lock, irq_flags);
@@ -1051,7 +1048,7 @@ aspace_write(
 
         uintptr_t region_offset = offset - region->tree_node.key;
 
-        if((region->prot_flags & MMAP_PROT_WRITE) == 0) {
+        if((region->mmap_flags & MMAP_PROT_WRITE) == 0) {
             // The process is not allowed to write this page
             spin_unlock(&region->page_tree_lock);
             spin_unlock_irq_restore(&aspace->lock, irq_flags);
@@ -1171,7 +1168,7 @@ aspace_user_strlen(
 
         size_t region_offset = offset - region->tree_node.key;
 
-        if((region->prot_flags & MMAP_PROT_READ) == 0) {
+        if((region->mmap_flags & MMAP_PROT_READ) == 0) {
             // The process is not allowed to read this page
             spin_unlock(&region->page_tree_lock);
             spin_unlock_irq_restore(&aspace->lock, irq_flags);

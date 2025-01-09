@@ -10,6 +10,7 @@
 #include <kanawha/proc/file_table.h>
 #include <kanawha/uapi/file.h>
 #include <kanawha/uapi/process.h>
+#include <kanawha/uapi/mmap.h>
 
 struct process;
 
@@ -67,17 +68,27 @@ ARG(fd_t, file)\
 ARG(int, attr)\
 ARG(size_t __user *, value)
 
+#define SYSCALL_SIG_MCREATE(RET,ARG)\
+RET(int)\
+ARG(unsigned long, flags)\
+ARG(ad_t __user *, aspace)
+
+#define SYSCALL_SIG_MCLOSE(RET,ARG)\
+RET(int)\
+ARG(ad_t, aspace)
+
 #define SYSCALL_SIG_MMAP(RET,ARG)\
 RET(int)\
+ARG(ad_t, aspace)\
 ARG(fd_t, file)\
 ARG(size_t, file_offset)\
-ARG(void __user * __user*, where)\
+ARG(void __user * __user *, where)\
 ARG(size_t, size)\
-ARG(unsigned long, prot_flags)\
-ARG(unsigned long, mmap_flags)\
+ARG(unsigned long, flags)\
 
 #define SYSCALL_SIG_MUNMAP(RET,ARG)\
 RET(int)\
+ARG(ad_t, aspace)\
 ARG(void __user *, mapping)
 
 #define SYSCALL_SIG_EXEC(RET,ARG)\
@@ -227,6 +238,8 @@ X(chroot,    28, CHROOT,     SYSCALL_SIG_CHROOT)\
 X(pipe,      29, PIPE,       SYSCALL_SIG_PIPE)\
 X(insmod,    30, INSMOD,     SYSCALL_SIG_INSMOD)\
 X(rmmod,     31, RMMOD,      SYSCALL_SIG_RMMOD)\
+X(mcreate,   32, MCREATE,    SYSCALL_SIG_MCREATE)\
+X(mclose,    33, MCLOSE,     SYSCALL_SIG_MCLOSE)\
 
 #define DECLARE_SYSCALL_ID_CONSTANTS(__name, __id, __NAME, ...)\
 const static syscall_id_t SYSCALL_ID_ ## __NAME = __id;

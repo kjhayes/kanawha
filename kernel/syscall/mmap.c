@@ -20,12 +20,12 @@
 int
 syscall_mmap(
         struct process *process,
+        ad_t aspace_id,
         fd_t file,
         size_t file_offset,
         void __user * __user* where,
         size_t size,
-        unsigned long prot_flags,
-        unsigned long mmap_flags)
+        unsigned long flags)
 {
     int res;
 
@@ -41,7 +41,7 @@ syscall_mmap(
         return res;
     }
 
-    uint8_t type = mmap_flags & 0b11;
+    uint8_t type = flags & 0b11;
 
     // Mis-aligned/Mis-sized
 
@@ -54,7 +54,7 @@ syscall_mmap(
         return -EINVAL;
     }
 
-    if(mmap_flags & MMAP_EXACT)
+    if(flags & MMAP_EXACT)
     {
         if(ptr_orderof(requested) < VMEM_MIN_PAGE_ORDER) {
             wprintk("syscall_mmap: virtual address is not aligned to the minimum vmem page size!\n");
@@ -66,8 +66,7 @@ syscall_mmap(
                 file_offset,
                 (uintptr_t)requested,
                 size,
-                prot_flags,
-                mmap_flags);
+                flags);
         if(res) {
             wprintk("syscall_mmap: aspace_map_region_exact returned %s\n",
                     errnostr(res));
@@ -83,8 +82,7 @@ syscall_mmap(
                 file_offset,
                 &hint_offset,
                 size,
-                prot_flags,
-                mmap_flags);
+                flags);
         if(res) {
             wprintk("syscall_mmap: aspace_map_region returned %s\n",
                     errnostr(res));
@@ -125,6 +123,7 @@ syscall_mmap(
 int
 syscall_munmap(
         struct process *process,
+        ad_t aspace_id,
         void __user *mapping) 
 {
     int res;

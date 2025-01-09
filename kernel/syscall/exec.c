@@ -56,7 +56,6 @@ exec_elf64_load_segment(
 {
     int res;
 
-    unsigned long prot_flags = 0;
     unsigned long mmap_flags = 0;
 
     if(phdr->p_memsz == 0) {
@@ -95,13 +94,13 @@ exec_elf64_load_segment(
     }
 
     if(phdr->p_flags & PF_R) {
-        prot_flags |= MMAP_PROT_READ;
+        mmap_flags |= MMAP_PROT_READ;
     }
     if(phdr->p_flags & PF_W) {
-        prot_flags |= MMAP_PROT_WRITE;
+        mmap_flags |= MMAP_PROT_WRITE;
     }
     if(phdr->p_flags & PF_X) {
-        prot_flags |= MMAP_PROT_EXEC;
+        mmap_flags |= MMAP_PROT_EXEC;
     }
 
     if(filesz > 0) {
@@ -116,7 +115,6 @@ exec_elf64_load_segment(
                 phdr->p_offset,
                 phdr->p_vaddr,
                 filesz,
-                prot_flags,
                 mmap_flags | MMAP_PRIVATE);
         if(res) {
             return res;
@@ -135,7 +133,6 @@ exec_elf64_load_segment(
                 0,
                 phdr->p_vaddr + filesz,
                 bsssz,
-                prot_flags,
                 mmap_flags | MMAP_ANON);
         if(res) {
             return res;

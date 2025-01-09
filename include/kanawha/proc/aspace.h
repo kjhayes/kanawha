@@ -39,7 +39,6 @@ struct aspace_region
     uintptr_t file_offset;
     uintptr_t size;
 
-    unsigned long prot_flags;
     unsigned long mmap_flags;
 
     spinlock_t page_tree_lock;
@@ -79,7 +78,6 @@ aspace_map_region(
         uintptr_t file_offset,
         uintptr_t *hint_offset,
         size_t size,
-        unsigned long prot_flags,
         unsigned long mmap_flags);
 
 int
@@ -89,7 +87,6 @@ aspace_map_region_exact(
         uintptr_t file_offset,
         uintptr_t aspace_offset,
         size_t size,
-        unsigned long prot_flags,
         unsigned long mmap_flags);
 
 int
