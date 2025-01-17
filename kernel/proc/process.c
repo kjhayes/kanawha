@@ -15,11 +15,8 @@
 #include <kanawha/stddef.h>
 #include <kanawha/timer.h>
 #include <kanawha/assert.h>
-#include <kanawha/proc/aspace.h>
-#include <kanawha/proc/file_table.h>
-#include <kanawha/syscall.h>
+#include <kanawha/proc/mmap.h>
 #include <kanawha/uapi/spawn.h>
-#include <kanawha/proc/user_access.h>
 
 static DECLARE_SPINLOCK(process_pid_lock);
 static DECLARE_PTREE(process_pid_tree);
@@ -219,7 +216,7 @@ process_alloc(
     waitqueue_init(&process->wait_queue);
 
     process->root = NULL;
-    process->aspace = NULL;
+    process->mmap = NULL;
     process->file_table = NULL;
     process->environ = NULL;
 
@@ -340,8 +337,8 @@ launch_init_process(void)
         return res;
     }
 
-    res = aspace_create(PROCESS_LOWMEM_SIZE, process);
-    if(process->aspace == NULL) {
+    res = mmap_create(PROCESS_LOWMEM_SIZE, process);
+    if(process->mmap == NULL) {
         process_free(process);
         return res;
     }
@@ -369,7 +366,7 @@ launch_init_process(void)
     if(sched == NULL) {
         eprintk("Could not find a scheduler on CPU (%ld)!\n",
                 (sl_t)current_cpu_id());
-        aspace_deattach(process->aspace, process);
+        mmap_deattach(process->mmap, process);
         kfree(process);
         return -EINVAL;
     }
@@ -378,7 +375,7 @@ launch_init_process(void)
     if(res) {
         eprintk("Failed to set init process scheduler! (err=%s)\n",
                 errnostr(res));
-        aspace_deattach(process->aspace, process);
+        mmap_deattach(process->mmap, process);
         kfree(process);
         return res;
     }
@@ -387,7 +384,7 @@ launch_init_process(void)
     if(res) {
         eprintk("Failed to schedule init process! (err=%s)\n",
                 errnostr(res));
-        aspace_deattach(process->aspace, process);
+        mmap_deattach(process->mmap, process);
         kfree(process);
         return res;
     }
@@ -563,9 +560,9 @@ process_write_usermem(
         size_t length)
 {
     int res;
-    res = process_user_write(
+    res = mmap_write(
             process,
-            (uintptr_t)dst - (uintptr_t)process->aspace_ref->virt_addr,
+            (uintptr_t)dst - (uintptr_t)process->mmap_ref->virt_addr,
             src,
             length);
     if(res) {
@@ -582,9 +579,9 @@ process_read_usermem(
         size_t length)
 {
     int res;
-    res = process_user_read(
+    res = mmap_read(
             process,
-            (uintptr_t)src - (uintptr_t)process->aspace_ref->virt_addr,
+            (uintptr_t)src - (uintptr_t)process->mmap_ref->virt_addr,
             dst,
             length);
     if(res) {
@@ -601,9 +598,9 @@ process_strlen_usermem(
         size_t *out)
 {
     int res;
-    res = process_user_strlen(
+    res = mmap_user_strlen(
             process,
-            (uintptr_t)str - (uintptr_t)process->aspace_ref->virt_addr,
+            (uintptr_t)str - (uintptr_t)process->mmap_ref->virt_addr,
             max_len,
             out);
     if(res) {
@@ -694,8 +691,8 @@ process_terminate(
     if(process->root) {
         fs_path_put(process->root);
     }
-    if(process->aspace) {
-        aspace_deattach(process->aspace, process);
+    if(process->mmap) {
+        mmap_deattach(process->mmap, process);
     }
     if(process->file_table) {
         file_table_deattach(process->file_table, process);
@@ -834,15 +831,15 @@ process_spawn_child(
     if(spawn_flags & SPAWN_MMAP_CLONE) {
         panic("SPAWN_MMAP_CLONE is unimplemented!\n");
         if(res) {
-            eprintk("Failed to clone aspace for spawned process! (err=%s)\n",
+            eprintk("Failed to clone mmap for spawned process! (err=%s)\n",
                     errnostr(res));
             goto err1;
         }
     } else {
         // SPAWN_MMAP_SHARED
-        res = aspace_attach(parent->aspace, process);
+        res = mmap_attach(parent->mmap, process);
         if(res) {
-            eprintk("Failed to attach aspace to spawned process! (err=%s)\n",
+            eprintk("Failed to attach mmap to spawned process! (err=%s)\n",
                     errnostr(res));
             goto err1;
         }

@@ -1,8 +1,7 @@
 
 obj-y += \
 	process.o \
-	aspace.o \
+	mmap.o \
 	file_table.o \
 	env.o \
-	user_access.o \
 

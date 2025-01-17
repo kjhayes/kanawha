@@ -8,7 +8,7 @@
 #include <kanawha/string.h>
 #include <kanawha/assert.h>
 #include <kanawha/uapi/mmap.h>
-#include <kanawha/proc/aspace.h>
+#include <kanawha/proc/mmap.h>
 #include <kanawha/fs/node.h>
 
 #include <elf/elf.h>
@@ -109,7 +109,7 @@ exec_elf64_load_segment(
                 phdr->p_vaddr,
                 phdr->p_vaddr + bsssz,
                 bsssz);
-        res = aspace_map_region_exact(
+        res = mmap_map_region_exact(
                 process,
                 file,
                 phdr->p_offset,
@@ -127,7 +127,7 @@ exec_elf64_load_segment(
                 phdr->p_vaddr,
                 phdr->p_vaddr + bsssz,
                 bsssz);
-        res = aspace_map_region_exact(
+        res = mmap_map_region_exact(
                 process,
                 0,
                 0,
@@ -252,18 +252,18 @@ syscall_exec(
         return -EPERM;
     }
 
-    res = aspace_deattach(process->aspace, process);
+    res = mmap_deattach(process->mmap, process);
     if(res) {
         file_table_put_file(process->file_table, process, desc);
-        eprintk("syscall_exec: Failed to deattach aspace! (err=%s)\n",
+        eprintk("syscall_exec: Failed to deattach mmap! (err=%s)\n",
                 errnostr(res));
         return res;
     }
 
-    res = aspace_create(PROCESS_LOWMEM_SIZE, process);
+    res = mmap_create(PROCESS_LOWMEM_SIZE, process);
     if(res) {
         file_table_put_file(process->file_table, process, desc);
-        eprintk("syscall_exec: Failed to create new aspace! (err=%s)\n",
+        eprintk("syscall_exec: Failed to create new mmap! (err=%s)\n",
                 errnostr(res));
         return res;
     }
@@ -277,9 +277,9 @@ syscall_exec(
     dprintk("syscall_exec: desc->path->fs_node->index = %lld\n", (sll_t)desc->path->fs_node->cache_node.key);
     file_table_put_file(process->file_table, process, desc);
 
-    res = vmem_flush_region(process->aspace->vmem_region);
+    res = vmem_flush_region(process->mmap->vmem_region);
     if(res) {
-        eprintk("syscall_exec: Failed to flush aspace region!\n");
+        eprintk("syscall_exec: Failed to flush mmap region!\n");
         return res;
     }
 

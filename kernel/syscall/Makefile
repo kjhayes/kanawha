@@ -23,7 +23,5 @@ obj-y += \
 	symlink.o \
 	unlink.o \
 	chroot.o \
-	mcreate.o \
-	mclose.o \
 	mod.o
 

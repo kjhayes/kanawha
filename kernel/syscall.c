@@ -3,7 +3,7 @@
 #include <kanawha/proc/process.h>
 
 #define __KANAWHA_SYSCALL_KEEP_XLIST
-#include <kanawha/syscall.h>
+#include <kanawha/uapi/syscall.h>
 
 void
 strace_begin_syscall(

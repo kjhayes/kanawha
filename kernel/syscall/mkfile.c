@@ -1,6 +1,6 @@
 
-#include <kanawha/syscall.h>
 #include <kanawha/proc/process.h>
+#include <kanawha/uapi/syscall.h>
 #include <kanawha/proc/file_table.h>
 #include <kanawha/fs/node.h>
 
@@ -10,7 +10,7 @@ int
 syscall_mkfile(
         struct process *process,
         fd_t dir_fd,
-        const char __user * name,
+        char __user * name,
         unsigned long user_flags)
 {
     int res;
