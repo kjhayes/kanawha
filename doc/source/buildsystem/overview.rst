@@ -2,6 +2,9 @@
 Building Kanawha
 ================
 
+Quickstart
+----------
+
 To build the kernel ensure that there is a valid ``.config`` file
 in the root directory, or generate one with::
 
@@ -17,10 +20,16 @@ Once there is a valid ``.config`` all you need to do is run::
 
 and a kernel binary should be built at ``build/kanawha.o``.
 
-Buildsystem Details
-===================
+Buildsystem Overview
+--------------------
 
 Kanawha has a custom buildsystem, which is heavily
 inspired by the design of "kbuild" from the Linux
 kernel.
+
+Kanawha uses a version of the "kconfig" configuration system
+from the Linux kernel. However instead of building "kconfig" from
+source like Linux, we rely on `kconfiglib <https://pypi.org/project/kconfiglib/>`_,
+a python implementation of the tools Linux uses for parsing/generating/editing
+``Kconfig`` files.
 

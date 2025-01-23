@@ -10,7 +10,7 @@ Welcome to kanawha's documentation!
    :maxdepth: 2
    :caption: Contents:
 
-   buildsystem/quickstart.rst
+   buildsystem/overview.rst
 
 
 Indices and tables
