@@ -73,7 +73,9 @@ COMMON_FLAGS += \
 				-fno-pie \
 				-fno-pic \
 				-nostdlib \
-				-nostdinc
+				-ffreestanding \
+
+
 COMMON_DEPS += $(AUTOCONF)
 AFLAGS += -D__ASSEMBLER__
 CFLAGS += -mgeneral-regs-only

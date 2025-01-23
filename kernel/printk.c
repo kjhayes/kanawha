@@ -1,6 +1,5 @@
 
 #include <kanawha/printk.h>
-#include <kanawha/stdarg.h>
 #include <kanawha/stdint.h>
 #include <kanawha/export.h>
 #include <kanawha/errno.h>
@@ -10,6 +9,9 @@
 #include <kanawha/proc/process.h>
 #include <kanawha/klog.h>
 #include <kanawha/irq.h>
+
+// Freestanding Compiler Includes
+#include <stdarg.h>
 
 static DECLARE_SPINLOCK(printk_lock);
 
