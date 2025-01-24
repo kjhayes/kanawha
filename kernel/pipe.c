@@ -19,7 +19,7 @@
  *
  * you can try to load any "inode" and the mount
  * will just create a new pipe, so if the fs subsystem
- * every tried to "load" the same node twice without unloading,
+ * ever tried to "load" the same node twice without unloading,
  * then we would leak memory
  */
 
