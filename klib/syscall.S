@@ -33,8 +33,7 @@
 #define KANAWHA_SYSCALL_ID_PIPE      29
 #define KANAWHA_SYSCALL_ID_INSMOD    30
 #define KANAWHA_SYSCALL_ID_RMMOD     31
-#define KANAWHA_SYSCALL_ID_MCREATE   32
-#define KANAWHA_SYSCALL_ID_MCLOSE    33
+#define KANAWHA_SYSCALL_ID_CHWDIR    32
 
 .global kanawha_sys_exit
 .type kanawha_sys_exit,@function
@@ -337,4 +336,13 @@ kanawha_sys_rmmod:
     // rsi -> unsigned long flags
     syscall
     retq
+
+.global kanawha_sys_chwdir
+.type kanawha_sys_chwdir,@function
+kanawha_sys_chwdir:
+    movq $KANAWHA_SYSCALL_ID_CHWDIR, %rax
+    // rdi -> fd_t dir
+    syscall
+    retq
+
 

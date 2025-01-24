@@ -159,6 +159,9 @@ int
 kanawha_sys_chroot(fd_t dir);
 
 int
+kanawha_sys_chwdir(fd_t dir);
+
+int
 kanawha_sys_pipe(
         unsigned long flags,
         fd_t *out);
