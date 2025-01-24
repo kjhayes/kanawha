@@ -5,7 +5,7 @@
 #include <kanawha/vmem.h>
 
 int
-syscall_chroot(
+syscall_chwdir(
         struct process *process,
         fd_t fd)
 {
@@ -14,7 +14,7 @@ syscall_chroot(
     DEBUG_ASSERT(KERNEL_ADDR(process));
     DEBUG_ASSERT(KERNEL_ADDR(process->file_table));
 
-    printk("PID(%ld) chroot(%ld)\n",
+    dprintk("PID(%ld) chwdir(%ld)\n",
             process->id, fd);
 
     struct file *file = file_table_get_file(
@@ -26,32 +26,18 @@ syscall_chroot(
     }
 
     if(file->path == NULL) {
-        eprintk("PID(%ld) chroot(%ld), file has NULL fs_path!\n");
+        dprintk("PID(%ld) chwdir(%ld), file has NULL fs_path!\n");
         return -EINVAL;
     }
 
-    res = process_set_root_directory(process, file->path);
-    if(res) {
-        file_table_put_file(
-                process->file_table,
-                process,
-                file);
-        eprintk("PID(%ld) chroot(%ld), process_set_root_directory returned %s\n",
-                process->id, fd, errnostr(res));
-        return res;
-    }
-
-    // also set the working directory to the new root directory
     res = process_set_working_directory(process, file->path);
     if(res) {
         file_table_put_file(
                 process->file_table,
                 process,
                 file);
-        eprintk("PID(%ld) chroot(%ld), process_set_working_directory returned %s\n",
+        eprintk("PID(%ld) chwdir(%ld), process_set_working_directory returned %s\n",
                 process->id, fd, errnostr(res));
-        // TODO: We should probably restore the old root directory here
-        //       (If we fail at restoring, we should probably kill the process)
         return res;
     }
 
@@ -60,7 +46,7 @@ syscall_chroot(
             process,
             file);
     if(res) {
-        eprintk("PID(%ld) chroot: failed to put file! (err=%s)\n",
+        eprintk("PID(%ld) chwdir: failed to put file! (err=%s)\n",
                 process->id, errnostr(res));
         return res;
     }

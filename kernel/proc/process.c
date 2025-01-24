@@ -215,7 +215,8 @@ process_alloc(
     ilist_init(&process->children);
     waitqueue_init(&process->wait_queue);
 
-    process->root = NULL;
+    process->root_directory = NULL;
+    process->working_directory = NULL;
     process->mmap = NULL;
     process->file_table = NULL;
     process->environ = NULL;
@@ -330,10 +331,19 @@ launch_init_process(void)
     }
     ramfile_put(backing_file);
 
-    res = process_set_root(process, root);
+    res = process_set_root_directory(process, root);
     if(res) {
         eprintk("Failed to set init process root directory! (err=%s)\n",
                 errnostr(res));
+        process_free(process);
+        return res;
+    }
+
+    res = process_set_working_directory(process, root);
+    if(res) {
+        eprintk("Failed to set init process working directory! (err=%s)\n",
+                errnostr(res));
+        process_free(process);
         return res;
     }
 
@@ -524,7 +534,7 @@ process_set_scheduler(
 }
 
 int
-process_set_root(
+process_set_root_directory(
         struct process *process,
         struct fs_path *path)
 {
@@ -532,13 +542,13 @@ process_set_root(
 
     res = fs_path_get(path);
     if(res) {
-        eprintk("process_set_root(%ld): fs_path_get failed: (err=%s)\n",
+        eprintk("process_set_root_directory(%ld): fs_path_get failed: (err=%s)\n",
                 process->id, errnostr(res));
         return res;
     }
 
-    if(process->root != NULL) {
-        res = fs_path_put(process->root);
+    if(process->root_directory != NULL) {
+        res = fs_path_put(process->root_directory);
         if(res) {
             eprintk("process_set_root(pid=%ld): fs_path_put failed: (err=%s)\n",
                     process->id, errnostr(res));
@@ -547,7 +557,36 @@ process_set_root(
         }
     }
 
-    process->root = path;
+    process->root_directory = path;
+
+    return 0;
+}
+
+int
+process_set_working_directory(
+        struct process *process,
+        struct fs_path *path)
+{
+    int res;
+
+    res = fs_path_get(path);
+    if(res) {
+        eprintk("process_set_working_directory(%ld): fs_path_get failed: (err=%s)\n",
+                process->id, errnostr(res));
+        return res;
+    }
+
+    if(process->working_directory != NULL) {
+        res = fs_path_put(process->working_directory);
+        if(res) {
+            eprintk("process_set_working_directory(pid=%ld): fs_path_put failed: (err=%s)\n",
+                    process->id, errnostr(res));
+            fs_path_put(path);
+            return res;
+        }
+    }
+
+    process->working_directory = path;
 
     return 0;
 }
@@ -688,8 +727,11 @@ process_terminate(
     process->exitcode = exitcode;
     process->status = PROCESS_STATUS_ZOMBIE;
 
-    if(process->root) {
-        fs_path_put(process->root);
+    if(process->root_directory) {
+        fs_path_put(process->root_directory);
+    }
+    if(process->working_directory) {
+        fs_path_put(process->working_directory);
     }
     if(process->mmap) {
         mmap_deattach(process->mmap, process);
@@ -818,14 +860,20 @@ process_spawn_child(
 
     DEBUG_ASSERT(process->status == PROCESS_STATUS_SUSPEND);
 
-    DEBUG_ASSERT(KERNEL_ADDR(parent->root));
+    DEBUG_ASSERT(KERNEL_ADDR(parent->root_directory));
 
-    res = process_set_root(process, parent->root);
+    res = process_set_root_directory(process, parent->root_directory);
     if(res) {
         eprintk("process_spawn_child: failed to set root directory! (err=%s)\n",
                 errnostr(res));
-        kfree(state);
-        return NULL;
+        goto err1;
+    }
+
+    res = process_set_working_directory(process, parent->working_directory);
+    if(res) {
+        eprintk("process_spawn_child: failed to set working directory! (err=%s)\n",
+                errnostr(res));
+        goto err1;
     }
 
     if(spawn_flags & SPAWN_MMAP_CLONE) {

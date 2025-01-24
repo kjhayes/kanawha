@@ -23,5 +23,6 @@ obj-y += \
 	symlink.o \
 	unlink.o \
 	chroot.o \
+	chwdir.o \
 	mod.o
 

@@ -135,7 +135,8 @@ __fs_path_put(struct fs_path *path)
 }
 
 int
-fs_path_put(struct fs_path *path) {
+fs_path_put(struct fs_path *path)
+{
     int res;
     spin_lock(&fs_path_global_lock);
     res = __fs_path_put(path);
@@ -297,8 +298,11 @@ fs_path_lookup_for_process(
 {
     int res;
 
-    dprintk("fs_path_lookup_for_process(pid=%ld, %s, root=%p)\n",
-            (sl_t)process->id, path_str, process->root);
+    dprintk("fs_path_lookup_for_process(pid=%ld, %s, root=%p, pwd=%p)\n",
+            (sl_t)process->id,
+            path_str,
+            process->root_directory,
+            process->working_directory);
 
     char *dup = kstrdup(path_str);
     if(dup == NULL) {
@@ -306,18 +310,41 @@ fs_path_lookup_for_process(
     }
 
     size_t pathlen = strlen(dup);
+
+    // Cannot open ""
+    if(pathlen == 0) {
+        res = -EINVAL;
+        goto exit;
+    }
+
     for(size_t i = 0; i < pathlen; i++) {
         if(dup[i] == '/') {
             dup[i] = '\0';
         }
     }
 
-    struct fs_path *cur = process->root;
+    struct fs_path *cur;
+    if(strlen(dup) == 0) {
+        // "/..."
+        dprintk("fs_path_lookup_for_process(pid=%ld, %s) Starting from root directory (%s)\n",
+                (sl_t)process->id,
+                path_str,
+                process->root_directory->name != NULL ? process->root_directory->name : "NULL");
+        cur = process->root_directory;
+    } else {
+        // "..."
+        dprintk("fs_path_lookup_for_process(pid=%ld, %s) Starting from working directory (%s)\n",
+                (sl_t)process->id,
+                path_str,
+                process->root_directory->name != NULL ? process->root_directory->name : "NULL");
+        cur = process->working_directory;
+    }
+
     DEBUG_ASSERT(KERNEL_ADDR(cur));
 
     res = fs_path_get(cur);
     if(res) {
-        eprintk("fs_path_lookup_for_process: fs_path_get failed for root directory! (err=%s)\n",
+        eprintk("fs_path_lookup_for_process: fs_path_get failed for initial directory! (err=%s)\n",
                 errnostr(res));
         goto exit;
     }
@@ -337,15 +364,25 @@ fs_path_lookup_for_process(
         }
 
         struct fs_path *next;
+
         // Increments the ref counter on "next" on success
         res = __fs_path_traverse(cur, iter, &next);
         if(res) {
             fs_path_put(cur);
+            dprintk("fs_path_lookup_for_process(pid=%ld, %s) __fs_path_traverse(%p, %s) returned %s\n",
+                (sl_t)process->id,
+                path_str,
+                cur,
+                iter,
+                errnostr(res));
             goto exit;
         }
 
         if(next == NULL) {
             fs_path_put(cur);
+            dprintk("fs_path_lookup_for_process(pid=%ld, %s) next node after traversal is NULL!\n",
+                (sl_t)process->id,
+                path_str);
             res = -ENXIO;
             goto exit;
         }
@@ -359,10 +396,16 @@ fs_path_lookup_for_process(
     // TODO: Check process file access permissions here
 
     *out = cur;
-
     res = 0;
+
 exit:
     kfree(dup);
+    if(res) {
+        dprintk("fs_path_lookup_for_process(pid=%ld, %s) Returning %s\n",
+                (sl_t)process->id,
+                path_str,
+                errnostr(res));
+    }
     return res;
 }
 

@@ -59,7 +59,10 @@ struct process
     ilist_node_t environ_node;
 
     // Root Directory
-    struct fs_path *root;
+    struct fs_path *root_directory;
+
+    // Working Directory
+    struct fs_path *working_directory;
 
 #ifdef CONFIG_DEBUG_TRACK_PROCESS_EXEC
     const char *tracked_exec;
@@ -94,7 +97,12 @@ process_set_scheduler(
         struct scheduler *sched);
 
 int
-process_set_root(
+process_set_root_directory(
+        struct process *process,
+        struct fs_path *root);
+
+int
+process_set_working_directory(
         struct process *process,
         struct fs_path *root);
 
