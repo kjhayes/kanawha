@@ -25,6 +25,9 @@ __fs_path_traverse(
     int res;
 
     spin_lock(&fs_path_global_lock);
+    dprintk("fs_path_traverse(%s -> %s)\n",
+            dir->name != NULL ? dir->name : "NULL",
+            child_name != NULL ? child_name : "NULL");
 
     // Try and find the child in the fs_path tree
     ilist_node_t *node;
@@ -365,17 +368,37 @@ fs_path_lookup_for_process(
 
         struct fs_path *next;
 
-        // Increments the ref counter on "next" on success
-        res = __fs_path_traverse(cur, iter, &next);
-        if(res) {
-            fs_path_put(cur);
-            dprintk("fs_path_lookup_for_process(pid=%ld, %s) __fs_path_traverse(%p, %s) returned %s\n",
-                (sl_t)process->id,
-                path_str,
-                cur,
-                iter,
-                errnostr(res));
-            goto exit;
+        // Special cases
+        if(strcmp(iter, ".") == 0) {
+            res = fs_path_get(cur);
+            if(res) {
+                fs_path_put(cur);
+                goto exit;
+            }
+            next = cur;
+        }
+        else if(strcmp(iter, "..") == 0) {
+            if(cur->parent != NULL) {
+                res = fs_path_get(cur->parent);
+                if(res) {
+                    fs_path_put(cur);
+                    goto exit;
+                }
+                next = cur->parent;
+            }
+        } else {
+            // Increments the ref counter on "next" on success
+            res = __fs_path_traverse(cur, iter, &next); 
+            if(res) {
+                fs_path_put(cur);
+                dprintk("fs_path_lookup_for_process(pid=%ld, %s) __fs_path_traverse(%p, %s) returned %s\n",
+                    (sl_t)process->id,
+                    path_str,
+                    cur,
+                    iter,
+                    errnostr(res));
+                goto exit;
+            }
         }
 
         if(next == NULL) {
