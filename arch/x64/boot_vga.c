@@ -34,7 +34,7 @@ x64_boot_vga_setchar(uint8_t c, uint8_t attr, unsigned x, unsigned y)
         return -EINVAL;
     }
 
-    uint16_t *framebuffer = (void*)__va((uintptr_t)X64_BOOT_VGA_FRAMEBUFFER_BASE);
+    uint16_t *framebuffer = (void*)__va((void __phys *)X64_BOOT_VGA_FRAMEBUFFER_BASE);
     framebuffer[x + (y * X64_BOOT_VGA_WIDTH)] = x64_boot_vga_encode(c, attr);
 
     return 0;
@@ -52,7 +52,7 @@ x64_boot_vga_clear(uint8_t c, uint8_t attr) {
 static void
 x64_boot_vga_shift_up(uint8_t c, uint8_t attr) 
 {
-    uint16_t *framebuffer = (void*)__va((uintptr_t)X64_BOOT_VGA_FRAMEBUFFER_BASE);
+    uint16_t *framebuffer = (void*)__va((void __phys *)X64_BOOT_VGA_FRAMEBUFFER_BASE);
 
     for(unsigned y = 1; y < X64_BOOT_VGA_HEIGHT; y++) {
         for(unsigned x = 0; x < X64_BOOT_VGA_WIDTH; x++) {
