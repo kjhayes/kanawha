@@ -5,13 +5,6 @@ config SERIAL_8250
     help
       Framework to support 8250-based serial UART devices
 
-config DEBUG_VGA_SERIAL
-    bool "Debug VGA Pseudo-Terminal"
-    default n
-    depends on X64 && DEBUGGING && !X64_BOOT_VGA
-    help
-      Place a simple pseudo terminal on the platform VGA serial device
-
 config VIRTIO_CONSOLE
     bool "Virtio Console"
     default n

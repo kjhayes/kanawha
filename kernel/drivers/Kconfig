@@ -20,3 +20,6 @@ source "kernel/drivers/ps2/Kconfig"
 source "kernel/drivers/qemu/Kconfig"
 source "kernel/drivers/virtio/Kconfig"
 
+menu "VGA Options"
+source "kernel/drivers/vga/Kconfig"
+endmenu
