@@ -217,6 +217,7 @@ x64_platform_vga_serial_register(void)
     int res;
 
     x64_platform_vga.framebuffer = mmio_map((void __phys *)0xB8000, 2 * 80 * 25);
+    vga_serial_clear(&x64_platform_vga, ' ', x64_platform_vga.default_attr);
 
     res = register_char_dev(
             &x64_platform_vga.char_dev,
