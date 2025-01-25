@@ -124,6 +124,10 @@ fs_node_flush_page_lockless(
 
     size_t amount = page->size;
 
+    dprintk("fs_node_flush_page_lockless(node=%p, page=%p, page->pfn=%p)\n",
+            node,
+            page,
+            page->tree_node.key);
     res = fs_node_write_page(
             node,
             (void*)__va(page->paddr),
@@ -219,6 +223,7 @@ fs_node_flush_all_pages(
         struct fs_node *node)
 {
     int res = 0;
+    dprintk("fs_node_flush_all_pages\n");
     spin_lock(&node->page_lock);
 
     struct ptree_node *pnode = ptree_get_first(&node->page_cache);

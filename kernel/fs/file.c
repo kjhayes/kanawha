@@ -242,6 +242,15 @@ fs_file_node_flush(
         struct file *file,
         unsigned long offset)
 {
-    return fs_node_flush(file->path->fs_node);
+    int res;
+    res = fs_node_flush_all_pages(file->path->fs_node);
+    if(res) {
+        return res; 
+    }
+    res = fs_node_flush_all_pages(file->path->fs_node);
+    if(res) {
+        return res;
+    }
+    return 0;
 }
 
