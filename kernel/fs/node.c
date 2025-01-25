@@ -83,28 +83,20 @@ fs_node_get_page(
         res = fs_node_page_order(node, &order);
         if(res) {
             spin_unlock(&node->page_lock);
-            return NULL;
-        }
-
-        res = page_alloc(order, &page->paddr, 0);
-        if(res) {
-            spin_unlock(&node->page_lock);
             kfree(page);
             return NULL;
         }
 
-        unsigned long read_page_flags =
-            flags & FS_NODE_GET_PAGE_MAY_CREATE ? FS_NODE_READ_PAGE_MAY_CREATE : 0;
+        unsigned long load_page_flags =
+            flags & FS_NODE_GET_PAGE_MAY_CREATE ? FS_NODE_LOAD_PAGE_MAY_CREATE : 0;
 
-        res = fs_node_read_page(
+        res = fs_node_load_page(
                 node,
-                (void*)__va(page->paddr),
                 pfn,
-                read_page_flags);
-
+                load_page_flags,
+                &page->paddr);
         if(res) {
             spin_unlock(&node->page_lock);
-            page_free(order, page->paddr);
             kfree(page);
             return NULL;
         }
@@ -191,11 +183,13 @@ fs_node_put_page(
 
         dprintk("removed ptree node\n");
 
-        dprintk("page_free(%ld, %p)\n",
-                (sl_t)page->order, page->paddr);
-        res = page_free(page->order, page->paddr);
+        res = fs_node_unload_page(
+                node,
+                pfn,
+                0, // flags
+                page->paddr);
         if(res) {
-            eprintk("Failed to free fs_page backing page order=%ld, phys_addr=%p! (err=%s)\n",
+            eprintk("Failed to unload fs_page backing page order=%ld, phys_addr=%p! (err=%s)\n",
                     (sl_t)page->order, page->paddr, errnostr(res));
         }
         dprintk("freed phys page\n");
@@ -419,6 +413,24 @@ fs_node_cannot_write_page(
     return -EINVAL;
 }
 int
+fs_node_cannot_load_page(
+        struct fs_node *node,
+        uintptr_t pfn,
+        unsigned long flags,
+        void __phys ** addr_out)
+{
+    return -EINVAL;
+}
+int
+fs_node_cannot_unload_page(
+        struct fs_node *node,
+        uintptr_t pfn,
+        unsigned long flags,
+        void __phys *addr)
+{
+    return -EINVAL;
+}
+int
 fs_node_cannot_flush(
         struct fs_node *node)
 {
@@ -494,5 +506,66 @@ fs_node_cannot_unlink(
         const char *name)
 {
     return -EINVAL;
+}
+
+int
+fs_node_load_page_read_alloc(
+        struct fs_node *node,
+        uintptr_t pfn,
+        unsigned long flags,
+        void __phys ** addr_out)
+{
+    int res;
+
+    order_t order;
+    res = fs_node_page_order(node, &order);
+    if(res) {
+        return res;
+    }
+
+    void __phys *addr;
+
+    res = page_alloc(order, &addr, 0);
+    if(res) {
+        return res;
+    }
+
+    unsigned long read_page_flags =
+        flags & FS_NODE_LOAD_PAGE_MAY_CREATE ? FS_NODE_READ_PAGE_MAY_CREATE : 0;
+
+    res = fs_node_read_page(
+            node,
+            (void*)__va(addr),
+            pfn,
+            read_page_flags);
+    if(res) {
+        page_free(order, addr);
+        return res;
+    }
+
+    *addr_out = addr;
+    return 0;
+}
+int
+fs_node_unload_page_free(
+        struct fs_node *node,
+        uintptr_t pfn,
+        unsigned long flags,
+        void __phys *addr)
+{
+    int res;
+
+    order_t order;
+    res = fs_node_page_order(node, &order);
+    if(res) {
+        return res;
+    }
+
+    res = page_free(order, addr);
+    if(res) {
+        return res;
+    }
+
+    return 0;
 }
 

@@ -174,6 +174,10 @@ struct fs_node_ops
 cpio_node_ops = {
     .read_page = cpio_node_read_page,
     .write_page = cpio_node_write_page,
+
+    .load_page = fs_node_load_page_read_alloc,
+    .unload_page = fs_node_unload_page_free,
+
     .flush = cpio_node_flush,
     .getattr = cpio_node_getattr,
     .setattr = cpio_node_setattr,

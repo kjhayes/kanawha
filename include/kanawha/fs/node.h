@@ -27,6 +27,27 @@ ARG(void *, page)\
 ARG(uintptr_t, pfn)\
 ARG(unsigned long, flags)
 
+/*
+ * Load/Unloading implementations do not need to keep track of reference counts
+ *
+ * That should be managed at the "fs_page" level, and so "load" should
+ * only be called once before unloading, and vice-versa.
+ */
+
+#define FS_NODE_LOAD_PAGE_MAY_CREATE (1ULL<<0)
+
+#define FS_NODE_LOAD_PAGE_SIG(RET,ARG)\
+RET(int)\
+ARG(uintptr_t, pfn)\
+ARG(unsigned long, flags)\
+ARG(void __phys **, addr_out)
+
+#define FS_NODE_UNLOAD_PAGE_SIG(RET,ARG)\
+RET(int)\
+ARG(uintptr_t, pfn)\
+ARG(unsigned long, flags)\
+ARG(void __phys *, addr)
+
 #define FS_NODE_FLUSH_SIG(RET,ARG)\
 RET(int)
 
@@ -87,6 +108,8 @@ ARG(const char *, name)
 #define FS_NODE_OP_LIST(OP, ...)\
 OP(read_page, FS_NODE_READ_PAGE_SIG, ##__VA_ARGS__)\
 OP(write_page, FS_NODE_WRITE_PAGE_SIG, ##__VA_ARGS__)\
+OP(load_page, FS_NODE_LOAD_PAGE_SIG, ##__VA_ARGS__)\
+OP(unload_page, FS_NODE_UNLOAD_PAGE_SIG, ##__VA_ARGS__)\
 OP(flush, FS_NODE_FLUSH_SIG, ##__VA_ARGS__)\
 OP(getattr, FS_NODE_GETATTR_SIG, ##__VA_ARGS__)\
 OP(setattr, FS_NODE_SETATTR_SIG, ##__VA_ARGS__)\
@@ -226,6 +249,18 @@ fs_node_cannot_write_page(
         uintptr_t pfn,
         unsigned long flags);
 int
+fs_node_cannot_load_page(
+        struct fs_node *node,
+        uintptr_t pfn,
+        unsigned long flags,
+        void __phys ** addr_out);
+int
+fs_node_cannot_unload_page(
+        struct fs_node *node,
+        uintptr_t pfn,
+        unsigned long flags,
+        void __phys *addr);
+int
 fs_node_cannot_flush(
         struct fs_node *node);
 int
@@ -272,5 +307,24 @@ int
 fs_node_cannot_unlink(
         struct fs_node *node,
         const char *name);
+
+/*
+ * Default Implementations
+ */
+
+// Load/Unload Page by allocating/freeing memory
+// and calling fs_node_read/write_page
+int
+fs_node_load_page_read_alloc(
+        struct fs_node *node,
+        uintptr_t pfn,
+        unsigned long flags,
+        void __phys ** addr);
+int
+fs_node_unload_page_free(
+        struct fs_node *node,
+        uintptr_t pfn,
+        unsigned long flags,
+        void __phys *addr);
 
 #endif

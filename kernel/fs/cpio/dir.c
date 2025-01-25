@@ -262,6 +262,8 @@ struct fs_node_ops
 cpio_dir_node_ops = {
     .read_page = fs_node_cannot_read_page,
     .write_page = fs_node_cannot_write_page,
+    .load_page = fs_node_cannot_load_page,
+    .unload_page = fs_node_cannot_unload_page,
     .flush = fs_node_cannot_flush,
     .getattr = fs_node_cannot_getattr,
     .setattr = fs_node_cannot_setattr,

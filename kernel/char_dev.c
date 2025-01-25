@@ -163,13 +163,19 @@ char_dev_fs_node_getattr(
     return -EINVAL;
 }
 static struct fs_node_ops
-char_dev_fs_node_ops = {
+char_dev_fs_node_ops =
+{
+    .read_page = fs_node_cannot_read_page,
+    .write_page = fs_node_cannot_write_page,
+    .load_page = fs_node_cannot_load_page,
+    .unload_page = fs_node_cannot_unload_page,
     .lookup = fs_node_cannot_lookup,
     .mkfile = fs_node_cannot_mkfile,
     .mkdir = fs_node_cannot_mkdir,
     .link = fs_node_cannot_link,
     .symlink = fs_node_cannot_symlink,
     .unlink = fs_node_cannot_unlink,
+
     .setattr = char_dev_fs_node_setattr,
     .getattr = char_dev_fs_node_getattr,
 };

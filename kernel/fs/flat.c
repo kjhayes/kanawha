@@ -212,6 +212,8 @@ flat_node_ops =
     .symlink = fs_node_cannot_symlink,
     .read_page = fs_node_cannot_read_page,
     .write_page = fs_node_cannot_write_page,
+    .load_page = fs_node_cannot_load_page,
+    .unload_page = fs_node_cannot_unload_page,
     .getattr = fs_node_cannot_getattr,
     .setattr = fs_node_cannot_setattr,
 };

@@ -72,6 +72,8 @@ pci_fs_node_ops =
 {
     .read_page = pci_cfg_fs_node_read_page,
     .write_page = fs_node_cannot_write_page,
+    .load_page = fs_node_load_page_read_alloc,
+    .unload_page = fs_node_unload_page_free,
     .flush = fs_node_cannot_flush,
     .getattr = pci_cfg_fs_node_getattr,
     .setattr = fs_node_cannot_setattr,

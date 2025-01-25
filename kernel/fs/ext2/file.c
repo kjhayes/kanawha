@@ -14,6 +14,10 @@ struct fs_node_ops
 ext2_file_node_ops = {
     .read_page = ext2_fs_node_read_page,
     .write_page = ext2_fs_node_write_page,
+
+    .load_page = fs_node_load_page_read_alloc,
+    .unload_page = fs_node_unload_page_free,
+
     .getattr = ext2_fs_node_getattr,
     .setattr = ext2_fs_node_setattr,
     .flush = ext2_fs_node_flush,

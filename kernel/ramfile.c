@@ -211,6 +211,12 @@ ramfile_fs_node_ops =
 {
     .read_page = ramfile_read_page,
     .write_page = ramfile_write_page,
+
+    // TODO: These functions can directly access the
+    //       ramfile and avoid allocations
+    .load_page = fs_node_load_page_read_alloc,
+    .unload_page = fs_node_unload_page_free,
+
     .flush = ramfile_node_flush,
 
     .getattr = ramfile_node_getattr,
