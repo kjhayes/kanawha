@@ -411,7 +411,7 @@ file_table_swap(
     spin_lock(&table->lock);
 
     dprintk("file_table_swap (%ld <-> %ld): Before\n", fd0, fd1);
-    file_table_dump_lockless(table);
+    //file_table_dump_lockless(table);
 
     struct ptree_node *rem;
 
@@ -446,7 +446,7 @@ file_table_swap(
     }
 
     dprintk("file_table_swap (%ld <-> %ld): After\n", fd0, fd1);
-    file_table_dump_lockless(table);
+    //file_table_dump_lockless(table);
 
     res = 0;
 
