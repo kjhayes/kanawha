@@ -166,7 +166,11 @@ fs_path_create_anon_pipe(
 
     pipe->type = FS_PATH_NODE;
     pipe->parent = NULL;
-    pipe->name = NULL;
+
+    char buffer[128];
+    snprintk(buffer, 128, "pipe-%ld", pipe->fs_node->cache_node.key);
+    buffer[127] = '\0';
+    pipe->name = kstrdup(buffer);
     pipe->refs = 1; 
     ilist_init(&pipe->children);
 

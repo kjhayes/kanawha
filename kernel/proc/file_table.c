@@ -72,9 +72,6 @@ file_table_clone(
 
     spin_lock(&parent->lock);
 
-    dprintk("file_table_clone: Parent Before\n");
-    //file_table_dump_lockless(parent);
-
     child->num_open_files = parent->num_open_files;
     spinlock_init(&child->lock);
     ptree_init(&child->descriptor_tree);
@@ -111,12 +108,6 @@ file_table_clone(
 
         node = ptree_get_next(node);
     }
-
-    dprintk("file_table_clone: Parent After\n");
-    //file_table_dump_lockless(parent);
-
-    dprintk("file_table_clone: Child After\n");
-    //file_table_dump_lockless(child);
 
     spin_unlock(&parent->lock);
 
@@ -410,9 +401,6 @@ file_table_swap(
 
     spin_lock(&table->lock);
 
-    dprintk("file_table_swap (%ld <-> %ld): Before\n", fd0, fd1);
-    //file_table_dump_lockless(table);
-
     struct ptree_node *rem;
 
     struct ptree_node *p0 =
@@ -445,11 +433,7 @@ file_table_swap(
         }
     }
 
-    dprintk("file_table_swap (%ld <-> %ld): After\n", fd0, fd1);
-    //file_table_dump_lockless(table);
-
     res = 0;
-
 exit:
     spin_unlock(&table->lock);
     return res;

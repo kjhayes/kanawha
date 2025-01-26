@@ -256,11 +256,21 @@ pipefs_init(void)
 }
 declare_init_desc(fs, pipefs_init, "Creating PipeFS");
 
+// This is awful and I hate it but assume we will never overflow
+// 2^64 pipes between reboots.
+static DECLARE_SPINLOCK(next_pipe_index_lock);
+static uint64_t next_pipe_index = 0;
+
 struct fs_node *
 pipe_fs_get_anon_pipe(void)
 {
+    spin_lock(&next_pipe_index_lock);
+    uint64_t index = next_pipe_index;
+    next_pipe_index++;
+    spin_unlock(&next_pipe_index_lock);
+
     return fs_mount_get_node(
             &pipe_fs_mount,
-            0);
+            index);
 }
 
