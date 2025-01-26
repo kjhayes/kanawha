@@ -73,6 +73,10 @@ pipe_fs_file_read(
         if(pipe->head != pipe->tail) {
             // The buffer is non-empty
             *(uint8_t*)buffer = ((uint8_t*)pipe->buffer)[pipe->tail];
+            dprintk("PID(%ld, EXEC(%s)) PIPE(%p) Reading: %c\n",
+                    current_process()->id,
+                    current_process()->tracked_exec != NULL ? current_process()->tracked_exec : "UNKNOWN",
+                    pipe, *(uint8_t*)buffer);
             pipe->tail = (pipe->tail + 1) % pipe->buflen;
             read += 1;
             break;
@@ -117,6 +121,10 @@ pipe_fs_file_write(
     while(written <= 0) {
         if(((pipe->head+1)%pipe->buflen) != pipe->tail) {
             // The buffer still has room
+            dprintk("PID(%ld, EXEC(%s)) PIPE(%p) Writing: %c\n",
+                    current_process()->id,
+                    current_process()->tracked_exec != NULL ? current_process()->tracked_exec : "UNKNOWN",
+                    pipe, *(uint8_t*)buffer);
             ((uint8_t*)pipe->buffer)[pipe->head] = *(uint8_t*)buffer;
             pipe->head = (pipe->head + 1) % pipe->buflen;
             written += 1;

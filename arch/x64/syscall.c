@@ -228,12 +228,13 @@ x64_route_syscall(struct x64_syscall_state *state)
                         (size_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDX] // buflen
                         );
             break;
-        case SYSCALL_ID_FSWAP:
+        case SYSCALL_ID_FMOVE:
             *ret_val = (uint64_t)(int)
-                syscall_fswap(
+                syscall_fmove(
                         process,
                         (fd_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDI], // fd0
-                        (fd_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RSI]  // fd1
+                        (fd_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RSI],  // fd1
+                        (unsigned long)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDX] // flags
                         );
             break;
         case SYSCALL_ID_MKFILE:

@@ -13,4 +13,9 @@ typedef unsigned long fd_t;
 // Opening the file should clear the file
 #define FILE_MODE_OPEN_TRUNC   (1ULL<<1)
 
+// Swap dst and src
+#define FMOVE_SWAP (0)
+// Replace dst with a copy of src
+#define FMOVE_DUP  (1)
+
 #endif

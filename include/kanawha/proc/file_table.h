@@ -100,4 +100,10 @@ file_table_swap(
         fd_t f0,
         fd_t f1);
 
+int
+file_table_dup_into(
+        struct file_table *table,
+        fd_t closed_dst,
+        fd_t open_src);
+
 #endif

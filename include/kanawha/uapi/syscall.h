@@ -122,10 +122,11 @@ ARG(fd_t, dir)\
 ARG(char __user *, namebuf)\
 ARG(size_t, buflen)
 
-#define SYSCALL_SIG_FSWAP(RET,ARG)\
+#define SYSCALL_SIG_FMOVE(RET,ARG)\
 RET(int)\
-ARG(fd_t, f0)\
-ARG(fd_t, f1)
+ARG(fd_t, dst)\
+ARG(fd_t, src)\
+ARG(unsigned long, flags)
 
 #define SYSCALL_SIG_MKFILE(RET,ARG)\
 RET(int)\
@@ -203,7 +204,7 @@ X(dirbegin,  17, DIRBEGIN,   SYSCALL_SIG_DIRBEGIN)\
 X(dirnext,   18, DIRNEXT,    SYSCALL_SIG_DIRNEXT)\
 X(dirattr,   19, DIRATTR,    SYSCALL_SIG_DIRATTR)\
 X(dirname,   20, DIRNAME,    SYSCALL_SIG_DIRNAME)\
-X(fswap,     21, FSWAP,      SYSCALL_SIG_FSWAP)\
+X(fmove,     21, FMOVE,      SYSCALL_SIG_FMOVE)\
 X(mkfile,    22, MKFILE,     SYSCALL_SIG_MKFILE)\
 X(mkdir,     24, MKDIR,      SYSCALL_SIG_MKDIR)\
 X(link,      25, LINK,       SYSCALL_SIG_LINK)\
@@ -239,7 +240,7 @@ SYSCALL_XLIST(DECLARE_SYSCALL_ID_CONSTANTS)
 #undef SYSCALL_SIG_DIRNEXT
 #undef SYSCALL_SIG_DIRATTR
 #undef SYSCALL_SIG_DIRNAME
-#undef SYSCALL_SIG_FSWAP
+#undef SYSCALL_SIG_FMOVE
 #undef SYSCALL_SIG_MKFILE
 #undef SYSCALL_SIG_MKDIR
 #undef SYSCALL_SIG_LINK

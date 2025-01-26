@@ -10,6 +10,26 @@
 #include <kanawha/fs/path.h>
 #include <kanawha/fs/node.h>
 
+static void
+file_table_dump_lockless(
+        struct file_table *table)
+{
+    printk("File Table: %p, attachments=%ld\n", table, (sl_t)ilist_count(&table->process_list));
+
+    struct ptree_node *node = ptree_get_first(&table->descriptor_tree);
+    while(node != NULL) {
+        struct file *file = container_of(node, struct file, table_node);
+        printk("\tDescriptor(%ld) refs=%ld, path=%p, %s\n",
+            file->table_node.key,
+            (sl_t)file->refs,
+            file->path,
+            file->path->name != NULL ? file->path->name : "(NULL)"
+            );
+        node = ptree_get_next(node);
+    }
+
+}
+
 int
 file_table_create(
         struct process *process)
@@ -52,6 +72,9 @@ file_table_clone(
 
     spin_lock(&parent->lock);
 
+    dprintk("file_table_clone: Parent Before\n");
+    //file_table_dump_lockless(parent);
+
     child->num_open_files = parent->num_open_files;
     spinlock_init(&child->lock);
     ptree_init(&child->descriptor_tree);
@@ -88,6 +111,12 @@ file_table_clone(
 
         node = ptree_get_next(node);
     }
+
+    dprintk("file_table_clone: Parent After\n");
+    //file_table_dump_lockless(parent);
+
+    dprintk("file_table_clone: Child After\n");
+    //file_table_dump_lockless(child);
 
     spin_unlock(&parent->lock);
 
@@ -381,6 +410,9 @@ file_table_swap(
 
     spin_lock(&table->lock);
 
+    dprintk("file_table_swap (%ld <-> %ld): Before\n", fd0, fd1);
+    file_table_dump_lockless(table);
+
     struct ptree_node *rem;
 
     struct ptree_node *p0 =
@@ -413,8 +445,69 @@ file_table_swap(
         }
     }
 
+    dprintk("file_table_swap (%ld <-> %ld): After\n", fd0, fd1);
+    file_table_dump_lockless(table);
+
     res = 0;
 
+exit:
+    spin_unlock(&table->lock);
+    return res;
+}
+
+int
+file_table_dup_into(
+        struct file_table *table,
+        fd_t closed_dst,
+        fd_t open_src)
+{
+    int res;
+
+    spin_lock(&table->lock);
+
+    struct ptree_node *open_node = ptree_get(&table->descriptor_tree, open_src);
+    if(open_node == NULL) {
+        res = -ENXIO;
+        goto exit;
+    }
+    struct file *src_file = container_of(open_node, struct file, table_node);
+
+    if(ptree_get(&table->descriptor_tree, closed_dst) != NULL) {
+        res = -EEXIST;
+        goto exit;
+    }
+
+    struct file *dst_file = kmalloc(sizeof(struct file));
+    if(dst_file == NULL) {
+        res = -ENOMEM;
+        goto exit;
+    }
+    memset(dst_file, 0, sizeof(struct file));
+
+    dst_file->seek_offset = src_file->seek_offset;
+    dst_file->dir_offset = src_file->dir_offset;
+    dst_file->mode_flags = src_file->mode_flags;
+    dst_file->access_flags = src_file->access_flags;
+    dst_file->status_flags = src_file->status_flags;
+
+    res = fs_path_get(src_file->path);
+    if(res) {
+        kfree(dst_file);
+        goto exit;
+    }
+    dst_file->path = src_file->path;
+    dst_file->refs = 1;
+
+    res = ptree_insert(&table->descriptor_tree, &dst_file->table_node, closed_dst);
+    if(res) {
+        fs_path_put(dst_file->path);
+        kfree(dst_file);
+        goto exit;
+    }
+
+    table->num_open_files++;
+
+    res = 0;
 exit:
     spin_unlock(&table->lock);
     return res;

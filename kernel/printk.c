@@ -405,6 +405,7 @@ int vprintk_handle_escaped(struct vprintk_state *state) {
 
     // scratch variables
     void *ptr;
+    char character;
 
     while(*(state->fmt_iter) && state->escaped) {
         char c = *(state->fmt_iter);
@@ -414,6 +415,15 @@ int vprintk_handle_escaped(struct vprintk_state *state) {
 
             case '%':
                 res = vprintk_putc(state, c);
+                if(res) {
+                    return res;
+                }
+                state->escaped = 0;
+                return 0;
+
+            case 'c':
+                character = va_arg(*state->args_ptr, int);
+                res = vprintk_putc(state, character);
                 if(res) {
                     return res;
                 }

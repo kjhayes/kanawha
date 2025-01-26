@@ -15,7 +15,7 @@ obj-y += \
 	getpid.o \
 	mount.o \
 	dir.o \
-	fswap.o \
+	fmove.o \
 	mkfile.o \
 	mkdir.o \
 	pipe.o \
