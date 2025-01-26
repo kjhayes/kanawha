@@ -8,7 +8,7 @@
 #define KANAWHA_SYSCALL_ID_READ      3
 #define KANAWHA_SYSCALL_ID_WRITE     4
 #define KANAWHA_SYSCALL_ID_SEEK      5
-#define KANAWHA_SYSCALL_ID_ATTR      6
+#define KANAWHA_SYSCALL_ID_FLUSH     6
 #define KANAWHA_SYSCALL_ID_MMAP      7
 #define KANAWHA_SYSCALL_ID_MUNMAP    8
 #define KANAWHA_SYSCALL_ID_EXEC      9
@@ -23,7 +23,7 @@
 #define KANAWHA_SYSCALL_ID_DIRNEXT   18
 #define KANAWHA_SYSCALL_ID_DIRATTR   19
 #define KANAWHA_SYSCALL_ID_DIRNAME   20
-#define KANAWHA_SYSCALL_ID_FSWAP     21
+#define KANAWHA_SYSCALL_ID_FMOVE     21
 #define KANAWHA_SYSCALL_ID_MKFILE    22
 #define KANAWHA_SYSCALL_ID_MKDIR     24
 #define KANAWHA_SYSCALL_ID_LINK      25
@@ -92,13 +92,12 @@ kanawha_sys_seek:
     syscall
     retq
 
-.global kanawha_sys_attr
-.type kanawha_sys_attr,@function
-kanawha_sys_attr:
-    movq $KANAWHA_SYSCALL_ID_ATTR, %rax
+.global kanawha_sys_flush
+.type kanawha_sys_flush,@function
+kanawha_sys_flush:
+    movq $KANAWHA_SYSCALL_ID_FLUSH, %rax
     // rdi -> fd_t file
-    // rsi -> int attr 
-    // rdx -> size_t __user * value 
+    // rsi -> unsigned long flags
     syscall
     retq
 
@@ -241,12 +240,13 @@ kanawha_sys_dirname:
     syscall
     retq
 
-.global kanawha_sys_fswap
-.type kanawha_sys_fswap,@function
-kanawha_sys_fswap:
-    movq $KANAWHA_SYSCALL_ID_FSWAP, %rax
+.global kanawha_sys_fmove
+.type kanawha_sys_fmove,@function
+kanawha_sys_fmove:
+    movq $KANAWHA_SYSCALL_ID_FMOVE, %rax
     // rdi -> fd_t f0
     // rsi -> fd_t f1
+    // rdx -> unsigned long flags
     syscall
     retq
 

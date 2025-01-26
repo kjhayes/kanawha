@@ -42,10 +42,9 @@ kanawha_sys_seek(
         int whence);
 
 int
-kanawha_sys_attr(
+kanawha_sys_flush(
         fd_t file,
-        int attr,
-        size_t *value);
+        unsigned long flags);
 
 int
 kanawha_sys_mmap(
@@ -120,9 +119,10 @@ kanawha_sys_dirname(
         size_t buflen);
 
 int
-kanawha_sys_fswap(
+kanawha_sys_fmove(
         fd_t f0,
-        fd_t f1);
+        fd_t f1,
+        unsigned long flags);
 
 int
 kanawha_sys_mkfile(
