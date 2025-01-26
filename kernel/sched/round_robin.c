@@ -117,6 +117,7 @@ rr_sched_force_resched(struct scheduler *sched)
         }
 
         if(next == running) {
+            *current_ptr = NULL; // we are not running any rr_thread
             spin_unlock_irq_restore(&rr_sched->list_lock, irq_flags);
             return NULL;
         }
@@ -200,7 +201,7 @@ rr_sched_remove_thread(
             ilist_remove(&rr_sched->thread_list, &thread->list_node);
             rr_sched->num_threads--;
             struct rr_thread **current_ptr = (struct rr_thread**)percpu_ptr(rr_sched->current_rr_thread);
-            if((*current_ptr)->state == state) {
+            if(*current_ptr && (*current_ptr)->state == state) {
                 *current_ptr = NULL;
             }
             spin_unlock_irq_restore(&rr_sched->list_lock, irq_flags);
