@@ -11,6 +11,9 @@
 static DECLARE_SPINLOCK(sched_type_tree_lock);
 static DECLARE_STREE(sched_type_tree);
 
+static DECLARE_SPINLOCK(sched_instance_list_lock);
+static DECLARE_ILIST(sched_instance_list);
+
 DECLARE_STATIC_PERCPU_VAR(struct scheduler *, current_scheduler);
 
 int
@@ -38,7 +41,7 @@ register_scheduler_type(
 }
 
 struct scheduler *
-create_scheduler(const char *type_name)
+create_scheduler(const char *type_name, const char *sched_name)
 {
     struct scheduler_type *type;
     spin_lock(&sched_type_tree_lock);
@@ -58,7 +61,15 @@ create_scheduler(const char *type_name)
 
     sched->num_cpus = 0;
     sched->type = type;
+    sched->name = kstrdup(sched_name);
+    if(sched->name == NULL) {
+        scheduler_type_free_instance(type, sched);
+    }
     spinlock_init(&sched->lock);
+
+    spin_lock(&sched_instance_list_lock);
+    ilist_push_tail(&sched_instance_list, &sched->instance_list_node);
+    spin_unlock(&sched_instance_list_lock);
 
     return sched;
 }
@@ -105,7 +116,7 @@ init_cpu_scheds(void) {
 
     // If we have a default scheduler, create an instance, and assign it to every CPU
     if(strlen(CONFIG_DEFAULT_SCHEDULER) != 0) {
-        struct scheduler *def_sched = create_scheduler(CONFIG_DEFAULT_SCHEDULER);
+        struct scheduler *def_sched = create_scheduler(CONFIG_DEFAULT_SCHEDULER, "default");
         if(def_sched == NULL) {
             eprintk("Failed to create default scheduler of type \"%s\"\n",
                     CONFIG_DEFAULT_SCHEDULER);
@@ -143,5 +154,33 @@ force_resched(void)
         return NULL;
     }
     return scheduler_force_resched(sched);
+}
+
+// Default Implementations
+int sched_debug_dump_no_info(
+        struct scheduler *sched,
+        printk_f *printer)
+{
+    // Just don't print anything
+    return 0;
+}
+
+// Debug Printing
+
+void
+dump_schedulers(printk_f *printer) {
+    spin_lock(&sched_instance_list_lock);
+    ilist_node_t *node;
+    (*printer)("--- Scheduler Instances ---\n");
+    ilist_for_each(node, &sched_instance_list) {
+        struct scheduler *sched = container_of(node, struct scheduler, instance_list_node);
+        (*printer)("\tSCHED(%s) type=\"%s\" num_cpus=%ld\n",
+                sched->name == NULL ? "UNNAMED" : sched->name,
+                sched->type->name,
+                (sl_t)sched->num_cpus
+                );
+        scheduler_debug_dump(sched, printer);
+    }
+    spin_unlock(&sched_instance_list_lock);
 }
 

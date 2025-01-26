@@ -157,4 +157,8 @@ int
 process_clear_forced_ip(
         struct process *process);
 
+// Debugging "Dump" Processes
+void
+dump_processes(printk_f *printer);
+
 #endif

@@ -15,7 +15,10 @@ menu "Randomness Sources"
 source "kernel/drivers/rand/Kconfig"
 endmenu
 
+menu "PCI Options"
 source "kernel/drivers/pci/Kconfig"
+endmenu
+
 source "kernel/drivers/ps2/Kconfig"
 source "kernel/drivers/qemu/Kconfig"
 source "kernel/drivers/virtio/Kconfig"

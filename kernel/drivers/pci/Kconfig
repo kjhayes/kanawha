@@ -5,6 +5,12 @@ config PCI
     help
       Base PCI Bus Support
 
+config PCI_ASSUME_CONTIGUOUS_DEVICES
+    bool "Assume Contiguous Devices"
+    default n
+    help
+      Assume PCI devices are contiguous within a bus, this is not required, but may speed up boot times by avoiding enumerating every possible bus:device:func.
+
 menu "PCI Configuration Space Access Mechanisms"
 depends on PCI
 

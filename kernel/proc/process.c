@@ -23,6 +23,40 @@ static DECLARE_PTREE(process_pid_tree);
 
 static struct process *init_process = NULL;
 
+void
+dump_processes(printk_f *printer) {
+    spin_lock(&process_pid_lock);
+    struct ptree_node *node;
+    node = ptree_get_first(&process_pid_tree);
+    (*printer)("--- Process Table ---\n");
+    while(node) {
+        struct process *proc = container_of(node, struct process, pid_node);
+        (*printer)(
+                "\tPROCESS(%ld) (sched=%s) %s%s\n",
+                node->key,
+
+                proc->scheduler == NULL ? "NONE" :
+                proc->scheduler->name == NULL ? "UNNAMED" :
+                proc->scheduler->name,
+
+                proc->status == PROCESS_STATUS_SUSPEND ? "[SUSPEND]" :
+                proc->status == PROCESS_STATUS_SCHEDULED ? "[SCHEDULED]" :
+                proc->status == PROCESS_STATUS_ZOMBIE ? "[ZOMBIE]" : "[INVALID-PROCESS-STATUS]",
+
+                proc->thread.status == THREAD_STATUS_READY ? "[READY]" :
+                proc->thread.status == THREAD_STATUS_TIRED ? "[TIRED]" :
+                proc->thread.status == THREAD_STATUS_RUNNING ? "[RUNNING]" :
+                proc->thread.status == THREAD_STATUS_SLEEPING ? "[SLEEPING]" :
+                proc->thread.status == THREAD_STATUS_ABANDONED ? "[ABANDONED]" :
+                proc->thread.status == THREAD_STATUS_PREPARING ? "[PREPARING]" :
+                proc->thread.status == THREAD_STATUS_SCHEDULED ? "[SCHEDULED]" : "[INVALID-THREAD-STATUS]"
+
+                );
+        node = ptree_get_next(node);
+    }
+    spin_unlock(&process_pid_lock);
+}
+
 int
 process_force_ip(
         struct process *process,

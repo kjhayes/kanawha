@@ -29,7 +29,12 @@ pci_probe_bus(
 
     for(size_t dev_index = 0; dev_index < PCI_MAX_DEVICES_PER_BUS; dev_index++) {
         res = pci_probe_device(bus, dev_index);
-        if(res) {
+        if(res == -ENXIO) {
+#ifdef CONFIG_PCI_ASSUME_CONTIGUOUS_DEVICES
+            break;
+#endif
+        }
+        else if(res) {
             return res;
         }
     }

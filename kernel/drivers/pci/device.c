@@ -15,7 +15,7 @@ pci_probe_device(
     pci_bus_readw(bus, dev_index, 0, PCI_CFG_VENDOR_ID, &probe_id);
     if(probe_id == 0xFFFF) {
         // Device does not exist
-        return 0;
+        return -ENXIO;
     }
 
     struct pci_device *device;

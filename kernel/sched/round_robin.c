@@ -212,6 +212,26 @@ rr_sched_remove_thread(
     return -ENXIO;
 }
 
+static int
+rr_sched_debug_dump(
+        struct scheduler *scheduler,
+        printk_f *printer)
+{
+    struct rr_scheduler *sched =
+        container_of(scheduler, struct rr_scheduler, sched);
+    spin_lock(&sched->list_lock);
+    ilist_node_t *node;
+    ilist_for_each(node, &sched->thread_list) {
+        struct rr_thread *thread =
+            container_of(node, struct rr_thread, list_node);
+        (*printer)("RR-THREAD(%ld)\n",
+                (sl_t)thread->state->id
+                );
+    }
+    spin_unlock(&sched->list_lock);
+    return 0;
+}
+
 static struct scheduler_type
 rr_sched_type = {
     .name = "rr_sched",
@@ -222,6 +242,8 @@ rr_sched_type = {
     .instance_ops.force_resched = rr_sched_force_resched,
     .instance_ops.remove_thread = rr_sched_remove_thread,
     .instance_ops.add_thread = rr_sched_add_thread,
+
+    .instance_ops.debug_dump = rr_sched_debug_dump,
 };
 
 static int
