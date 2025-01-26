@@ -81,6 +81,15 @@ config PERCPU_DEBUG_ASSERTIONS
       Enable the DEBUG_ASSERT_PERCPU_VALID assertion, which includes a percpu checksum variable
       used to make sure that the percpu variable subsystem is working correctly.
 
+menu "Kernel Address Checking"
+config DEBUG_HIGHER_HALF_KERNEL_ADDRESSES
+    bool "Higher Half Addresses"
+    depends on DEBUGGING
+    default y
+    help
+      Check that pointers are in the higher half of memory during KERNEL_ADDR checks
+endmenu
+
 config DEBUG_BUDDY_ALLOC
     bool "Debug Buddy Allocators"
     depends on DEBUGGING

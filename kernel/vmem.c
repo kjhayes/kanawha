@@ -608,6 +608,10 @@ vmem_map_unhandled_user_page_fault(
         return res;
     }
 
+#ifdef CONFIG_DEBUGGING
+    panic("Panicking on process termination because signals are not implemented yet!\n");
+#endif
+
     thread_abandon(force_resched());
     return 0;
 }

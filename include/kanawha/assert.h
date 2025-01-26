@@ -30,13 +30,23 @@
 #define DEBUG_ASSERT_MSG(...)
 #endif
 
+
 // The architecture can define a more strict or lax version
 // of this check if needed
 //
 // At minimum, this needs to always return 0 if ptr==NULL
+
+#ifdef CONFIG_DEBUG_HIGHER_HALF_KERNEL_ADDRESSES
+#define KERNEL_ADDR_HIGHER_HALF_CHECK(ptr) (((uintptr_t)ptr & (1ULL<<((sizeof(void*)*8)-1))) != 0)
+#else
+#define KERNEL_ADDR_HIGHER_HALF_CHECK(ptr) 1
+#endif
+
 #ifndef KERNEL_ADDR 
-#define KERNEL_ADDR(ptr) \
-    (((uintptr_t)ptr & (1ULL<<((sizeof(void*)*8)-1))) != 0)
+#define KERNEL_ADDR(ptr) (\
+           ((uintptr_t)ptr != 0) && \
+           KERNEL_ADDR_HIGHER_HALF_CHECK(ptr) && \
+           1)
 #endif
 
 #endif
