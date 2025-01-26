@@ -5,6 +5,12 @@
 #define DEBUG
 #endif
 
+#ifdef CONFIG_LOG_INIT_STAGES
+#define LOG(...) printk(__VA_ARGS__)
+#else
+#define LOG(...)
+#endif
+
 #include <kanawha/printk.h>
 
 #include <kanawha/stdint.h>
@@ -36,30 +42,30 @@ handle_init_stage_generic(
           init_f *func = event->func;
           if(func != NULL) {
               if(event->desc_name != NULL) {
-                  printk("%s...\n", event->desc_name);
+                  LOG("%s...\n", event->desc_name);
               }
               int res = (*func)();
               switch(res) {
                   case -EDEFER:
                     num_deferred++;
                     if(event->desc_name) {
-                        printk("%s [DEFERRED]\n", event->desc_name);
+                        LOG("%s [DEFERRED]\n", event->desc_name);
                     }
                     break;
                   case 0:
                     num_complete++;
                     event->func = NULL;
                     if(event->desc_name) {
-                        printk("%s [COMPLETE]\n", event->desc_name);
+                        LOG("%s [COMPLETE]\n", event->desc_name);
                     }
                     break;
                   default:
                     num_failed++;
                     event->func = NULL;
                     if(event->desc_name) {
-                        printk("%s [FAILED]\n", event->desc_name);
+                        LOG("%s [FAILED]\n", event->desc_name);
                     } else {
-                        printk("init %p [FAILED]\n", event->func);
+                        LOG("init %p [FAILED]\n", event->func);
                     }
                     break;
               }

@@ -50,6 +50,12 @@ config PRINTK_MAX_HANDLERS
     default 8
     help
       Maximum number of printk handlers which can be registered
+
+config LOG_INIT_STAGES
+    bool "Log all init handlers using printk"
+    default n
+    help
+      Print out a message with the start and end of each init function.
 endmenu
 
 menu "Debug Options"
