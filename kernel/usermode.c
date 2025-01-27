@@ -4,7 +4,7 @@
 #include <kanawha/proc/process.h>
 
 __attribute__((noreturn))
-void enter_usermode(void __user *starting_address, void *arg)
+void enter_usermode(void *arg)
 {
     struct process *process = current_process();
 
@@ -20,15 +20,6 @@ void enter_usermode(void __user *starting_address, void *arg)
      * when an interrupt/exception occurs
      */
 
-    void __user *ip = starting_address;
-
-    spin_lock(&process->signal_lock);
-    if(process->forcing_ip) {
-        ip = (void __user *)process->forced_ip;
-        process->forcing_ip = 0;
-    }
-    spin_unlock(&process->signal_lock);
-
-    arch_enter_usermode(ip, arg);
+    arch_enter_usermode(process->user_ip, arg);
 }
 

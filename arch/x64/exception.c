@@ -14,6 +14,7 @@
 #include <kanawha/stddef.h>
 #include <kanawha/assert.h>
 #include <kanawha/cpu.h>
+#include <kanawha/proc/process.h>
 
 struct irq_domain *x64_vector_irq_domain = NULL;
 
@@ -165,6 +166,13 @@ void x64_handle_exception(struct x64_excp_state *state)
             state->rip);
 
     struct thread_state *cur_thread = current_thread();
+
+    if(ring_from > 0) {
+        struct process *process = current_process();
+        if(process != NULL) {
+            process->user_ip = (void __user *)state->rip;
+        }
+    }
 
     DEBUG_ASSERT_MSG(
             cur_thread == NULL ||

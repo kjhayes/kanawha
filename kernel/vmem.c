@@ -592,12 +592,14 @@ vmem_map_unhandled_user_page_fault(
     // signalling implemented
 
 #ifdef CONFIG_DEBUG_TRACK_PROCESS_EXEC
-    eprintk("Terminating PID(%ld) [EXEC(%s)] for Invalid Memory Access!\n",
+    eprintk("Terminating PID(%ld) [EXEC(%s)] for Invalid Memory Access (user_ip=%p)!\n",
             (sl_t)process->id,
-            process->tracked_exec == NULL ? "???" : process->tracked_exec);
+            process->tracked_exec == NULL ? "???" : process->tracked_exec,
+            process->user_ip);
 #else
-    eprintk("Terminating PID(%ld) for Invalid Memory Access!\n",
-            (sl_t)process->id);
+    eprintk("Terminating PID(%ld) for Invalid Memory Access (user_ip=%p)!\n",
+            (sl_t)process->id,
+            process->user_ip);
 #endif
 
     res = process_terminate(process, 1);

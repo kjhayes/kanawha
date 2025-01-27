@@ -63,23 +63,7 @@ process_force_ip(
         void __user *ip)
 {
     spin_lock(&process->signal_lock);
-    if(process->forcing_ip) {
-        spin_unlock(&process->signal_lock);
-        return -EALREADY;
-    }
-    process->forcing_ip = 1;
-    process->forced_ip = ip;
-    spin_unlock(&process->signal_lock);
-    return 0;
-}
-
-int
-process_clear_forced_ip(
-        struct process *process)
-{
-    spin_lock(&process->signal_lock);
-    process->forcing_ip = 0;
-    process->forced_ip = NULL;
+    process->user_ip = ip;
     spin_unlock(&process->signal_lock);
     return 0;
 }
@@ -199,7 +183,7 @@ init_process_kernel_entry(void *in)
     dprintk("init_process_kernel_entry(%p)\n",
             NULL);
 
-    enter_usermode(NULL,NULL);
+    enter_usermode(NULL);
 }
 
 struct spawned_process_state {
@@ -225,7 +209,9 @@ spawned_process_kernel_entry(void *in)
     dprintk("spawned_process_kernel_entry(%p,%p)\n",
             entry, arg);
 
-    enter_usermode(entry,arg);
+    process->user_ip = entry;
+
+    enter_usermode(arg);
 }
 
 static struct process *

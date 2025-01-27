@@ -218,7 +218,6 @@ process_exec_elf64(
         }
     }
 
-    process_clear_forced_ip(process);
     res = process_force_ip(process, (void __user*)elf_hdr.e_entry);
     if(res) {
         return res;

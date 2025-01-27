@@ -42,8 +42,7 @@ struct process
     ilist_t children;
 
     spinlock_t signal_lock;
-    int forcing_ip;
-    void __user *forced_ip;
+    void __user *user_ip;
 
     // Virtual Memory
     struct mmap *mmap;

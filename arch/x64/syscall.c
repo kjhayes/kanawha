@@ -43,6 +43,7 @@ x64_route_syscall(struct x64_syscall_state *state)
 
     syscall_id_t id = state->caller_regs[PUSHED_CALLER_REGS_INDEX_RAX];
     void __user *user_return = (void __user *)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RCX];
+
     uint64_t user_rflags = state->caller_regs[PUSHED_CALLER_REGS_INDEX_R11];
 
     uint64_t *ret_val = &state->caller_regs[PUSHED_CALLER_REGS_INDEX_RAX];
@@ -52,6 +53,8 @@ x64_route_syscall(struct x64_syscall_state *state)
 
     struct process *process = current_process();
     DEBUG_ASSERT(process);
+
+    process->user_ip = user_return;
 
     strace_begin_syscall(process, id);
 
@@ -338,11 +341,8 @@ x64_route_syscall(struct x64_syscall_state *state)
 
     disable_irqs();
 
-    if(process->forcing_ip) {
-        state->caller_regs[PUSHED_CALLER_REGS_INDEX_RCX] =
-            (uint64_t)process->forced_ip;
-        process->forcing_ip = 0;
-    }
+    state->caller_regs[PUSHED_CALLER_REGS_INDEX_RCX] =
+        (uint64_t)process->user_ip;
 
     // We want to reset the kernel stack in-case we were preempted
     // when interrupts were enabled
