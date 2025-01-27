@@ -10,7 +10,8 @@ ssize_t
 fs_file_cannot_read(
         struct file *file,
         void *buf,
-        ssize_t buflen)
+        ssize_t buflen,
+        unsigned long flags)
 {
     return -EINVAL;
 }
@@ -18,7 +19,8 @@ ssize_t
 fs_file_cannot_write(
         struct file *file,
         void *buf,
-        ssize_t buflen)
+        ssize_t buflen,
+        unsigned long flags)
 {
     return -EINVAL;
 }
@@ -75,7 +77,8 @@ ssize_t
 fs_file_eof_read(
         struct file *file,
         void *buf,
-        ssize_t buflen)
+        ssize_t buflen,
+        unsigned long flags)
 {
     return 0;
 }
@@ -83,7 +86,8 @@ ssize_t
 fs_file_eof_write(
         struct file *file,
         void *buf,
-        ssize_t buflen)
+        ssize_t buflen,
+        unsigned long flags)
 {
     return 0;
 }
@@ -115,7 +119,8 @@ ssize_t
 fs_file_paged_read(
         struct file *file,
         void *buf,
-        ssize_t buflen)
+        ssize_t buflen,
+        unsigned long flags)
 {
     int res;
     struct fs_node *fs_node = file->path->fs_node;
@@ -179,7 +184,8 @@ ssize_t
 fs_file_paged_write(
         struct file *file,
         void *buf,
-        ssize_t buflen)
+        ssize_t buflen,
+        unsigned long flags)
 {
     int res;
     struct fs_node *fs_node = file->path->fs_node;

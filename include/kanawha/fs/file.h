@@ -5,15 +5,21 @@
 #include <kanawha/proc/file_table.h>
 #include <kanawha/fs/node.h>
 
+#define FS_FILE_READ_NON_BLOCKING (1ULL<<0)
+
 #define FS_FILE_READ_SIG(RET,ARG)\
 RET(ssize_t)\
 ARG(void *, buf)\
-ARG(ssize_t, buflen)
+ARG(ssize_t, buflen)\
+ARG(unsigned long, flags)
+
+#define FS_FILE_WRITE_NON_BLOCKING (1ULL<<0)
 
 #define FS_FILE_WRITE_SIG(RET,ARG)\
 RET(ssize_t)\
 ARG(void *, buf)\
-ARG(ssize_t, buflen)
+ARG(ssize_t, buflen)\
+ARG(unsigned long, flags)
 
 #define FS_FILE_SEEK_CUR 0
 #define FS_FILE_SEEK_SET 1
@@ -85,12 +91,14 @@ ssize_t
 fs_file_cannot_read(
         struct file *file,
         void *buf,
-        ssize_t buflen);
+        ssize_t buflen,
+        unsigned long flags);
 ssize_t
 fs_file_cannot_write(
         struct file *file,
         void *buf,
-        ssize_t buflen);
+        ssize_t buflen,
+        unsigned long flags);
 ssize_t
 fs_file_cannot_seek(
         struct file *file,
@@ -126,12 +134,14 @@ ssize_t
 fs_file_eof_read(
         struct file *file,
         void *buf,
-        ssize_t buflen);
+        ssize_t buflen,
+        unsigned long flags);
 ssize_t
 fs_file_eof_write(
         struct file *file,
         void *buf,
-        ssize_t buflen);
+        ssize_t buflen,
+        unsigned long flags);
 
 // Keeps the seek head pinned to zero
 ssize_t
@@ -154,12 +164,14 @@ ssize_t
 fs_file_paged_read(
         struct file *file,
         void *buf,
-        ssize_t buflen);
+        ssize_t buflen,
+        unsigned long flags);
 ssize_t
 fs_file_paged_write(
         struct file *file,
         void *buf,
-        ssize_t buflen);
+        ssize_t buflen,
+        unsigned long flags);
 
 // Seek using fs_node_getattr and FS_NODE_ATTR_DATA_SIZE
 ssize_t

@@ -186,10 +186,16 @@ static ssize_t
 klog_fs_file_read(
         struct file *file,
         void *buffer,
-        ssize_t amount)
+        ssize_t amount,
+        unsigned long flags)
 {
     struct fs_node *fs_node =
         file->path->fs_node;
+
+    if(flags & FS_FILE_READ_NON_BLOCKING) {
+        // TODO: Handle non-blocking reads
+        return 0;
+    }
 
     size_t offset = file->seek_offset;
 

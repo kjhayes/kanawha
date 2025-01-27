@@ -63,10 +63,16 @@ syscall_write(
         goto exit;
     }
 
+    unsigned long flags = 0;
+    if(desc->mode_flags & FILE_MODE_NON_BLOCK) {
+        flags |= FS_FILE_WRITE_NON_BLOCKING;
+    }
+
     amount_written = direct_file_write(
             desc,
             buffer,
-            amount_to_write);
+            amount_to_write,
+            flags);
     if(amount_written < 0) {
         eprintk("syscall_write: fs_node_write returned %s\n",
                 errnostr(res));

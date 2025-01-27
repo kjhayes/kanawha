@@ -91,12 +91,17 @@ static ssize_t
 char_dev_fs_node_read(
         struct file *file,
         void *buffer,
-        ssize_t amount)
+        ssize_t amount,
+        unsigned long flags)
 {
     struct fs_node *fs_node =
         file->path->fs_node;
     struct char_dev *dev =
         container_of(fs_node, struct char_dev, flat_fs_node.fs_node);
+
+    if(flags & FS_FILE_READ_NON_BLOCKING) {
+        return 0;
+    }
 
     amount = char_dev_read(dev, buffer, amount);
 
@@ -107,12 +112,17 @@ static ssize_t
 char_dev_fs_node_write(
         struct file *file,
         void *buffer,
-        ssize_t amount)
+        ssize_t amount,
+        unsigned long flags)
 {
     struct fs_node *fs_node =
         file->path->fs_node;
     struct char_dev *dev =
         container_of(fs_node, struct char_dev, flat_fs_node.fs_node);
+
+    if(flags & FS_FILE_WRITE_NON_BLOCKING) {
+        return 0;
+    }
 
     amount = char_dev_write(dev, buffer, amount);
 

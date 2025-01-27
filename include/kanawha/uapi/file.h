@@ -12,6 +12,8 @@ typedef unsigned long fd_t;
 #define FILE_MODE_WRITE_EXTEND (1ULL<<0)
 // Opening the file should clear the file
 #define FILE_MODE_OPEN_TRUNC   (1ULL<<1)
+// Non-Blocking File
+#define FILE_MODE_NON_BLOCK    (1ULL<<2)
 
 // Swap dst and src
 #define FMOVE_SWAP (0)

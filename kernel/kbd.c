@@ -255,7 +255,8 @@ static ssize_t
 kbd_fs_file_read(
         struct file *file,
         void *buffer,
-        ssize_t amount)
+        ssize_t amount,
+        unsigned long flags)
 {
     struct fs_node *fs_node =
         file->path->fs_node;
@@ -277,6 +278,10 @@ kbd_fs_file_read(
         && num_events_written <= 0
         && kbd->read_queue)
         {
+            if(flags & FS_FILE_READ_NON_BLOCKING) {
+                // Do not block/wait on the queue for more input
+                break;
+            }
             dprintk("kbd_read: (SLEEPING)\n");
             wait_on(kbd->read_queue);
             continue;

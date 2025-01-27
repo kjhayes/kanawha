@@ -50,10 +50,15 @@ static ssize_t
 pipe_fs_file_read(
         struct file *file,
         void *buffer,
-        ssize_t amount)
+        ssize_t amount,
+        unsigned long flags)
 {
     dprintk("pipefs read: amount=%p\n", amount);
     if(amount == 0) {
+        return 0;
+    }
+
+    if(flags & FS_FILE_READ_NON_BLOCKING) {
         return 0;
     }
 
@@ -99,9 +104,14 @@ static ssize_t
 pipe_fs_file_write(
         struct file *file,
         void *buffer,
-        ssize_t amount)
+        ssize_t amount,
+        unsigned long flags)
 {
     if(amount == 0) {
+        return 0;
+    }
+
+    if(flags & FS_FILE_WRITE_NON_BLOCKING) {
         return 0;
     }
 

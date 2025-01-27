@@ -49,10 +49,16 @@ syscall_read(
     ssize_t amount_to_read = buffer_len > size ? size : buffer_len;
     ssize_t amount_read = amount_to_read;
 
+    unsigned long flags = 0;
+    if(desc->mode_flags & FILE_MODE_NON_BLOCK) {
+        flags |= FS_FILE_READ_NON_BLOCKING;
+    }
+
     amount_read = direct_file_read(
             desc,
             buffer,
-            amount_to_read);
+            amount_to_read,
+            flags);
     if(amount_read < 0) {
         res = amount_read;
         goto exit;
