@@ -2,7 +2,7 @@
 #define __KANAWHA__DISPLAY_DEVICE_H__
 
 #include <kanawha/ops.h>
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 #include <kanawha/stree.h>
 
 struct disp_dev;

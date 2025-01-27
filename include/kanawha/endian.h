@@ -1,7 +1,7 @@
 #ifndef __KANAWHA__ENDIAN_H__
 #define __KANAWHA__ENDIAN_H__
 
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 
 typedef uint16_t le16_t;
 typedef uint16_t be16_t;

@@ -1,7 +1,7 @@
 #ifndef __KANAWHA__KMALLOC_H__
 #define __KANAWHA__KMALLOC_H__
 
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 
 #define KMALLOC_ALIGN_ORDER 4
 

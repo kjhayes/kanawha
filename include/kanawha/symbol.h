@@ -1,7 +1,7 @@
 #ifndef __KANAWHA__SYMBOL_H__
 #define __KANAWHA__SYMBOL_H__
 
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 #include <kanawha/refcount.h>
 #include <kanawha/list.h>
 #include <kanawha/stree.h>

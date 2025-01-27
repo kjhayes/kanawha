@@ -3,7 +3,7 @@
 
 #include <kanawha/excp.h>
 #include <kanawha/usermode.h>
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 #include <kanawha/stddef.h>
 #include <kanawha/ops.h>
 #include <kanawha/proc/file_table.h>

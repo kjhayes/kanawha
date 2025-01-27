@@ -1,7 +1,7 @@
 
 #include <kanawha/vmem.h>
 #include <kanawha/init.h>
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 #include <kanawha/stddef.h>
 #include <kanawha/errno.h>
 #include <kanawha/slab.h>

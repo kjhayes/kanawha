@@ -2,7 +2,7 @@
 #define __KANAWHA__ELF_MODULE_STATE_H__
 
 #include <elf/elf.h>
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 
 struct elf64_module_state
 {

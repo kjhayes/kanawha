@@ -1,7 +1,7 @@
 #ifndef __KANAWHA__LIST_H__
 #define __KANAWHA__LIST_H__
 
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 #include <kanawha/printk.h>
 #include <kanawha/assert.h>
 

@@ -1,7 +1,7 @@
 #ifndef __KANAWHA__FS_CPIO_CPIO_H__
 #define __KANAWHA__FS_CPIO_CPIO_H__
 
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 
 typedef enum {
     CPIO_ASCII,

@@ -1,7 +1,7 @@
 #ifndef __KANAWHA__IDT_H__
 #define __KANAWHA__IDT_H__
 
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 
 /*
  * TODO: Stop using bitfields for this

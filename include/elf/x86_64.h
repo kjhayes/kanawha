@@ -1,7 +1,7 @@
 #ifndef __KANAWHA__ELF_X86_64_H__
 #define __KANAWHA__ELF_X86_64_H__
 
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 
 #define DECLARE_U32_CONSTANTS(NAME, VAL, ...)\
     const static uint32_t NAME = VAL;

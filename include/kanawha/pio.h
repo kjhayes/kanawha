@@ -5,7 +5,7 @@
 #error Included File "kanawha/pio.h" without having CONFIG_PORT_IO set!
 #endif
 
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 
 #ifdef CONFIG_X64
 #include <arch/x64/pio.h>

@@ -1,6 +1,6 @@
 
 #include <kanawha/waitqueue.h>
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 #include <kanawha/stddef.h>
 #include <kanawha/list.h>
 #include <kanawha/spinlock.h>

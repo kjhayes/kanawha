@@ -2,7 +2,7 @@
 #define __KANAWHA__PRINTK_H__
 
 #include <kanawha/common.h>
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 #include <kanawha/time.h>
 #include <kanawha/clk.h>
 

@@ -2,7 +2,7 @@
 #define __KANAWHA__ELF_STRING_H__
 
 #include <elf/elf.h>
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 
 const char *elf_get_class_string(unsigned char cls);
 const char *elf_get_data_string(unsigned char data);

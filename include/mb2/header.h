@@ -1,7 +1,7 @@
 #ifndef __KANAWHA_MB2_HEADER_H__
 #define __KANAWHA_MB2_HEADER_H__
 
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 
 #define MB2_HEADER_MAGIC 0xE85250D6
 

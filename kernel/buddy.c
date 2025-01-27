@@ -4,9 +4,10 @@
 #endif
 #include <kanawha/printk.h>
 
+#include <kanawha/types.h>
 #include <kanawha/string.h>
 #include <kanawha/buddy.h>
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 #include <kanawha/page_alloc.h>
 #include <kanawha/errno.h>
 #include <kanawha/bitmap.h>
@@ -312,12 +313,15 @@ buddy_region_alloc(
     }
 
     // We have a page of the right size!
+    DEBUG_ASSERT(((uintptr_t)page >= (uintptr_t)region->pages_start) &&
+                 ((uintptr_t)page <= (uintptr_t)region->pages_start + region->region_size));
     uintptr_t rel_page_addr = (uintptr_t)page - (uintptr_t)region->pages_start;
     size_t min_page_index = rel_page_addr >> region->min_order;
 
     *out = (void*)page;
 
     // Mark it as allocated
+    DEBUG_ASSERT(min_page_index < (region->region_size>>region->min_order));
     bitmap_clear(region->bitmap, min_page_index);
 
     return 0;

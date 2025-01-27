@@ -1,7 +1,7 @@
 #ifndef __KANAWHA__CHAR_DEV_H__
 #define __KANAWHA__CHAR_DEV_H__
 
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 #include <kanawha/ops.h>
 #include <kanawha/stree.h>
 #include <kanawha/ptree.h>

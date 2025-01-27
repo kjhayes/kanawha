@@ -4,7 +4,7 @@
 #include <kanawha/stddef.h>
 #include <kanawha/scheduler.h>
 #include <kanawha/string.h>
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 #include <kanawha/init.h>
 #include <kanawha/assert.h>
 

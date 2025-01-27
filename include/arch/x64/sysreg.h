@@ -1,7 +1,7 @@
 #ifndef __KANAWHA__X64_SYSREG_H__
 #define __KANAWHA__X64_SYSREG_H__
 
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 
 static inline
 uint32_t read_cr0(void) {

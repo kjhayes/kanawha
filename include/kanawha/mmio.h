@@ -1,7 +1,7 @@
 #ifndef __KANAWHA__MMIO_H__
 #define __KANAWHA__MMIO_H__
 
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 #include <kanawha/pointer.h>
 
 #define __mmio __attribute__((noderef))

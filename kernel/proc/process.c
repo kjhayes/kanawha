@@ -2,7 +2,7 @@
 #include <kanawha/proc/process.h>
 #include <kanawha/irq.h>
 #include <kanawha/thread.h>
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 #include <kanawha/vmem.h>
 #include <kanawha/init.h>
 #include <kanawha/usermode.h>

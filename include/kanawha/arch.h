@@ -2,7 +2,7 @@
 #define __KANAWHA__ARCH_H__
 
 #include <kanawha/errno.h>
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 #include <kanawha/init.h>
 
 /*

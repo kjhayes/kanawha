@@ -1,7 +1,7 @@
 #ifndef __KANAWHA__STRING_H__
 #define __KANAWHA__STRING_H__
 
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 
 void *memset(void *str, int c, size_t n);
 void *memcpy(void *dest, const void *src, size_t n);

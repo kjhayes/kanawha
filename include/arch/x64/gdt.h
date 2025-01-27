@@ -7,7 +7,7 @@
 #ifndef __ASSEMBLER__
 
 #include <kanawha/stddef.h>
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 #include <kanawha/percpu.h>
 
 struct gdt64_segment {

@@ -1,7 +1,7 @@
 #ifndef __KANAWHA__PCI_PCI_H__
 #define __KANAWHA__PCI_PCI_H__
 
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 #include <kanawha/list.h>
 #include <kanawha/ops.h>
 #include <kanawha/ptree.h>

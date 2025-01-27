@@ -1,7 +1,7 @@
 #ifndef __KANAWHA__ELF_TYPES_H__
 #define __KANAWHA__ELF_TYPES_H__
 
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 
 #define DECLARE_UCHAR_CONSTANTS(NAME,VALUE,...)\
     static const unsigned char NAME = VALUE;

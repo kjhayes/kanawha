@@ -2,7 +2,7 @@
 #define __KANAWHA__VIRTIO_DEVICE_H__
 
 #include <kanawha/ops.h>
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 #include <kanawha/list.h>
 
 #define VIRTIO_DEVICE_READ_STATUS_SIG(RET,ARG)\

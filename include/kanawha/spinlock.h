@@ -2,7 +2,7 @@
 #define __KANAWHA__SPINLOCK_H__
 
 #include <kanawha/atomic.h>
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 #include <kanawha/errno.h>
 #include <kanawha/printk.h>
 

@@ -1,7 +1,7 @@
 #ifndef __KANAWHA__DMA_H__
 #define __KANAWHA__DMA_H__
 
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 #include <kanawha/vmem.h>
 
 typedef void __phys * dma_addr_t;

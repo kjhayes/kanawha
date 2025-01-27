@@ -1,6 +1,6 @@
 
 #include <kanawha/stddef.h>
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 #include <kanawha/printk.h>
 #include <arch/x64/lapic.h>
 #include <arch/x64/cpu.h>

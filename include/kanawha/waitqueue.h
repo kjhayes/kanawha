@@ -1,7 +1,7 @@
 #ifndef __KANAWHA__WAITQUEUE_H__
 #define __KANAWHA__WAITQUEUE_H__
 
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 #include <kanawha/list.h>
 #include <kanawha/spinlock.h>
 #include <kanawha/thread.h>

@@ -2,7 +2,7 @@
 #define __KANAWHA__PROCESS_H__
 
 #include <kanawha/thread.h>
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 #include <kanawha/vmem.h>
 #include <kanawha/scheduler.h>
 #include <kanawha/proc/env.h>

@@ -2,7 +2,7 @@
 #define __KANAWHA__FS_TYPE_H__
 
 #include <kanawha/ops.h>
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 #include <kanawha/stree.h>
 #include <kanawha/ptree.h>
 #include <kanawha/spinlock.h>

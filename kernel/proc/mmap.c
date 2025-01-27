@@ -3,7 +3,7 @@
 #include <kanawha/proc/process.h>
 #include <kanawha/proc/file_table.h>
 #include <kanawha/irq.h>
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 #include <kanawha/kmalloc.h>
 #include <kanawha/string.h>
 #include <kanawha/ptree.h>

@@ -1,7 +1,7 @@
 #ifndef __KANAWHA__ACPI_TABLE_H__
 #define __KANAWHA__ACPI_TABLE_H__
 
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 
 struct acpi_rsdp {
     uint8_t signature[8];

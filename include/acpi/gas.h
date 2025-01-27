@@ -1,7 +1,7 @@
 #ifndef __KANAWHA__ACPI_GAS_H__
 #define __KANAWHA__ACPI_GAS_H__
 
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 
 #define DECLARE_U8_CONSTANTS(__NAME, __VAL)\
     const static uint8_t __NAME = __VAL;

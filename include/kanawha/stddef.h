@@ -1,7 +1,7 @@
 #ifndef __KANAWHA__STDDEF_H__
 #define __KANAWHA__STDDEF_H__
 
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 
 #define alignof(x) __alignof__(x)
 #define offsetof(type, member)  __builtin_offsetof (type, member)

@@ -1,7 +1,7 @@
 #ifndef __KANAWHA__BLOCK_DEVICE_H__
 #define __KANAWHA__BLOCK_DEVICE_H__
 
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 #include <kanawha/ops.h>
 #include <kanawha/list.h>
 #include <kanawha/atomic.h>

@@ -1,7 +1,7 @@
 
 #define __PAGE_ALLOCATOR__KEEP_OP_LIST
 #include <kanawha/page_alloc.h>
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 #include <kanawha/stddef.h>
 #include <kanawha/printk.h>
 #include <kanawha/errno.h>
@@ -175,12 +175,16 @@ page_alloc_get_allocator(
         if(alloc->flags == flags) {
             // This allocator is an exact match
             dprintk("page-alloc perfect match %p\n", alloc);
+
+            spin_lock(&alloc->lock);
             res = page_allocator_alloc(alloc, order, addr);
             if(res) {
                 // Failed to allocate for some reason
                 dprintk("Failed to alloc (err=%s)\n", errnostr(res));
+                spin_unlock(&alloc->lock);
                 continue;
             }
+            spin_unlock(&alloc->lock);
 
             //printk("page_alloc -> %p\n", *addr);
             return alloc;
@@ -203,11 +207,14 @@ page_alloc_get_allocator(
                 continue;
             }
 
+            spin_lock(&alloc->lock);
             res = page_allocator_alloc(alloc, order, addr);
             if(res) {
                 // Failed to allocate for some reason
+                spin_unlock(&alloc->lock);
                 continue;
             }
+            spin_unlock(&alloc->lock);
 
             dprintk("page_alloc -> %p\n", *addr);
             return alloc;
@@ -250,7 +257,12 @@ page_free(order_t order, void __phys * addr)
         return -EINVAL;
     }
     struct page_allocator *alloc = container_of(alloc_ptree_node ,struct page_allocator, ptree_node);
-    return page_allocator_free(alloc, order, addr);
+    int res;
+
+    spin_lock(&alloc->lock);
+    res = page_allocator_free(alloc, order, addr);
+    spin_unlock(&alloc->lock);
+    return res;
 }
 
 size_t
@@ -262,7 +274,9 @@ page_alloc_amount_free(void)
 
     ilist_for_each(node, &page_allocator_list) {
         alloc = container_of(node, struct page_allocator, list_node);
+        spin_lock(&alloc->lock);
         amount += page_allocator_amount_free(alloc);
+        spin_unlock(&alloc->lock);
     }
 
     return amount;
@@ -280,7 +294,9 @@ page_alloc_amount_matching(unsigned long flags)
         if((alloc->flags & flags) != flags) {
             continue;
         }
+        spin_lock(&alloc->lock);
         amount += page_allocator_amount_free(alloc);
+        spin_unlock(&alloc->lock);
     }
 
     return amount;

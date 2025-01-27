@@ -1,7 +1,7 @@
 #ifndef __KANAWHA__PAGE_ALLOC_H__
 #define __KANAWHA__PAGE_ALLOC_H__
 
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 #include <kanawha/ptree.h>
 #include <kanawha/list.h>
 #include <kanawha/ops.h>

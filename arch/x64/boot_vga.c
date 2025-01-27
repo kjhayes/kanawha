@@ -1,5 +1,5 @@
 
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 #include <kanawha/printk.h>
 #include <kanawha/errno.h>
 #include <kanawha/init.h>

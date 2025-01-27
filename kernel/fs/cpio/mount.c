@@ -7,7 +7,7 @@
 #include <kanawha/string.h>
 #include <kanawha/vmem.h>
 #include <kanawha/stddef.h>
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 #include <kanawha/assert.h>
 #include <kanawha/vmem.h>
 #include <kanawha/fs/cpio/cpio.h>

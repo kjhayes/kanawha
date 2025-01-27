@@ -2,7 +2,7 @@
 #define __KANAWHA__IRQ_H__
 
 #include <kanawha/common.h>
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 #include <kanawha/spinlock.h>
 
 #define NULL_IRQ ((irq_t)(-1))

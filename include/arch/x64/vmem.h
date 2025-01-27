@@ -1,7 +1,7 @@
 #ifndef __KANAWHA__ARCH_X64_VIRT_MEM_H__
 #define __KANAWHA__ARCH_X64_VIRT_MEM_H__
 
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 #include <kanawha/pointer.h>
 
 #define VMEM_MIN_PAGE_ORDER 12

@@ -2,7 +2,7 @@
 #include <kanawha/usermode.h>
 #include <kanawha/thread.h>
 #include <arch/x64/thread.h>
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 #include <kanawha/assert.h>
 
 extern __attribute__((noreturn)) void

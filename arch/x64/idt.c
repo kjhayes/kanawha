@@ -4,7 +4,7 @@
 #include <kanawha/printk.h>
 #include <kanawha/vmem.h>
 #include <kanawha/string.h>
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 #include <arch/x64/gdt.h>
 
 extern size_t x64_exception_entry_size;

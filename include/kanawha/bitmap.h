@@ -6,7 +6,7 @@
  * meaning byte n has bits (8n) to (8(n+1))-1
  */
 
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 #include <kanawha/assert.h>
 
 #define BITS_PER_LONG (sizeof(unsigned long)*8)

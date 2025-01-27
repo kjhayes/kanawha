@@ -47,7 +47,7 @@
 
 #ifndef __ASSEMBLER__
 
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 #include <arch/x64/asm/regs.S>
 #include <kanawha/irq_domain.h>
 

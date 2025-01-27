@@ -5,7 +5,7 @@
 #include <elf/module.h>
 #include <kanawha/module.h>
 #include <kanawha/ptree.h>
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 
 struct elf64_machine_reloc
 {

@@ -3,7 +3,7 @@
 #include <kanawha/uapi/spawn.h>
 #include <kanawha/proc/process.h>
 #include <kanawha/proc/mmap.h>
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 #include <kanawha/usermode.h>
 
 int

@@ -3,7 +3,7 @@
 #include <kanawha/init.h>
 #include <kanawha/stddef.h>
 #include <kanawha/ptree.h>
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 #include <kanawha/spinlock.h>
 #include <kanawha/proc/process.h>
 #include <kanawha/usermode.h>

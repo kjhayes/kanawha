@@ -1,7 +1,7 @@
 #ifndef __KANAWHA__BUDDY_H__
 #define __KANAWHA__BUDDY_H__
 
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 #include <kanawha/printk.h>
 #include <kanawha/page_alloc.h>
 

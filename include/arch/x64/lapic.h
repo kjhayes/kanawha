@@ -1,7 +1,7 @@
 #ifndef __KANAWHA__X64_LAPIC_H__
 #define __KANAWHA__X64_LAPIC_H__
 
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 #include <kanawha/irq_dev.h>
 #include <kanawha/ops.h>
 

@@ -51,7 +51,7 @@
 
 #ifndef __LINKER__
 
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 #include <kanawha/stddef.h>
 
 typedef int(init_f)(void);

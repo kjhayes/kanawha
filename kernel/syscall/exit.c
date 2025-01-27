@@ -1,7 +1,7 @@
 
 #include <kanawha/syscall.h>
 #include <kanawha/stddef.h>
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 #include <kanawha/proc/process.h>
 #include <kanawha/thread.h>
 

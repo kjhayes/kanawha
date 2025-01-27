@@ -2,7 +2,7 @@
 #define __KANAWHA__PERCPU_H__
 
 #include <kanawha/cpu.h>
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 #include <kanawha/export.h>
 
 // "per-cpu variables"

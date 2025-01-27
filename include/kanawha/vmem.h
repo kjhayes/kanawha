@@ -11,12 +11,12 @@
 #error "Architecture did not define VMEM_MIN_PAGE_ORDER!"
 #endif
 
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 #include <kanawha/ptree.h>
 #include <kanawha/refcount.h>
 #include <kanawha/printk.h>
 #include <kanawha/list.h>
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 #include <kanawha/pointer.h>
 
 static inline void *

@@ -1,6 +1,6 @@
 
 #include <kanawha/printk.h>
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 #include <kanawha/export.h>
 #include <kanawha/errno.h>
 #include <kanawha/spinlock.h>

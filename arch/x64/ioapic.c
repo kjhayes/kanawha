@@ -3,7 +3,7 @@
 #include <arch/x64/exception.h>
 #include <arch/x64/lapic.h>
 #include <arch/x64/cpu.h>
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 #include <kanawha/stddef.h>
 #include <kanawha/list.h>
 #include <kanawha/kmalloc.h>

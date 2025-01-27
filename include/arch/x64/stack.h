@@ -1,7 +1,7 @@
 #ifndef __KANAWHA__X64_STACK_H__
 #define __KANAWHA__X64_STACK_H__
 
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 #include <kanawha/vmem.h>
 
 struct thread_state;

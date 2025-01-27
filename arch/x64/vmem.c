@@ -1,7 +1,7 @@
 
 #include <kanawha/vmem.h>
 #include <kanawha/page_alloc.h>
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 #include <kanawha/stddef.h>
 #include <kanawha/string.h>
 #include <kanawha/printk.h>

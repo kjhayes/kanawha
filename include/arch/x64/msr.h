@@ -1,7 +1,7 @@
 #ifndef __KANAWHA__X64_MSR_H__
 #define __KANAWHA__X64_MSR_H__
 
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 
 #define X64_MSR_EFER (uint32_t)0xC0000080
 #define X64_EFER_SCE (uint64_t)(1ULL<<0)

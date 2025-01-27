@@ -2,7 +2,7 @@
 #define __KANAWHA__IRQ_DEV_H__
 
 #include <kanawha/irq.h>
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 #include <kanawha/cpu.h>
 #include <kanawha/ops.h>
 

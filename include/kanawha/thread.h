@@ -1,7 +1,7 @@
 #ifndef __KANAWHA__THREAD_H__
 #define __KANAWHA__THREAD_H__
 
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 #include <kanawha/spinlock.h>
 #include <kanawha/ptree.h>
 #include <kanawha/printk.h>

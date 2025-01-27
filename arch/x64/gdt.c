@@ -2,7 +2,7 @@
 #include <arch/x64/gdt.h>
 #include <kanawha/init.h>
 #include <kanawha/stddef.h>
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 #include <kanawha/cpu.h>
 #include <kanawha/kmalloc.h>
 #include <kanawha/string.h>

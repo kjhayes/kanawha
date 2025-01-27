@@ -11,7 +11,7 @@
 #include <kanawha/arch.h>
 #include <kanawha/fs/node.h>
 #include <kanawha/fs/mount.h>
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 #include <kanawha/errno.h>
 #include <kanawha/string.h>
 #include <elf/elf.h>

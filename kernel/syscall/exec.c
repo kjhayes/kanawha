@@ -2,7 +2,7 @@
 #include <kanawha/syscall.h>
 #include <kanawha/proc/file_table.h>
 #include <kanawha/proc/process.h>
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 #include <kanawha/stddef.h>
 #include <kanawha/kmalloc.h>
 #include <kanawha/string.h>

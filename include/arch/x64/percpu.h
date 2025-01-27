@@ -1,7 +1,7 @@
 #ifndef __KANAWHA__X64_PERCPU_H__
 #define __KANAWHA__X64_PERCPU_H__
 
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 #include <kanawha/cpu.h>
 
 // Locations in this structure need to be fixed,

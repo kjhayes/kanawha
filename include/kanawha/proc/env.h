@@ -2,7 +2,7 @@
 #define __KANAWHA__ENV_H__
 
 #include <kanawha/stree.h>
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 #include <kanawha/spinlock.h>
 #include <kanawha/list.h>
 

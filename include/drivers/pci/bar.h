@@ -1,7 +1,7 @@
 #ifndef __KANAWHA__PCI_BAR_H__
 #define __KANAWHA__PCI_BAR_H__
 
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 #include <kanawha/mmio.h>
 #include <kanawha/pio.h>
 

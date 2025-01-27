@@ -1,7 +1,7 @@
 #ifndef __KANAWHA__MEM_FLAGS_H__
 #define __KANAWHA__MEM_FLAGS_H__
 
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 #include <kanawha/printk.h>
 #include <kanawha/spinlock.h>
 

@@ -1,6 +1,6 @@
 
 #include <kanawha/slab.h>
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 #include <kanawha/stddef.h>
 #include <kanawha/errno.h>
 #include <kanawha/bitmap.h>

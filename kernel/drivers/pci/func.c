@@ -1,5 +1,5 @@
 
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 #include <kanawha/kmalloc.h>
 #include <kanawha/string.h>
 #include <drivers/pci/cfg.h>

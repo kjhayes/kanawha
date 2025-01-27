@@ -1,7 +1,7 @@
 #ifndef __KANAWHA__TIME_H__
 #define __KANAWHA__TIME_H__
 
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 
 typedef size_t cycles_t;
 

@@ -7,7 +7,7 @@
  * "Pointer" Binary Search Tree, indexed on uintptr_t
  */
 
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 
 struct ptree {
     struct ptree_node *root;

@@ -1,7 +1,7 @@
 #ifndef __KANAWHA__MULTIBOOT2_INFO_H__
 #define __KANAWHA__MULTIBOOT2_INFO_H__
 
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 #include <kanawha/section.h>
 
 struct mb2_info_header {

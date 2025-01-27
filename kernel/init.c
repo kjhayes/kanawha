@@ -13,7 +13,7 @@
 
 #include <kanawha/printk.h>
 
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 #include <kanawha/errno.h>
 #include <kanawha/assert.h>
 #include <kanawha/vmem.h>

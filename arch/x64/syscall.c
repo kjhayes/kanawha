@@ -322,6 +322,14 @@ x64_route_syscall(struct x64_syscall_state *state)
                         (fd_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDI]
                         );
             break;
+        case SYSCALL_ID_SLEEP:
+            *ret_val = (uint64_t)(int)
+                syscall_sleep(
+                        process,
+                        (size_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDI],
+                        (unsigned long)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RSI]
+                        );
+            break;
         default:
             syscall_unknown(process, id);
     }

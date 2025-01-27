@@ -2,7 +2,7 @@
 #define __KANAWHA__ASSERT_H__
 
 #include <kanawha/printk.h>
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 
 #ifdef CONFIG_DEBUG_ASSERTIONS
 

@@ -1,7 +1,7 @@
 #ifndef __KANAWHA__ARCH_X64_THREAD_H__
 #define __KANAWHA__ARCH_X64_THREAD_H__
 
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 #include <kanawha/printk.h>
 #include <arch/x64/stack.h>
 

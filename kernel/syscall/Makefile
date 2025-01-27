@@ -24,5 +24,6 @@ obj-y += \
 	unlink.o \
 	chroot.o \
 	chwdir.o \
-	mod.o
+	mod.o \
+	sleep.o
 

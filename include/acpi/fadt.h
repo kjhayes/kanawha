@@ -1,7 +1,7 @@
 #ifndef __KANAWHA__ACPI_FADT_H__
 #define __KANAWHA__ACPI_FADT_H__
 
-#include <kanawha/stdint.h>
+#include <kanawha/types.h>
 #include <acpi/table.h>
 #include <acpi/gas.h>
 

@@ -183,6 +183,11 @@ ARG(unsigned long, flags)
 RET(int)\
 ARG(fd_t, dir)
 
+#define SYSCALL_SIG_SLEEP(RET,ARG)\
+RET(int)\
+ARG(size_t, duration)\
+ARG(unsigned long, flags)
+
 #define SYSCALL_XLIST(X)\
 X(exit,      0,  EXIT,       SYSCALL_SIG_EXIT)\
 X(open,      1,  OPEN,       SYSCALL_SIG_OPEN)\
@@ -215,6 +220,7 @@ X(pipe,      29, PIPE,       SYSCALL_SIG_PIPE)\
 X(insmod,    30, INSMOD,     SYSCALL_SIG_INSMOD)\
 X(rmmod,     31, RMMOD,      SYSCALL_SIG_RMMOD)\
 X(chwdir,    32, CHWDIR,     SYSCALL_SIG_CHWDIR)\
+X(sleep,     33, SLEEP,      SYSCALL_SIG_SLEEP)\
 
 #define DECLARE_SYSCALL_ID_CONSTANTS(__name, __id, __NAME, ...)\
 const static syscall_id_t SYSCALL_ID_ ## __NAME = __id;
@@ -250,6 +256,7 @@ SYSCALL_XLIST(DECLARE_SYSCALL_ID_CONSTANTS)
 #undef SYSCALL_SIG_INSMOD
 #undef SYSCALL_SIG_RMMOD
 #undef SYSCALL_SIG_CHWDIR
+#undef SYSCALL_SIG_SLEEP
 #undef SYSCALL_XLIST
 #endif
 
