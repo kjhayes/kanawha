@@ -94,6 +94,13 @@ kbd_key_t simple_key_set[256] = {
     [0x83] = KBD_KEY_F7,
 };
 
+kbd_key_t e0_key_set[256] = {
+    [0x6B] = KBD_KEY_LEFT_ARROW,
+    [0x74] = KBD_KEY_RIGHT_ARROW,
+    [0x75] = KBD_KEY_UP_ARROW,
+    [0x72] = KBD_KEY_DOWN_ARROW,
+};
+
 static int
 qwerty_2_scanset_handler(
         uint8_t next_byte,
@@ -118,6 +125,14 @@ qwerty_2_scanset_handler(
         }
         *flags = 0;
         return 0;
+    } else if (((*flags & FLAG_E0) != 0) && (e0_key_set[next_byte] != 0)) {
+        out->key = e0_key_set[next_byte];
+        if(*flags & FLAG_F0) {
+            out->motion = KBD_MOTION_RELEASED;
+        } else {
+            out->motion = KBD_MOTION_PRESSED;
+        }
+        *flags = 0;
     }
 
     // Clear E0 and F0
