@@ -19,7 +19,7 @@ int do_printk(const char *fmt, ...);
 
 #define printk(fmt, ...) \
     do {\
-        nsec_t time_ns = duration_to_nsec(clk_mono_current()); \
+        nsec_t time_ns = duration_to_nsec(current_timestamp()); \
         unsigned long __printk__sec = time_ns / NSEC_PER_SEC; \
         unsigned long __printk__sec_dec = time_ns % NSEC_PER_SEC; \
         do_printk("[%lu.%lu]: " fmt, __printk__sec, __printk__sec_dec, ##__VA_ARGS__); \
@@ -27,7 +27,7 @@ int do_printk(const char *fmt, ...);
 
 #define eprintk(fmt, ...) \
     do {\
-        nsec_t time_ns = duration_to_nsec(clk_mono_current()); \
+        nsec_t time_ns = duration_to_nsec(current_timestamp()); \
         unsigned long __printk__sec = time_ns / NSEC_PER_SEC; \
         unsigned long __printk__sec_dec = time_ns % NSEC_PER_SEC; \
         do_printk("[ERROR (%lu.%lu)]: " fmt, __printk__sec, __printk__sec_dec, ##__VA_ARGS__); \
@@ -35,7 +35,7 @@ int do_printk(const char *fmt, ...);
 
 #define wprintk(fmt, ...) \
     do {\
-        nsec_t time_ns = duration_to_nsec(clk_mono_current()); \
+        nsec_t time_ns = duration_to_nsec(current_timestamp()); \
         unsigned long __printk__sec = time_ns / NSEC_PER_SEC; \
         unsigned long __printk__sec_dec = time_ns % NSEC_PER_SEC; \
         do_printk("[WARN (%lu.%lu)]: " fmt, __printk__sec, __printk__sec_dec, ##__VA_ARGS__); \
@@ -45,7 +45,7 @@ int do_printk(const char *fmt, ...);
 #ifdef DEBUG
 #define dprintk(fmt, ...) \
     do {\
-        nsec_t time_ns = duration_to_nsec(clk_mono_current()); \
+        nsec_t time_ns = duration_to_nsec(current_timestamp()); \
         unsigned long __printk__sec = time_ns / NSEC_PER_SEC; \
         unsigned long __printk__sec_dec = time_ns % NSEC_PER_SEC; \
         do_printk("[DEBUG (%lu.%lu)]: " fmt, __printk__sec, __printk__sec_dec, ##__VA_ARGS__); \

@@ -93,6 +93,12 @@ config PERIODIC_RESOLUTION_MS
     The period of all periodic events will be rounded to the nearest non-zero
     multiple of this number. A higher value will result in fewer timer interrupts,
     but worse latency/longer sleep times than requested.
+config TIMESTAMP_RESOLUTION_MS
+  int "Timestamp Resolution (ms)"
+  default 10
+  help
+    Resolution of the system "current_timestamp" found in "kanawha/time.h".
+    At the moment, this value must be a multiple of PERIODIC_RESOLUTION_MS.
 endmenu
 
 menu "Firmware Interfaces"

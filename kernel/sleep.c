@@ -22,7 +22,7 @@ thread_sleep(
 {
     int res;
 
-    // Make our own waitqueue and wait on it untill a timer
+    // Make our own waitqueue and wait on it until a timer
     // wakes us up.
 
     // Do it the dumb way

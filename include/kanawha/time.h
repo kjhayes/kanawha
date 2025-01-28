@@ -55,7 +55,7 @@ freq_to_ghz(freq_t freq) {
     return freq / HZ_PER_GHZ;
 }
 
-// For now, duration_t is always measure in nano-seconds,
+// For now, duration_t is always measured in nano-seconds,
 // but we want the API to keep this flexible in the future
 typedef size_t time_t;
 typedef time_t duration_t;
@@ -98,6 +98,11 @@ nsec_to_duration(nsec_t nsec) {
 }
 
 static inline duration_t
+duration_between(time_t before, time_t after) {
+    return after-before;
+}
+
+static inline duration_t
 freq_cycles_to_duration(freq_t freq, cycles_t cycles)
 {
 
@@ -129,5 +134,21 @@ timed_cycles_to_freq(duration_t elapsed_time, cycles_t elapsed_cycles)
     hz_t hz = ((elapsed_cycles * NSEC_PER_SEC) / duration_to_nsec(elapsed_time));
     return hz_to_freq(hz);
 }
+
+// System Time
+
+// Returns the current timestamp
+//
+// NOTE: This timestamp should not be relied upon to be entirely
+//       accurate. It will be constant during early boot
+//       (timestamp isn't being updated yet)
+//       and it's resolution may not be very high regardless.
+//
+//       It may even be disabled entirely by the config.
+//       
+//       Only use this for debugging/logging, and for userspace access
+//       to a "best-effort" source of time.
+//
+time_t current_timestamp(void);
 
 #endif
