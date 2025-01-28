@@ -10,6 +10,7 @@
 #include <kanawha/xcall.h>
 #include <kanawha/vmem.h>
 #include <kanawha/assert.h>
+#include <kanawha/periodic.h>
 
 struct rr_thread {
     struct thread_state *state;
@@ -67,9 +68,17 @@ rr_sched_alloc_instance(
     ilist_init(&sched->thread_list);
     spinlock_init(&sched->list_lock);
 
-    struct timer_event *event = timer_set_periodic(msec_to_duration(20), rr_sched_kick, sched);
+    struct periodic_event *event
+        = create_periodic_event(
+            msec_to_duration(100),
+            (void*)sched,
+            rr_sched_kick);
+
     if(event == NULL) {
         eprintk("Failed to set rr_sched periodic kick!\n");
+        percpu_free(sched->current_rr_thread, sizeof(struct rr_thread*));
+        kfree(sched);
+        return NULL;
     }
 
     return &sched->sched;

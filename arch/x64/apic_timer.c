@@ -286,6 +286,8 @@ lapic_timer_set_alarm_oneshot(
     struct x64_cpu *cpu =
         container_of(lapic_timer, struct x64_cpu, apic_timer);
 
+    printk("lapic_timer_set_alarm_oneshot\n");
+
     return xcall_run(cpu->cpu.id, lapic_timer_set_oneshot_xcall, (void*)(uintptr_t)wait_for);
 }
 
@@ -380,13 +382,11 @@ register_cpu_lapic_timer(
 
     timer->clk_dev.driver = &lapic_clk_driver;
 
-    if(cpu->cpu.is_bsp) {
-        printk("Setting BSP APIC Timer as Timer Source\n");
-        res = timer_source_set(&timer->timer_dev, 0);
-        if(res) {
-            eprintk("Failed to set BSP APIC Timer as timer source! (err=%s)\n",
-                    errnostr(res));
-        }
+    res = provide_timer(&timer->timer_dev, 0);
+    if(res) {
+        eprintk("Failed to provide APIC Timer %ld as timer source! (err=%s)\n",
+                (sl_t)cpu->apic.id,
+                errnostr(res));
     }
 
     return res;

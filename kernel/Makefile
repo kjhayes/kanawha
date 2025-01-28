@@ -34,6 +34,8 @@ obj-y += \
 	pipe.o \
 	xcall.o \
 	timer.o \
+	periodic.o \
+	sleep.o \
 	spinlock.o \
 	clk.o \
 	kbd.o

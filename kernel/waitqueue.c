@@ -57,6 +57,8 @@ wait_on(struct waitqueue *queue)
         spin_unlock(&queue->lock);
         thread_switch(next);
         enable_restore_irqs(irq_flags);
+        return 0; // Should this be an error?
+                  // ehhhhhhhhhhhhh... idk -KJH
     }
 
     // (Instead of going from RUNNING -> READY we will

@@ -84,6 +84,17 @@ config MMIO_RESERVE_SIZE_ORDER
     Order which reserved MMIO virtual memory region should be sized as.
 endmenu
 
+menu "Time Options"
+config PERIODIC_RESOLUTION_MS
+  int "Periodic Event Resolution (ms)"
+  default 10
+  help
+    Minimum resolution of the "periodic" events subsystem.
+    The period of all periodic events will be rounded to the nearest non-zero
+    multiple of this number. A higher value will result in fewer timer interrupts,
+    but worse latency/longer sleep times than requested.
+endmenu
+
 menu "Firmware Interfaces"
 config ACPI
   bool "ACPI"

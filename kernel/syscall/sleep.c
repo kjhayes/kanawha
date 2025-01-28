@@ -2,6 +2,7 @@
 #include <kanawha/uapi/syscall.h>
 #include <kanawha/uapi/sleep.h>
 #include <kanawha/proc/process.h>
+#include <kanawha/sleep.h>
 #include <kanawha/errno.h>
 
 int
@@ -17,10 +18,10 @@ syscall_sleep(
 
     switch(flags) {
         case SLEEP_DURATION_MSEC:
-            clk_delay(msec_to_duration(duration));
+            thread_sleep(msec_to_duration(duration), 0);
             break;
         case SLEEP_DURATION_SEC:
-            clk_delay(sec_to_duration(duration));
+            thread_sleep(sec_to_duration(duration), 0);
             break;
         default:
             return -EINVAL;

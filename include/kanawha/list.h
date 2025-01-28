@@ -149,6 +149,10 @@ ilist_insert_before(ilist_t *list, ilist_node_t *to_insert, ilist_node_t *ref)
     dprintk("ilist_insert_before list=%p, to_insert=%p, ref=%p\n",
             list, to_insert, ref);
 
+    DEBUG_ASSERT(KERNEL_ADDR(list));
+    DEBUG_ASSERT(KERNEL_ADDR(to_insert));
+    DEBUG_ASSERT(KERNEL_ADDR(ref));
+
     if(ref == to_insert) {
         eprintk("Tried to insert list node before itself!\n");
         return;
@@ -159,6 +163,8 @@ ilist_insert_before(ilist_t *list, ilist_node_t *to_insert, ilist_node_t *ref)
         return;
     }
 
+    DEBUG_ASSERT(KERNEL_ADDR(ref->prev));
+    DEBUG_ASSERT(KERNEL_ADDR(ref->prev->next));
     ref->prev->next = to_insert;
     to_insert->prev = ref->prev;
 
