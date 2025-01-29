@@ -1,6 +1,7 @@
 #ifndef __KANAWHA__UAPI_SYSCALL_H__
 #define __KANAWHA__UAPI_SYSCALL_H__
 
+#include <kanawha/types.h>
 #include <kanawha/uapi/file.h>
 #include <kanawha/uapi/process.h>
 
@@ -188,6 +189,10 @@ RET(int)\
 ARG(size_t, duration)\
 ARG(unsigned long, flags)
 
+#define SYSCALL_SIG_TIME(RET,ARG)\
+RET(ssize_t)\
+ARG(unsigned long, flags)
+
 #define SYSCALL_XLIST(X)\
 X(exit,      0,  EXIT,       SYSCALL_SIG_EXIT)\
 X(open,      1,  OPEN,       SYSCALL_SIG_OPEN)\
@@ -221,6 +226,7 @@ X(insmod,    30, INSMOD,     SYSCALL_SIG_INSMOD)\
 X(rmmod,     31, RMMOD,      SYSCALL_SIG_RMMOD)\
 X(chwdir,    32, CHWDIR,     SYSCALL_SIG_CHWDIR)\
 X(sleep,     33, SLEEP,      SYSCALL_SIG_SLEEP)\
+X(time,      34, TIME,       SYSCALL_SIG_TIME)\
 
 #define DECLARE_SYSCALL_ID_CONSTANTS(__name, __id, __NAME, ...)\
 const static syscall_id_t SYSCALL_ID_ ## __NAME = __id;

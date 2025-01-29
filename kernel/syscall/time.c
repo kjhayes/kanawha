@@ -1,0 +1,36 @@
+
+#include <kanawha/syscall.h>
+#include <kanawha/uapi/time.h>
+#include <kanawha/time.h>
+
+ssize_t
+syscall_time(
+        struct process *process,
+        unsigned long flags)
+{
+    unsigned long type = (flags >> 0) & 0b11;
+    unsigned long unit = (flags >> 2) & 0b11;
+
+    time_t value;
+    switch(type) {
+        case TIME_SYS:
+          value = current_timestamp();
+          break;
+        case TIME_PROC:
+          value = current_timestamp() - process->creation_timestamp;
+          break;
+        default:
+          value = 0;
+          break;
+    }
+
+    switch(unit) {
+        case TIME_DURATION_MSEC:
+            return duration_to_msec(value);
+        case TIME_DURATION_SEC:
+            return duration_to_sec(value);
+        default:
+            return 0;
+    }
+}
+

@@ -235,6 +235,8 @@ process_alloc(
     ilist_init(&process->children);
     waitqueue_init(&process->wait_queue);
 
+    process->creation_timestamp = current_timestamp();
+
     process->root_directory = NULL;
     process->working_directory = NULL;
     process->mmap = NULL;

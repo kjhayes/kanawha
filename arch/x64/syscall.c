@@ -333,6 +333,13 @@ x64_route_syscall(struct x64_syscall_state *state)
                         (unsigned long)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RSI]
                         );
             break;
+        case SYSCALL_ID_TIME:
+            *ret_val = (uint64_t)(ssize_t)
+                syscall_time(
+                        process,
+                        (unsigned long)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDI]
+                        );
+            break;
         default:
             syscall_unknown(process, id);
     }

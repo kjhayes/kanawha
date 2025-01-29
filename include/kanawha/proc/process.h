@@ -4,6 +4,7 @@
 #include <kanawha/thread.h>
 #include <kanawha/types.h>
 #include <kanawha/vmem.h>
+#include <kanawha/time.h>
 #include <kanawha/scheduler.h>
 #include <kanawha/proc/env.h>
 #include <kanawha/usermode.h>
@@ -32,6 +33,9 @@ struct process
     unsigned long flags;
     int exitcode;
     int status;
+
+    // Timestamp
+    duration_t creation_timestamp;
 
     struct waitqueue wait_queue;
 

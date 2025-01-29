@@ -25,5 +25,6 @@ obj-y += \
 	chroot.o \
 	chwdir.o \
 	mod.o \
-	sleep.o
+	sleep.o \
+	time.o 
 
