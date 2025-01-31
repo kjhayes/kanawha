@@ -2,6 +2,7 @@
 #include <arch/x64/exception.h>
 #include <kanawha/init.h>
 #include <kanawha/proc/process.h>
+#include <kanawha/proc/signal.h>
 #include <kanawha/excp.h>
 
 static int
@@ -24,12 +25,18 @@ x64_gp_fault_handler(
         return IRQ_UNHANDLED;
     }
 
-    eprintk("Killing Process (%ld) for GP Fault! (RIP=%p) (error=%p)\n",
-            (sl_t)process->id, excp_state->rip, (uintptr_t)excp_state->error_code);
-
-    arch_excp_dump_state(gen_excp_state, do_printk);
-
-    process_terminate(process, -1);
+    res = signal_deliver(process, SIGNAL_ID_PROTFAULT, 0);
+    if(res) {
+        eprintk("Failed to deliver PROTFAULT signal to process on general protection fault (user_ip=%p) (err=%s)!\n",
+                process->user_ip,
+                errnostr(res));
+        res = process_terminate(process, 1);
+        if(res) {
+            eprintk("Failed to terminate process which could not be delivered PROTFAULT (err=%s)\n",
+                    errnostr(res));
+            return res;
+        }
+    }
 
     return IRQ_HANDLED;
 }

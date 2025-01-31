@@ -7,6 +7,7 @@
 #include <kanawha/page_alloc.h>
 #include <kanawha/syscall.h>
 #include <kanawha/xcall.h>
+#include <kanawha/strace.h>
 #include <kanawha/proc/process.h>
 #include <kanawha/assert.h>
 #include <arch/x64/msr.h>
@@ -338,6 +339,19 @@ x64_route_syscall(struct x64_syscall_state *state)
                 syscall_time(
                         process,
                         (unsigned long)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDI]
+                        );
+            break;
+        case SYSCALL_ID_SIGRET:
+            *ret_val = (uint64_t)(int)
+                syscall_sigret(
+                        process
+                        );
+            break;
+        case SYSCALL_ID_SIGROUTE:
+            *ret_val = (uint64_t)(int)
+                syscall_sigroute(
+                        process,
+                        (void __user *)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDI]
                         );
             break;
         default:

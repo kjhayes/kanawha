@@ -57,17 +57,6 @@ dump_processes(printk_f *printer) {
     spin_unlock(&process_pid_lock);
 }
 
-int
-process_force_ip(
-        struct process *process,
-        void __user *ip)
-{
-    spin_lock(&process->signal_lock);
-    process->user_ip = ip;
-    spin_unlock(&process->signal_lock);
-    return 0;
-}
-
 struct process *
 process_from_pid(
         pid_t id)
@@ -242,6 +231,12 @@ process_alloc(
     process->mmap = NULL;
     process->file_table = NULL;
     process->environ = NULL;
+
+    res = signal_state_init(&process->signal_state);
+    if(res) {
+        eprintk("process_alloc: Failed to initialize process signal state!\n");
+        goto err0;
+    }
 
     res = thread_init(
             &process->thread,

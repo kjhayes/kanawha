@@ -26,5 +26,7 @@ obj-y += \
 	chwdir.o \
 	mod.o \
 	sleep.o \
-	time.o 
+	time.o \
+	sigret.o \
+	sigroute.o \
 

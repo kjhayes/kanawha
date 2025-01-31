@@ -87,6 +87,29 @@ config PERCPU_DEBUG_ASSERTIONS
       Enable the DEBUG_ASSERT_PERCPU_VALID assertion, which includes a percpu checksum variable
       used to make sure that the percpu variable subsystem is working correctly.
 
+menu "Strace Options"
+
+config STRACE_LOG_SYSCALL_BEGIN
+    bool "Debug Log syscall"
+    depends on DEBUGGING
+    default n
+    help
+      Log the beginning of each syscall (process ID and syscall ID)
+
+config STRACE_LOG_SYSCALL_END
+    bool "Debug Log syscall Completion"
+    depends on DEBUGGING
+    default n
+    help
+      Log the ending of each syscall, useful for debugging kernel bugs during the handling of a specific syscall
+
+config STRACE_LOG_SIGNALS
+    bool "Debug Log signals"
+    depends on DEBUGGING
+    default n
+
+endmenu
+
 menu "Kernel Address Checking"
 config DEBUG_HIGHER_HALF_KERNEL_ADDRESSES
     bool "Higher Half Addresses"

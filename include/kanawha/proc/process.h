@@ -10,6 +10,8 @@
 #include <kanawha/usermode.h>
 #include <kanawha/waitqueue.h>
 #include <kanawha/uapi/process.h>
+#include <kanawha/uapi/signal.h>
+#include <kanawha/proc/signal.h>
 
 #define PROCESS_LOWMEM_SIZE (1ULL<<32)
 
@@ -45,8 +47,10 @@ struct process
     ilist_node_t child_node;
     ilist_t children;
 
-    spinlock_t signal_lock;
+    // User State
     void __user *user_ip;
+
+    struct signal_state signal_state;
 
     // Virtual Memory
     struct mmap *mmap;
@@ -150,11 +154,6 @@ int
 process_reap(
         struct process *process,
         int *exitcode);
-
-int
-process_force_ip(
-        struct process *process,
-        void __user *ip);
 
 int
 process_clear_forced_ip(

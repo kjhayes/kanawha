@@ -10,6 +10,7 @@
 #include <kanawha/ptree.h>
 #include <kanawha/thread.h>
 #include <kanawha/proc/process.h>
+#include <kanawha/proc/signal.h>
 #include <kanawha/assert.h>
 #include <kanawha/irq.h>
 #include <arch/x64/mmu.h>
@@ -591,31 +592,37 @@ vmem_map_unhandled_user_page_fault(
     // TODO: Signal something like SIGSEGV once we have
     // signalling implemented
 
-#ifdef CONFIG_DEBUG_TRACK_PROCESS_EXEC
-    eprintk("Terminating PID(%ld) [EXEC(%s)] for Invalid Memory Access (user_ip=%p)!\n",
-            (sl_t)process->id,
-            process->tracked_exec == NULL ? "???" : process->tracked_exec,
-            process->user_ip);
-#else
-    eprintk("Terminating PID(%ld) for Invalid Memory Access (user_ip=%p)!\n",
-            (sl_t)process->id,
-            process->user_ip);
-#endif
+//#ifdef CONFIG_DEBUG_TRACK_PROCESS_EXEC
+//    eprintk("Terminating PID(%ld) [EXEC(%s)] for Invalid Memory Access (user_ip=%p)!\n",
+//            (sl_t)process->id,
+//            process->tracked_exec == NULL ? "???" : process->tracked_exec,
+//            process->user_ip);
+//#else
+//    eprintk("Terminating PID(%ld) for Invalid Memory Access (user_ip=%p)!\n",
+//            (sl_t)process->id,
+//            process->user_ip);
+//#endif
 
-    res = process_terminate(process, 1);
+    res = signal_deliver(process, SIGNAL_ID_MEMFAULT, 0);
     if(res) {
-        eprintk("Failed to terminate PID(%ld)! (err=%s)\n", 
-                (sl_t)process->id,
+        eprintk("Failed to deliver signal to process (err=%s)!\n",
                 errnostr(res));
-        return res;
+        res = process_terminate(process, 1);
+        if(res) {
+            panic("Failed to terminate process which could not be delivered MEMFAULT (err=%s)\n",
+                    errnostr(res));
+        }
+        thread_abandon(force_resched());
     }
 
-#ifdef CONFIG_DEBUGGING
-    panic("Panicking on process termination because signals are not implemented yet!\n");
-#endif
-
-    thread_abandon(force_resched());
     return 0;
+
+//#ifdef CONFIG_DEBUGGING
+//    panic("Panicking on process termination because signals are not implemented yet!\n");
+//#endif
+//
+//    thread_abandon(force_resched());
+//    return 0;
 }
 
 int
@@ -650,6 +657,15 @@ vmem_map_handle_page_fault(
             return 0;
         case PAGE_FAULT_UNHANDLED:
 
+            if(access_flags & PF_FLAG_USERMODE) {
+                res = vmem_map_unhandled_user_page_fault(
+                        faulting_address,
+                        access_flags,
+                        map);
+                return res; // res should be zero assuming there are no kernel errors,
+                            // even if we end up killing the user-process
+            } else {
+
             eprintk("Unhandled Page Fault! (addr=%p) %s%s%s%s%s\n",
                     faulting_address,
                     (access_flags & PF_FLAG_NOT_PRESENT ? "[NOT_PRESENT]" : ""),
@@ -659,14 +675,6 @@ vmem_map_handle_page_fault(
                     (access_flags & PF_FLAG_USERMODE ? "[USERMODE]" : "")
                     );
  
-            if(access_flags & PF_FLAG_USERMODE) {
-                res = vmem_map_unhandled_user_page_fault(
-                        faulting_address,
-                        access_flags,
-                        map);
-                return res; // res should be zero assuming there are no kernel errors,
-                            // even if we end up killing the user-process
-            } else {
                return -EINVAL;
             }
              

@@ -39,7 +39,8 @@ obj-y += \
 	sleep.o \
 	spinlock.o \
 	clk.o \
-	kbd.o
+	kbd.o \
+	strace.o
 
 obj-y += fs/
 obj-y += syscall/

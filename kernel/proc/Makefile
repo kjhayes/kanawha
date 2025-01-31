@@ -4,4 +4,5 @@ obj-y += \
 	mmap.o \
 	file_table.o \
 	env.o \
+	signal.o \
 

@@ -190,7 +190,7 @@ void x64_handle_exception(struct x64_excp_state *state)
         } else {
             x64_unhandled_interrupt(state);
         }
-        return;
+        goto exit;
     }
 
     struct irq_desc *desc = x64_vector_irq_desc(state->vector);
@@ -203,7 +203,7 @@ void x64_handle_exception(struct x64_excp_state *state)
         } else {
             x64_unhandled_interrupt(state);
         }
-        return;
+        goto exit;
     }
 
     struct excp_state *excp_state = (struct excp_state*)state;
@@ -219,7 +219,7 @@ void x64_handle_exception(struct x64_excp_state *state)
         } else {
             x64_unhandled_interrupt(state);
         } 
-        return;
+        goto exit;
     }
 
     struct thread_state *new_thread = query_resched();
@@ -244,13 +244,17 @@ void x64_handle_exception(struct x64_excp_state *state)
         //        (sl_t)current_cpu_id());
     }
 
+exit:
     if(ring_from != 0) {
         // We need to reset the thread stack pointer
         // because we are returning to usermode
         cur_thread->arch_state.stack.rsp =
             cur_thread->arch_state.stack.stack_base;
+        struct process *process = current_process();
+        if(process != NULL) {
+            state->rip = (uint64_t)process->user_ip;
+        }
     }
-
     return;
 }
 

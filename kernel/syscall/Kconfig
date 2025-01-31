@@ -1,18 +1,4 @@
 
-config STRACE_LOG_SYSCALL_BEGIN
-    bool "Debug Log syscall"
-    depends on DEBUGGING
-    default n
-    help
-      Log the beginning of each syscall (process ID and syscall ID)
-
-config STRACE_LOG_SYSCALL_END
-    bool "Debug Log syscall Completion"
-    depends on DEBUGGING
-    default n
-    help
-      Log the ending of each syscall, useful for debugging kernel bugs during the handling of a specific syscall
-
 config DEBUG_SYSCALL_OPEN
     bool "Debug open"
     depends on DEBUGGING

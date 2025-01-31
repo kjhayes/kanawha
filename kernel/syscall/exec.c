@@ -218,10 +218,7 @@ process_exec_elf64(
         }
     }
 
-    res = process_force_ip(process, (void __user*)elf_hdr.e_entry);
-    if(res) {
-        return res;
-    }
+    process->user_ip = (void __user*)elf_hdr.e_entry;
 
     return 0;
 }
