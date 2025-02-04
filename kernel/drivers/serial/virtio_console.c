@@ -276,6 +276,7 @@ virtio_console_char_dev_read(
     struct virtio_request *req = virtio_request_create(port->recv_queue);
     if(req == NULL) {
         dma_free(dma_buffer, amount);
+        return -ENOMEM;
     }
 
     res = virtio_request_append_output(

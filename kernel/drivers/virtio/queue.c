@@ -239,6 +239,10 @@ virtio_queue_point_desc(
 
     desc->addr = (uintptr_t)buffer;
     desc->len = size;
+
+    desc->flags = 0; // Default to no flags
+    desc->next = 0; // NULL
+
     if(output) {
         desc->flags |= VIRTQ_DESC_F_WRITE;
     } else {

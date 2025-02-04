@@ -17,6 +17,7 @@ obj-y += \
 	bitmap.o \
 	ramfile.o \
 	char_dev.o \
+	fb_dev.o \
 	irq_domain.o \
 	irq_dev.o \
 	thread.o \
@@ -30,6 +31,7 @@ obj-y += \
 	symbol.o \
 	module.o \
 	string.o \
+	parse.o \
 	waitqueue.o \
 	pipe.o \
 	xcall.o \

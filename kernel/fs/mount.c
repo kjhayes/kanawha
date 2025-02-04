@@ -95,7 +95,7 @@ fs_mount_put_node(
     else if(node->refcount == 1) {
         // We're removing the last reference
 
-        res = fs_node_flush_all_pages(node);
+        res = fs_node_flush_all_fs_pages(node);
         if(res) {
             goto err;
         }

@@ -17,7 +17,6 @@
 static DECLARE_SPINLOCK(char_dev_tree_lock);
 static size_t num_char_dev = 0;
 static DECLARE_STREE(char_dev_tree);
-static DECLARE_PTREE(char_dev_fs_node_tree);
 
 static struct flat_mount *char_dev_fs_mount = NULL;
 static struct fs_node_ops char_dev_fs_node_ops;
@@ -223,7 +222,7 @@ char_dev_init_fs_mount(void)
                 &dev->flat_fs_node,
                 node->key);
         if(res) {
-            spin_lock(&char_dev_tree_lock);
+            spin_unlock(&char_dev_tree_lock);
             return res;
         }
     }

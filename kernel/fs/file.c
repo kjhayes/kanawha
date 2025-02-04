@@ -207,6 +207,20 @@ fs_file_paged_write(
     return buflen;
 }
 
+int
+fs_file_paged_flush(
+        struct file *file,
+        unsigned long flags)
+{
+    int res;
+    struct fs_node *node = file->path->fs_node;
+    res = fs_node_flush_all_fs_pages(node);
+    if(res) {
+        return res;
+    }
+    return 0;
+}
+
 // Seek using fs_node_getattr and FS_NODE_ATTR_DATA_SIZE
 ssize_t
 fs_file_paged_seek(
@@ -244,18 +258,14 @@ fs_file_paged_seek(
 }
 
 int
-fs_file_node_flush(
+fs_file_flush_all_fs_pages(
         struct file *file,
-        unsigned long offset)
+        unsigned long flags)
 {
     int res;
-    res = fs_node_flush_all_pages(file->path->fs_node);
+    res = fs_node_flush_all_fs_pages(file->path->fs_node);
     if(res) {
         return res; 
-    }
-    res = fs_node_flush_all_pages(file->path->fs_node);
-    if(res) {
-        return res;
     }
     return 0;
 }

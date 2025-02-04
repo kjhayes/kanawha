@@ -74,10 +74,10 @@ syscall_write(
             amount_to_write,
             flags);
     if(amount_written < 0) {
-        eprintk("syscall_write: fs_node_write returned %s\n",
+        res = amount_written;
+        eprintk("syscall_write: direct_file_write returned %s\n",
                 errnostr(res));
         DEBUG_ASSERT(res < 0);
-        res = amount_written;
         goto exit;
     }
 

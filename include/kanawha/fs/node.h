@@ -48,8 +48,11 @@ ARG(uintptr_t, pfn)\
 ARG(unsigned long, flags)\
 ARG(void __phys *, addr)
 
-#define FS_NODE_FLUSH_SIG(RET,ARG)\
-RET(int)
+#define FS_NODE_FLUSH_PAGE_SIG(RET,ARG)\
+RET(int)\
+ARG(uintptr_t, pfn)\
+ARG(unsigned long, flags)\
+ARG(void __phys *, addr)
 
 #define FS_NODE_ATTR_PAGE_ORDER 0
 #define FS_NODE_ATTR_DATA_SIZE  1
@@ -110,7 +113,7 @@ OP(read_page, FS_NODE_READ_PAGE_SIG, ##__VA_ARGS__)\
 OP(write_page, FS_NODE_WRITE_PAGE_SIG, ##__VA_ARGS__)\
 OP(load_page, FS_NODE_LOAD_PAGE_SIG, ##__VA_ARGS__)\
 OP(unload_page, FS_NODE_UNLOAD_PAGE_SIG, ##__VA_ARGS__)\
-OP(flush, FS_NODE_FLUSH_SIG, ##__VA_ARGS__)\
+OP(flush_page, FS_NODE_FLUSH_PAGE_SIG, ##__VA_ARGS__)\
 OP(getattr, FS_NODE_GETATTR_SIG, ##__VA_ARGS__)\
 OP(setattr, FS_NODE_SETATTR_SIG, ##__VA_ARGS__)\
 OP(lookup, FS_NODE_LOOKUP_SIG, ##__VA_ARGS__)\
@@ -206,12 +209,12 @@ fs_node_put_page(
         int modified);
 
 int
-fs_node_flush_page(
+fs_node_flush_fs_page(
         struct fs_node *node,
         struct fs_page *page);
 
 int
-fs_node_flush_all_pages(
+fs_node_flush_all_fs_pages(
         struct fs_node *node);
 
 #define FS_NODE_PAGED_READ_MAY_EXTEND (1ULL<<0)
@@ -261,8 +264,11 @@ fs_node_cannot_unload_page(
         unsigned long flags,
         void __phys *addr);
 int
-fs_node_cannot_flush(
-        struct fs_node *node);
+fs_node_cannot_flush_page(
+        struct fs_node *node,
+        uintptr_t pfn,
+        unsigned long flags,
+        void __phys *addr);
 int
 fs_node_cannot_getattr(
         struct fs_node *node,
@@ -326,5 +332,11 @@ fs_node_unload_page_free(
         uintptr_t pfn,
         unsigned long flags,
         void __phys *addr);
+int
+fs_node_flush_page_write(
+        struct fs_node *node,
+        uintptr_t pfn,
+        unsigned long flags,
+        void __phys * addr);
 
 #endif

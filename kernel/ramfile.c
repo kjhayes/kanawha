@@ -124,16 +124,6 @@ ramfile_write_page(
 }
 
 static int
-ramfile_node_flush(
-        struct fs_node *fs_node)
-{
-    // TODO: Flush caches of any CPU(s) which might have written
-    // to this ramfile (only needed with a weaker memory model)
-
-    return 0;
-}
-
-static int
 ramfile_node_getattr(
         struct fs_node *fs_node,
         int attr,
@@ -216,8 +206,7 @@ ramfile_fs_node_ops =
     //       ramfile and avoid allocations
     .load_page = fs_node_load_page_read_alloc,
     .unload_page = fs_node_unload_page_free,
-
-    .flush = ramfile_node_flush,
+    .flush_page = fs_node_flush_page_write,
 
     .getattr = ramfile_node_getattr,
     .setattr = ramfile_node_setattr,
@@ -237,7 +226,7 @@ ramfile_fs_file_ops =
     .write = fs_file_paged_write,
     .seek = fs_file_paged_seek,
 
-    .flush = fs_file_node_flush,
+    .flush = fs_file_paged_flush,
 
     .dir_begin = fs_file_cannot_dir_begin,
     .dir_next = fs_file_cannot_dir_next,

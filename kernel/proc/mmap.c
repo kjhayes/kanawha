@@ -218,7 +218,11 @@ mmap_region_flush_page(
     }
 
     struct fs_node *node = region->fs_node; 
-    return fs_node_flush_page(node, page->fs_page);
+    return fs_node_flush_page(
+            node,
+            page->tree_node.key,
+            0,
+            page->phys_addr);
 }
 
 // Unmap, and unload the page

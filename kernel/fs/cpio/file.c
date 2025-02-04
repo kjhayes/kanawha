@@ -10,30 +10,12 @@
 
 #define CPIO_FILE_PAGE_ORDER 12
 
-static int
-cpio_file_flush(
-        struct file *file,
-        unsigned long flags)
-{
-    int res;
-
-    struct fs_node *fs_node =
-        file->path->fs_node;
-
-    res = fs_node_flush(fs_node);
-    if(res) {
-        return res;
-    }
-
-    return 0;
-}
-
 struct fs_file_ops
 cpio_file_ops = {
     .read = fs_file_paged_read,
     .write = fs_file_paged_write,
     .seek = fs_file_paged_seek,
-    .flush = cpio_file_flush,
+    .flush = fs_file_paged_flush,
 
     .dir_next = fs_file_cannot_dir_next,
     .dir_begin = fs_file_cannot_dir_begin,
@@ -122,23 +104,6 @@ cpio_node_write_page(
 }
 
 static int
-cpio_node_flush(
-        struct fs_node *node)
-{
-    int res;
-
-    struct cpio_file_node *cpio_file =
-        container_of(node, struct cpio_file_node, fs_node);
-
-    res = fs_node_flush(cpio_file->mnt->backing_file);
-    if(res) {
-        return res;
-    }
-
-    return 0;
-}
-
-static int
 cpio_node_getattr(
         struct fs_node *node,
         int attr,
@@ -177,8 +142,8 @@ cpio_node_ops = {
 
     .load_page = fs_node_load_page_read_alloc,
     .unload_page = fs_node_unload_page_free,
+    .flush_page = fs_node_flush_page_write,
 
-    .flush = cpio_node_flush,
     .getattr = cpio_node_getattr,
     .setattr = cpio_node_setattr,
 

@@ -1,3 +1,5 @@
 
-obj-y += sysfs.o
+obj-y += \
+	sysfs.o \
+	vfs.o
 

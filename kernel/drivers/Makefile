@@ -8,6 +8,7 @@ obj-y += \
 	qemu/ \
 	virtio/ \
 	vga/ \
+	fb/ \
 
 
 obj-$(CONFIG_PS2) += ps2/

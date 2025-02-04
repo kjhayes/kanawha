@@ -22,7 +22,7 @@ static inline uint16_t
 virtio_pci_get_id(struct pci_func *func)
 {
     if(func->device_id >= 0x1040 && func->device_id < 0x1080) {
-        return (func->device_id - 0x1040) + 1;
+        return (func->device_id - 0x1040);
     }
     switch(func->device_id) {
         case 0x1000: // network
@@ -187,6 +187,14 @@ virtio_pci_init_device(
     }
 
     DEBUG_ASSERT(KERNEL_ADDR(func->irq_domain));
+
+    res = pci_func_raw_enable_bus_master(func);
+    if(res) {
+        eprintk("Failed to enable bus mastering on virtio-pci device! (err=%s)\n",
+                errnostr(res));
+        pci_func_stop_irqs(func);
+        return res;
+    }
 
     struct virtio_pci_device *vpci_dev = kmalloc(sizeof(struct virtio_pci_device));
     if(vpci_dev == NULL) {

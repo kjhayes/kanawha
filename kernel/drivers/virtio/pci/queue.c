@@ -20,7 +20,7 @@ virtio_pci_queue_used_notification_irq_handler(
     struct virtio_pci_queue *queue =
         action->handler_data.priv_data;
 
-    dprintk("virtio_pci_queue: Queue(0x%lx) IRQ Handler!\n",
+    printk("virtio_pci_queue: Queue(0x%lx) IRQ Handler!\n",
             queue->queue.index);
 
     res = virtio_queue_handle_used_notification(&queue->queue);
@@ -231,16 +231,15 @@ virtio_pci_notify(
     size_t offset = pci_queue->notify_offset * vpci_dev->notify_multiplier;
 
     // TODO: Handle VIRTIO_F_NOTIFICATION_DATA
-    dprintk("virtio_pci_notify(queue=0x%x, notify_offset=0x%lx, notify_mult=0x%lx, offset=0x%lx, data=0x%lx, notify_cap_offset=%p, notify_cap_length=%p) index=0x%lx, data=0x%lx\n",
+    printk("virtio_pci_notify(queue=0x%x, notify_offset=0x%lx, notify_mult=0x%lx, offset=0x%lx, notify_cap_offset=%p, notify_cap_length=%p) index=0x%lx, data=0x%x\n",
             virtio_queue_index(vdev, queue),
             pci_queue->notify_offset,
             vpci_dev->notify_multiplier,
             offset,
-            pci_queue->notify_data,
             vpci_dev->notify_cap->offset,
             vpci_dev->notify_cap->length,
             queue->index,
-            pci_queue->notify_data
+            (uint32_t)pci_queue->notify_data
             );
     virtio_pci_cap_bar_writew(
             vpci_dev,

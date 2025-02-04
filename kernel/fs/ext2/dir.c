@@ -497,10 +497,10 @@ ext2_dir_node_ops = {
 
     .load_page = fs_node_load_page_read_alloc,
     .unload_page = fs_node_unload_page_free,
+    .flush_page = fs_node_flush_page_write,
 
     .getattr = ext2_fs_node_getattr,
     .setattr = ext2_fs_node_setattr,
-    .flush = ext2_fs_node_flush,
 
     .lookup = ext2_dir_node_lookup,
 
@@ -520,7 +520,7 @@ ext2_dir_file_ops = {
     .read = fs_file_paged_read,
     .write = fs_file_paged_write,
     .seek = fs_file_paged_seek,
-    .flush = fs_file_node_flush,
+    .flush = fs_file_paged_flush,
 
     .dir_next = ext2_dir_next,
     .dir_begin = ext2_dir_begin,

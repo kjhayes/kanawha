@@ -116,7 +116,7 @@ fs_node_get_page(
 }
 
 static int
-fs_node_flush_page_lockless(
+fs_node_flush_fs_page_lockless(
         struct fs_node *node,
         struct fs_page *page)
 {
@@ -124,15 +124,17 @@ fs_node_flush_page_lockless(
 
     size_t amount = page->size;
 
-    dprintk("fs_node_flush_page_lockless(node=%p, page=%p, page->pfn=%p)\n",
+    dprintk("fs_node_flush_fs_page_lockless(node=%p, page=%p, page->pfn=%p)\n",
             node,
             page,
             page->tree_node.key);
-    res = fs_node_write_page(
+
+    res = fs_node_flush_page(
             node,
-            (void*)__va(page->paddr),
             page->tree_node.key,
-            FS_NODE_WRITE_PAGE_MAY_CREATE);
+            0,
+            page->paddr
+            );
     if(res) {
         return res;
     }
@@ -169,11 +171,11 @@ fs_node_put_page(
     if(page->pins == 0) {
         dprintk("freeing fs_page\n");
         if(page->flags & FS_PAGE_FLAG_DIRTY) {
-            res = fs_node_flush_page_lockless(
+            res = fs_node_flush_fs_page_lockless(
                     node,
                     page);
             if(res) {
-                eprintk("fs_node_put_page failed because fs_node_flush_page_lockless returned (%s) with dirty page!\n",
+                eprintk("fs_node_put_page failed because fs_node_flush_fs_page_lockless returned (%s) with dirty page!\n",
                         errnostr(res));
                 page->pins++;
                 spin_unlock(&node->page_lock);
@@ -207,30 +209,30 @@ fs_node_put_page(
 }
 
 int
-fs_node_flush_page(
+fs_node_flush_fs_page(
         struct fs_node *node,
         struct fs_page *page)
 {
     int res;
     spin_lock(&node->page_lock);
-    res = fs_node_flush_page_lockless(node, page);
+    res = fs_node_flush_fs_page_lockless(node, page);
     spin_unlock(&node->page_lock);
     return res;
 }
 
 int
-fs_node_flush_all_pages(
+fs_node_flush_all_fs_pages(
         struct fs_node *node)
 {
     int res = 0;
-    dprintk("fs_node_flush_all_pages\n");
+    dprintk("fs_node_flush_all_fs_pages\n");
     spin_lock(&node->page_lock);
 
     struct ptree_node *pnode = ptree_get_first(&node->page_cache);
     while(pnode != NULL) {
         struct fs_page *page =
             container_of(pnode, struct fs_page, tree_node);
-        res = fs_node_flush_page_lockless(node, page);
+        res = fs_node_flush_fs_page_lockless(node, page);
         if(res) {
             break;
         }
@@ -436,8 +438,11 @@ fs_node_cannot_unload_page(
     return -EINVAL;
 }
 int
-fs_node_cannot_flush(
-        struct fs_node *node)
+fs_node_cannot_flush_page(
+        struct fs_node *node,
+        uintptr_t pfn,
+        unsigned long flags,
+        void __phys *addr)
 {
     return -EINVAL;
 }
@@ -567,6 +572,29 @@ fs_node_unload_page_free(
     }
 
     res = page_free(order, addr);
+    if(res) {
+        return res;
+    }
+
+    return 0;
+}
+
+int
+fs_node_flush_page_write(
+        struct fs_node *node,
+        uintptr_t pfn,
+        unsigned long flags,
+        void __phys *addr)
+{
+    int res;
+
+    unsigned long write_page_flags = FS_NODE_WRITE_PAGE_MAY_CREATE;
+
+    res = fs_node_write_page(
+            node,
+            (void*)__va(addr),
+            pfn,
+            write_page_flags);
     if(res) {
         return res;
     }

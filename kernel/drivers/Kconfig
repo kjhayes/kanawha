@@ -11,6 +11,10 @@ menu "Serial Devices"
 source "kernel/drivers/serial/Kconfig"
 endmenu
 
+menu "Framebuffer Devices"
+source "kernel/drivers/fb/Kconfig"
+endmenu
+
 menu "Randomness Sources"
 source "kernel/drivers/rand/Kconfig"
 endmenu
