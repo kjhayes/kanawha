@@ -234,7 +234,7 @@ virtio_queue_point_desc(
         (struct virtio_queue_desc*)queue->desc_table;
     struct virtio_queue_desc *desc = &(desc_table[desc_index]);
 
-    printk("virtio_queue_point_desc %p, size=0x%lx\n",
+    dprintk("virtio_queue_point_desc %p, size=0x%lx\n",
             buffer, size);
 
     desc->addr = (uintptr_t)buffer;
@@ -279,7 +279,7 @@ virtio_queue_try_push_avail_ring(
     avail_ring->idx = idx + 1;
     mbarrier();
 
-    printk("avail_ring.idx 0x%lx -> 0x%lx, slot=0x%lx\n",
+    dprintk("avail_ring.idx 0x%lx -> 0x%lx, slot=0x%lx\n",
             idx, idx+1, req->avail_slot);
 
     spin_unlock(&queue->avail_lock);
@@ -371,25 +371,29 @@ virtio_queue_handle_used_notification(
     size_t idx = used_ring->idx;
 
     size_t num_new_elem = idx - last_idx;
+    dprintk("virtio_queue_handle_used_notification (num_new_elem = 0x%lx)\n",
+            num_new_elem);
 
     for(size_t i = 0; i < num_new_elem; i++) {
         struct virtio_queue_used_elem *elem =
-            &used_ring->ring[last_idx + i];
-        
+            &used_ring->ring[(last_idx + i) % queue->queue_size];
+
+        le32_t id = elem->id;
+        le32_t len = elem->len;
+ 
         struct virtio_request *req =
             virtio_queue_find_launched_req_by_desc(
                     queue,
-                    elem->id);
+                    id);
         if(req == NULL) {
             eprintk("virtio_queue: Device or Driver Issue, Descriptor in Used Buffer without a corresponding launched request! (id=0x%lx)\n",
-                    (ul_t)elem->id);
+                    (ul_t)id);
             continue;
         }
 
-        req->len_written = elem->len;
-
         spin_lock(&queue->req_lock);
         ilist_remove(&req->queue_node, &queue->launched_reqs);
+        req->len_written = len;
         req->state = VIRTIO_REQUEST_COMPLETED;
         ilist_push_tail(&req->queue_node, &queue->complete_reqs);
         spin_unlock(&queue->req_lock);

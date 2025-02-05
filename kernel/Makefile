@@ -18,6 +18,7 @@ obj-y += \
 	ramfile.o \
 	char_dev.o \
 	fb_dev.o \
+	rand_dev.o \
 	irq_domain.o \
 	irq_dev.o \
 	thread.o \

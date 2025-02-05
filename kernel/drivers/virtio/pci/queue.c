@@ -20,7 +20,7 @@ virtio_pci_queue_used_notification_irq_handler(
     struct virtio_pci_queue *queue =
         action->handler_data.priv_data;
 
-    printk("virtio_pci_queue: Queue(0x%lx) IRQ Handler!\n",
+    dprintk("virtio_pci_queue: Queue(0x%lx) IRQ Handler!\n",
             queue->queue.index);
 
     res = virtio_queue_handle_used_notification(&queue->queue);
@@ -84,6 +84,8 @@ virtio_pci_create_queue(
         eprintk("virtio_pci_queue: Queue rejected MSI-X vector 0x%lx (resp_vector=0x%lx)\n",
                 (ul_t)queue->msix_vector,
                 (ul_t)resp_vector);
+        kfree(queue);
+        return NULL;
     }
 
     dprintk("VIRTIO QUEUE: irq=0x%lx\n",
@@ -231,7 +233,7 @@ virtio_pci_notify(
     size_t offset = pci_queue->notify_offset * vpci_dev->notify_multiplier;
 
     // TODO: Handle VIRTIO_F_NOTIFICATION_DATA
-    printk("virtio_pci_notify(queue=0x%x, notify_offset=0x%lx, notify_mult=0x%lx, offset=0x%lx, notify_cap_offset=%p, notify_cap_length=%p) index=0x%lx, data=0x%x\n",
+    dprintk("virtio_pci_notify(queue=0x%x, notify_offset=0x%lx, notify_mult=0x%lx, offset=0x%lx, notify_cap_offset=%p, notify_cap_length=%p) index=0x%lx, data=0x%x\n",
             virtio_queue_index(vdev, queue),
             pci_queue->notify_offset,
             vpci_dev->notify_multiplier,
