@@ -1,6 +1,8 @@
 
 # Kanawha Kernel
 
+![screenshot](images/logo.png)
+
 A simple hobby kernel I'm writing in my free time.
 
 This kernel is not *efficient*. There are many many levels of indirection do not have a fantastic reason
