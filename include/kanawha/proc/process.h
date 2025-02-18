@@ -39,7 +39,10 @@ struct process
     // Timestamp
     duration_t creation_timestamp;
 
+    // Waiting on this process to terminate
     struct waitqueue wait_queue;
+    // Waiting on any of this processes' children to terminate
+    struct waitqueue child_wait_queue;
 
     // Process Hierarchy
     spinlock_t hierarchy_lock;
@@ -149,11 +152,23 @@ process_terminate(
 // Returns 0, populates exitcode, and invalidates the process pointer on success,
 // else Returns a negative errno, exitcode is undefined, and process should still be valid
 //
-// If process is not a ZOMBIE, then process_reap will return -EINVAL
+// If process is not a ZOMBIE, and nowait is non-zero then process_reap returns -EWOULDBLOCK
 int
 process_reap(
         struct process *process,
-        int *exitcode);
+        int *exitcode,
+        int nowait);
+
+// Find a child of this process which is able to be reaped without waiting,
+//
+// if nowait is 0, then the process may block until such a child exists.
+// if nowait is 1, no such child exists, returns -EWOULDBLOCK
+// On success, returns 0, and sets child_out to such a child
+int
+process_get_reapable_child(
+        struct process *process,
+        int nowait,
+        struct process **child_out);
 
 int
 process_clear_forced_ip(

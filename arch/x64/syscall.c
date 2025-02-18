@@ -171,8 +171,8 @@ x64_route_syscall(struct x64_syscall_state *state)
             *ret_val = (uint64_t)(int)
                 syscall_reap(
                         process,
-                        (pid_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDI], // to_reap
-                        (unsigned long)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RSI], // flags
+                        (unsigned long)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDI], // flags
+                        (pid_t __user *)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RSI], // pid_inout
                         (int __user *)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDX] // exitcode
                         );
             break;

@@ -223,6 +223,7 @@ process_alloc(
     spinlock_init(&process->hierarchy_lock);
     ilist_init(&process->children);
     waitqueue_init(&process->wait_queue);
+    waitqueue_init(&process->child_wait_queue);
 
     process->creation_timestamp = current_timestamp();
 
@@ -665,6 +666,38 @@ process_strlen_usermem(
     return 0;
 }
 
+int
+process_get_reapable_child(
+        struct process *process,
+        int nowait,
+        struct process **out_child)
+{
+    int res;
+    int irq_flags = spin_lock_irq_save(&process->hierarchy_lock);
+
+    while(1) {
+        ilist_node_t *list_node;
+        ilist_for_each(list_node, &process->children) {
+            struct process *child =
+                container_of(list_node, struct process, child_node);
+            if(child->status == PROCESS_STATUS_ZOMBIE) {
+                spin_unlock_irq_restore(&process->hierarchy_lock, irq_flags);
+                *out_child = child;
+                return 0;
+            }
+        }
+
+        if(nowait) {
+            spin_unlock_irq_restore(&process->hierarchy_lock, irq_flags);
+            return -EWOULDBLOCK;
+        } else {
+            spin_unlock_irq_restore(&process->hierarchy_lock, irq_flags);
+            wait_on(&process->child_wait_queue);
+            irq_flags = spin_lock_irq_save(&process->hierarchy_lock);
+        }
+    }
+}
+
 // Remove a process from the process hierarchy with 
 // process->parent->hierarchy_lock held
 static int
@@ -760,9 +793,21 @@ process_terminate(
         environment_deattach(process->environ, process);
     }
 
+    if(process->parent) {
+        // We need to wake anyone waiting on our parent's children
+        // (This is usually just our parent doing a REAP_ANY)
+        wake_all(&process->parent->child_wait_queue);
+    }
+
+    // Wake up anyone waiting on us to terminate
     waitqueue_disable(&process->wait_queue);
     wake_all(&process->wait_queue);
     waitqueue_deinit(&process->wait_queue);
+
+    // Wake up anyone waiting on our children to terminate
+    waitqueue_disable(&process->child_wait_queue);
+    wake_all(&process->child_wait_queue);
+    waitqueue_deinit(&process->child_wait_queue);
 
     // Terminate and Reap all children of this thread
     // NOTE: We acquire status_lock before hierarchy_lock here
@@ -811,7 +856,8 @@ process_terminate(
 int
 process_reap(
         struct process *process,
-        int *exitcode)
+        int *exitcode,
+        int nowait)
 {
     int res;
 
@@ -821,7 +867,14 @@ process_reap(
     int irq_flags = spin_lock_irq_save(&process->parent->hierarchy_lock);
 
     while(process->status != PROCESS_STATUS_ZOMBIE) {
-        wait_on(&process->wait_queue);
+        if(nowait) {
+            spin_unlock_irq_restore(&process->parent->hierarchy_lock, irq_flags);
+            return -EWOULDBLOCK;
+        } else {
+            spin_unlock_irq_restore(&process->parent->hierarchy_lock, irq_flags);
+            wait_on(&process->wait_queue);
+            irq_flags = spin_lock_irq_save(&process->parent->hierarchy_lock);
+        }
     }
 
     if(exitcode) {
@@ -985,7 +1038,7 @@ process_spawn_child(
 
 err1:
     process_terminate(process, 1);
-    process_reap(process, &exitcode);
+    process_reap(process, &exitcode, 0);
     DEBUG_ASSERT(exitcode == 1);
 err0:
     return NULL;

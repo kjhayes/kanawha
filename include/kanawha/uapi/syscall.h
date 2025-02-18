@@ -84,8 +84,8 @@ ARG(pid_t __user *, child)
 
 #define SYSCALL_SIG_REAP(RET,ARG)\
 RET(int)\
-ARG(pid_t, id)\
 ARG(unsigned long, flags)\
+ARG(pid_t __user *, pid_inout)\
 ARG(int __user *, exitcode)
 
 #define SYSCALL_SIG_GETPID(RET,ARG)\
