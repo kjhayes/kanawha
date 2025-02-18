@@ -16,4 +16,9 @@
 // len -> ignored
 #define ENV_CLEAR 2
 
+// key -> name of variable
+// value -> ignored
+// len -> ignored
+#define ENV_EXIST 3
+
 #endif

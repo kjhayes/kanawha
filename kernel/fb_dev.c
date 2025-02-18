@@ -171,10 +171,10 @@ fb_dev_buffer_fs_node_flush_page(
     spin_unlock(&dev->buffer_lock);
 
     // TODO This is ridiculuously inefficient (flushing full buffer on every page flush)
-    res = fb_dev_flush_buffer(dev);
-    if(res) {
-        return res;
-    }
+//    res = fb_dev_flush_buffer(dev);
+//    if(res) {
+//        return res;
+//    }
 
     return 0;
 }
@@ -231,6 +231,29 @@ exit:
     return res;
 }
 
+static int
+fb_dev_buffer_fs_file_flush(
+        struct file *file,
+        unsigned long flags)
+{
+    int res;
+
+    struct fs_node *fs_node = file->path->fs_node;
+    struct fb_dev *dev =
+        container_of(fs_node, struct fb_dev, buffer_vfs_node.fs_node);
+
+    if(dev->buffer_tail_pfn >= 0) {
+        fs_node_flush_all_fs_pages(fs_node);
+    }
+
+    res = fb_dev_flush_buffer(dev);
+    if(res) {
+        return res;
+    }
+
+    return 0;
+}
+
 static struct fs_node_ops fb_dev_buffer_fs_node_ops = {
     .lookup = vfs_dir_lookup,
 
@@ -260,7 +283,7 @@ static struct fs_file_ops fb_dev_buffer_fs_file_ops =
 
     .read = fs_file_paged_read,
     .write = fs_file_paged_write,
-    .flush = fs_file_paged_flush,
+    .flush = fb_dev_buffer_fs_file_flush,
     .seek = fs_file_paged_seek,
 };
 
@@ -286,10 +309,23 @@ fb_dev_mode_set_fs_file_write(
     str_buf[buflen] = '\0';
 
     unsigned long long value = parse_unsigned_long_long(str_buf, 0);
+
+    spin_lock(&dev->buffer_lock);
+
+    if(dev->buffer_pages_loaded > 0) {
+        if(fb_dev_get_mode(dev) != value) {
+            // Cannot change modes while the buffer is loaded
+            spin_unlock(&dev->buffer_lock);
+            return -EBUSY;
+        }
+    }
     res = fb_dev_set_mode(dev, value);
     if(res) {
+        spin_unlock(&dev->buffer_lock);
         return res;
     }
+
+    spin_unlock(&dev->buffer_lock);
 
     return buflen;
 }

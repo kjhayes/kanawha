@@ -3,18 +3,22 @@
 #include <kanawha/proc/file_table.h>
 #include <kanawha/assert.h>
 #include <kanawha/vmem.h>
+#include <kanawha/usermode.h>
 
 int
 syscall_fmove(
         struct process *process,
         fd_t dst,
         fd_t src,
-        unsigned long flags)
+        unsigned long flags,
+        fd_t __user *user_out)
 {
     int res;
 
     DEBUG_ASSERT(KERNEL_ADDR(process));
     DEBUG_ASSERT(KERNEL_ADDR(process->file_table));
+
+    fd_t out;
 
     dprintk("PID(%ld) fmove(dst=%ld, src=%ld, flags=0x%lx)\n",
             current_process()->id, dst, src, flags);
@@ -33,9 +37,20 @@ syscall_fmove(
         res = file_table_dup_into(
                 process->file_table,
                 dst,
-                src);
+                src,
+                &out);
         if(res) {
             return res;
+        }
+        if(user_out != NULL) {
+            res = process_write_usermem(
+                    process,
+                    user_out,
+                    &out,
+                    sizeof(fd_t));
+            if(res) {
+                return res;
+            }
         }
         break;
       default:

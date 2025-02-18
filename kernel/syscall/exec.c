@@ -63,27 +63,37 @@ exec_elf64_load_segment(
         return -EINVAL;
     }
 
-    if(ptr_orderof(phdr->p_offset) < VMEM_MIN_PAGE_ORDER) {
-        wprintk("exec_elf64_load_segment: PT_LOAD segment with file_offset=%p not a multiple of the minimum page size!\n",
-                (uintptr_t)phdr->p_offset);
-        return -EINVAL;
-    }
-
-    if(ptr_orderof(phdr->p_vaddr) < VMEM_MIN_PAGE_ORDER) {
-        wprintk("exec_elf64_load_segment: PT_LOAD segment with vaddr=%p not a multiple of the minimum page size!\n",
-                (uintptr_t)phdr->p_vaddr);
-        return -EINVAL;
-    }
-
+    uintptr_t offset = phdr->p_offset;
+    uintptr_t vaddr = phdr->p_vaddr;
     size_t memsz = phdr->p_memsz;
     size_t filesz = phdr->p_filesz;
-    size_t bsssz = memsz - filesz;
+
+    if((offset & ((1ULL<<VMEM_MIN_PAGE_ORDER)-1)) != (vaddr & ((1ULL<<VMEM_MIN_PAGE_ORDER)-1))) {
+        wprintk("exec_elf64_load_segment: PT_LOAD segment with file_offset=%p, vaddr=%p with different page offsets!\n",
+                (uintptr_t)offset, (uintptr_t)vaddr);
+        return -EINVAL;
+    }
+
+    if(ptr_orderof(vaddr) < VMEM_MIN_PAGE_ORDER) {
+        // Need to align both the file_offset and vaddr down to the nearest page
+        size_t page_offset = (vaddr & ((1ULL<<VMEM_MIN_PAGE_ORDER)-1));
+        vaddr -= page_offset;
+        offset -= page_offset;
+
+        // Increase the file size to compensate
+        filesz += page_offset;
+    }
 
     if(ptr_orderof(filesz) < VMEM_MIN_PAGE_ORDER) {
         dprintk("exec_elf64_load_segment: PT_LOAD segment with file_size=%p not a multiple of the minimum page size: rounding up\n",
                 (uintptr_t)filesz);
         filesz += ((1ULL<<VMEM_MIN_PAGE_ORDER)-1);
         filesz &= ~((1ULL<<VMEM_MIN_PAGE_ORDER)-1);
+    }
+
+    size_t bsssz = 0;
+    if(memsz > filesz) {
+        bsssz = memsz - filesz;
     }
 
     if(ptr_orderof(bsssz) < VMEM_MIN_PAGE_ORDER) {
@@ -112,8 +122,8 @@ exec_elf64_load_segment(
         res = mmap_map_region_exact(
                 process,
                 file,
-                phdr->p_offset,
-                phdr->p_vaddr,
+                offset,
+                vaddr,
                 filesz,
                 mmap_flags | MMAP_PRIVATE);
         if(res) {
@@ -131,7 +141,7 @@ exec_elf64_load_segment(
                 process,
                 0,
                 0,
-                phdr->p_vaddr + filesz,
+                vaddr + filesz,
                 bsssz,
                 mmap_flags | MMAP_ANON);
         if(res) {

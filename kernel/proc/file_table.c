@@ -442,8 +442,9 @@ exit:
 int
 file_table_dup_into(
         struct file_table *table,
-        fd_t closed_dst,
-        fd_t open_src)
+        fd_t dst,
+        fd_t open_src,
+        fd_t *out)
 {
     int res;
 
@@ -456,9 +457,8 @@ file_table_dup_into(
     }
     struct file *src_file = container_of(open_node, struct file, table_node);
 
-    if(ptree_get(&table->descriptor_tree, closed_dst) != NULL) {
-        res = -EEXIST;
-        goto exit;
+    while(ptree_get(&table->descriptor_tree, dst) != NULL) {
+        dst++;
     }
 
     struct file *dst_file = kmalloc(sizeof(struct file));
@@ -482,7 +482,7 @@ file_table_dup_into(
     dst_file->path = src_file->path;
     dst_file->refs = 1;
 
-    res = ptree_insert(&table->descriptor_tree, &dst_file->table_node, closed_dst);
+    res = ptree_insert(&table->descriptor_tree, &dst_file->table_node, dst);
     if(res) {
         fs_path_put(dst_file->path);
         kfree(dst_file);
@@ -492,6 +492,7 @@ file_table_dup_into(
     table->num_open_files++;
 
     res = 0;
+    *out = dst;
 exit:
     spin_unlock(&table->lock);
     return res;

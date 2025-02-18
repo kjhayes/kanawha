@@ -3,6 +3,7 @@
 
 #include <kanawha/types.h>
 #include <kanawha/pointer.h>
+#include <kanawha/string.h>
 
 #define __mmio __attribute__((noderef))
 
@@ -55,6 +56,12 @@ static inline void
 mmio_writeq(void __mmio *addr, uint64_t val)
 {
     *(volatile uint64_t*)addr = val;
+}
+
+static inline void
+mmio_memset(void __mmio *addr, int val, size_t length)
+{
+    memset((void*)addr, val, length);
 }
 
 #endif

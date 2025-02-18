@@ -17,7 +17,7 @@ typedef unsigned long fd_t;
 
 // Swap dst and src
 #define FMOVE_SWAP (0)
-// Replace dst with a copy of src
+// Replace first available descriptor greater than dst with a copy of src
 #define FMOVE_DUP  (1)
 
 #endif

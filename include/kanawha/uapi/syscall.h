@@ -127,7 +127,8 @@ ARG(size_t, buflen)
 RET(int)\
 ARG(fd_t, dst)\
 ARG(fd_t, src)\
-ARG(unsigned long, flags)
+ARG(unsigned long, flags)\
+ARG(fd_t __user *, out)\
 
 #define SYSCALL_SIG_MKFILE(RET,ARG)\
 RET(int)\

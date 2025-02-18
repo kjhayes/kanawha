@@ -24,6 +24,10 @@
 #define FB_LAYER_FORMAT_VGA_CHAR  (12) // Single byte VGA character
 #define FB_LAYER_FORMAT_VGA_ATTR  (13) // Single byte VGA attribute
 
+#define FB_LAYER_FORMAT_BYTE_R3G3B2     (16) // Single byte with bit layout  | r2 | r1 | r0 | g2 | g1 | g0 | b1 | b0 |
+#define FB_LAYER_FORMAT_BYTE_R1G1B1I1 (17) // bit layout | 0000 | r0 | g0 | b0 | i0 |
+#define FB_LAYER_FORMAT_BYTE_R1G2B1   (18) // bit layout | 0000 | r0 | g1 | g0 | b0 |
+
 // Order of pixels in the layer
 #define FB_LAYER_ORDER_UNDEFINED    (0)
 #define FB_LAYER_ORDER_ROW_MAJOR    (1)

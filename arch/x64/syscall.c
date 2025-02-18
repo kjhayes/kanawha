@@ -238,7 +238,8 @@ x64_route_syscall(struct x64_syscall_state *state)
                         process,
                         (fd_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDI], // fd0
                         (fd_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RSI],  // fd1
-                        (unsigned long)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDX] // flags
+                        (unsigned long)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDX], // flags
+                        (fd_t __user *)state->caller_regs[PUSHED_CALLER_REGS_INDEX_R8] // out
                         );
             break;
         case SYSCALL_ID_MKFILE:
@@ -266,7 +267,7 @@ x64_route_syscall(struct x64_syscall_state *state)
                         (fd_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDI], // from
                         (fd_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RSI], // dir
                         (const char __user *)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDX], // link_name
-                        (unsigned long)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDX] // flags
+                        (unsigned long)state->caller_regs[PUSHED_CALLER_REGS_INDEX_R8] // flags
                         );
             break;
         case SYSCALL_ID_SYMLINK:
