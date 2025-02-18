@@ -174,8 +174,8 @@ kanawha_sys_spawn:
 .type kanawha_sys_reap,@function
 kanawha_sys_reap:
     movq $KANAWHA_SYSCALL_ID_REAP, %rax
-    // rdi -> pid_t child 
-    // rsi -> unsigned long flags
+    // rdi -> unsigned long flags
+    // rsi -> pid_t *child_inout
     // rdx -> int *exitcode 
     syscall
     retq

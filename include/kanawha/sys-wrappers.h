@@ -104,8 +104,8 @@ kanawha_sys_spawn(
 __attribute__((weak))
 int
 kanawha_sys_reap(
-        pid_t child,
         unsigned long flags,
+        pid_t *child_inout,
         int *exitcode);
 
 __attribute__((weak))

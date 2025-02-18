@@ -8,9 +8,9 @@
 #define WNOHANG   (1ULL<<0)
 #define WUNTRACED (1ULL<<1)
 
-#define WEXITSTATUS(stat)  (0)
+#define WEXITSTATUS(stat)  (stat & 0xFF)
 #define WIFCONTINUED(stat) (0)
-#define WIFEXITED(stat)    (0)
+#define WIFEXITED(stat)    (1)
 #define WIFSIGNALED(stat)  (0)
 #define WIFSTOPPED(stat)   (0)
 #define WSTOPSIG(stat)     (0)
