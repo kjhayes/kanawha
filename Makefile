@@ -5,13 +5,12 @@ ROOT_DIR := $(shell pwd)
 SCRIPTS_DIR := $(ROOT_DIR)/scripts
 MK_SCRIPTS_DIR := $(SCRIPTS_DIR)/make
 
-KLIB_SOURCE_DIR := $(ROOT_DIR)/klib
+LIBKFB_SOURCE_DIR := $(ROOT_DIR)/libkfb
 LIBC_SOURCE_DIR := $(ROOT_DIR)/libc
 CRT_SOURCE_DIR := $(ROOT_DIR)/crt
 
 INCLUDE_DIR := $(ROOT_DIR)/include
 LIBC_INCLUDE_DIR := $(ROOT_DIR)/include/libc
-LINK_DIR := $(ROOT_DIR)/link
 
 SETUPS_DIR := $(ROOT_DIR)/setups
 OUTPUT_DIR := $(ROOT_DIR)/build
@@ -19,6 +18,7 @@ MODULE_OUTPUT_DIR := $(OUTPUT_DIR)/modules
 
 PYTHON := python3
 
+CFLAGS += -g
 
 default:
 	@
@@ -71,13 +71,11 @@ COMMON_FLAGS += \
 				-D__ELK_LIBC__\
 				-I $(INCLUDE_DIR) \
 				-I $(LIBC_INCLUDE_DIR) \
-				-I $(ROOT_DIR)/$(subst ",,$(CONFIG_KANAWHA_INCLUDE_PATH)) \
 				-include $(AUTOCONF) \
 				$(subst ",,$(CONFIG_OPT_FLAGS)) \
 				-fno-pie \
 				-fno-pic \
 				-nostdlib \
-				-mgeneral-regs-only \
 				-ffreestanding
 
 COMMON_DEPS += $(AUTOCONF)
@@ -87,59 +85,48 @@ ifdef CONFIG_DEBUG_SYMBOLS
 COMMON_FLAGS += -g
 endif
 
-LDSCRIPT := $(LINK_DIR)/link.$(ARCH).ld
+$(OUTPUT_DIR)/libkfb/obj.o: $(AUTOCONF) FORCE
+	$(Q)$(MAKE) -C $(LIBKFB_SOURCE_DIR) -f $(MK_SCRIPTS_DIR)/build.mk obj
 
-LDFLAGS += -T $(LDSCRIPT)
-LDDEPS += $(LDSCRIPT)
-
-LDFLAGS += $(OUTPUT_DIR)/null.o
-LDDEPS += $(OUTPUT_DIR)/null.o
-$(OUTPUT_DIR)/null.o: $(SCRIPTS_DIR)/null.c $(CDEPS) $(COMMON_DEPS) | $(OUTPUT_DIR)
-	$(call qinfo, CC, $(call rel-dir, $@, $(OUTPUT_DIR)))
-	$(Q)$(CC) -c $(CFLAGS) $(COMMON_FLAGS) $< -o $@
-
-$(OUTPUT_DIR)/klib/obj.o: $(LDDEPS) FORCE
-	$(Q)$(MAKE) -C $(KLIB_SOURCE_DIR) -f $(MK_SCRIPTS_DIR)/build.mk obj
-
-$(OUTPUT_DIR)/libc/obj.o: $(LDDEPS) FORCE
+$(OUTPUT_DIR)/libc/obj.o: $(AUTOCONF) FORCE
 	$(Q)$(MAKE) -C $(LIBC_SOURCE_DIR) -f $(MK_SCRIPTS_DIR)/build.mk obj
 
-$(OUTPUT_DIR)/crt/crt0-obj.o: $(LDDEPS) FORCE
+$(OUTPUT_DIR)/crt/crt0-obj.o: $(AUTOCONF) FORCE
 	$(Q)$(MAKE) -C $(CRT_SOURCE_DIR) -f $(MK_SCRIPTS_DIR)/build.mk crt0-obj
 
-$(OUTPUT_DIR)/crt/crti-obj.o: $(LDDEPS) FORCE
+$(OUTPUT_DIR)/crt/crti-obj.o: $(AUTOCONF) FORCE
 	$(Q)$(MAKE) -C $(CRT_SOURCE_DIR) -f $(MK_SCRIPTS_DIR)/build.mk crti-obj
 
-$(OUTPUT_DIR)/crt/crtn-obj.o: $(LDDEPS) FORCE
+$(OUTPUT_DIR)/crt/crtn-obj.o: $(AUTOCONF) FORCE
 	$(Q)$(MAKE) -C $(CRT_SOURCE_DIR) -f $(MK_SCRIPTS_DIR)/build.mk crtn-obj
 
+libkfb: $(OUTPUT_DIR)/libkfb.a
+$(OUTPUT_DIR)/libkfb.a: $(OUTPUT_DIR)/libkfb/obj.o
+	$(Q)rm -f $@
+	$(Q)$(AR) -cru $@ $^
 
-klib: $(OUTPUT_DIR)/klib.o
-$(OUTPUT_DIR)/klib.o: $(OUTPUT_DIR)/klib/obj.o
-	$(Q)$(LD) -r $(LDFLAGS) $^ -o $@
-
-libc: $(OUTPUT_DIR)/libc.o
-$(OUTPUT_DIR)/libc.o: $(OUTPUT_DIR)/libc/obj.o
-	$(Q)$(LD) -r $(LDFLAGS) $^ -o $@
+libc: $(OUTPUT_DIR)/libc.a
+$(OUTPUT_DIR)/libc.a: $(OUTPUT_DIR)/libc/obj.o
+	$(Q)rm -f $@
+	$(Q)$(AR) -cru $@ $^
 
 crt0: $(OUTPUT_DIR)/crt0.o
 $(OUTPUT_DIR)/crt0.o: $(OUTPUT_DIR)/crt/crt0-obj.o
-	$(Q)$(LD) -r $(LDFLAGS) $^ -o $@
+	$(Q)mv $< $@
 
 crti: $(OUTPUT_DIR)/crti.o
 $(OUTPUT_DIR)/crti.o: $(OUTPUT_DIR)/crt/crti-obj.o
-	$(Q)$(LD) -r $(LDFLAGS) $^ -o $@
+	$(Q)mv $< $@
 
 crtn: $(OUTPUT_DIR)/crtn.o
 $(OUTPUT_DIR)/crtn.o: $(OUTPUT_DIR)/crt/crtn-obj.o
-	$(Q)$(LD) -r $(LDFLAGS) $^ -o $@
+	$(Q)mv $< $@
 
+default: libkfb libc crt0 crti crtn 
 
-default: klib libc crt0 crti crtn
-
--include $(MK_SCRIPTS_DIR)/qemu.mk
 -include $(MK_SCRIPTS_DIR)/asm.mk
 -include $(MK_SCRIPTS_DIR)/initrd.mk
+-include $(MK_SCRIPTS_DIR)/sysroot.mk
 
 clean: FORCE
 	$(Q)find $(OUTPUT_DIR) -name "*.o" -delete $(QPIPE) $(QIGNORE)

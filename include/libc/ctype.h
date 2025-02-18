@@ -1,6 +1,7 @@
 #ifndef __ELK_LIBC__CTYPE_H__
 #define __ELK_LIBC__CTYPE_H__
 
+int isalnum(int c);
 int isalpha(int c);
 int isblank(int c);
 int iscntrl(int c);

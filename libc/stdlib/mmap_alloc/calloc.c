@@ -1,8 +1,4 @@
 
-#include "kanawha/sys-wrappers.h"
-#include "kanawha/uapi/mmap.h"
-#include "kanawha/uapi/file.h"
-
 #include <stddef.h>
 #include <stdlib.h>
 

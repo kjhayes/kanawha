@@ -19,15 +19,23 @@ obj-y += \
 obj-y += \
 	fgetc.o \
 	getc.o \
-	getchar.o
+	getchar.o \
+	fgets.o
 
 obj-y += \
 	fread.o \
-	fwrite.o
+	fwrite.o \
+	fflush.o
 
 obj-y += \
 	doprnt.o \
 	vfprintf.o \
 	fprintf.o \
-	printf.o
+	printf.o \
+	vsnprintf.o \
+	snprintf.o \
+
+obj-y += \
+	remove.o \
+	rename.o \
 

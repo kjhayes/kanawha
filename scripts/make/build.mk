@@ -63,6 +63,3 @@ $(CUR_OBJ_OUTPUT_DIR)%.o: $(CUR_SOURCE_DIR)%.S $(ADEPS) $(COMMON_DEPS) | $(CUR_O
 	$(call qinfo, AS, $(call rel-dir, $@, $(OUTPUT_DIR)))
 	$(Q)$(AS) $(AFLAGS) $(COMMON_FLAGS) -c $< -o $@
 
-$(CUR_OBJ_OUTPUT_DIR)%.o: FORCE
-	$(Q)$(MAKE) -C $(CUR_SOURCE_DIR) -f $(MK_SCRIPTS_DIR)/build.mk $(basename $(notdir $@))
-

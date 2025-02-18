@@ -1,8 +1,8 @@
 
-#include "kanawha/sys-wrappers.h"
-#include <kanawha/uapi/mmap.h>
-#include <kanawha/uapi/environ.h>
-#include <kanawha/uapi/errno.h>
+#include <kanawha/sys-wrappers.h>
+#include <kanawha/mmap.h>
+#include <kanawha/environ.h>
+#include <kanawha/errno.h>
 
 static size_t
 strlen(char *str)

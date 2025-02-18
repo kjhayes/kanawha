@@ -1,7 +1,5 @@
 
-#include "kanawha/sys-wrappers.h"
-#include "kanawha/uapi/mmap.h"
-#include "kanawha/uapi/file.h"
+#include <kanawha/sys-wrappers.h>
 
 #include <stddef.h>
 #include <assert.h>
@@ -12,6 +10,6 @@ void free(void *ptr)
     void *base_ptr = (void*)((uintptr_t)ptr & ~0xFFF);
 
     res = kanawha_sys_munmap(ptr);
-    assert(res == 0);
+    //assert(res == 0);
 }
 

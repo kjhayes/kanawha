@@ -4,6 +4,10 @@ obj-y += \
 	stdlib/ \
 	stdio/ \
 	ctype/ \
+	math/ \
 	locale.o \
-	errno.o
+	errno.o \
+	getopt.o \
+	syscall.o \
+	posix/ \
 

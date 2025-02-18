@@ -34,6 +34,10 @@
 #define KANAWHA_SYSCALL_ID_INSMOD    30
 #define KANAWHA_SYSCALL_ID_RMMOD     31
 #define KANAWHA_SYSCALL_ID_CHWDIR    32
+#define KANAWHA_SYSCALL_ID_SLEEP     33
+#define KANAWHA_SYSCALL_ID_TIME      34
+#define KANAWHA_SYSCALL_ID_SIGRET    35
+#define KANAWHA_SYSCALL_ID_SIGROUTE  36
 
 .global kanawha_sys_exit
 .type kanawha_sys_exit,@function
@@ -247,6 +251,7 @@ kanawha_sys_fmove:
     // rdi -> fd_t f0
     // rsi -> fd_t f1
     // rdx -> unsigned long flags
+    movq %rcx, %r8 // r8 -> fd_t *out
     syscall
     retq
 
@@ -345,4 +350,35 @@ kanawha_sys_chwdir:
     syscall
     retq
 
+.global kanawha_sys_sleep
+.type kanawha_sys_sleep,@function
+kanawha_sys_sleep:
+    movq $KANAWHA_SYSCALL_ID_SLEEP, %rax
+    // rdi -> size_t duration
+    // rsi -> unsigned long flags
+    syscall
+    retq
+
+.global kanawha_sys_time
+.type kanawha_sys_time,@function
+kanawha_sys_time:
+    movq $KANAWHA_SYSCALL_ID_TIME, %rax
+    // rdi -> unsigned long flags
+    syscall
+    retq
+
+.global kanawha_sys_sigret
+.type kanawha_sys_sigret,@function
+kanawha_sys_sigret:
+    movq $KANAWHA_SYSCALL_ID_SIGRET, %rax
+    syscall
+    retq
+
+.global kanawha_sys_sigroute
+.type kanawha_sys_sigroute,@function
+kanawha_sys_sigroute:
+    movq $KANAWHA_SYSCALL_ID_SIGROUTE, %rax
+    // rdi -> void * entry
+    syscall
+    retq
 

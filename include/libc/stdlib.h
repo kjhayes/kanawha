@@ -57,6 +57,7 @@ int at_quick_exit(void (*func)(void));
 _Noreturn void exit(int status);
 _Noreturn void _Exit(int status);
 char *getenv(const char *name);
+int setenv(const char *envname, const char *envval, int overwrite);
 _Noreturn void quick_exit(int status);
 int system(const char *string);
 

@@ -21,6 +21,10 @@ obj-y += \
 	strtok.o \
 	memset.o \
 	strerror.o \
-	strlen.o
+	strlen.o \
+	strdup.o \
+	strndup.o \
+	strncasecmp.o \
+	strcasecmp.o \
 
 

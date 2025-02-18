@@ -1,4 +1,4 @@
 
 obj-y += \
-	syscall.o
+	fabs.o \
 

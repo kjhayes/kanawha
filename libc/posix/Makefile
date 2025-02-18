@@ -1,0 +1,5 @@
+
+obj-y += \
+	unistd/ \
+	fcntl/ \
+

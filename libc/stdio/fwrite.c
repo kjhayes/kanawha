@@ -21,7 +21,7 @@ fwrite(
     while(total_size > 0) {
         ssize_t written = kanawha_sys_write(
                 stream->__fd,
-                ptr,
+                ptr + total_written,
                 total_size);
         if(written < 0) {
             // TODO: Setup ferror()

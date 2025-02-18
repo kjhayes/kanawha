@@ -1,0 +1,122 @@
+
+#include <kanawha/sys-wrappers.h>
+#include <kanawha/file.h>
+#include <kanawha/errno.h>
+#include <fcntl.h>
+#include <stdarg.h>
+#include <string.h>
+#include <stdlib.h>
+
+int
+open(
+        const char *pathname,
+        int flags,
+        ...)
+{
+    int res;
+
+    mode_t mode = 0;
+
+    va_list arg;
+    va_start(arg, flags);
+    if(flags & O_CREAT)
+    {
+        mode = va_arg(arg, mode_t);
+    }
+    va_end(arg);
+
+    // TODO Handle the file mode
+
+    unsigned long access_flags = 0;
+    unsigned long mode_flags = 0;
+
+    switch(flags & (O_RDONLY | O_WRONLY | O_RDWR)) {
+        case O_RDONLY:
+            access_flags |= FILE_PERM_READ;
+            break;
+        case O_WRONLY:
+            access_flags |= FILE_PERM_WRITE;
+            break;
+        case O_RDWR:
+            access_flags |= FILE_PERM_READ;
+            access_flags |= FILE_PERM_WRITE;
+            break;
+        default:
+            // TODO set errno
+            return -1;
+    }
+
+    if(flags & O_NONBLOCK) {
+        mode_flags |= FILE_MODE_NON_BLOCK;
+    }
+    if(flags & O_TRUNC) {
+        mode_flags |= FILE_MODE_OPEN_TRUNC;
+    }
+
+    if(flags & O_EXEC) {
+        access_flags |= FILE_PERM_EXEC;
+    }
+
+    mode_flags |= FILE_MODE_WRITE_EXTEND;
+
+    fd_t file_fd;
+    res = kanawha_sys_open(
+            pathname,
+            access_flags,
+            mode_flags,
+            &file_fd);
+    if(res == 0) {
+        return file_fd;
+    } else if(res != -ENXIO) {
+        // TODO set errno
+        return -1;
+    }
+
+    // We need to make the file
+    if(flags & O_CREAT) {
+        char *directory = strdup(pathname);
+        char *slash = strrchr(directory, '/');
+        if(slash < directory) {
+            free(directory);
+            // TODO set errno
+            return -1;
+        }
+        *slash = '\0';
+        const char *new_file_name = slash++;
+
+        fd_t dir_fd;
+        res = kanawha_sys_open(
+                directory,
+                FILE_PERM_READ|FILE_PERM_WRITE,
+                0,
+                &dir_fd);
+        if(res) {
+            free(directory);
+            // TODO set errno
+            return -1;
+        }
+        unsigned long mkfile_flags = 0;
+        res = kanawha_sys_mkfile(
+                dir_fd,
+                new_file_name,
+                mkfile_flags);
+        free(directory);
+        if(res) {
+            // TODO set errno
+            return -1;
+        }
+    }
+
+    res = kanawha_sys_open(
+            pathname,
+            access_flags,
+            mode_flags,
+            &file_fd);
+    if(res) {
+        // TODO set errno
+        return -1;
+    }
+
+    return file_fd;
+}
+

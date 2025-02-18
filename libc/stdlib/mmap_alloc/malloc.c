@@ -1,6 +1,6 @@
 
-#include "kanawha/sys-wrappers.h"
-#include "kanawha/uapi/mmap.h"
+#include <kanawha/sys-wrappers.h>
+#include <kanawha/mmap.h>
 
 #include <stddef.h>
 
@@ -12,8 +12,8 @@ void *malloc(size_t size)
     // Align up to the nearest page
     size_t alloc_size = size + 16;
     if(alloc_size & 0xFFF) {
+        alloc_size += 0xFFF;
         alloc_size &= ~0xFFF;
-        alloc_size += 0x1000;
     }
 
     res = kanawha_sys_mmap(

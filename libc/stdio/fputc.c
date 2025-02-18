@@ -1,7 +1,7 @@
 
-#include "elk-libc-internal/__sFILE.h"
-#include "kanawha/sys-wrappers.h"
-#include "kanawha/uapi/file.h"
+#include <elk-libc-internal/__sFILE.h>
+#include <kanawha/sys-wrappers.h>
+#include <kanawha/file.h>
 
 #include <stdio.h>
 #include <string.h>

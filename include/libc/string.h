@@ -99,4 +99,17 @@ char *strerror(
 size_t strlen(
         const char *s);
 
+char *strdup(const char *string);
+char *strndup(const char *s, size_t n);
+
+// Not strictly standards conforming
+// but often lumped into string.h from BSD strings.h
+int strcasecmp(
+        const char *,
+        const char *);
+int strncasecmp(
+        const char *,
+        const char *,
+        size_t);
+
 #endif

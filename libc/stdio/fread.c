@@ -22,7 +22,7 @@ fread(
     while(total_size > 0) {
         ssize_t read = kanawha_sys_read(
                 stream->__fd,
-                ptr,
+                ptr + total_read,
                 total_size);
         if(read < 0) {
             // TODO: Setup ferror()

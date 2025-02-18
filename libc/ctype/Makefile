@@ -1,5 +1,6 @@
 
 obj-y += \
+    isalnum.o \
     isalpha.o \
     isblank.o \
     iscntrl.o \
