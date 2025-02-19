@@ -10,4 +10,5 @@ obj-y += \
 	getopt.o \
 	syscall.o \
 	posix/ \
+	argv.o \
 

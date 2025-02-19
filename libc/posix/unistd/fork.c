@@ -3,14 +3,19 @@
 #include <kanawha/sys-wrappers.h>
 #include <kanawha/spawn.h>
 
-extern void
+extern int
 __elk_posix__do_fork(pid_t *pid_out);
 
 pid_t
 fork(void)
 {
 
+    int res;
     pid_t pid = 0;
-    __elk_posix__do_fork(&pid);
+    res = __elk_posix__do_fork(&pid);
+    if(res) {
+        // TODO set errno
+        return -1;
+    }
     return pid;
 }

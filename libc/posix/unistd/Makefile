@@ -7,4 +7,5 @@ obj-y += \
 	dup2.o \
 	pipe.o \
 	chrdir.o \
+	execvp.o \
 
