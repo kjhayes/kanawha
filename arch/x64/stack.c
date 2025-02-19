@@ -6,6 +6,7 @@
 #include <kanawha/string.h>
 #include <kanawha/page_alloc.h>
 #include <kanawha/assert.h>
+#include <kanawha/proc/process.h>
 
 #define X64_THREAD_STACK_VIRT_SIZE_ORDER 21
 #define X64_THREAD_STACK_VIRT_ALIGN_ORDER 21
@@ -22,8 +23,14 @@ x64_thread_stack_page_fault_handler(
     DEBUG_ASSERT(KERNEL_ADDR(thread));
 
     if(thread == current_thread()) {
-        eprintk("Thread(%ld) likely stack overflow!\n",
+        if(thread->flags & THREAD_FLAG_PROCESS) {
+            eprintk("Thread(%ld) PID(%ld) likely stack overflow!\n",
+                    thread->id,
+                    current_process()->id);
+        } else {
+            eprintk("Thread(%ld) likely stack overflow!\n",
                 thread->id);
+        }
     }
 
     return PAGE_FAULT_UNHANDLED;
