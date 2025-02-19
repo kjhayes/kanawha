@@ -9,6 +9,7 @@
 #include <kanawha/string.h>
 #include <kanawha/assert.h>
 #include <kanawha/vmem.h>
+#include <kanawha/irq.h>
 
 int
 fs_node_get(struct fs_node *node)
@@ -113,6 +114,25 @@ fs_node_get_page(
 
     spin_unlock(&node->page_lock);
     return page;
+}
+
+int
+fs_page_get(
+        struct fs_node *node,
+        struct fs_page *page)
+{
+    int res;
+    int irq_flags = spin_lock_irq_save(&node->page_lock);
+
+    if(page->pins == 0) {
+        res = -EINVAL;
+    } else {
+        page->pins++;
+        res = 0;
+    }
+
+    spin_unlock_irq_restore(&node->page_lock, irq_flags);
+    return res;
 }
 
 static int

@@ -209,6 +209,11 @@ fs_node_put_page(
         int modified);
 
 int
+fs_page_get(
+        struct fs_node *node,
+        struct fs_page *page);
+
+int
 fs_node_flush_fs_page(
         struct fs_node *node,
         struct fs_page *page);

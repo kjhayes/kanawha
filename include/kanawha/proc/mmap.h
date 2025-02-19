@@ -23,7 +23,14 @@ struct mmap_page
     order_t order;
 
     unsigned long flags;
-    struct fs_page *fs_page;
+
+    union {
+        // Non-anonymous page
+        struct fs_page *fs_page;
+
+        // Anonymous page (NULL if not copy-on-write)
+        atomic_t *anon_sharing_level;
+    };
 
     struct ptree_node tree_node;
 };
@@ -135,5 +142,11 @@ mmap_page_fault_handler(
         uintptr_t offset,
         unsigned long flags,
         void *priv_state);
+
+// Cloning
+int
+mmap_clone(
+        struct mmap *from,
+        struct process *onto);
 
 #endif

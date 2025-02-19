@@ -947,7 +947,8 @@ process_spawn_child(
     }
 
     if(spawn_flags & SPAWN_MMAP_CLONE) {
-        panic("SPAWN_MMAP_CLONE is unimplemented!\n");
+//        panic("SPAWN_MMAP_CLONE is unimplemented!\n");
+        res = mmap_clone(parent->mmap, process);
         if(res) {
             eprintk("Failed to clone mmap for spawned process! (err=%s)\n",
                     errnostr(res));

@@ -106,6 +106,8 @@ mmap_deattach(
     process->mmap = NULL;
 
     if(ilist_empty(&mmap->process_list)) {
+        // TODO Free the mmap_regions/pages
+
         // This was the last process to hold a reference to this mmap
         res = vmem_region_destroy(mmap->vmem_region);
         if(res) {
@@ -121,7 +123,6 @@ mmap_deattach(
 
     spin_unlock_irq_restore(&mmap->lock, irq_flags);
     return 0;
-
 }
 
 int
@@ -248,10 +249,21 @@ mmap_region_reclaim_page(
     }
 
     if(page->flags & MMAP_PAGE_ANON) {
-        DEBUG_ASSERT(page->fs_page == NULL);
-        res = page_free(page->order, page->phys_addr);
-        if(res) {
-            return res;
+        int can_free = 1;
+        if(page->flags & MMAP_PAGE_COPY_ON_WRITE) {
+            atomic_t *sharing_level = page->anon_sharing_level;
+            atomic_t new_level = atomic_fetch_dec(sharing_level)-1;
+            if(new_level != 0) {
+                can_free = 0;
+            } else {
+                kfree(page->anon_sharing_level);
+            }
+        }
+        if(can_free) {
+            res = page_free(page->order, page->phys_addr);
+            if(res) {
+                return res;
+            }
         }
     } else {
         DEBUG_ASSERT(KERNEL_ADDR(page->fs_page));
@@ -791,7 +803,22 @@ mmap_region_load_page(
     page->order = order;
     page->flags = page_flags;
     page->phys_addr = paddr;
-    page->fs_page = fs_page;
+    if(page->flags & MMAP_ANON) {
+        if(page->flags & MMAP_PAGE_COPY_ON_WRITE) {
+            // This should never happen but stay consistent if our caller is weird
+            page->anon_sharing_level = kmalloc(sizeof(atomic_t));
+            if(page->anon_sharing_level == NULL) {
+                page_free(order, paddr);
+                kfree(page);
+                return -ENOMEM;
+            }
+            *page->anon_sharing_level = 1;
+        } else {
+            page->anon_sharing_level = NULL;
+        }
+    } else {
+        page->fs_page = fs_page;
+    }
 
     DEBUG_ASSERT(ptr_orderof(page->phys_addr) >= VMEM_MIN_PAGE_ORDER);
 
@@ -820,7 +847,7 @@ mmap_page_do_copy_on_write(
 {
     int res;
 
-    dprintk("mmap_page_do_copy_on_write(region=%p, page=%p, page->offset=%p)\n",
+    printk("mmap_page_do_copy_on_write(region=%p, page=%p, page->offset=%p)\n",
             region, page, page->tree_node.key);
 
     res = mmap_region_unmap_page(region, page);
@@ -829,6 +856,7 @@ mmap_page_do_copy_on_write(
                 errnostr(res));
         return res;
     }
+
     // The process tried to write to a "copy-on-write" page
     void __phys * new_page;
 
@@ -849,9 +877,9 @@ mmap_page_do_copy_on_write(
 
     dprintk("copied data\n");
 
+    // Clean-Up
     if((page->flags & MMAP_PAGE_ANON) == 0) {
-
-        dprintk("putting fs_page\n");
+        // File-Backed
 
         DEBUG_ASSERT(KERNEL_ADDR(region));
         DEBUG_ASSERT(KERNEL_ADDR(region->fs_node));
@@ -875,15 +903,33 @@ mmap_page_do_copy_on_write(
         dprintk("put fs_page\n");
 
     } else {
-        panic("mmap_page_do_copy_on_write: MMAP_PAGE_ANON and MMAP_PAGE_COPY_ON_WRITE are both set (Unsupported!)\n");
+        printk("Handling Anonymous Copy-On-Write Page Fault...\n");
+        // Anonymous
+        atomic_t *sharing_level = page->anon_sharing_level;
+        DEBUG_ASSERT(KERNEL_ADDR(sharing_level));
+
+        // Need this synchronization because
+        atomic_t new_level = atomic_fetch_dec(sharing_level)-1;
+
+        printk("Set Sharing Level to %d\n", new_level);
+
+        if(new_level == 0) {
+            // Free the old page (Really we should just use the old one TODO)
+            printk("Freeing Page!\n");
+            page_free(page->order, page->phys_addr);
+            kfree(sharing_level);
+        }
     }
 
+    // Set up our page as if it is just a standard anonymous page
     page->flags &= ~MMAP_PAGE_COPY_ON_WRITE;
     page->flags |= MMAP_PAGE_ANON;
     page->phys_addr = new_page;
+    page->anon_sharing_level = NULL;
 
     dprintk("populated page flags\n");
 
+    // Remap the page into memory
     res = mmap_region_map_page(region, page);
     if(res) {
         // We can potentially survive this, it'll just become an unmapped but
@@ -1379,3 +1425,187 @@ mmap_page_fault_handler(
     spin_unlock_irq_restore(&mmap->lock, irq_flags);
     return PAGE_FAULT_UNHANDLED;
 }
+
+// Cloning
+
+// Should be called holding the region lock of "from"
+static int
+mmap_page_clone(
+        struct mmap_page *from,
+        struct mmap_region *to)
+{
+    int res;
+
+    struct mmap_page *page = kmalloc(sizeof(struct mmap_page));
+    if(page == NULL) {
+        return -ENOMEM;
+    }
+    memset(page, 0, sizeof(struct mmap_page));
+
+    page->flags = from->flags;
+    page->order = from->order;
+
+    page->flags &= ~MMAP_PAGE_MAPPED;
+
+    // Set phys_addr and fs_page/anon_sharing_level
+    if(from->flags & MMAP_PAGE_ANON) {
+        if(from->flags & MMAP_PAGE_COPY_ON_WRITE) {
+            // This page is already being shared between mmap's as copy-on-write
+            page->anon_sharing_level = from->anon_sharing_level;
+            atomic_t old_sharing_level = atomic_fetch_inc(from->anon_sharing_level);
+            if(old_sharing_level <= 0) {
+                // We caught this page in the middle of freeing it?
+                // (shouldn't be possible)
+                kfree(page);
+                return -EINVAL;
+            }
+            page->phys_addr = from->phys_addr;
+        } else {
+            // We need to make this a shared anonymous copy-on-write page
+            page->flags |= MMAP_PAGE_COPY_ON_WRITE;
+            page->anon_sharing_level = kmalloc(sizeof(atomic_t));
+            if(page->anon_sharing_level == NULL) {
+                kfree(page);
+                return -ENOMEM;
+            }
+            *page->anon_sharing_level = 2;
+
+            // I'm fairly confident this is safe: these is accesses are questionable though
+            from->flags |= MMAP_PAGE_COPY_ON_WRITE;
+            from->anon_sharing_level = page->anon_sharing_level;
+
+            page->phys_addr = from->phys_addr;
+        }
+    } else {
+        struct fs_page *fs_page = from->fs_page;
+        DEBUG_ASSERT(KERNEL_ADDR(fs_page));
+
+        res = fs_page_get(to->fs_node, fs_page);
+        if(res) {
+            kfree(page);
+            return res;
+        }
+
+        page->fs_page = fs_page;
+        page->phys_addr = from->phys_addr;
+    }
+
+    res = ptree_insert(
+            &to->page_tree,
+            &page->tree_node,
+            from->tree_node.key);
+    if(res) {
+        if(page->flags & MMAP_PAGE_ANON) {
+            // Anonymous
+            atomic_t *sharing_level = page->anon_sharing_level;
+            DEBUG_ASSERT(KERNEL_ADDR(sharing_level));
+
+            // Need this synchronization because
+            atomic_t new_level = atomic_fetch_dec(sharing_level)-1;
+
+            if(new_level == 0) {
+                // Free the old page (Really we should just use the old one TODO)
+                page_free(page->order, page->phys_addr);
+                kfree(sharing_level);
+            }
+            kfree(page);
+            return res;
+        } else {
+            fs_node_put_page(to->fs_node, page->fs_page, 0);
+            kfree(page);
+            return res;
+        }
+    }
+    
+    return 0;
+}
+
+// Should be called holding the mmap lock of "from"
+static int
+mmap_region_clone(
+        struct mmap_region *from,
+        struct mmap *to)
+{
+    int res;
+
+    struct mmap_region *region = kmalloc(sizeof(struct mmap_region));
+    if(region == NULL) {
+        return -ENOMEM;
+    }
+    memset(region, 0, sizeof(struct mmap_region));
+
+    region->mmap = to;
+
+    int irq_flags = spin_lock_irq_save(&from->page_tree_lock);
+
+    region->size = from->size;
+    region->file_offset = from->file_offset;
+    region->mmap_flags = from->mmap_flags;
+    region->fs_node = from->fs_node;
+    spinlock_init(&region->page_tree_lock);
+    ptree_init(&region->page_tree);
+
+    size_t region_offset = from->tree_node.key;
+
+    res = ptree_insert(&to->region_tree, &region->tree_node, region_offset);
+    if(res) {
+        spin_unlock_irq_restore(&from->page_tree_lock, irq_flags);
+        kfree(region);
+        return res;
+    }
+
+    struct ptree_node *pnode;
+    for(pnode = ptree_get_first(&from->page_tree);
+        pnode != NULL;
+        pnode = ptree_get_next(pnode))
+    {
+        struct mmap_page *page = container_of(pnode, struct mmap_page, tree_node);
+        res = mmap_page_clone(page, region);
+        if(res) {
+            spin_unlock_irq_restore(&from->page_tree_lock, irq_flags);
+            // Our region will still be in the mmap just incomplete
+            // (It should be freed on mmap destruction)
+            return res;
+        }
+    }
+
+    spin_unlock_irq_restore(&from->page_tree_lock, irq_flags);
+    return 0;
+}
+
+int
+mmap_clone(
+        struct mmap *from,
+        struct process *onto)
+{
+    int res;
+
+    res = mmap_create(from->vmem_region->size, onto);
+    if(res) {
+        return res;
+    }
+    struct mmap *mmap = onto->mmap;
+
+    // No one should be able to access "onto->mmap" yet but just to be extra safe...
+    spin_lock(&mmap->lock);
+
+    int irq_flags = spin_lock_irq_save(&from->lock);
+    struct ptree_node *pnode;
+    for(pnode = ptree_get_first(&from->region_tree);
+        pnode != NULL;
+        pnode = ptree_get_next(pnode))
+    {
+        struct mmap_region *region =
+            container_of(pnode, struct mmap_region, tree_node);
+        res = mmap_region_clone(region, mmap);
+        if(res) {
+            spin_unlock_irq_restore(&from->lock, irq_flags);
+            spin_unlock(&mmap->lock);
+            return res;
+        }
+    }
+    spin_unlock_irq_restore(&from->lock, irq_flags);
+    spin_unlock(&mmap->lock);
+    return 0;
+}
+
