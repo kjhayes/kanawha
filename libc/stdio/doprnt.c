@@ -1,4 +1,5 @@
 
+#include <elk-libc-internal/doprnt.h>
 #include <stdarg.h>
 #include <stdint.h>
 #include <stddef.h>
@@ -6,7 +7,7 @@
 struct doprnt_state {
     // Inputs
     const char *fmt_iter;
-    va_list *args_ptr;
+    va_list args;
 
     // State
     int escaped;
@@ -106,15 +107,15 @@ __doprnt_get_signed_number(struct doprnt_state *state, unsigned long long *abs, 
 
     switch(state->size_modifier) {
         case 0:
-            value._int = va_arg(*state->args_ptr, int);
+            value._int = va_arg(state->args, int);
             val = value._int;
             break;
         case 1:
-            value._long = va_arg(*state->args_ptr, long);
+            value._long = va_arg(state->args, long);
             val = value._long;
             break;
         case 2:
-            value._long_long = va_arg(*state->args_ptr, long long);
+            value._long_long = va_arg(state->args, long long);
             val = value._long_long;
             break;
         default:
@@ -145,15 +146,15 @@ __doprnt_get_unsigned_number(struct doprnt_state *state, unsigned long long *val
 
     switch(state->size_modifier) {
         case 0:
-            value._int = va_arg(*state->args_ptr, unsigned int);
+            value._int = va_arg(state->args, unsigned int);
             *val = value._int;
             break;
         case 1:
-            value._long = va_arg(*state->args_ptr, unsigned long);
+            value._long = va_arg(state->args, unsigned long);
             *val = value._long;
             break;
         case 2:
-            value._long_long = va_arg(*state->args_ptr, unsigned long long);
+            value._long_long = va_arg(state->args, unsigned long long);
             *val = value._long_long;
             break;
         default:
@@ -299,7 +300,7 @@ doprnt_handle_escaped(struct doprnt_state *state) {
                 state->escaped = 0;
                 return;
             case 'c':
-                character = va_arg(*state->args_ptr, int);
+                character = va_arg(state->args, int);
                 doprnt_putc(state, character);
                 state->escaped = 0;
                 return;
@@ -333,7 +334,7 @@ doprnt_handle_escaped(struct doprnt_state *state) {
                 break;
 
             case 'p':
-                ptr = va_arg(*state->args_ptr, void*);
+                ptr = va_arg(state->args, void*);
                 state->uppercase_hex = 1;
                 doprnt_print_pointer(state, ptr);
                 state->escaped = 0;
@@ -356,7 +357,7 @@ doprnt_handle_escaped(struct doprnt_state *state) {
                 return;
 
             case 's':
-                ptr = (void*)va_arg(*state->args_ptr, const char*);
+                ptr = (void*)va_arg(state->args, const char*);
                 doprnt_puts(state, ptr);
                 state->escaped = 0;
                 return;
@@ -371,16 +372,16 @@ doprnt(
         int(*putchar)(int c, void *state),
         void *priv_state,
         const char *fmt,
-        va_list *args)
+        va_list args)
 {
     struct doprnt_state state = {
       .fmt_iter = fmt,
-      .args_ptr = args,
       .escaped = 0,
       .num_printed = 0,
       .priv_state = priv_state,
       .putchar = putchar,
     };
+    va_copy(state.args, args);
 
     while(*(state.fmt_iter)) {
         char c = *(state.fmt_iter);
@@ -393,6 +394,8 @@ doprnt(
             doprnt_putc(&state, c);
         }
     }
+
+    va_end(state.args);
 
     return state.num_printed;
 }

@@ -36,6 +36,14 @@ obj-y += \
 	snprintf.o \
 
 obj-y += \
+	doscan.o \
+	vfscanf.o \
+	fscanf.o \
+	scanf.o \
+
+obj-y += \
 	remove.o \
 	rename.o \
+
+obj-y += perror.o
 

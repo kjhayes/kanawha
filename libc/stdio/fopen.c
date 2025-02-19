@@ -19,6 +19,8 @@ FILE *fopen(
     if(file == NULL) {
         return NULL;
     }
+    memset(file, 0, sizeof(struct __sFILE));
+    __elk_libc_internal__init_sFILE(file);
 
     unsigned long access_flags = 0;
     unsigned long mode_flags = 0;
