@@ -362,7 +362,7 @@ doprnt_handle_escaped(struct doprnt_state *state) {
                 state->escaped = 0;
                 return;
             default:
-                return;
+                break;
         }
     }
 }

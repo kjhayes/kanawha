@@ -4,6 +4,10 @@
 #undef puts
 int puts(const char *s)
 {
-    return fputs(s, stdout);
+    int res = fputs(s, stdout);
+    if(res == EOF) {
+        return res;
+    }
+    return fputc('\n', stdout);
 }
 
