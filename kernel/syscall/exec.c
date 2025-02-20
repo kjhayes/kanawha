@@ -241,11 +241,12 @@ syscall_exec(
 {
     int res;
 
-    dprintk("PID(%ld) exec(%ld)\n",
-            process->id, file);
-
     struct file *desc =
         file_table_get_file(process->file_table, process, file);
+
+    //printk("PID(%ld) exec(%ld) %s\n",
+    //        process->id, file,
+    //        desc == NULL ? "NULL" : desc->path->name == NULL ? "UNNAMED" : desc->path->name);
 
     if(desc == NULL) {
         file_table_put_file(process->file_table, process, desc);

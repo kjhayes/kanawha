@@ -676,8 +676,10 @@ process_get_reapable_child(
     int irq_flags = spin_lock_irq_save(&process->hierarchy_lock);
 
     while(1) {
+        size_t child_count = 0;
         ilist_node_t *list_node;
         ilist_for_each(list_node, &process->children) {
+            child_count++;
             struct process *child =
                 container_of(list_node, struct process, child_node);
             if(child->status == PROCESS_STATUS_ZOMBIE) {
@@ -686,12 +688,17 @@ process_get_reapable_child(
                 return 0;
             }
         }
+        if(child_count == 0) {
+            // Cannot without any children
+            return -EINVAL;
+        }
 
         if(nowait) {
             spin_unlock_irq_restore(&process->hierarchy_lock, irq_flags);
             return -EWOULDBLOCK;
         } else {
             spin_unlock_irq_restore(&process->hierarchy_lock, irq_flags);
+            dprintk("PID(%ld) Sleeping on own child wait queue!\n", process->id);
             wait_on(&process->child_wait_queue);
             irq_flags = spin_lock_irq_save(&process->hierarchy_lock);
         }
@@ -793,22 +800,6 @@ process_terminate(
         environment_deattach(process->environ, process);
     }
 
-    if(process->parent) {
-        // We need to wake anyone waiting on our parent's children
-        // (This is usually just our parent doing a REAP_ANY)
-        wake_all(&process->parent->child_wait_queue);
-    }
-
-    // Wake up anyone waiting on us to terminate
-    waitqueue_disable(&process->wait_queue);
-    wake_all(&process->wait_queue);
-    waitqueue_deinit(&process->wait_queue);
-
-    // Wake up anyone waiting on our children to terminate
-    waitqueue_disable(&process->child_wait_queue);
-    wake_all(&process->child_wait_queue);
-    waitqueue_deinit(&process->child_wait_queue);
-
     // Terminate and Reap all children of this thread
     // NOTE: We acquire status_lock before hierarchy_lock here
     spin_lock(&process->hierarchy_lock);
@@ -835,6 +826,23 @@ process_terminate(
                     errnostr(res));
         }
     }
+
+    if(process->parent) {
+        // We need to wake anyone waiting on our parent's children
+        // (This is usually just our parent doing a REAP_ANY)
+        dprintk("Waking parent PID(%ld)'s child queue!\n", process->parent->id);
+        wake_all(&process->parent->child_wait_queue);
+    }
+
+    // Wake up anyone waiting on us to terminate
+    waitqueue_disable(&process->wait_queue);
+    wake_all(&process->wait_queue);
+    waitqueue_deinit(&process->wait_queue);
+
+    // Wake up anyone waiting on our children to terminate
+    waitqueue_disable(&process->child_wait_queue);
+    wake_all(&process->child_wait_queue);
+    waitqueue_deinit(&process->child_wait_queue);
 
     // We don't release the hierarchy lock,
     // because no one should ever be able to add/remove children

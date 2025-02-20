@@ -847,7 +847,7 @@ mmap_page_do_copy_on_write(
 {
     int res;
 
-    printk("mmap_page_do_copy_on_write(region=%p, page=%p, page->offset=%p)\n",
+    dprintk("mmap_page_do_copy_on_write(region=%p, page=%p, page->offset=%p)\n",
             region, page, page->tree_node.key);
 
     res = mmap_region_unmap_page(region, page);
@@ -903,7 +903,7 @@ mmap_page_do_copy_on_write(
         dprintk("put fs_page\n");
 
     } else {
-        printk("Handling Anonymous Copy-On-Write Page Fault...\n");
+        dprintk("Handling Anonymous Copy-On-Write Page Fault...\n");
         // Anonymous
         atomic_t *sharing_level = page->anon_sharing_level;
         DEBUG_ASSERT(KERNEL_ADDR(sharing_level));
@@ -911,11 +911,11 @@ mmap_page_do_copy_on_write(
         // Need this synchronization because
         atomic_t new_level = atomic_fetch_dec(sharing_level)-1;
 
-        printk("Set Sharing Level to %d\n", new_level);
+        dprintk("Set Sharing Level to %d\n", new_level);
 
         if(new_level == 0) {
             // Free the old page (Really we should just use the old one TODO)
-            printk("Freeing Page!\n");
+            dprintk("Freeing Page!\n");
             page_free(page->order, page->phys_addr);
             kfree(sharing_level);
         }
