@@ -136,12 +136,12 @@ ptree_remove(struct ptree *tree, uintptr_t key)
             node->parent->right = NULL;
         } else {
             // This shouldn't be possible
-            eprintk("ptree Node has parent, but isn't child of parent!\n");
+            panic("ptree node has parent, but isn't child of parent!\n");
             // Continue anyways
         }
     } else {
         // This shouldn't be possible
-        eprintk("ptree Node has parent, but isn't child of parent!\n");
+        panic("ptree node has parent, but isn't child of parent!\n");
         // Continue...
     }
 
