@@ -5,6 +5,7 @@
 #include <kanawha/string.h>
 #include <kanawha/stddef.h>
 #include <kanawha/char_dev.h>
+#include <kanawha/spinlock.h>
 #include <drivers/virtio/driver.h>
 #include <drivers/virtio/virtio.h>
 #include <drivers/virtio/queue.h>
@@ -36,6 +37,7 @@ struct virtio_console_port
 
     ilist_node_t list_node;
 
+    spinlock_t lock;
     struct char_dev char_dev;
 
     char *name;
@@ -145,6 +147,7 @@ virtio_console_init_device(
         port->device = cdev;
         port->xmit_queue = xmit_queue;
         port->recv_queue = recv_queue;
+        spinlock_init(&port->lock);
 
         res = virtio_queue_enable(port->recv_queue);
         if(res) {
@@ -263,6 +266,8 @@ virtio_console_char_dev_read(
     struct virtio_console_port *port =
         container_of(dev, struct virtio_console_port, char_dev);
 
+    spin_lock(&port->lock);
+
     dma_addr_t dma_buffer;
     res = dma_alloc(
             amount,
@@ -270,11 +275,13 @@ virtio_console_char_dev_read(
             DMA_PHYS_64,
             &dma_buffer);
     if(res) {
+        spin_unlock(&port->lock);
         return res;
     }
 
     struct virtio_request *req = virtio_request_create(port->recv_queue);
     if(req == NULL) {
+        spin_unlock(&port->lock);
         dma_free(dma_buffer, amount);
         return -ENOMEM;
     }
@@ -285,6 +292,7 @@ virtio_console_char_dev_read(
             amount);
     if(res) {
         virtio_request_destroy(req);
+        spin_unlock(&port->lock);
         dma_free(dma_buffer, amount);
         return res;
     }
@@ -292,6 +300,7 @@ virtio_console_char_dev_read(
     res = virtio_request_launch(req);
     if(res) {
         virtio_request_destroy(req);
+        spin_unlock(&port->lock);
         dma_free(dma_buffer, amount);
         return res;
     }
@@ -299,6 +308,7 @@ virtio_console_char_dev_read(
     res = virtio_request_await(req);
     if(res) {
         virtio_request_destroy(req);
+        spin_unlock(&port->lock);
         dma_free(dma_buffer, amount);
         return res;
     }
@@ -307,6 +317,8 @@ virtio_console_char_dev_read(
     amount = req->len_written;
 
     virtio_request_destroy(req);
+    spin_unlock(&port->lock);
+
     dma_free(dma_buffer, amount);
 
     return amount;
@@ -323,6 +335,8 @@ virtio_console_char_dev_write(
     struct virtio_console_port *port =
         container_of(dev, struct virtio_console_port, char_dev);
 
+    spin_lock(&port->lock);
+
     dma_addr_t dma_buffer;
     res = dma_alloc(
             amount,
@@ -330,6 +344,7 @@ virtio_console_char_dev_write(
             DMA_PHYS_64,
             &dma_buffer);
     if(res) {
+        spin_unlock(&port->lock);
         return res;
     }
 
@@ -337,7 +352,9 @@ virtio_console_char_dev_write(
 
     struct virtio_request *req = virtio_request_create(port->xmit_queue);
     if(req == NULL) {
+        spin_unlock(&port->lock);
         dma_free(dma_buffer, amount);
+        return -ENOMEM;
     }
 
     res = virtio_request_append_input(
@@ -346,6 +363,7 @@ virtio_console_char_dev_write(
             amount);
     if(res) {
         virtio_request_destroy(req);
+        spin_unlock(&port->lock);
         dma_free(dma_buffer, amount);
         return res;
     }
@@ -353,6 +371,7 @@ virtio_console_char_dev_write(
     res = virtio_request_launch(req);
     if(res) {
         virtio_request_destroy(req);
+        spin_unlock(&port->lock);
         dma_free(dma_buffer, amount);
         return res;
     }
@@ -360,11 +379,13 @@ virtio_console_char_dev_write(
     res = virtio_request_await(req);
     if(res) {
         virtio_request_destroy(req);
+        spin_unlock(&port->lock);
         dma_free(dma_buffer, amount);
         return res;
     }
 
     virtio_request_destroy(req);
+    spin_unlock(&port->lock);
     dma_free(dma_buffer, amount);
 
     return amount;
