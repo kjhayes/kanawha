@@ -39,18 +39,18 @@ struct ps2_8042_port
     struct irq_action *action;
 };
 
+#define PS2_WAIT_COUNT 0x100000
 static int
 ps2_8042_wait_input_buf(
         struct ps2_8042 *ps2)
 {
-    // TODO: Add a timeout
-    do {
+    for(uint32_t i = 0; i < PS2_WAIT_COUNT; i++) {
         uint8_t status = inb(ps2->status_port);
         if((status & 0b10) == 0) {
-            break;
+            return 0;
         }
-    } while(1);
-    return 0;
+    }
+    return -ETIMEDOUT;
 }
 
 static int
@@ -58,13 +58,13 @@ ps2_8042_wait_output_buf(
         struct ps2_8042 *ps2)
 {
     // TODO: Add a timeout
-    do {
+    for(uint32_t i = 0; i < PS2_WAIT_COUNT; i++) {
         uint8_t status = inb(ps2->status_port);
         if((status & 0b01) != 0) {
-            break;
+            return 0;
         }
-    } while(1);
-    return 0;
+    }
+    return -ETIMEDOUT;
 }
 
 static int
