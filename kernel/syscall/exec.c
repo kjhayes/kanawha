@@ -125,7 +125,7 @@ exec_elf64_load_segment(
                 offset,
                 vaddr,
                 filesz,
-                mmap_flags | MMAP_PRIVATE);
+                mmap_flags | (mmap_flags & MMAP_PROT_WRITE ? MMAP_PRIVATE : MMAP_SHARED));
         if(res) {
             return res;
         }

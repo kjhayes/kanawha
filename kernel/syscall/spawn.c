@@ -16,7 +16,7 @@ syscall_spawn(
 {
     int res;
 
-    //printk("syscall_spawn: child_pid=%p\n", child_pid);
+    dprintk("syscall_spawn: child_pid=%p\n", child_pid);
 
     struct process *child =
         process_spawn_child(
@@ -30,9 +30,9 @@ syscall_spawn(
         return -ENOMEM;
     }
 
-    //printk("spawned child %lld of parent %lld\n", (sll_t)child->id, (sll_t)process->id);
+    dprintk("spawned child %lld of parent %lld\n", (sll_t)child->id, (sll_t)process->id);
 
-    //printk("Writing PID to user address %p\n", child_pid);
+    dprintk("Writing PID to user address %p\n", child_pid);
     res = process_write_usermem(
             process,
             child_pid,

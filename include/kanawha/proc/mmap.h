@@ -149,4 +149,9 @@ mmap_clone(
         struct mmap *from,
         struct process *onto);
 
+int
+dump_mmap(
+        printk_f *printer,
+        struct mmap *mmap);
+
 #endif

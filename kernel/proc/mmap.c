@@ -15,6 +15,7 @@
 #include <kanawha/proc/mmap.h>
 #include <kanawha/vmem.h>
 #include <kanawha/fs/node.h>
+#include <kanawha/printk.h>
 
 int
 mmap_create(
@@ -1133,12 +1134,19 @@ mmap_write(
         }
 
         if(page->flags & MMAP_PAGE_COPY_ON_WRITE) {
+            //printk("mmap_page_do_copy_on_write from process_write_usermem\n");
             res = mmap_page_do_copy_on_write(region, page);
             if(res) {
                 spin_unlock(&region->page_tree_lock);
                 spin_unlock_irq_restore(&mmap->lock, irq_flags);
                 return res;
             }
+        }
+
+        if(page->flags & MMAP_PAGE_COPY_ON_WRITE) {
+            spin_unlock(&region->page_tree_lock);
+            spin_unlock_irq_restore(&mmap->lock, irq_flags);
+            return -EINVAL;
         }
  
         void __phys * page_paddr = page->phys_addr;
@@ -1431,6 +1439,7 @@ mmap_page_fault_handler(
 // Should be called holding the region lock of "from"
 static int
 mmap_page_clone(
+        struct mmap_region *from_region,
         struct mmap_page *from,
         struct mmap_region *to)
 {
@@ -1444,7 +1453,6 @@ mmap_page_clone(
 
     page->flags = from->flags;
     page->order = from->order;
-
     page->flags &= ~MMAP_PAGE_MAPPED;
 
     // Set phys_addr and fs_page/anon_sharing_level
@@ -1462,6 +1470,7 @@ mmap_page_clone(
             page->phys_addr = from->phys_addr;
         } else {
             // We need to make this a shared anonymous copy-on-write page
+           
             page->flags |= MMAP_PAGE_COPY_ON_WRITE;
             page->anon_sharing_level = kmalloc(sizeof(atomic_t));
             if(page->anon_sharing_level == NULL) {
@@ -1471,6 +1480,12 @@ mmap_page_clone(
             *page->anon_sharing_level = 2;
 
             // I'm fairly confident this is safe: these is accesses are questionable though
+            res = mmap_region_unmap_page(from_region, from);
+            if(res) {
+                kfree(page->anon_sharing_level);
+                kfree(page);
+                return res;
+            } 
             from->flags |= MMAP_PAGE_COPY_ON_WRITE;
             from->anon_sharing_level = page->anon_sharing_level;
 
@@ -1480,7 +1495,7 @@ mmap_page_clone(
         struct fs_page *fs_page = from->fs_page;
         DEBUG_ASSERT(KERNEL_ADDR(fs_page));
 
-        res = fs_page_get(to->fs_node, fs_page);
+        res = fs_page_get(from_region->fs_node, fs_page);
         if(res) {
             kfree(page);
             return res;
@@ -1511,7 +1526,7 @@ mmap_page_clone(
             kfree(page);
             return res;
         } else {
-            fs_node_put_page(to->fs_node, page->fs_page, 0);
+            fs_node_put_page(from_region->fs_node, page->fs_page, 0);
             kfree(page);
             return res;
         }
@@ -1560,8 +1575,10 @@ mmap_region_clone(
         pnode = ptree_get_next(pnode))
     {
         struct mmap_page *page = container_of(pnode, struct mmap_page, tree_node);
-        res = mmap_page_clone(page, region);
+        res = mmap_page_clone(from, page, region);
         if(res) {
+            eprintk("Failed to clone mmap page! err=%s\n",
+                    errnostr(res));
             spin_unlock_irq_restore(&from->page_tree_lock, irq_flags);
             // Our region will still be in the mmap just incomplete
             // (It should be freed on mmap destruction)
@@ -1579,6 +1596,8 @@ mmap_clone(
         struct process *onto)
 {
     int res;
+
+    //dump_mmap(do_printk, from);
 
     res = mmap_create(from->vmem_region->size, onto);
     if(res) {
@@ -1604,8 +1623,109 @@ mmap_clone(
             return res;
         }
     }
+
+    ilist_node_t *proc_node;
+    ilist_for_each(proc_node, &from->process_list) {
+        struct process *process = container_of(proc_node, struct process, mmap_list_node);
+        DEBUG_ASSERT(KERNEL_ADDR(process));
+        struct vmem_map *map = process->thread.mem_map;
+        res = vmem_flush_map(map);
+        if(res) {
+            wprintk("Failed to flush vmem map after cloning mmap! (err=%s) (PID=%ld)\n",
+                    errnostr(res),
+                    process->id);
+        }
+    }
+
     spin_unlock_irq_restore(&from->lock, irq_flags);
     spin_unlock(&mmap->lock);
+
+    //dump_mmap(do_printk, from);
+    //dump_mmap(do_printk, onto->mmap);
+    //dump_threads(do_printk);
+
     return 0;
 }
 
+static int
+dump_mmap_page(
+        printk_f *printer,
+        struct mmap_region *region,
+        struct mmap_page *page)
+{
+    (*printer)("\t\tPage [%p-%p] -> %p %s%s%s\n",
+            region->tree_node.key + page->tree_node.key,
+            region->tree_node.key + page->tree_node.key + (1ULL<<page->order),
+            page->phys_addr,
+            page->flags & MMAP_PAGE_ANON ? "[ANON]" : "",
+            page->flags & MMAP_PAGE_MAPPED ? "[MAPPED]" : "",
+            page->flags & MMAP_PAGE_COPY_ON_WRITE ? "[COW]" : ""
+            );
+    return 0;
+}
+
+static int
+dump_mmap_region(
+        printk_f *printer,
+        struct mmap_region *region)
+{
+    int res;
+
+    spin_lock(&region->page_tree_lock);
+
+    (*printer)("\tRegion [%p-%p] %s%s%s %s%s%s\n",
+            (uintptr_t)region->tree_node.key,
+            (uintptr_t)region->tree_node.key + region->size,
+            region->mmap_flags & MMAP_PROT_READ ? "[READ]" : "",
+            region->mmap_flags & MMAP_PROT_WRITE ? "[WRITE]" : "",
+            region->mmap_flags & MMAP_PROT_EXEC ? "[EXEC]" : "",
+            region->mmap_flags & MMAP_ANON ? "[ANON]" : "",
+            region->mmap_flags & MMAP_SHARED ? "[SHARED]" : "",
+            region->mmap_flags & MMAP_PRIVATE ? "[PRIVATE]" : ""
+            );
+
+    struct ptree_node *pnode;
+    for(pnode = ptree_get_first(&region->page_tree);
+        pnode != NULL;
+        pnode = ptree_get_next(pnode))
+    {
+        struct mmap_page *page =
+            container_of(pnode, struct mmap_page, tree_node);
+        res = dump_mmap_page(printer, region, page);
+        if(res) {
+            spin_unlock(&region->page_tree_lock);
+            return res;
+        }
+    }
+
+    spin_unlock(&region->page_tree_lock);
+    return 0;
+}
+
+int
+dump_mmap(
+        printk_f *printer,
+        struct mmap *mmap)
+{
+    int res;
+    int irq_flags = spin_lock_irq_save(&mmap->lock);
+
+    (*printer)("MMAP\n");
+
+    struct ptree_node *pnode;
+    for(pnode = ptree_get_first(&mmap->region_tree);
+        pnode != NULL;
+        pnode = ptree_get_next(pnode))
+    {
+        struct mmap_region *region =
+            container_of(pnode, struct mmap_region, tree_node);
+        res = dump_mmap_region(printer, region);
+        if(res) {
+            spin_unlock_irq_restore(&mmap->lock, irq_flags);
+            return res;
+        }
+    }
+
+    spin_unlock_irq_restore(&mmap->lock, irq_flags);
+    return 0;
+}
