@@ -1,5 +1,6 @@
 
 #include <stdlib.h>
+#include <stdio.h>
 #include <kanawha/sys-wrappers.h>
 #include <kanawha/environ.h>
 
