@@ -4,31 +4,28 @@
 #include <kanawha/sys-wrappers.h>
 
 int
-chdir(const char *path)
+chroot(const char *path)
 {
-    int res;
-
     fd_t file;
+
+    int res;
     res = kanawha_sys_open(
             path,
-            0,
+            FILE_PERM_READ,
             0,
             &file);
     if(res) {
         // TODO set errno
         return -1;
     }
-    res = kanawha_sys_chwdir(file);
+
+    res = kanawha_sys_chroot(file);
     if(res) {
         // TODO set errno
-        return -1;
+        return res;
     }
-    res = kanawha_sys_close(file);
-    if(res) {
-        // TODO set errno
-        return -1;
-    }
+
+    kanawha_sys_close(file);
 
     return 0;
 }
-
