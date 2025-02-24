@@ -1,6 +1,10 @@
 
+#include <stdlib.h>
+#include <stdio.h>
+
 _Noreturn void abort(void)
 {
-    while(1) {}
+    fprintf(stderr, "abort()\n");
+    exit(EXIT_FAILURE);
 }
 
