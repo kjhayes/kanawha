@@ -12,6 +12,7 @@ char *strpbrk(
             if(*s2_iter == *s1) {
                 return (char*)s1;
             }
+            s2_iter++;
         }
 
         s1++;

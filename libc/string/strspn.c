@@ -6,7 +6,7 @@ size_t strspn(
         const char *s2)
 {
     size_t i = 0;
-    while(*s1) {
+    while(s1[i]) {
         char c = s1[i];
 
         const char *s2_iter = s2;
