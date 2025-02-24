@@ -6,6 +6,9 @@ obj-y += \
 	dup.o \
 	dup2.o \
 	pipe.o \
-	chrdir.o \
+	chdir.o \
+	chroot.o \
 	execvp.o \
+	sleep.o \
+	usleep.o \
 

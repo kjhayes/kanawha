@@ -15,27 +15,31 @@ __elk_libc__exec_path_lookup(
     size_t filenamelen = strlen(file_name);
 
     char *path = getenv("PATH");
-    char *iter = path;
-
-    int searching = 1;
-    while(searching) {
-        char *dir = iter;
-        char *delim = strchr(iter, ';');
-        if(*delim == '\0') {
-            // Final iteration
-            searching = 0;
-        } else {
-            *delim = '\0';
-            iter = delim+1;
+    if(path == NULL) {
+        fd_t desc;
+        res = kanawha_sys_open(
+                file_name,
+                FILE_PERM_READ|FILE_PERM_EXEC,
+                0,
+                &desc);
+        if(res) {
+            return res;
         }
-        size_t dirlen = strlen(dir);
+        *file_out = desc;
+        return 0;
+    }
+
+    char *tok = strtok(path, ";");
+    while(tok) {
+
+        size_t dirlen = strlen(tok);
         // dir + '/' + file_name + '\0'
         size_t buflen = dirlen+1+filenamelen+1;
         char *buffer = malloc(buflen);
         if(buffer == NULL) {
-            continue;
+            return -ENOMEM;
         }
-        strncpy(buffer, dir, dirlen+1);
+        strncpy(buffer, tok, dirlen+1);
         strncpy(buffer + dirlen + 1, file_name, filenamelen+1);
         buffer[dirlen] = '/';
         buffer[buflen-1] = '\0';
@@ -50,6 +54,7 @@ __elk_libc__exec_path_lookup(
         free(buffer);
 
         if(res) {
+            tok = strtok(NULL, ";");
             continue;
         } else {
             // We found it!

@@ -33,8 +33,10 @@ __elk_libc__set_argv(
         iter += curlen;
         if(i < argc-1) {
             *iter = ' ';
+            iter++;
         } else {
             *iter = '\0';
+            break;
         }
     }
 

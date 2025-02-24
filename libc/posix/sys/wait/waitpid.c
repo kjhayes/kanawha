@@ -37,7 +37,7 @@ waitpid(
     }
 
     // We did it!
-    if(status_loc) {
+    if(status_loc != NULL) {
         *status_loc = child_status;
     }
 

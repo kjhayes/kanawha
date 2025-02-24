@@ -13,6 +13,7 @@ fork(void)
     int res;
     pid_t pid = 0;
     res = __elk_posix__do_fork(&pid);
+    asm volatile ("" ::: "memory");
     if(res) {
         // TODO set errno
         return -1;
