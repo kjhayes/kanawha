@@ -18,8 +18,10 @@
 
 #define __percpu_section __attribute__((section(".kpercpu")))
 
-#ifdef CONFIG_X64
+#if defined(CONFIG_X64)
 #include <arch/x64/percpu.h>
+#elif defined(CONFIG_RISCV64)
+#include <arch/riscv64/percpu.h>
 #else
 #error "Architecture did not define percpu.h!"
 #endif

@@ -14,6 +14,10 @@
 typedef uint64_t uintptr_t;
 typedef uint64_t size_t;
 typedef int64_t ssize_t;
+#elif defined(CONFIG_RISCV64)
+typedef uint64_t uintptr_t;
+typedef uint64_t size_t;
+typedef int64_t ssize_t;
 #else
 #error "Architecture does not define uintptr_t and size_t!"
 #endif

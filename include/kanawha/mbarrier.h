@@ -1,8 +1,10 @@
 #ifndef __KANAWHA__MBARRIER_H__
 #define __KANAWHA__MBARRIER_H__
 
-#ifdef CONFIG_X64
+#if defined(CONFIG_X64)
 #include <arch/x64/mbarrier.h>
+#elif defined(CONFIG_RISCV64)
+#include <arch/riscv64/mbarrier.h>
 #else
 #error "Architecture did not define mbarrier.h"
 #endif

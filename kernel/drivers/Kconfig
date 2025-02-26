@@ -28,5 +28,6 @@ source "kernel/drivers/qemu/Kconfig"
 source "kernel/drivers/virtio/Kconfig"
 
 menu "VGA Options"
+depends on PORT_IO
 source "kernel/drivers/vga/Kconfig"
 endmenu

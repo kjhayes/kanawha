@@ -1,5 +1,5 @@
 
-ENTRY( x64_kernel_entry )
+ENTRY( riscv64_kernel_entry )
 
 #define __LINKER__
 #include <kanawha/init.h>
@@ -28,16 +28,16 @@ SECTIONS
     *(.hdrs.*)
   } :header
 
-  .boot.text ALIGN(16) : AT(ADDR(.boot.text)) {
+  . = KERNEL_VIRTUAL_ADDR + CONFIG_KERNEL_LOAD_ADDR;
+
+  .boot.text ALIGN(16) : AT(VA_TO_PA(ADDR(.boot.text))) {
       *(.boot.text*) *(boot.text.*)
   } :boot = 0xcccccccc
   .boot.data ALIGN(0x1000) : AT(ADDR(.boot.data)) {
       *(.boot.data*) *(.boot.data.*)
   } :boot = 0
 
-  . = KERNEL_VIRTUAL_ADDR + (LOAD_AFTER(.boot.data) - CONFIG_KERNEL_LOAD_ADDR);
-
-  .text ALIGN(0x1000) : AT(VA_TO_PA(ADDR(.text))) {
+  .text ALIGN(0x1000) : AT(ADDR(.text)) {
     *(.text*)
     *(.text.*)
   } :text = 0xcccccccc /* fill empty regions with int3 */
@@ -100,10 +100,10 @@ XFOR_INIT_STAGE(DECLARE_INIT_STAGE_LINKER_SCRIPT_SECTIONS)
 
   /* Discard Sections */
 
-//  .got : {
-//  	*(.got) *(.igot.*)
-//  }
-//  ASSERT(SIZEOF(.got) == 0, "Unexpected GOT entries detected!")
+  .got : {
+  	*(.got) *(.igot.*)
+  }
+  ASSERT(SIZEOF(.got) == 0, "Unexpected GOT entries detected!")
   
   .plt : {
   	*(.plt) *(.plt.*) *(.iplt)

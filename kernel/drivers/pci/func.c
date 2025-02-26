@@ -43,7 +43,12 @@ pci_setup_bars(
 
         uint64_t original = (uint32_t)pci_func_raw_read_bar(func, bar_index);
         if(original & 1) {
+#ifdef CONFIG_PORT_IO
             bar->type = PCI_BAR_PIO;
+#else
+            eprintk("Found Port PCI Bar without CONFIG_PORT_IO set!\n");
+            return -EINVAL;
+#endif
         } else {
             bar->type = PCI_BAR_MMIO;
             bar->mmio.type = (original & 0x6ULL) >> 1;
@@ -74,7 +79,11 @@ pci_setup_bars(
         }
 
         dprintk("masked=0x%llx\n", (ull_t)masked);
+#ifdef CONFIG_PORT_IO
         masked &= ~(bar->type == PCI_BAR_PIO ? 0x3ULL : 0xFULL);
+#else
+        masked &= 0xFULL;
+#endif
         dprintk("masked=0x%llx\n", (ull_t)masked);
         uint64_t size_mask = 0xFFFFFFFFULL;
         if(bar->type == PCI_BAR_MMIO) {
@@ -104,15 +113,12 @@ pci_setup_bars(
 
         bar->size = size;
 
+#ifdef CONFIG_PORT_IO
         if(bar->type == PCI_BAR_PIO) {
-#ifndef CONFIG_PORT_IO
-            eprintk("Found PCI Port I/O Bar with CONFIG_PORT_IO disabled!\n");
-            continue;
-#else
             bar->phys_addr = original & ~0x3ULL;
             bar->pio.base = bar->phys_addr;
-#endif
         } else {
+#endif
             // MMIO
             bar->phys_addr = original & ~0xFULL;
 
@@ -123,7 +129,9 @@ pci_setup_bars(
                 bar->type = PCI_BAR_NONE;
                 continue;
             }
+#ifdef CONFIG_PORT_IO
         }
+#endif
     }
     return 0;
 }

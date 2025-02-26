@@ -8,8 +8,10 @@
 #include <kanawha/cpu.h>
 #include <kanawha/vmem.h>
 
-#ifdef CONFIG_X64
+#if defined(CONFIG_X64)
 #include <arch/x64/thread.h>
+#elif CONFIG_RISCV64
+#include <arch/riscv64/thread.h>
 #else
 #error "Architecture has not declared header: thread.h!"
 #endif

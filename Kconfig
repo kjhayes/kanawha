@@ -6,6 +6,8 @@ choice
     bool "x86_64"
     select PORT_IO
     select ACPI
+  config RISCV64
+    bool "RISCV64"
 endchoice
 
 choice

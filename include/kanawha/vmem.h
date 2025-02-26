@@ -1,8 +1,10 @@
 #ifndef __KANAWHA__VMEM_H__
 #define __KANAWHA__VMEM_H__
 
-#ifdef CONFIG_X64 
+#if defined(CONFIG_X64 )
 #include <arch/x64/vmem.h>
+#elif defined(CONFIG_RISCV64)
+#include <arch/riscv64/vmem.h>
 #else
 #error "Architecture did not provide vmem.h!"
 #endif

@@ -1,4 +1,5 @@
 
 COMMON_FLAGS += -mcmodel=large \
-				-mno-red-zone
+				-mno-red-zone \
+				-mgeneral-regs-only
 

@@ -43,6 +43,9 @@ else
 ifdef CONFIG_X64
 	ARCH := x64
 endif
+ifdef CONFIG_RISCV64
+	ARCH := riscv64
+endif
 
 ifdef ARCH
 -include $(SCRIPTS_DIR)/arch/$(ARCH)/arch.mk
@@ -70,15 +73,13 @@ COMMON_FLAGS += \
 				-I $(INCLUDE_DIR) \
 				-include $(AUTOCONF) \
 				$(subst ",,$(CONFIG_OPT_FLAGS)) \
-				-fno-pie \
-				-fno-pic \
 				-nostdlib \
 				-ffreestanding \
+				-fno-pie \
 
 
 COMMON_DEPS += $(AUTOCONF)
 AFLAGS += -D__ASSEMBLER__
-CFLAGS += -mgeneral-regs-only
 
 ifdef CONFIG_DEBUG_SYMBOLS
 COMMON_FLAGS += -g

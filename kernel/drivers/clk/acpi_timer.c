@@ -2,7 +2,6 @@
 #include <kanawha/clk_dev.h>
 #include <kanawha/clk.h>
 #include <kanawha/init.h>
-#include <kanawha/pio.h>
 #include <kanawha/mmio.h>
 #include <kanawha/kmalloc.h>
 #include <kanawha/string.h>
@@ -11,6 +10,10 @@
 #include <acpi/table.h>
 #include <acpi/gas.h>
 #include <acpi/fadt.h>
+
+#ifdef CONFIG_PORT_IO
+#include <kanawha/pio.h>
+#endif
 
 #define ACPI_PM_TIMER_FREQ_HZ (hz_t)3579545
 
@@ -26,12 +29,16 @@ struct acpi_pm_timer
         struct {
             void __mmio *blk;
         } mmio;
+
+#ifdef CONFIG_PORT_IO
         struct {
             pio_t port;
         } pio;
+#endif
     };
 };
 
+#ifdef CONFIG_PORT_IO
 static cycles_t
 acpi_pm_timer_cycles_port(struct clk_dev *clk_dev)
 {
@@ -40,6 +47,7 @@ acpi_pm_timer_cycles_port(struct clk_dev *clk_dev)
 
     return (cycles_t)inl(pm->pio.port);
 }
+#endif
 
 static cycles_t
 acpi_pm_timer_cycles_mmio(struct clk_dev *clk_dev)
@@ -51,11 +59,13 @@ acpi_pm_timer_cycles_mmio(struct clk_dev *clk_dev)
 }
 
 
+#ifdef CONFIG_PORT_IO
 static struct clk_driver
 acpi_pm_clk_driver_port = {
     .freq = acpi_pm_timer_freq,
     .mono_cycles = acpi_pm_timer_cycles_port,
 };
+#endif
 
 static struct clk_driver
 acpi_pm_clk_driver_mmio = {
@@ -100,8 +110,14 @@ init_acpi_pm_timer_clk(void)
                 clk->clk_dev.driver = &acpi_pm_clk_driver_mmio;
                 break;
             case ACPI_GAS_ASID_PIO:
+#ifdef CONFIG_PORT_IO
                 clk->pio.port = fadt->x_pm_tmr_blk.address;
                 clk->clk_dev.driver = &acpi_pm_clk_driver_port;
+#else
+                eprintk("ACPI Timer has Port I/O register but CONFIG_PORT_IO is not enabled!\n");
+                kfree(clk);
+                return -EINVAL;
+#endif
                 break;
             default:
                 eprintk("Unsupported Address Space for ACPI PM Timer Generic Address\n");
@@ -110,8 +126,14 @@ init_acpi_pm_timer_clk(void)
         }
     } else {
         printk("Using Legacy PM Timer Block in FADT\n");
+#ifdef CONFIG_PORT_IO
         clk->pio.port = fadt->pm_tmr_blk;
         clk->clk_dev.driver = &acpi_pm_clk_driver_port;
+#else
+        eprintk("Cannot use Legacy PM Timer Block without CONFIG_PORT_IO!\n");
+        kfree(clk);
+        return -EINVAL;
+#endif
     }
 
     int res;

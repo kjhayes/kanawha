@@ -1,9 +1,16 @@
 
-CC := gcc
-CPP := cpp
-LD := ld
-AS := gcc
+ifdef CONFIG_X64
+CROSS_COMPILE_PREFIX ?=
+endif
+ifdef CONFIG_RISCV64
+CROSS_COMPILE_PREFIX ?= riscv64-unknown-elf-
+endif
 
-OBJCOPY := objcopy
-OBJDUMP := objdump
+CC := $(CROSS_COMPILE_PREFIX)gcc
+CPP := $(CROSS_COMPILE_PREFIX)cpp
+LD := $(CROSS_COMPILE_PREFIX)ld
+AS := $(CROSS_COMPILE_PREFIX)gcc
+
+OBJCOPY := $(CROSS_COMPILE_PREFIX)objcopy
+OBJDUMP := $(CROSS_COMPILE_PREFIX)objdump
 
