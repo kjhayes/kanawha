@@ -8,4 +8,5 @@ obj-y += \
 	thread.o \
 	usermode.o \
 	percpu.o \
+	mem_flags.o \
 

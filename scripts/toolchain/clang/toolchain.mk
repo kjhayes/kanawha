@@ -15,5 +15,5 @@ LD := ld.lld-17
 AS := clang-17 $(LLVM_FLAGS)
 
 OBJCOPY := llvm-objcopy $(LLVM_FLAGS)
-OBJDUMP := llvm-objdump $(LLVM_FLAGS)
+OBJDUMP := llvm-objdump
 

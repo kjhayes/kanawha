@@ -22,7 +22,6 @@ PHDRS
 
 SECTIONS
 {  
-  __kernel_phys_start = CONFIG_KERNEL_LOAD_ADDR;
   .hdrs CONFIG_KERNEL_LOAD_ADDR : AT(CONFIG_KERNEL_LOAD_ADDR) {
     *(.hdrs*) 
     *(.hdrs.*)
@@ -30,12 +29,7 @@ SECTIONS
 
   . = KERNEL_VIRTUAL_ADDR + CONFIG_KERNEL_LOAD_ADDR;
 
-  .boot.text ALIGN(16) : AT(VA_TO_PA(ADDR(.boot.text))) {
-      *(.boot.text*) *(boot.text.*)
-  } :boot = 0xcccccccc
-  .boot.data ALIGN(0x1000) : AT(ADDR(.boot.data)) {
-      *(.boot.data*) *(.boot.data.*)
-  } :boot = 0
+  __kernel_virt_start = .;
 
   .text ALIGN(0x1000) : AT(ADDR(.text)) {
     *(.text*)
@@ -87,7 +81,7 @@ XFOR_INIT_STAGE(DECLARE_INIT_STAGE_LINKER_SCRIPT_SECTIONS)
 
   . = ALIGN(0x1000);
 
-  __kernel_phys_end = VA_TO_PA(.);
+  __kernel_virt_end = .;
 
   .shstrtab : {
      *(.shstrtab* .shstrtab.*)

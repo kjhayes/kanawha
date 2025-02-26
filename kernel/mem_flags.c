@@ -481,13 +481,10 @@ phys_mem_flags_reserve_kernel(void)
 {
     int res;
 
-    extern int __kernel_phys_start[];
-    extern int __kernel_phys_end[];
-
     res = mem_flags_set_flags(
             get_phys_mem_flags(),
-            (uintptr_t)__kernel_phys_start,
-            (uintptr_t)__kernel_phys_end - (uintptr_t)__kernel_phys_start,
+            (uintptr_t)arch_kernel_phys_start(),
+            arch_kernel_phys_size(),
             PHYS_MEM_FLAGS_KERNEL);
 
     if(res) {
@@ -496,8 +493,8 @@ phys_mem_flags_reserve_kernel(void)
 
     res = mem_flags_clear_flags(
             get_phys_mem_flags(), 
-            (uintptr_t)__kernel_phys_start,
-            (uintptr_t)__kernel_phys_end - (uintptr_t)__kernel_phys_start,
+            (uintptr_t)arch_kernel_phys_start(),
+            arch_kernel_phys_size(),
             PHYS_MEM_FLAGS_AVAIL);
 
     if(res) {

@@ -1,9 +1,15 @@
 #ifndef __KANAWHA__MEM_FLAGS_H__
 #define __KANAWHA__MEM_FLAGS_H__
 
+#include <kanawha/pointer.h>
 #include <kanawha/types.h>
 #include <kanawha/printk.h>
 #include <kanawha/spinlock.h>
+
+void __phys *
+arch_kernel_phys_start(void);
+size_t
+arch_kernel_phys_size(void);
 
 struct mem_flags_entry {
     uintptr_t base;

@@ -1,5 +1,5 @@
 
-.section .boot.text
+.section .text
 
 .global riscv64_kernel_entry
 .type riscv64_kernel_entry, @function

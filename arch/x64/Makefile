@@ -23,6 +23,7 @@ obj-y += \
 	xcall.o \
 	vendor.o \
 	gp_fault.o \
+	mem_flags.o \
 	lapic/ \
 
 obj-$(CONFIG_X64_MULTIBOOT2_BOOT) += mb2_boot.o
