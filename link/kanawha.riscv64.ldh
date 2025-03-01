@@ -7,12 +7,10 @@ ENTRY( riscv64_kernel_entry )
 #define AFTER(sec) ADDR(sec) + SIZEOF(sec)
 #define LOAD_AFTER(sec) LOADADDR(sec) + SIZEOF(sec)
 
-#define KERNEL_VIRTUAL_ADDR (CONFIG_VIRTUAL_BASE + CONFIG_KERNEL_LOAD_ADDR)
-#define VA_TO_PA(addr) (addr-CONFIG_VIRTUAL_BASE)
+#define VA_TO_PA(addr) ((addr+CONFIG_RISCV64_LINKED_PHYS_BASE)-CONFIG_RISCV64_KERNEL_VIRTUAL_BASE)
 
 PHDRS
 {
-  header PT_PHDR FILEHDR PHDRS FLAGS(4);
   text PT_LOAD FLAGS(5);
   data PT_LOAD FLAGS(6);
   rodata PT_LOAD FLAGS(4);
@@ -20,18 +18,26 @@ PHDRS
   note PT_NULL FLAGS(0);
 }
 
+// Don't assume a physical base of zero, to give room for the program headers
+
 SECTIONS
 {  
-  .hdrs CONFIG_KERNEL_LOAD_ADDR : AT(CONFIG_KERNEL_LOAD_ADDR) {
-    *(.hdrs*) 
-    *(.hdrs.*)
-  } :header
+  . = CONFIG_RISCV64_LINKED_PHYS_BASE;
 
-  . = KERNEL_VIRTUAL_ADDR + CONFIG_KERNEL_LOAD_ADDR;
+  PROVIDE(__riscv64_kernel_load_addr = .);
+
+  .boot.text : AT(ADDR(.boot.text)) {
+      *(.boot.text*) *(boot.text.*)
+  } :boot = 0xcccccccc
+  .boot.data ALIGN(0x1000) : AT(ADDR(.boot.data)) {
+      *(.boot.data*) *(.boot.data.*)
+  } :boot = 0
+
+  . = CONFIG_RISCV64_KERNEL_VIRTUAL_BASE + (LOAD_AFTER(.boot.data) - CONFIG_RISCV64_LINKED_PHYS_BASE);
 
   __kernel_virt_start = .;
 
-  .text ALIGN(0x1000) : AT(ADDR(.text)) {
+  .text ALIGN(0x1000) : AT(VA_TO_PA(ADDR(.text))) {
     *(.text*)
     *(.text.*)
   } :text = 0xcccccccc /* fill empty regions with int3 */
@@ -45,6 +51,7 @@ SECTIONS
     *(.sdata .sdata.*)
     *(.data .data.*)
     *(.tdata .tdata.*)
+    PROVIDE( __global_pointer$ = . + 0x800 );
   } :data = 0
 
   .bss : AT(VA_TO_PA(ADDR(.bss))) {

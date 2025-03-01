@@ -72,9 +72,19 @@ void x64_bsp_init(void) {
         panic("Failed to handle init stage \"page_alloc\"! err=%s", errnostr(res));
     }
 
+    res = handle_init_stage__dynamic_page();
+    if(res) {
+        panic("Failed to handle init stage \"dynamic_page\"! err=%s", errnostr(res));
+    }
+
     res = handle_init_stage__vmem();
     if(res) {
         panic("Failed to handle init stage \"vmem\"! err=%s", errnostr(res));
+    }
+
+    res = handle_init_stage__enable_vmem();
+    if(res) {
+        panic("Failed to handle init stage \"enable_vmem\"! err=%s", errnostr(res));
     }
 
     res = handle_init_stage__post_vmem();

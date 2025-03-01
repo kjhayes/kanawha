@@ -1,0 +1,47 @@
+
+menu "RISCV-64 Options"
+    depends on RISCV64
+
+config RISCV64_LINKED_PHYS_BASE
+  hex "Physical Base to Use When Linking"
+  default 0x10000
+  help
+    What physical base we should link the kernel to assume.
+    The kernel may actually be loaded at a different address, but because
+    we compile with the mcmodel=medany this is not a problem aside from making the transition
+    to high-mem early on in the boot process.
+
+    This value should also be greater than 0x0 to provide space for the ELF program headers section
+
+config RISCV64_KERNEL_VIRTUAL_BASE
+  hex "Virtual Address of the Kernel"
+  default 0xFFFFFFC000000000
+  help
+    What virtual address to link the kernel at
+
+config RISCV64_BOOT_KERNEL_MAPPING_ORDER
+  hex "Boot Kernel Mapping Order"
+  default 22
+  help
+    Order of the initial boot high-mem mapping in the kernel
+
+config RISCV64_BOOT_STACK_SIZE
+  hex "Boot Stack Size"
+  default 0x4000
+  help
+    Size of the boot-time stack used for kernel initialization
+
+config RISCV64_SV39
+  bool "Assume Sv39 Paging Support"
+  default y
+
+config RISCV64_SV48
+  bool "Assume Sv48 Paging Support"
+  default y
+
+config RISCV64_SV57
+  bool "Assume Sv57 Paging Support"
+  default n
+
+endmenu
+

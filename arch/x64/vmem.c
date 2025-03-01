@@ -1825,6 +1825,37 @@ arch_vmem_map_flush(struct vmem_map *map)
     return 0;
 }
 
+static struct vmem_region *identity_map_region = NULL;
+
+static int
+x64_map_identity_map_region(void)
+{
+    int res;
+
+    size_t phys_mem_mapping_size = (1ULL << CONFIG_X64_IDENTITY_MAP_ORDER);
+    identity_map_region = vmem_region_create_direct(
+            0x0,
+            phys_mem_mapping_size,
+            VMEM_REGION_EXEC|VMEM_REGION_WRITE|VMEM_REGION_READ);
+
+    if(identity_map_region == NULL) {
+        eprintk("OOM Error when initializing default kernel vmem_region!\n");
+        return -ENOMEM;
+    }
+
+    res = vmem_force_mapping(
+            identity_map_region,
+            (void*)CONFIG_X64_VIRTUAL_BASE);
+    if(res) {
+        eprintk("Failed to map identity map vmem_region into default vmem_map! (err=%s)\n", errnostr(res));
+        return res;
+    }
+
+    return 0;
+}
+
+declare_init_desc(vmem, x64_map_identity_map_region, "Creating Identity Map Virtual Memory Region");
+
 void
 arch_dump_vmem_map(printk_f *printer, struct vmem_map *map)
 {

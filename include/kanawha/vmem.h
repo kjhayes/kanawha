@@ -21,18 +21,7 @@
 #include <kanawha/types.h>
 #include <kanawha/pointer.h>
 
-static inline void *
-__va(void __phys * paddr) {
-    return (void *)(paddr + CONFIG_VIRTUAL_BASE);
-}
-
-static inline void __phys *
-__pa(void * vaddr) {
-    return (void __phys *)(vaddr - CONFIG_VIRTUAL_BASE);
-}
-
-_Static_assert((!KERNEL_ADDR(0)), "Architecture defined KERNEL_ADDR must return 0 for NULL!");
-_Static_assert((KERNEL_ADDR(CONFIG_VIRTUAL_BASE)), "Architecture defined KERNEL_ADDR does not return 1 for CONFIG_VIRTUAL_BASE!");
+_Static_assert((!KERNEL_ADDR(NULL)), "Architecture defined KERNEL_ADDR must return 0 for NULL!");
 
 #define VMEM_REGION_WRITE (1UL<<0)
 #define VMEM_REGION_READ  (1UL<<1)

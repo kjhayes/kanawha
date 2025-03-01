@@ -8,7 +8,9 @@
     X(mem_flags)\
     X(post_mem_flags)\
     X(page_alloc)\
+    X(dynamic_page)\
     X(vmem)\
+    X(enable_vmem)\
     X(post_vmem)\
     X(kmalloc)\
     X(dynamic)\
@@ -33,8 +35,10 @@
 // mem_flags - memory discovery / mem_flags population
 // post_mem_flags - memory reservation
 // page_alloc - page allocator initialization
-// vmem - virtual memory map initialization
-// post_vmem - virtual memory map enabling
+// dynamic_page - page allocator initialized/available
+// vmem - virtual memory map initialization (Essential regions must be added here)
+// enable_vmem - virtual memory map start enabling
+// post_vmem - virtual memory map enabled (Non-essential regions can be added here)
 // kmalloc - dynamic memory allocator initialization
 // dynamic - first stage with kmalloc/kfree family of functions
 // topo - system topology discovery

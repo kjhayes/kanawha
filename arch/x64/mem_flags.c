@@ -1,5 +1,6 @@
 
 #include <kanawha/mem_flags.h>
+#include <kanawha/init.h>
 
 extern int __kernel_phys_start[];
 extern int __kernel_phys_end[];
@@ -14,4 +15,23 @@ arch_kernel_phys_size(void)
 {
     return (size_t)((uintptr_t)__kernel_phys_end - (uintptr_t)__kernel_phys_start);
 }
+
+static int
+virt_mem_flags_reserve_ident_map(void) 
+{
+    int res;
+
+    res = mem_flags_clear_flags(
+            get_virt_mem_flags(),
+            CONFIG_X64_VIRTUAL_BASE,
+            (1ULL<<CONFIG_X64_IDENTITY_MAP_ORDER),
+            VIRT_MEM_FLAGS_AVAIL);
+
+    if(res) {
+        return res;
+    }
+
+    return 0;
+}
+declare_init_desc(mem_flags, virt_mem_flags_reserve_ident_map, "Reserving the Kernel Identity Map in Virtual Memory");
 

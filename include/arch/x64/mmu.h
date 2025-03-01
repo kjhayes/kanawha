@@ -1,6 +1,8 @@
 #ifndef __KANAWHA__X64_MMU_H__
 #define __KANAWHA__X64_MMU_H__
 
+// This file should be includable from assembly and C source files
+
 #define X64_PML5_SIZE    4096ULL
 #define X64_PML5_ENTRIES 512ULL
 #define X64_PML5_ALIGN   12ULL

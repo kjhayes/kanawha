@@ -21,4 +21,14 @@ struct arch_vmem_region
     int entry_only;
 };
 
+static inline void *
+__va(void __phys * paddr) {
+    return (void *)(paddr + CONFIG_X64_VIRTUAL_BASE);
+}
+
+static inline void __phys *
+__pa(void * vaddr) {
+    return (void __phys *)(vaddr - CONFIG_X64_VIRTUAL_BASE);
+}
+
 #endif

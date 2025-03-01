@@ -627,24 +627,6 @@ virt_mem_flags_static_init(void)
     return 0;
 }
 
-static int
-virt_mem_flags_reserve_ident_map(void) 
-{
-    int res;
-
-    res = mem_flags_clear_flags(
-            get_virt_mem_flags(),
-            CONFIG_VIRTUAL_BASE,
-            (1ULL<<CONFIG_IDENTITY_MAP_ORDER),
-            VIRT_MEM_FLAGS_AVAIL);
-
-    if(res) {
-        return res;
-    }
-
-    return 0;
-}
-
 static void
 virt_mem_flags_printer(printk_f *printer, unsigned long flags)
 {
@@ -665,6 +647,5 @@ virt_mem_flags_dump(void)
     return 0;
 }
 declare_init_desc(static, virt_mem_flags_static_init, "Initializing Virtual Memory Map");
-declare_init_desc(mem_flags, virt_mem_flags_reserve_ident_map, "Reserving the Kernel Identity Map in Virtual Memory");
 declare_init_desc(page_alloc, virt_mem_flags_dump, "Virtual Memory Map Dump");
 

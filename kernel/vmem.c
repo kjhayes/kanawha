@@ -455,7 +455,6 @@ int vmem_map_activate(struct vmem_map *map)
 }
 
 static struct vmem_map *default_map = NULL;
-static struct vmem_region *identity_map_region = NULL;
 
 int vmem_map_deactivate(void) 
 {
@@ -568,6 +567,7 @@ vmem_force_mapping(struct vmem_region *region, void * virtual_address)
 
     return 0;
 }
+
 int
 vmem_relax_mapping(void * virtual_address)
 {
@@ -696,28 +696,9 @@ vmem_create_default_kernel_map(void)
         return -ENOMEM;
     }
 
-    size_t phys_mem_mapping_size = (1ULL << CONFIG_IDENTITY_MAP_ORDER);
-    identity_map_region = vmem_region_create_direct(
-            0x0,
-            phys_mem_mapping_size,
-            VMEM_REGION_EXEC|VMEM_REGION_WRITE|VMEM_REGION_READ);
-
-    if(identity_map_region == NULL) {
-        eprintk("OOM Error when initializing default kernel vmem_region!\n");
-        return -ENOMEM;
-    }
-
-    res = vmem_force_mapping(
-            identity_map_region,
-            (void*)CONFIG_VIRTUAL_BASE);
-    if(res) {
-        eprintk("Failed to map identity map vmem_region into default vmem_map! (err=%s)\n", errnostr(res));
-        return res;
-    }
-
     return 0;
 }
-declare_init_desc(vmem, vmem_create_default_kernel_map, "Creating Default Kernel Virtual Memory Mapping");
+declare_init_desc(dynamic_page, vmem_create_default_kernel_map, "Creating Default Kernel Virtual Memory Mapping");
 
 int
 vmem_percpu_init(void)
@@ -727,5 +708,5 @@ vmem_percpu_init(void)
     }
     return vmem_map_activate(default_map);
 }
-declare_init_desc(post_vmem, vmem_percpu_init, "Activating default kernel vmem_map on BSP");
+declare_init_desc(enable_vmem, vmem_percpu_init, "Activating default kernel vmem_map on BSP");
 

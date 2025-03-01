@@ -1,3 +1,4 @@
 
 source "arch/x64/Kconfig"
+source "arch/riscv64/Kconfig"
 

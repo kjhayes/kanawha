@@ -123,6 +123,12 @@ $(OUTPUT_DIR)/kanawha.o: $(KERNEL_OBJS) $(LDDEPS) | $(OUTPUT_DIR)
 
 kanawha: $(OUTPUT_DIR)/kanawha.o
 
+binary: kanawha.bin FORCE
+kanawha.bin: $(OUTPUT_DIR)/kanawha.bin FORCE
+$(OUTPUT_DIR)/kanawha.bin: $(OUTPUT_DIR)/kanawha.o
+	$(call qinfo, OBJCOPY, $(call rel-dir, $@, $(OUTPUT_DIR)))
+	$(Q)$(OBJCOPY) -O binary $< $@
+
 default: kanawha
 
 modules: $(KERNEL_MOD_RULES) FORCE

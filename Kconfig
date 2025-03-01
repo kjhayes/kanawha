@@ -43,23 +43,6 @@ choice
 endchoice
 
 menu "Kernel Memory Layout"
-config KERNEL_LOAD_ADDR
-  hex "Kernel Load Address"
-  default 0x0
-  help
-    Physical Address the Kernel should be loaded at.
-
-config VIRTUAL_BASE
-  hex "Identity Map Virtual Base"
-  default 0x0
-  help
-    Virtual address to put the physical memory identity map at.
-
-config IDENTITY_MAP_ORDER
-  int "Identity Map Size Order"
-  default 39
-  help
-    Order which the kernel identity map region should be sized as.
 
 config HEAP_ALIGN_ORDER
   int "Heap Alignment Order"
