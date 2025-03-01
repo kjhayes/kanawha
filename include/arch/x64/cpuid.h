@@ -1,7 +1,6 @@
 #ifndef __KANAWHA__ARCH_X64_CPUID_H__
 #define __KANAWHA__ARCH_X64_CPUID_H__
 
-#include <kanawha/init.h>
 #include <kanawha/errno.h>
 #include <kanawha/printk.h>
 
@@ -38,7 +37,5 @@ cpuid_boot_check(void) {
     }
     return 0;
 }
-
-declare_init_desc(boot, cpuid_boot_check, "Checking for CPUID Support");
 
 #endif
