@@ -282,7 +282,7 @@ buddy_region_alloc(
             dprintk("buddy_region: amount_free = 0x%llx, amount_total = 0x%llx\n",
                     buddy_region_total_free(region), region->page_bytes);
 #ifdef CONFIG_DEBUG_BUDDY_ALLOC
-            buddy_region_dump_orders(region, printk);
+            buddy_region_dump_orders(region, do_printk);
 #endif
             return -ENOMEM;
         }

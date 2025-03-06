@@ -119,6 +119,26 @@ int strcmp(const char *lhs, const char *rhs)
     return 0;
 }
 
+int strncmp(const char *lhs, const char *rhs, size_t n)
+{
+    while(n > 0) {
+        n--;
+        unsigned char diff = (unsigned char)*lhs - (unsigned char)*rhs;
+        if(diff != 0) {
+            return diff;
+        }
+
+        if(*lhs == '\0' || *rhs == '\0') {
+            break;
+        }
+
+        lhs++;
+        rhs++;
+    }
+
+    return 0;
+}
+
 char *
 kstrdup(const char *str)
 {

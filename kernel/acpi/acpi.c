@@ -105,8 +105,12 @@ acpi_load_tables(void)
             }
         }
     } else {
-        eprintk("ACPI Trying to Load Tables from RSDP without XSDT or RSDT!\n");
+#ifdef CONFIG_ACPI_REQUIRED
+        eprintk("ACPI Tried to Load Tables from RSDP without XSDT or RSDT!\n");
         return -EINVAL;
+#else
+        return 0;
+#endif
     }
 
     return 0;

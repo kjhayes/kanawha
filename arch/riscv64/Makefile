@@ -3,6 +3,7 @@ obj-y += asm/
 
 obj-y += \
 	init.o \
+	identity_map.o \
 	irq.o \
 	vmem.o \
 	common.o \
@@ -10,4 +11,5 @@ obj-y += \
 	usermode.o \
 	percpu.o \
 	mem_flags.o \
+	sbi_console.o \
 

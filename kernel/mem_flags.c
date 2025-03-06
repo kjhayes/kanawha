@@ -414,6 +414,41 @@ mem_flags_find_and_reserve(
     return -ENOMEM;
 }
 
+int
+mem_flags_check_region(
+        struct mem_flags *map,
+        uintptr_t base,
+        size_t size,
+        unsigned long must_be_set,
+        unsigned long must_be_clear)
+{
+    int res;
+    size_t base_index;
+    size_t num_indices;
+    res = mem_flags_get_overlapping_regions(
+            map,
+            base,
+            size,
+            &base_index,
+            &num_indices);
+    if(res) {
+        return res;
+    }
+
+    for(size_t i = base_index; i < base_index + num_indices; i++) {
+        struct mem_flags_entry *entry = &map->entries[i];
+        if((entry->flags & must_be_set) != must_be_set) {
+            return -EEXIST;
+        }
+        if((entry->flags & must_be_clear) != 0) {
+            return -EEXIST;
+        }
+    }
+
+#undef BUFLEN
+    return 0;
+}
+
 void
 mem_flags_print(
         struct mem_flags *map,
@@ -481,10 +516,16 @@ phys_mem_flags_reserve_kernel(void)
 {
     int res;
 
+    void __phys *phys_start = arch_kernel_phys_start();
+    size_t size = arch_kernel_phys_size();
+
+    printk("Kernel Physical Region [%p - %p)\n",
+            phys_start, phys_start + size);
+
     res = mem_flags_set_flags(
             get_phys_mem_flags(),
-            (uintptr_t)arch_kernel_phys_start(),
-            arch_kernel_phys_size(),
+            (uintptr_t)phys_start,
+            size,
             PHYS_MEM_FLAGS_KERNEL);
 
     if(res) {
@@ -515,8 +556,8 @@ phys_mem_flags_printer(printk_f *printer, unsigned long flags)
     if(flags & PHYS_MEM_FLAGS_DEFECT)     {(*printer)("[DEFECT]");}
     if(flags & PHYS_MEM_FLAGS_FW_IGNORE)  {(*printer)("[FW_IGNORE]");}
     if(flags & PHYS_MEM_FLAGS_PAGE_ALLOC) {(*printer)("[PAGE_ALLOC]");}
-    if(flags & PHYS_MEM_FLAGS_16_BIT) {(*printer)("[16]");}
-    if(flags & PHYS_MEM_FLAGS_32_BIT) {(*printer)("[32]");}
+    if(flags & PHYS_MEM_FLAGS_16_BIT)     {(*printer)("[16]");}
+    if(flags & PHYS_MEM_FLAGS_32_BIT)     {(*printer)("[32]");}
 }
 
 int
@@ -527,6 +568,66 @@ phys_mem_flags_dump(void)
     printk("=============================\n");
     return 0;
 }
+
+declare_init_desc(static, phys_mem_flags_static_init, "Setting Up Physical Memory Map");
+declare_init_desc(post_mem_flags, phys_mem_flags_reserve_kernel, "Reserving the Kernel in Physical Memory");
+
+/*
+ * Virtual Memory
+ */
+#define MAX_VIRT_MEM_FLAGS_ENTRIES 256
+static struct mem_flags __virt_mem_flags = { 0 };
+static struct mem_flags_entry __virt_mem_flags_buffer[MAX_VIRT_MEM_FLAGS_ENTRIES];
+
+struct mem_flags *
+get_virt_mem_flags(void) {
+    return &__virt_mem_flags;
+}
+
+static int
+virt_mem_flags_static_init(void) 
+{
+    __virt_mem_flags.max_entries = MAX_VIRT_MEM_FLAGS_ENTRIES;
+    __virt_mem_flags.entries = (struct mem_flags_entry*)__virt_mem_flags_buffer;
+    spinlock_init(&__virt_mem_flags.lock);
+
+    printk("Marking all of virtual memory available\n");
+    int res = mem_flags_clear_all(&__virt_mem_flags,VIRT_MEM_FLAGS_NONCANON|VIRT_MEM_FLAGS_AVAIL);
+    if(res) {return res;}
+
+    return 0;
+}
+
+static void
+virt_mem_flags_printer(printk_f *printer, unsigned long flags)
+{
+    if(flags & VIRT_MEM_FLAGS_NONCANON) {(*printer)("[NONCANON]");}
+    if(flags & VIRT_MEM_FLAGS_HIGHMEM)  {(*printer)("[HIGH]");}
+    if(flags & VIRT_MEM_FLAGS_AVAIL)    {(*printer)("[AVAIL]");}
+    if(flags & VIRT_MEM_FLAGS_HEAP)     {(*printer)("[HEAP]");}
+    if(flags & VIRT_MEM_FLAGS_MMIO)     {(*printer)("[MMIO]");}
+    if(flags & VIRT_MEM_FLAGS_PERCPU)   {(*printer)("[PERCPU]");}
+}
+
+int
+virt_mem_flags_dump(void) 
+{
+    printk("=== Virtual Memory Flags ===\n");
+    mem_flags_print(get_virt_mem_flags(), do_printk, virt_mem_flags_printer);
+    printk("============================\n");
+    return 0;
+}
+declare_init_desc(static, virt_mem_flags_static_init, "Initializing Virtual Memory Map");
+
+static int
+mem_flags_dump(void) {
+    phys_mem_flags_dump();
+    virt_mem_flags_dump();
+    return 0;
+}
+declare_init_desc(page_alloc, mem_flags_dump, "Memory Map Dump");
+
+// Freeing Memory
 
 static int
 free_phys_mem(void) 
@@ -548,7 +649,7 @@ free_phys_mem(void)
           }
           
           // Free this region
-          dprintk("Registering Buddy Allocator for region [%p - %p)\n",
+          printk("Registering Buddy Allocator for region [%p - %p)\n",
                   (void*)entry->base, (void*)(entry->base + entry->size));
 
           unsigned long page_alloc_flags = 0;
@@ -586,7 +687,7 @@ free_phys_mem(void)
               return res;
           }
 
-          dprintk("Registered Buddy Allocator for region [%p - %p)\n",
+          printk("Registered Buddy Allocator for region [%p - %p)\n",
                   (void*)entry->base, (void*)(entry->base + entry->size));
           freed_something = 1;
           break;
@@ -595,57 +696,4 @@ free_phys_mem(void)
 
     return 0;
 }
-
-declare_init_desc(static, phys_mem_flags_static_init, "Setting Up Physical Memory Map");
-declare_init_desc(post_mem_flags, phys_mem_flags_reserve_kernel, "Reserving the Kernel in Physical Memory");
-declare_init_desc(page_alloc, phys_mem_flags_dump, "Physical Memory Map Dump");
 declare_init_desc(page_alloc, free_phys_mem, "Freeing Available Physical Memory");
-
-/*
- * Virtual Memory
- */
-#define MAX_VIRT_MEM_FLAGS_ENTRIES 256
-static struct mem_flags __virt_mem_flags = { 0 };
-static struct mem_flags_entry __virt_mem_flags_buffer[MAX_VIRT_MEM_FLAGS_ENTRIES];
-
-struct mem_flags *
-get_virt_mem_flags(void) {
-    return &__virt_mem_flags;
-}
-
-static int
-virt_mem_flags_static_init(void) 
-{
-    __virt_mem_flags.max_entries = MAX_VIRT_MEM_FLAGS_ENTRIES;
-    __virt_mem_flags.entries = (struct mem_flags_entry*)__virt_mem_flags_buffer;
-    spinlock_init(&__virt_mem_flags.lock);
-
-    printk("Marking all of virtual memory available\n");
-    int res = mem_flags_clear_all(&__virt_mem_flags,VIRT_MEM_FLAGS_NONCANON|VIRT_MEM_FLAGS_AVAIL);
-    if(res) {return res;}
-
-    return 0;
-}
-
-static void
-virt_mem_flags_printer(printk_f *printer, unsigned long flags)
-{
-    if(flags & VIRT_MEM_FLAGS_NONCANON)  {(*printer)("[NONCANON]");}
-    if(flags & VIRT_MEM_FLAGS_HIGHMEM) {(*printer)("[HIGH]");}
-    if(flags & VIRT_MEM_FLAGS_AVAIL) {(*printer)("[AVAIL]");}
-    if(flags & VIRT_MEM_FLAGS_HEAP)   {(*printer)("[HEAP]");}
-    if(flags & VIRT_MEM_FLAGS_MMIO)   {(*printer)("[MMIO]");}
-    if(flags & VIRT_MEM_FLAGS_PERCPU)   {(*printer)("[PERCPU]");}
-}
-
-int
-virt_mem_flags_dump(void) 
-{
-    printk("=== Virtual Memory Flags ===\n");
-    mem_flags_print(get_virt_mem_flags(), do_printk, virt_mem_flags_printer);
-    printk("============================\n");
-    return 0;
-}
-declare_init_desc(static, virt_mem_flags_static_init, "Initializing Virtual Memory Map");
-declare_init_desc(page_alloc, virt_mem_flags_dump, "Virtual Memory Map Dump");
-

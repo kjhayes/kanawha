@@ -3,6 +3,12 @@
 
 #include <stdint.h>
 
+#ifdef CONFIG_TOOLCHAIN_SUPPORTS_BITWISE_ATTRIBUTE
+#define __bitwise __attribute__((bitwise))
+#else
+#define __bitwise
+#endif
+
 #undef NULL
 #define NULL ((void*)0)
 

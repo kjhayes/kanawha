@@ -1,8 +1,9 @@
 
 #include <kanawha/thread.h>
 
-int arch_init_thread_state(struct thread_state *thread)
+int arch_init_thread_state(struct thread_state *state)
 {
+    struct arch_thread_state *arch = &state->arch_state;
     return -EUNIMPL;
 }
 

@@ -11,6 +11,7 @@ size_t strlen(const char *str);
 char *strcpy(char *dst, const char *src);
 char *strncpy(char *dst, const char *src, size_t n);
 int strcmp(const char *lhs, const char *rhs);
+int strncmp(const char *lhs, const char *rhs, size_t n);
 
 // Duplicates the string using kmalloc
 char *kstrdup(const char *str);

@@ -1,21 +1,23 @@
 
+#include <kanawha/types.h>
 #include <kanawha/irq.h>
+#include <arch/riscv64/csr.h>
 
 int arch_irq_disable(void)
 {
-    panic("arch_irq_disable is unimplemented!\n");
-    return -EUNIMPL;
+    write_csr(sstatus, read_csr(sstatus) & ~(1ULL<<1));
+    return 0;
 }
 
 int arch_irq_enable(void)
 {
-    panic("arch_irq_enable is unimplemented!\n");
-    return -EUNIMPL;
+    write_csr(sstatus, read_csr(sstatus) | (1ULL<<1));
+    return 0;
 }
 
 int arch_irqs_enabled(void)
 {
-    panic("arch_irqs_enabled is unimplemented!\n");
-    return -EUNIMPL;
+    uint64_t status = read_csr(sstatus);
+    return status & (1ULL<<1);
 }
 

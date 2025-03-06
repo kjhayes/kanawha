@@ -53,6 +53,7 @@ obj-y += elf/
 obj-y += mb2/
 obj-y += proc/
 obj-$(CONFIG_ACPI) += acpi/
+obj-$(CONFIG_DEVICETREE) += devicetree/
 
 obj-m += memdump.o
 

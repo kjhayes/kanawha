@@ -19,11 +19,17 @@ config RISCV64_KERNEL_VIRTUAL_BASE
   help
     What virtual address to link the kernel at
 
-config RISCV64_BOOT_KERNEL_MAPPING_ORDER
-  hex "Boot Kernel Mapping Order"
+config RISCV64_BOOT_KERNEL_MAP_ORDER
+  int "Boot Kernel Mapping Order"
   default 22
   help
-    Order of the initial boot high-mem mapping in the kernel
+    Order of the boot-time kernel high-mem mapping
+
+config RISCV64_IDENTITY_MAP_ORDER
+  int "Identity Map Order"
+  default 32
+  help
+    Order of the kernel identity map
 
 config RISCV64_BOOT_STACK_SIZE
   hex "Boot Stack Size"

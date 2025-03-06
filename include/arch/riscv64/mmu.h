@@ -15,9 +15,16 @@
 #define RISCV64_SV_NAPOT    (1ULL<<63)
 
 #define RISCV64_SV_TABLE_ALIGN 12
+#define RISCV64_SV_TABLE_ORDER 12
 
 #define RISCV64_SV_ENTRY_DATA_SIZE 8ULL
 #define RISCV64_SV_ENTRIES_PER_LEVEL 512ULL
+
+#define RISCV64_SV_PAGE_ORDER_LEVEL_0 (12)
+#define RISCV64_SV_PAGE_ORDER_LEVEL_1 (RISCV64_SV_PAGE_ORDER_LEVEL_0 + 9)
+#define RISCV64_SV_PAGE_ORDER_LEVEL_2 (RISCV64_SV_PAGE_ORDER_LEVEL_1 + 9)
+#define RISCV64_SV_PAGE_ORDER_LEVEL_3 (RISCV64_SV_PAGE_ORDER_LEVEL_2 + 9)
+#define RISCV64_SV_PAGE_ORDER_LEVEL_4 (RISCV64_SV_PAGE_ORDER_LEVEL_3 + 9)
 
 #define RISCV64_SV_PAGE_SIZE_LEVEL_0 (1ULL<<12)
 #define RISCV64_SV_PAGE_SIZE_LEVEL_1 (RISCV64_SV_PAGE_SIZE_LEVEL_0 << 9)
@@ -38,19 +45,36 @@
 #define RISCV64_SV_LEVEL_4_INDEX_OF_ADDR(addr) (((addr)>>RISCV64_SV_LEVEL_4_INDEX_ADDR_SHIFT)&(RISCV64_SV_ENTRIES_PER_LEVEL-1))
 
 #define RISCV64_SV_ENTRY_IS_LEAF(entry) \
-    (entry &\
+    ((entry &\
      (\
       RISCV64_SV_READ|\
       RISCV64_SV_EXEC\
-      ) != 0\
+      )) != 0\
      )
 
 #define RISCV64_SV39_NUM_LEVELS 3
 #define RISCV64_SV48_NUM_LEVELS 4
 #define RISCV64_SV57_NUM_LEVELS 5
 
-
 // Kanawha Custom Fields
 #define RISCV64_SV_VMEM_SHARED_MAP (1ULL<<8)
+
+#ifndef __ASSEMBLER__
+
+#include <kanawha/types.h>
+
+struct
+__attribute__((aligned(1<<RISCV64_SV_TABLE_ALIGN),packed))
+riscv64_sv_page_table
+{
+    uint64_t entries[RISCV64_SV_ENTRIES_PER_LEVEL];
+};
+
+static inline void
+riscv64_flush_tlb(void) {
+    asm volatile ("sfence.vma");
+}
+
+#endif
 
 #endif

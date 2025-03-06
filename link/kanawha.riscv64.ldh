@@ -26,12 +26,19 @@ SECTIONS
 
   PROVIDE(__riscv64_kernel_load_addr = .);
 
+  __kernel_boot_start = .;
+
+  .boot.init : AT(ADDR(.boot.init)) {
+      *(.boot.init*) *(boot.init.*)
+  } :boot = 0xcccccccc
   .boot.text : AT(ADDR(.boot.text)) {
       *(.boot.text*) *(boot.text.*)
   } :boot = 0xcccccccc
   .boot.data ALIGN(0x1000) : AT(ADDR(.boot.data)) {
       *(.boot.data*) *(.boot.data.*)
   } :boot = 0
+
+  __kernel_boot_end = .;
 
   . = CONFIG_RISCV64_KERNEL_VIRTUAL_BASE + (LOAD_AFTER(.boot.data) - CONFIG_RISCV64_LINKED_PHYS_BASE);
 
@@ -54,11 +61,13 @@ SECTIONS
     PROVIDE( __global_pointer$ = . + 0x800 );
   } :data = 0
 
+  __kernel_bss_start = .;
   .bss : AT(VA_TO_PA(ADDR(.bss))) {
     *(.sbss .sbss.*)
     *(.bss .bss.*);
     *(.tbss .tbss*);
   } :data = 0
+  __kernel_bss_end = .;
 
 // Past Here Everything Should be Discardable After Kernel Initialization
 

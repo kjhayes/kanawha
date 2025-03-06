@@ -1096,10 +1096,11 @@ arch_vmem_map_map_region(
         return -EINVAL;
     }
 
+    map_table = map->arch_state.pt_root;
     while(pt_level > ref->region->arch_state.pt_level) {
 
-        size_t index = pt_level_table_index(map->arch_state.pt_level, ref->virt_addr);
-        map_entry = ((uint64_t*)__va(map->arch_state.pt_root)) + index;
+        size_t index = pt_level_table_index(pt_level, ref->virt_addr);
+        map_entry = ((uint64_t*)__va(map_table)) + index;
 
         size_t next_table_size;
         uint64_t present_mask;

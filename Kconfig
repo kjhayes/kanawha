@@ -6,8 +6,11 @@ choice
     bool "x86_64"
     select PORT_IO
     select ACPI
+    select ACPI_REQUIRED
   config RISCV64
     bool "RISCV64"
+    select DEVICETREE
+    select DEVICETREE_REQUIRED
 endchoice
 
 choice
@@ -17,6 +20,7 @@ choice
     bool "Clang/LLVM"
   config GCC
     bool "GCC"
+    select TOOLCHAIN_SUPPORTS_BITWISE_ATTRIBUTE
 endchoice
 
 config OPT_FLAGS
@@ -92,6 +96,26 @@ config ACPI
   default n
   help
     Include support for the Advanced Power and Configuration Interface (ACPI)
+
+config ACPI_REQUIRED
+  bool "ACPI Required"
+  default n
+  depends on ACPI
+  help
+    Should the kernel panic if ACPI tables cannot be found?
+
+config DEVICETREE
+  bool "Device Tree"
+  default n
+  help
+    Include support for the OpenFirmware Device Tree interface
+
+config DEVICETREE_REQUIRED
+  bool "Device Tree Required"
+  default n
+  help
+    Should the kernel panic if a device tree cannot be found?
+
 endmenu
 
 source "kernel/Kconfig"
@@ -107,4 +131,8 @@ config PORT_IO
 config SMP
     def_bool y
     depends on MAX_CPUS > 1
+
+# Toolchain Support
+config TOOLCHAIN_SUPPORTS_BITWISE_ATTRIBUTE
+    def_bool n
 

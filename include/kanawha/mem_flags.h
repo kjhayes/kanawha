@@ -69,6 +69,16 @@ mem_flags_find_and_reserve(
         unsigned long to_clear,
         uintptr_t *base_out);
 
+// Ensure that the given region is mapped properly
+// Returns 0 if the constraints are met, negative errno otherwise
+int
+mem_flags_check_region(
+        struct mem_flags *map,
+        uintptr_t base,
+        size_t size,
+        unsigned long must_be_set,
+        unsigned long must_be_clear);
+
 void
 mem_flags_print(
         struct mem_flags *map,

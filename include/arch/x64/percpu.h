@@ -29,9 +29,14 @@ __x64_percpu_data[CONFIG_MAX_CPUS];
 
 #define __arch_percpu_ptr_specific(ptr, cpu_id) \
     ({\
-     void *ptr_spec = (typeof(ptr)*)(__x64_percpu_data[cpu_id].percpu_offset + (uintptr_t)ptr);\
+     void *ptr_spec = \
+         (typeof(ptr)*)(\
+               __x64_percpu_data[cpu_id].percpu_offset\
+             + (uintptr_t)ptr);\
+    \
      dprintk("percpu_ptr_specific(%p, %ld) -> %p\n",\
              (void*)ptr, (unsigned long)cpu_id, ptr_spec);\
+    \
      ptr_spec;\
      })
 
