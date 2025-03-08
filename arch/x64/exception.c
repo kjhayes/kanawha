@@ -248,7 +248,7 @@ exit:
     if(ring_from != 0) {
         // We need to reset the thread stack pointer
         // because we are returning to usermode
-        cur_thread->arch_state.stack.rsp =
+        cur_thread->arch_state.stack.stack_pointer =
             cur_thread->arch_state.stack.stack_base;
         struct process *process = current_process();
         if(process != NULL) {

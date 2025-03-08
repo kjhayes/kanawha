@@ -1,0 +1,157 @@
+
+#include <kanawha/init.h>
+#include <kanawha/printk.h>
+#include <kanawha/irq.h>
+#include <kanawha/irq_domain.h>
+#include <arch/riscv64/csr.h>
+#include <arch/riscv64/trap.h>
+
+extern void __riscv64_trap_entry(void);
+
+#define STVEC_MODE_MASK 0b11
+#define STVEC_DIRECT    0b00
+#define STVEC_VECTORED  0b01
+
+static int
+riscv64_boot_setup_stvec(void)
+{
+
+    uint64_t stvec_value = (uintptr_t)__riscv64_trap_entry;
+
+    // Clear the mode bits
+    // (Should do nothing if we assume the handler is properly aligned)
+    stvec_value &= ~0b11;
+ 
+    stvec_value |= STVEC_DIRECT;
+
+    write_csr(stvec, stvec_value);
+    return 0;
+}
+
+declare_init_desc(boot, riscv64_boot_setup_stvec, "Setting Up RISC-V Trap Vector");
+
+struct irq_domain *riscv64_exception_irq_domain = NULL;
+struct irq_domain *riscv64_interrupt_irq_domain = NULL;
+
+static int
+riscv64_alloc_root_irq_domains(void)
+{
+    riscv64_exception_irq_domain =
+        alloc_irq_domain_linear(0, 64);
+    if(riscv64_exception_irq_domain == NULL) {
+        return -ENOMEM;
+    }
+    riscv64_interrupt_irq_domain =
+        alloc_irq_domain_linear(0, 64);
+    if(riscv64_interrupt_irq_domain == NULL) {
+        return -ENOMEM;
+    }
+    return 0;
+}
+declare_init_desc(dynamic, riscv64_alloc_root_irq_domains, "Creating RISC-V Root IRQ Domains");
+
+__attribute__((noreturn))
+static void
+riscv64_unhandled_exception(
+        struct riscv64_excp_state *state)
+{
+    // TODO Usermode
+    printk("==== UNHANDLED EXCEPTION ====\n");
+
+    printk("\tSCAUSE = %p\n", state->scause);
+    printk("\tSTVAL  = %p\n", state->stval);
+    printk("\tSEPC   = %p\n", state->sepc);
+
+    panic("Unhandled Exception!\n");
+}
+
+void
+riscv64_route_trap(
+        struct riscv64_excp_state *state)
+{
+    struct thread_state *cur_thread = current_thread();
+
+    // TODO update process->user_ip if we came from usermode
+
+    struct irq_desc *desc = NULL;
+
+    int is_interrupt = state->scause & (1ULL<<63);
+    hwirq_t hwirq = state->scause & ~(1ULL<<63);
+    if(hwirq >= 64) {
+        eprintk("riscv64_route_trap: exception with cause >=64! (scause=0x%lx)\n", state->scause);
+        riscv64_unhandled_exception(state);
+    }
+
+    if(is_interrupt) {
+        if(riscv64_interrupt_irq_domain == NULL) {
+            eprintk("riscv64_route_trap: Interrupt occurred before setting up root interrupt IRQ domain!\n");
+            riscv64_unhandled_exception(state);
+        }
+        irq_t irq = irq_domain_revmap(riscv64_interrupt_irq_domain, hwirq);
+        if(irq == NULL_IRQ) {
+            eprintk("riscv64_route_trap: Failed to map root interrupt hwirq=0x%lx!\n", (ul_t)hwirq);
+            riscv64_unhandled_exception(state);
+        }
+        desc = irq_to_desc(irq);
+    } else {
+        if(riscv64_exception_irq_domain == NULL) {
+            eprintk("riscv64_route_trap: Exception occurred before setting up root exception IRQ domain!\n");
+            riscv64_unhandled_exception(state);
+        }
+        irq_t irq = irq_domain_revmap(riscv64_exception_irq_domain, hwirq);
+        if(irq == NULL_IRQ) {
+            eprintk("riscv64_route_trap: Failed to map root exception hwirq=0x%lx!\n", (ul_t)hwirq);
+            riscv64_unhandled_exception(state);
+        }
+        desc = irq_to_desc(irq);
+    }
+
+    if(desc == NULL) {
+        eprintk("riscv64_route_trap: Failed to get root trap IRQ descriptor!\n");
+        riscv64_unhandled_exception(state);
+    }
+
+    dprintk("hwirq=0x%lx, num_actions=0x%lx\n", desc->hwirq, desc->num_actions);
+
+    int res = handle_irq(
+            desc,
+            (struct excp_state*)state);
+    if(res == IRQ_UNHANDLED) {
+        eprintk("Failed to handle IRQ 0x%lx (scause=0x%lx) on CPU (%ld)\n",
+                (ul_t)desc->irq, (ul_t)state->scause, (sl_t)current_cpu_id());
+        riscv64_unhandled_exception(state);
+    }
+
+exit:
+    panic("RISC-V Trap! (sepc=%p, scause=0x%lx, stval=0x%lx)\n",
+            state->sepc,
+            state->scause,
+            state->stval);
+}
+
+struct irq_desc *
+riscv64_exception_irq_desc(hwirq_t hwirq)
+{
+    if(riscv64_exception_irq_domain == NULL) {
+        return NULL;
+    }
+    irq_t irq = irq_domain_revmap(riscv64_exception_irq_domain, hwirq);
+    if(irq == NULL_IRQ) {
+        return NULL;
+    }
+    return irq_to_desc(irq);
+}
+
+struct irq_desc *
+riscv64_interrupt_irq_desc(hwirq_t hwirq)
+{
+    if(riscv64_interrupt_irq_domain == NULL) {
+        return NULL;
+    }
+    irq_t irq = irq_domain_revmap(riscv64_interrupt_irq_domain, hwirq);
+    if(irq == NULL_IRQ) {
+        return NULL;
+    }
+    return irq_to_desc(irq);
+}
+

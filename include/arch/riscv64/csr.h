@@ -14,4 +14,16 @@
               :: "r" (__val));\
     } while(0)
 
+#define SSTATUS_MASK_SIE  (0b1ULL<<1)
+#define SSTATUS_MASK_SPIE (0b1ULL<<5)
+#define SSTATUS_MASK_UBE  (0b1ULL<<6)
+#define SSTATUS_MASK_SPP  (0b1ULL<<8)
+#define SSTATUS_MASK_VS   (0b11ULL<<9)
+#define SSTATUS_MASK_FS   (0b11ULL<<13)
+#define SSTATUS_MASK_XS   (0b11ULL<<15)
+#define SSTATUS_MASK_SUM  (0b1ULL<<18)
+#define SSTATUS_MASK_MXR  (0b1ULL<<19)
+#define SSTATUS_MASK_UXL  (0b11ULL<<32)
+#define SSTATUS_MASK_SD   (0b1ULL<<63)
+
 #endif

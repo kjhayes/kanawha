@@ -879,6 +879,13 @@ arch_vmem_region_init(struct vmem_region *region)
     }
 }
 
+order_t
+arch_vmem_region_alignment(
+        struct vmem_region *region)
+{
+    return 12; // TODO (This may not be correct)
+}
+
 static int
 map_region_tables(
         void __phys * map_table,

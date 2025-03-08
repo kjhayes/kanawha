@@ -150,6 +150,69 @@ riscv64_init(void *in)
     printk("Started threading on CPU (%ld)\n",
             (long)current_cpu_id());
 
-    while(1) {}
+    enable_irqs();
+
+    res = handle_init_stage__topo();
+    if(res) {
+        panic("Failed to handle init stage \"topo\"! err=%s", errnostr(res));
+    }
+
+    res = handle_init_stage__post_topo();
+    if(res) {
+        panic("Failed to handle init stage \"post_topo\"! err=%s", errnostr(res));
+    }
+
+    res = handle_init_stage__smp_bringup();
+    if(res) {
+        panic("Failed to handle init stage \"smp_bringup\"! err=%s", errnostr(res));
+    }
+
+    res = handle_init_stage__smp();
+    if(res) {
+        panic("Failed to handle init stage \"smp\"! err=%s", errnostr(res));
+    }
+
+    res = handle_init_stage__fs();
+    if(res) {
+        panic("Failed to handle init stage \"fs\"! err=%s", errnostr(res));
+    }
+
+    res = handle_init_stage__platform();
+    if(res) {
+        panic("Failed to handle init stage \"platform\"! err=%s", errnostr(res));
+    }
+
+    res = handle_init_stage__bus();
+    if(res) {
+        panic("Failed to handle init stage \"bus\"! err=%s", errnostr(res));
+    }
+
+    res = handle_init_stage__early_device();
+    if(res) {
+        panic("Failed to handle init stage \"early_device\"! err=%s", errnostr(res));
+    }
+
+    res = handle_init_stage__device();
+    if(res) {
+        panic("Failed to handle init stage \"device\"! err=%s", errnostr(res));
+    }
+
+    res = handle_init_stage__late();
+    if(res) {
+        panic("Failed to handle init stage \"late\"! err=%s", errnostr(res));
+    }
+
+    res = handle_init_stage__launch();
+    if(res) {
+        panic("Failed to handle init stage \"launch\"! err=%s", errnostr(res));
+    }
+
+    //dump_irq_descs(printk);
+    //dump_threads(printk);
+
+    printk("CPU (%ld) init thread is idling\n", (sl_t)current_cpu_id());
+    idle_loop();
+
+    panic("Returned from idle loop on CPU (%ld)!\n", (sl_t)current_cpu_id());
 }
 

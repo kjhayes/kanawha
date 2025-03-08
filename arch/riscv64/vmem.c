@@ -128,54 +128,108 @@ static void
 riscv64_dump_page_table(
         printk_f *printer,
         struct riscv64_sv_page_table __phys *phys_table,
-        int level,
-        void *vbase)
+        void *vbase,
+        int level)
 {
+    if(level < 0) {
+        eprintk("riscv64_dump_page_table reached an invalid level!\n");
+        return;
+    }
+
 #define TAB() \
     do {\
-        for(int __i = 0; i < MAX_LEVEL-level; i++) {\
+        for(int __i = 0; __i < (MAX_LEVEL-level); __i++) {\
             (*printer)("\t");\
         }\
     } while(0)
 
+    int leaf_pending = 0;
+    void __phys *pending_next_paddr;
+    void __phys *pending_paddr;
+    void *pending_vaddr;
+    size_t pending_size;
+
+#define DUMP_PENDING_LEAF()\
+    do {\
+        TAB();\
+        if((uintptr_t)pending_vaddr & (1ULL<<(VADDR_BITS-1))) {\
+            pending_vaddr = (void*)((uintptr_t)pending_vaddr | ((~(uintptr_t)0)<<VADDR_BITS));\
+        }\
+        (*printer)("%p -> %p [size=0x%llx]\n",\
+                pending_vaddr,\
+                pending_paddr,\
+                pending_size);\
+    } while(0)
+
+#if defined(CONFIG_RISCV64_SV57)
+#define VADDR_BITS 57
+#elif defined(CONFIG_RISCV64_SV48)
+#define VADDR_BITS 48
+#elif defined(CONFIG_RISCV64_SV39)
+#define VADDR_BITS 39
+#endif
+
     size_t page_size = sv_level_page_size(level);
     struct riscv64_sv_page_table *table = __va(phys_table);
-    for(size_t i = 0; i < RISCV64_SV_ENTRIES_PER_LEVEL; i++) {
+
+    for(size_t i = 0; i < RISCV64_SV_ENTRIES_PER_LEVEL; i++)
+    {
         uint64_t *entry = &table->entries[i];
-        if(*entry & RISCV64_SV_VALID) {
-            void __phys *addr = sv_pointer_from_entry(*entry);
-            void *vaddr = vbase + (i * page_size);
-            if(RISCV64_SV_ENTRY_IS_LEAF(*entry)) {
-                TAB();
-                (*printer)(
-                        "[%p - %p) -> [%p - %p)\n",
-                        vaddr,
-                        vaddr + page_size,
-                        addr,
-                        addr + page_size);
-            } else {
-                riscv64_dump_page_table(
-                        printer,
-                        addr,
-                        level-1,
-                        vaddr);
+        if(!(*entry & RISCV64_SV_VALID)) {
+            vbase += page_size;
+            if(leaf_pending) {
+                leaf_pending = 0;
+                DUMP_PENDING_LEAF();
             }
+            continue;
         }
+
+        void __phys *cur_paddr = sv_pointer_from_entry(*entry);
+
+        int is_leaf = RISCV64_SV_ENTRY_IS_LEAF(*entry);
+
+        if(leaf_pending) {
+            if(!is_leaf) {
+                leaf_pending = 0;
+                DUMP_PENDING_LEAF();
+            } else if(cur_paddr != pending_next_paddr) {
+                DUMP_PENDING_LEAF();
+                leaf_pending = 1;
+                pending_paddr = cur_paddr;
+                pending_next_paddr = cur_paddr + page_size;
+                pending_vaddr = vbase;
+                pending_size = page_size;
+            } else {
+                leaf_pending = 1;
+                pending_size += page_size;
+                pending_next_paddr += page_size;
+            }
+        } else if(is_leaf) {
+            leaf_pending = 1;
+            pending_paddr = cur_paddr;
+            pending_next_paddr = cur_paddr + page_size;
+            pending_vaddr = vbase;
+            pending_size = page_size;
+        }
+
+        if(!is_leaf) {
+            riscv64_dump_page_table(
+                    printer,
+                    cur_paddr,
+                    vbase,
+                    level-1);
+        }
+
+        vbase += page_size;
+    }
+
+    if(leaf_pending) {
+        leaf_pending = 0;
+        DUMP_PENDING_LEAF();
     }
 
 #undef TAB
-}
-
-static void
-riscv64_dump_vmem_map(
-        printk_f *printer,
-        struct vmem_map *map)
-{
-    riscv64_dump_page_table(
-            printer,
-            map->arch_state.root_table,
-            map->arch_state.root_level,
-            0x0);
+#undef DUMP_PENDING_LEAF
 }
 
 int arch_vmem_map_init(struct vmem_map *generic_map)
@@ -201,11 +255,39 @@ int arch_vmem_map_init(struct vmem_map *generic_map)
     return 0;
 }
 
+static int
+free_sv_page_tables(
+        struct riscv64_sv_page_table __phys *phys_table,
+        int level)
+{
+    int res;
+    if(level > 0) {
+        struct riscv64_sv_page_table *table = __va(phys_table);
+        for(size_t i = 0; i < RISCV64_SV_ENTRIES_PER_LEVEL; i++) {
+            uint64_t *entry = &table->entries[i];
+            if(!(*entry & RISCV64_SV_VALID)) {
+                continue;
+            }
+            if(!RISCV64_SV_ENTRY_IS_LEAF(*entry)) {
+                struct riscv64_sv_page_table __phys *subtable =
+                    sv_pointer_from_entry(*entry);
+                *entry = 0;
+                res = free_sv_page_tables(subtable, level-1);
+                if(res) {
+                    wprintk("Failed to free subtree of page table (%s) Leaking Memory!\n",
+                            errnostr(res));
+                }
+            }
+        }
+    }
+    return page_free(RISCV64_SV_TABLE_ORDER, phys_table);
+}
+
 int arch_vmem_map_deinit(struct vmem_map *map)
 {
     int res;
     // Every region should have been unmapped already
-    res = page_free(RISCV64_SV_TABLE_ORDER, map->arch_state.root_table);
+    res = free_sv_page_tables(map->arch_state.root_table, map->arch_state.root_level);
     if(res) {
         return res;
     }
@@ -539,7 +621,23 @@ arch_vmem_region_init(struct vmem_region *region)
 
 int arch_vmem_region_deinit(struct vmem_region *region)
 {
-    return -EUNIMPL;
+    int res;
+    res = free_sv_page_tables(
+            region->arch_state.root_table,
+            region->arch_state.root_level);
+    if(res) {
+        return res;
+    }
+    return 0;
+}
+
+order_t
+arch_vmem_region_alignment(
+        struct vmem_region *region)
+{
+    int root_level = region->arch_state.root_level;
+    order_t order = sv_level_page_order(root_level);
+    return order;
 }
 
 static int
@@ -635,14 +733,101 @@ sv_map_region_tables(
     return 0;
 }
 
+static int
+sv_unmap_region_tables(
+    struct riscv64_sv_page_table __phys * phys_map_table,
+    struct riscv64_sv_page_table __phys * phys_region_table,
+    int level,
+    void * vbase,
+    struct vmem_map *map,
+    struct vmem_region *region)
+{
+    int res;
+
+    struct riscv64_sv_page_table *map_table = __va(phys_map_table);
+    struct riscv64_sv_page_table *region_table = __va(phys_region_table);
+
+    size_t virtual_index = sv_level_index_of_addr(level, vbase);
+    for(size_t vi = virtual_index; vi < RISCV64_SV_ENTRIES_PER_LEVEL; vi++) {
+        uint64_t *map_entry = &map_table->entries[vi];
+        uint64_t *region_entry = &region_table->entries[vi - virtual_index];
+
+        if(!(*region_entry & RISCV64_SV_VALID)) {
+            // End of region
+            break;
+        }
+
+        if(!(*map_entry & RISCV64_SV_VALID)) {
+            // Something is wrong
+            // (region was mapped incorrectly or this region is not mapped at all)
+            return -EINVAL;
+        }
+
+        if(*map_entry == *region_entry) {
+            // We can just zero the entry
+            *map_entry = 0x0;
+            continue;
+        }
+        else if(*map_entry & RISCV64_SV_VMEM_SHARED_MAP) {
+            struct riscv64_sv_page_table __phys *phys_shared_table
+                = sv_pointer_from_entry(*map_entry);
+            struct riscv64_sv_page_table __phys *phys_region_subtable
+                = sv_pointer_from_entry(*region_entry);
+            res = sv_unmap_region_tables(
+                    phys_shared_table,
+                    phys_region_subtable,
+                    level-1,
+                    vbase + ((vi-virtual_index) * sv_level_page_size(level)),
+                    map,
+                    region);
+            if(res) {
+                return res;
+            }
+            int shared_table_empty = 1;
+            struct riscv64_sv_page_table *shared_table = __va(phys_shared_table);
+            for(size_t i = 0; i < RISCV64_SV_ENTRIES_PER_LEVEL; i++) {
+                if(shared_table->entries[i] & RISCV64_SV_VALID) {
+                    shared_table_empty = 0;
+                    break;
+                }
+            }
+            if(shared_table_empty) {
+                res = free_sv_page_tables(phys_shared_table, level-1);
+                if(res) {
+                    wprintk("Failed to free shared intermediate page table (Possibly Leaking Memory) (err=%s)\n",
+                            errnostr(res));
+                } else {
+                    // Only clear the map entry if we freed the shared table
+                    // (Hopefully won't leak memory if we fail to free)
+                    *map_entry = 0x0;
+                }
+            }
+        } else {
+            // Either they should be exactly the same or it should be a shared table
+            return -EINVAL;
+        }
+    }
+    return 0;
+}
+
 int arch_vmem_map_map_region(struct vmem_map *map, struct vmem_region_ref *ref)
 {
     int res;
+
+    dprintk("arch_vmem_map_map_region(map=%p, ref=%p, vaddr=%p, size=%p)\n",
+            map, ref,
+            ref->virt_addr,
+            ref->region->size);
 
     int level = map->arch_state.root_level;
     if(level < ref->region->arch_state.root_level) {
         eprintk("arch_vmem_map_map_region: invalid map->level < region->level (%d < %d)\n",
                 (int)level, (int)ref->region->arch_state.root_level);
+        return -EINVAL;
+    }
+
+    size_t region_root_page_size = sv_level_page_size(ref->region->arch_state.root_level);
+    if((uintptr_t)ref->virt_addr % region_root_page_size) {
         return -EINVAL;
     }
 
@@ -690,13 +875,50 @@ int arch_vmem_map_map_region(struct vmem_map *map, struct vmem_region_ref *ref)
 }
 int arch_vmem_map_unmap_region(struct vmem_map *map, struct vmem_region_ref *ref)
 {
-    return -EUNIMPL;
+    int res;
+
+    DEBUG_ASSERT(ref->map == map);
+
+    int level = map->arch_state.root_level;
+    if(level < ref->region->arch_state.root_level) {
+        eprintk("arch_vmem_map_unmap_region: invalid map->level < region->level (%d < %d)\n",
+                (int)level, (int)ref->region->arch_state.root_level);
+        return -EINVAL;
+    }
+
+    struct riscv64_sv_page_table __phys *phys_map_table = map->arch_state.root_table;
+    while(level > ref->region->arch_state.root_level) {
+        size_t index = sv_level_index_of_addr(level, ref->virt_addr);
+        struct riscv64_sv_page_table *map_table = __va(phys_map_table);
+        uint64_t *map_entry = &map_table->entries[index];
+
+        if(RISCV64_SV_VALID & *map_entry) {
+            DEBUG_ASSERT(*map_entry & RISCV64_SV_VMEM_SHARED_MAP);
+            phys_map_table = sv_pointer_from_entry(*map_entry);
+        } else {
+            // We should be able to walk down to the region
+            return -EINVAL;
+        }
+
+        level--;
+    }
+
+    res = sv_unmap_region_tables(
+            phys_map_table,
+            ref->region->arch_state.root_table,
+            level,
+            ref->virt_addr,
+            map,
+            ref->region);
+    if(res) {
+        return res;
+    }
+
+    return 0;
 }
 
 int arch_vmem_map_activate(struct vmem_map *map)
 {
-//    riscv64_dump_vmem_map(do_printk, map);
-
     uint64_t satp_value = ((uintptr_t)map->arch_state.root_table >> 12);
 
     switch(map->arch_state.root_level) {
@@ -757,6 +979,12 @@ int arch_vmem_paged_region_map(
 {
     int res;
 
+    dprintk("arch_vmem_paged_region_map: region=%p, offset=%p, phys_addr=%p, size=%p\n",
+            region,
+            offset,
+            phys_addr,
+            size);
+
     size_t root_page_size = sv_level_page_size(region->arch_state.root_level);
     struct riscv64_sv_page_table __phys *phys_root = region->arch_state.root_table;
     struct riscv64_sv_page_table *root = __va(phys_root);
@@ -776,6 +1004,7 @@ int arch_vmem_paged_region_map(
 
         struct riscv64_sv_page_table __phys *cur_phys_table = phys_root;
         int cur_level = region->arch_state.root_level;
+        size_t cur_offset = offset % sv_level_page_size(cur_level+1);
 
         dprintk("arch_vmem_paged_region_map(offset=0x%lx, phys_addr=%p, size=0x%lx)\n",
                 offset,
@@ -783,10 +1012,14 @@ int arch_vmem_paged_region_map(
                 size);
 
         do {
+            size_t cur_page_size = sv_level_page_size(cur_level);
             struct riscv64_sv_page_table *cur_table = __va(cur_phys_table);
-            size_t cur_index = sv_level_index_of_addr(
-                    cur_level,
-                    (void*)offset);
+            size_t cur_index = cur_offset / cur_page_size;
+            if(cur_index > RISCV64_SV_ENTRIES_PER_LEVEL) {
+                eprintk("arch_vmem_paged_region_map(offset=0x%lx) offset is too large for page table!\n",
+                        offset);
+                return -EINVAL;
+            }
             uint64_t *cur_entry = &cur_table->entries[cur_index];
             if(*cur_entry & RISCV64_SV_VALID)
             {
@@ -812,6 +1045,7 @@ int arch_vmem_paged_region_map(
                     return res;
                 }
 
+                cur_offset = cur_offset % cur_page_size;
                 cur_phys_table = phys_subtable;
             }
             cur_level--;
@@ -819,8 +1053,8 @@ int arch_vmem_paged_region_map(
         } while(cur_level != entry_level);
 
         struct riscv64_sv_page_table *cur_table = __va(cur_phys_table);
-        size_t index = sv_level_index_of_addr(cur_level, (void*)offset);
-        uint64_t *entry = &cur_table->entries[index];
+        size_t cur_index = cur_offset / sv_level_page_size(cur_level);
+        uint64_t *entry = &cur_table->entries[cur_index];
 
         res = create_sv_leaf_entry(
                 entry,
@@ -831,9 +1065,10 @@ int arch_vmem_paged_region_map(
             return res;
         }
 
-        dprintk("Created Leaf Entry 0x%lx at level=%d, index=0x%lx, phys_addr=0x%lx\n",
+        dprintk("Created Leaf Entry 0x%lx at level=%d, offset=0x%lx, index=0x%lx, phys_addr=0x%lx\n",
                 *entry,
                 cur_level,
+                offset,
                 index,
                 phys_addr);
         size_t page_size = sv_level_page_size(cur_level);
@@ -850,15 +1085,67 @@ int arch_vmem_paged_region_unmap(
         size_t offset,
         size_t size)
 {
-    return -EUNIMPL;
+    int res;
+
+    size_t root_page_size = sv_level_page_size(region->arch_state.root_level);
+    struct riscv64_sv_page_table __phys *phys_root = region->arch_state.root_table;
+    struct riscv64_sv_page_table *root = __va(phys_root);
+
+    while(size > 0) {
+        int entry_level = 0;
+
+        struct riscv64_sv_page_table __phys *cur_phys_table = phys_root;
+        int cur_level = region->arch_state.root_level;
+
+        do {
+            struct riscv64_sv_page_table *cur_table = __va(cur_phys_table);
+            size_t cur_index = sv_level_index_of_addr(
+                    cur_level,
+                    (void*)offset);
+            uint64_t *cur_entry = &cur_table->entries[cur_index];
+            if(*cur_entry & RISCV64_SV_VALID)
+            {
+                DEBUG_ASSERT(!RISCV64_SV_ENTRY_IS_LEAF(*cur_entry));
+                DEBUG_ASSERT(!(*cur_entry & RISCV64_SV_VMEM_SHARED_MAP));
+
+                cur_phys_table = sv_pointer_from_entry(*cur_entry);
+            }
+            else
+            {
+                // We are unmapping, if it doesn't exist, then our job is already done
+                break;
+            }
+            cur_level--;
+
+        } while(cur_level != entry_level);
+
+        struct riscv64_sv_page_table *cur_table = __va(cur_phys_table);
+        size_t index = sv_level_index_of_addr(cur_level, (void*)offset);
+        uint64_t *entry = &cur_table->entries[index];
+
+        DEBUG_ASSERT(
+                !(*entry & RISCV64_SV_VALID) ||
+                RISCV64_SV_ENTRY_IS_LEAF(*entry));
+
+        // Invalidate the mapping
+        *entry = 0x0;
+
+        size_t page_size = sv_level_page_size(cur_level);
+        offset += page_size;
+        size -= page_size;
+    }
+
+    return 0;
 }
 
 void
 arch_dump_vmem_map(printk_f *printer, struct vmem_map *map)
 {
-    // TODO
-    wprintk("arch_dump_vmem_map is unimplemented on riscv64!\n");
-    return;
+    riscv64_dump_page_table(
+            printer,
+            map->arch_state.root_table,
+            0x0,
+            map->arch_state.root_level);
 }
 
 static struct vmem_region *kernel_map_region = NULL;
@@ -891,4 +1178,48 @@ riscv64_map_identity_map_region(void)
 }
 
 declare_init_desc(vmem, riscv64_map_identity_map_region, "Creating Kernel Virtual Memory Region");
+
+// Returns 0 if not-present 1 if present, -ERRNO on error
+int
+riscv64_vmem_map_page_is_present(
+        struct vmem_map *map,
+        void *vaddr)
+{
+    int res;
+    int irq_flags = spin_lock_irq_save(&map->lock);
+
+    int level = map->arch_state.root_level;
+    struct riscv64_sv_page_table __phys *phys_table =
+        map->arch_state.root_table;
+
+    while(level >= 0) {
+        size_t index = sv_level_index_of_addr(level, vaddr);
+        struct riscv64_sv_page_table *table = __va(phys_table);
+        uint64_t *entry = &table->entries[index];
+        if(!(*entry & RISCV64_SV_VALID)) {
+            // Not-present
+            spin_unlock_irq_restore(&map->lock, irq_flags);
+            return 0;
+        }
+        if(RISCV64_SV_ENTRY_IS_LEAF(*entry)) {
+            // It is present
+            spin_unlock_irq_restore(&map->lock, irq_flags);
+            return 1;
+        }
+
+        if(level == 0) {
+            // Invalid page table
+            spin_unlock_irq_restore(&map->lock, irq_flags);
+            return -EINVAL;
+        }
+
+        // It is a table, traverse
+        phys_table = sv_pointer_from_entry(*entry);
+        level--;
+    }
+
+    spin_unlock_irq_restore(&map->lock, irq_flags);
+    return 0;
+}
+
 

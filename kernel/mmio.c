@@ -17,31 +17,6 @@ mmio_vmem_region(void) {
 }
 
 static int
-mmio_reserve_virt_mem_region(void)
-{
-    size_t size = (1ULL<<CONFIG_MMIO_RESERVE_SIZE_ORDER);
-    int res = mem_flags_find_and_reserve(
-            get_virt_mem_flags(),
-            size,
-            PAGE_SIZE_4KB,
-            VIRT_MEM_FLAGS_HIGHMEM|VIRT_MEM_FLAGS_AVAIL,
-            VIRT_MEM_FLAGS_NONCANON,
-            VIRT_MEM_FLAGS_MMIO,
-            VIRT_MEM_FLAGS_AVAIL,
-            (uintptr_t*)&mmio_region_base);
-
-    if(res) {
-        return res;
-    }
-
-    printk("Reserved MMIO Virtual Memory Region [%p - %p)\n",
-            mmio_region_base, mmio_region_base + size);
-
-    return 0;
-}
-declare_init_desc(post_mem_flags, mmio_reserve_virt_mem_region, "Reserving MMIO Memory Region");
-
-static int
 mmio_page_fault_handler(
         struct vmem_region_ref *ref,
         uintptr_t offset,
@@ -56,6 +31,8 @@ mmio_page_fault_handler(
 static int
 mmio_create_mmio_map(void)
 {
+    int res;
+
     __mmio_vmem_region =
         vmem_region_create_paged(
             1ULL<<CONFIG_MMIO_RESERVE_SIZE_ORDER,
@@ -65,8 +42,28 @@ mmio_create_mmio_map(void)
         return -ENOMEM;
     }
 
-    int res = vmem_force_mapping(__mmio_vmem_region, mmio_region_base);
+    size_t size = (1ULL<<CONFIG_MMIO_RESERVE_SIZE_ORDER);
+    res = mem_flags_find_and_reserve(
+            get_virt_mem_flags(),
+            size,
+            vmem_region_alignment(__mmio_vmem_region),
+            VIRT_MEM_FLAGS_HIGHMEM|VIRT_MEM_FLAGS_AVAIL,
+            VIRT_MEM_FLAGS_NONCANON,
+            VIRT_MEM_FLAGS_MMIO,
+            VIRT_MEM_FLAGS_AVAIL,
+            (uintptr_t*)&mmio_region_base);
+
     if(res) {
+        vmem_region_destroy(__mmio_vmem_region);
+        return res;
+    }
+
+    printk("Reserved MMIO Virtual Memory Region [%p - %p)\n",
+            mmio_region_base, mmio_region_base + size);
+
+    res = vmem_force_mapping(__mmio_vmem_region, mmio_region_base);
+    if(res) {
+        vmem_region_destroy(__mmio_vmem_region);
         return res;
     }
 

@@ -11,5 +11,7 @@ obj-y += \
 	usermode.o \
 	percpu.o \
 	mem_flags.o \
+	trap.o \
+	page_fault.o \
 	sbi_console.o \
 

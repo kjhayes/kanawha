@@ -250,6 +250,13 @@ vmem_region_destroy(
     return 0;
 }
 
+order_t
+vmem_region_alignment(
+        struct vmem_region *region)
+{
+    return arch_vmem_region_alignment(region);
+}
+
 struct vmem_region_ref *
 vmem_map_get_region(struct vmem_map *map, void * addr) 
 {
@@ -283,6 +290,13 @@ vmem_map_map_region(
 
     spin_lock(&region->lock);
     spin_lock(&map->lock);
+
+    order_t region_align_order = vmem_region_alignment(region);
+    if(ptr_orderof(base) < region_align_order) {
+        spin_unlock(&map->lock);
+        spin_unlock(&region->lock);
+        return -EINVAL;
+    }
 
     { // Checking for overlap
     struct ptree_node *overlap_check_node = ptree_get_max_less_or_eq(&map->mapping_root, (uintptr_t)end-1);

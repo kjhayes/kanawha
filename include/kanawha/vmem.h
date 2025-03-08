@@ -114,6 +114,12 @@ vmem_region_create_paged(
 int
 vmem_region_destroy(struct vmem_region *region);
 
+// Return the minimum virtual alignment the region
+// can be mapped to
+order_t
+vmem_region_alignment(
+        struct vmem_region *region);
+
 struct vmem_region_ref *
 vmem_map_get_region(struct vmem_map *map, void * addr);
 
@@ -182,6 +188,8 @@ int arch_vmem_map_init(struct vmem_map *map);
 int arch_vmem_map_deinit(struct vmem_map *map);
 int arch_vmem_region_init(struct vmem_region *region);
 int arch_vmem_region_deinit(struct vmem_region *region);
+
+order_t arch_vmem_region_alignment(struct vmem_region *region);
 
 int arch_vmem_map_map_region(struct vmem_map *map, struct vmem_region_ref *ref);
 int arch_vmem_map_unmap_region(struct vmem_map *map, struct vmem_region_ref *ref);

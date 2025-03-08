@@ -155,12 +155,6 @@ void cpu_start_threading(thread_f *func, void *state);
 int arch_init_thread_state(struct thread_state *thread);
 int arch_deinit_thread_state(struct thread_state *thread);
 
-// Should eventually return zero when we return to "from"
-// The architecture also needs to atomically set "from"'s status from
-// "Running" to "Suspended" once the switch is complete,
-// ("to" should already be marked as "Running")
-int arch_thread_switch(struct thread_state *to, struct thread_state *from);
-
 // If we have a current thread, we need to checkpoint it, and then run "func"
 // without a thread, this may block, as "func" could switch from "threadless"
 // to running a different thread

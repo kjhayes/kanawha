@@ -6,6 +6,8 @@
 
 #define VMEM_MIN_PAGE_ORDER 12
 
+struct vmem_map;
+
 struct arch_vmem_map
 {
     int root_level;
@@ -30,5 +32,11 @@ static inline void __phys *
 __pa(void * vaddr) {
     return (void __phys *)(vaddr - __riscv64_identity_map_offset);
 }
+
+// Returns 0 if not-present 1 if present, -ERRNO on error
+int
+riscv64_vmem_map_page_is_present(
+        struct vmem_map *map,
+        void *vaddr);
 
 #endif

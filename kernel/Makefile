@@ -45,6 +45,8 @@ obj-y += \
 	kbd.o \
 	strace.o
 
+obj-y += stack.o
+
 obj-y += fs/
 obj-y += syscall/
 obj-y += drivers/

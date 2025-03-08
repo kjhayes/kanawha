@@ -120,7 +120,7 @@ init_cpu_scheds(void) {
         if(def_sched == NULL) {
             eprintk("Failed to create default scheduler of type \"%s\"\n",
                     CONFIG_DEFAULT_SCHEDULER);
-            return 0;
+            return -EINVAL;
         }
         for(cpu_id_t cpu = 0; cpu < total_num_cpus(); cpu++) {
             int res = assign_cpu_scheduler(def_sched, cpu);
