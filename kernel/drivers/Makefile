@@ -8,6 +8,7 @@ obj-y += \
 	qemu/ \
 	virtio/ \
 	fb/ \
+	irq/ \
 
 obj-$(CONFIG_PORT_IO) += vga/
 

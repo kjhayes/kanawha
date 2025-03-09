@@ -1,0 +1,8 @@
+
+config SIFIVE_PLIC
+    tristate "SiFive PLIC"
+    default y
+    depends on DEVICETREE && RISCV64
+    help
+      Include a driver for the SiFive PLIC Interrupt Controller
+

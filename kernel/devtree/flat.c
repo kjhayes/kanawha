@@ -1,7 +1,7 @@
 
-#include <devicetree/devicetree.h>
-#include <devicetree/types.h>
-#include <devicetree/flat.h>
+#include <devtree/devtree.h>
+#include <devtree/types.h>
+#include <devtree/flat.h>
 
 #include <kanawha/string.h>
 
@@ -13,6 +13,12 @@ fdt_check_header(struct fdt *fdt)
         return -EINVAL;
     }
     return 0;
+}
+
+size_t
+fdt_size(struct fdt *fdt) {
+    uint32_t size = fdttoh32(fdt->hdr.totalsize);
+    return (size_t)size;
 }
 
 fdt32_t *
@@ -81,6 +87,8 @@ fdt_next_token(struct fdt *fdt, fdt32_t *token)
 struct fdt_node *
 fdt_first_node(struct fdt *fdt)
 {
+    DEBUG_ASSERT(fdt_check_header(fdt) == 0);
+
     uint32_t offset = fdttoh32(fdt->hdr.off_dt_struct);
     fdt32_t *token = (fdt32_t*)(((void*)fdt) + offset);
     while(token && fdttoh32(*token) != FDT_BEGIN_NODE) {
@@ -263,6 +271,9 @@ fdt_node_next_subnode(
 
     do {
         token = fdt_next_token(fdt, token);
+        if(token == NULL) {
+            break;
+        }
         uint32_t value = fdttoh32(*token);
         switch(value) {
             case FDT_BEGIN_NODE:

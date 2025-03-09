@@ -1,5 +1,5 @@
-#ifndef __KANAWHA_DEVICETREE_TYPES_H__
-#define __KANAWHA_DEVICETREE_TYPES_H__
+#ifndef __KANAWHA_DEVTREE_TYPES_H__
+#define __KANAWHA_DEVTREE_TYPES_H__
 
 #include <kanawha/endian.h>
 
@@ -7,6 +7,8 @@ typedef be64_t fdt64_t;
 typedef be32_t fdt32_t;
 typedef be16_t fdt16_t;
 typedef uint8_t fdt8_t;
+
+typedef fdt32_t fdt_phandle_t;
 
 static inline uint16_t
 fdttoh16(fdt16_t from)

@@ -14,4 +14,5 @@ obj-y += \
 	trap.o \
 	page_fault.o \
 	sbi_console.o \
+	dt_cpu.o \
 

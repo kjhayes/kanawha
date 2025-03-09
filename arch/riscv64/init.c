@@ -7,12 +7,14 @@
 #include <kanawha/vmem.h>
 #include <kanawha/thread.h>
 #include <kanawha/irq_domain.h>
+#include <kanawha/mem_flags.h>
 #include <kanawha/clk.h>
 #include <kanawha/string.h>
 #include <kanawha/usermode.h>
 #include <arch/riscv64/mem_flags.h>
 
-#include <devicetree/devicetree.h>
+#include <devtree/devtree.h>
+#include <devtree/flat.h>
 
 static void
 clear_bss(void) {
@@ -35,6 +37,30 @@ extern uint8_t __builtin_kpercpu_end[];
         (void*)&__builtin_kpercpu_start,
         0,
         (uintptr_t)&__builtin_kpercpu_end - (uintptr_t)&__builtin_kpercpu_start);
+}
+
+static int
+riscv64_reserve_dtb(struct fdt __phys *dtb)
+{
+    int res;
+
+    struct fdt *fdt = __va(dtb);
+    size_t size = fdt_size(fdt);
+
+    printk("Reserving DTB [%p - %p)\n",
+            (void*)dtb,
+            (void*)dtb + size);
+
+    res = mem_flags_clear_flags(
+            get_phys_mem_flags(), 
+            (uintptr_t)dtb,
+            size,
+            PHYS_MEM_FLAGS_AVAIL);
+    if(res) {
+        return res;
+    }
+
+    return 0;
 }
 
 void *
@@ -67,11 +93,11 @@ riscv64_boot_bsp_init(
     }
     printk("Provided Kernel Physical Base = %p\n", kernel_phys_base);
 
-    res = devicetree_provide_dtb(dtb);
+    res = devtree_provide_fdt(__va(dtb));
     if(res) {
         panic("Kernel rejected provided device tree!\n");
     }
-    printk("Provided Device Tree = %p\n", dtb);
+    printk("Provided Device Tree: (paddr=%p, vaddr=%p)\n", dtb, __va(dtb));
 
     res = handle_init_stage__static();
     if(res) {
@@ -84,6 +110,10 @@ riscv64_boot_bsp_init(
     res = handle_init_stage__mem_flags();
     if(res) {
         panic("Failed to handle init stage \"mem_flags\"! err=%s", errnostr(res));
+    }
+    res = riscv64_reserve_dtb(dtb);
+    if(res) {
+        panic("Failed to reserve the RISC-V device tree blob in physical memory!\n");
     }
     res = handle_init_stage__post_mem_flags();
     if(res) {

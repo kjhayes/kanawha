@@ -649,7 +649,7 @@ free_phys_mem(void)
           }
           
           // Free this region
-          printk("Registering Buddy Allocator for region [%p - %p)\n",
+          dprintk("Registering Buddy Allocator for region [%p - %p)\n",
                   (void*)entry->base, (void*)(entry->base + entry->size));
 
           unsigned long page_alloc_flags = 0;
@@ -687,7 +687,7 @@ free_phys_mem(void)
               return res;
           }
 
-          printk("Registered Buddy Allocator for region [%p - %p)\n",
+          dprintk("Registered Buddy Allocator for region [%p - %p)\n",
                   (void*)entry->base, (void*)(entry->base + entry->size));
           freed_something = 1;
           break;

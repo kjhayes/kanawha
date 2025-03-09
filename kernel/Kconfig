@@ -188,6 +188,10 @@ endmenu
 
 menu "Misc. Modules"
 
+menu "Device Tree"
+source "kernel/devtree/Kconfig"
+endmenu
+
 config MULTIBOOT2
     tristate "Multiboot2 Support"
     default n

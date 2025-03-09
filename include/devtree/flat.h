@@ -1,9 +1,9 @@
-#ifndef __KANAWHA_DEVICETREE_FLAT_H__
-#define __KANAWHA_DEVICETREE_FLAT_H__
+#ifndef __KANAWHA_DEVTREE_FLAT_H__
+#define __KANAWHA_DEVTREE_FLAT_H__
 
 #include <kanawha/types.h>
 #include <kanawha/pointer.h>
-#include <devicetree/types.h>
+#include <devtree/types.h>
 
 #define FDT_MAGIC 0xd00dfeed
 
@@ -52,6 +52,10 @@ struct fdt {
 // Returns negative errno on failure
 int
 fdt_check_header(struct fdt *fdt);
+
+// Return the size of the device tree in bytes
+size_t
+fdt_size(struct fdt *fdt);
 
 // Returns the next token of any type (including NOP)
 // Returns NULL if there are no more tokens

@@ -1,7 +1,7 @@
 
-#include <devicetree/devicetree.h>
-#include <devicetree/flat.h>
-#include <devicetree/types.h>
+#include <devtree/devtree.h>
+#include <devtree/flat.h>
+#include <devtree/types.h>
 
 #include <kanawha/mem_flags.h>
 #include <kanawha/init.h>
@@ -14,13 +14,12 @@ fdt_find_memory(void)
     int res;
     struct mem_flags *phys_map = get_phys_mem_flags();
 
-    struct device_tree *dev_tree = devicetree_get();
+    struct devtree *dev_tree = devtree_get();
     if(dev_tree == NULL) {
         return -EDEFER;
     }
 
-    struct fdt __phys *phys_fdt = dev_tree->backing_data;
-    struct fdt *fdt = __va(phys_fdt);
+    struct fdt *fdt = devtree_get_fdt(dev_tree);
 
     DEBUG_ASSERT(fdt_check_header(fdt) == 0);
 
