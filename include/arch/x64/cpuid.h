@@ -29,13 +29,4 @@ x64_cpuid_features(void) {
     return feat;
 }
 
-static int
-cpuid_boot_check(void) {
-    if(!x64_cpuid_supported()) {
-        eprintk("Processor Does Not Support CPUID Instruction! (Required by Kanawha)\n");
-        return -EINVAL;
-    }
-    return 0;
-}
-
 #endif
