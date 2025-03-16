@@ -4,6 +4,7 @@
 #include <devtree/devtree.h>
 #include <devtree/driver.h>
 
+#include <kanawha/string.h>
 
 struct fdt_node *
 dt_node_get_fdt_node(
@@ -39,6 +40,30 @@ dt_node_read_property_u32(
     }
 
     return 0;
+}
+
+int
+dt_node_check_device_type(
+        struct dt_node *node,
+        const char *device_type)
+{
+    struct fdt *fdt = devtree_get_fdt(node->dt);
+    struct fdt_node *fdt_node = dt_node_get_fdt_node(node);
+
+    struct fdt_property *prop =
+        fdt_find_property_by_name(fdt, fdt_node, "device_type");
+    if(prop == NULL) {
+        return 1;
+    }
+
+    char *data = fdt_property_data(fdt, prop);
+    size_t prop_len = fdt_property_size(fdt, prop);
+    size_t device_type_len = strlen(device_type);
+    if((device_type_len + 1) != prop_len) {
+        return 1;
+    }
+
+    return strcmp(device_type, data);
 }
 
 size_t
@@ -110,7 +135,62 @@ dt_node_get_interrupts_extended_irq_count(
         struct dt_node *node,
         size_t *count_out)
 {
-    return -EUNIMPL;
+    int res;
+
+    struct fdt *fdt = devtree_get_fdt(node->dt);
+    struct fdt_node *fdt_node = dt_node_get_fdt_node(node);
+
+    struct fdt_property *prop
+        = fdt_find_property_by_name(
+            fdt,
+            fdt_node,
+            "interrupts-extended");
+    if(prop == NULL) {
+        return -ENXIO;
+    }
+
+    size_t prop_len = fdt_property_size(fdt, prop);
+    size_t cell_len = prop_len / sizeof(fdt32_t);
+
+    fdt32_t *cell_ptr = fdt_property_data(fdt, prop);
+
+    size_t irq_count = 0;
+
+    for(size_t i = 0; i < cell_len; i++)
+    {
+        fdt_phandle_t phandle = cell_ptr[i];
+
+        struct dt_node *irq_parent = devtree_get_node_by_phandle(node->dt, phandle);
+        if(irq_parent == NULL) {
+            eprintk("Failed to get \"interrupts-extended\" property interrupt parent node!\n");
+            return -EINVAL;
+        }
+        
+        uint32_t interrupt_cells;
+        res = dt_node_read_property_u32(
+                irq_parent,
+                "#interrupt-cells",
+                &interrupt_cells);
+        if(res) {
+            eprintk("Failed to get \"interrupts-extended\" interrupt parent node \"#interrupt-cells\" property!\n");
+            return res;
+        }
+
+        if(cell_len - (i+1) >= interrupt_cells) {
+            irq_count++;
+            i += interrupt_cells;
+        } else {
+            eprintk("Failed to get \"interrupts-extended\" not enough room for interrupt parent node IRQ descriptor! (interrupt_cells = 0x%lx)\n",
+                    (ul_t)interrupt_cells);
+            return -EINVAL;
+        }
+    }
+
+    if(count_out) {
+        *count_out = irq_count;
+    }
+
+    return 0;
 }
 
 static int
@@ -165,21 +245,20 @@ dt_node_get_interrupts_irq_count(
     return 0;
 }
 
-size_t
+int
 dt_node_irq_count(
-        struct dt_node *node)
+        struct dt_node *node,
+        size_t *size_out)
 {
     int res;
-    size_t count;
-    res = dt_node_get_interrupts_extended_irq_count(node, &count);
+    res = dt_node_get_interrupts_extended_irq_count(node, size_out);
     if(res) {
-        res = dt_node_get_interrupts_irq_count(node, &count);
+        res = dt_node_get_interrupts_irq_count(node, size_out);
         if(res) {
-            count = 0;
+            return res;
         }
     }
-
-    return count;
+    return 0;
 }
 
 static int
@@ -188,7 +267,75 @@ dt_node_interrupts_extended_read_irq(
         size_t index,
         irq_t *irq_out)
 {
-    return -EUNIMPL;
+    int res;
+
+    struct fdt *fdt = devtree_get_fdt(node->dt);
+    struct fdt_node *fdt_node = dt_node_get_fdt_node(node);
+
+    struct fdt_property *prop
+        = fdt_find_property_by_name(
+            fdt,
+            fdt_node,
+            "interrupts-extended");
+    if(prop == NULL) {
+        return -ENXIO;
+    }
+
+    size_t prop_len = fdt_property_size(fdt, prop);
+    size_t cell_len = prop_len / sizeof(fdt32_t);
+
+    fdt32_t *cell_ptr = fdt_property_data(fdt, prop);
+
+    size_t cur_irq_index = 0;
+
+    for(size_t i = 0; i < cell_len; i++)
+    {
+        fdt_phandle_t phandle = cell_ptr[i];
+
+        struct dt_node *irq_parent = devtree_get_node_by_phandle(node->dt, phandle);
+        if(irq_parent == NULL) {
+            eprintk("Failed to get \"interrupts-extended\" property interrupt parent node!\n");
+            return -EINVAL;
+        }
+        if(irq_parent->driver == NULL) {
+            wprintk("Un-driven interrupt parent in device tree (node=%s, irq_parent=%s) Deferring...\n",
+                    fdt_node_unitname(fdt, dt_node_get_fdt_node(node)),
+                    fdt_node_unitname(fdt, dt_node_get_fdt_node(irq_parent))
+                    );
+            return -EDEFER;
+        }
+        
+        uint32_t interrupt_cells;
+        res = dt_node_read_property_u32(
+                irq_parent,
+                "#interrupt-cells",
+                &interrupt_cells);
+        if(res) {
+            eprintk("Failed to get \"interrupts-extended\" interrupt parent node \"#interrupt-cells\" property!\n");
+            return res;
+        }
+
+        if(cell_len - (i+1) >= interrupt_cells)
+        {
+            if(cur_irq_index == index) {
+                irq_t irq = dt_driver_xlate_irq(
+                        irq_parent->driver,
+                        irq_parent,
+                        &cell_ptr[i+1],
+                        interrupt_cells);
+                if(irq_out) {
+                    *irq_out = irq;
+                    return 0;
+                }
+            }
+            cur_irq_index++;
+            i += interrupt_cells;
+        } else {
+            return -EINVAL;
+        }
+    }
+
+    return -ENXIO;
 }
 
 static int
@@ -263,20 +410,24 @@ dt_node_interrupts_read_irq(
 
 }
 
-irq_t
+int
 dt_node_read_irq(
         struct dt_node *node,
-        size_t index)
+        size_t index,
+        irq_t *irq_out)
 {
     int res;
     irq_t irq;
-    res = dt_node_interrupts_extended_read_irq(node, index, &irq);
+    res = dt_node_interrupts_extended_read_irq(node, index, irq_out);
     if(res) {
-        res = dt_node_interrupts_read_irq(node, index, &irq);
+        if(res == -EDEFER) {
+            return res;
+        }
+        res = dt_node_interrupts_read_irq(node, index, irq_out);
         if(res) {
-            return NULL_IRQ;
+            return res;
         }
     }
-    return irq;
+    return 0;
 }
 

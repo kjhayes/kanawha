@@ -5,6 +5,8 @@
 
 .extern riscv64_boot_bsp_init
 .extern riscv64_virtual_bsp_init
+.extern riscv64_boot_ap_init
+.extern riscv64_virtual_ap_init
 
 .option norvc
 .option norelax
@@ -80,6 +82,29 @@ riscv64_kernel_boot:
 riscv64_reset_without_reload_panic:
     j riscv64_reset_without_reload_panic
 
+.global riscv64_ap_entry
+.type riscv64_ap_entry, @function
+riscv64_ap_entry:
+    // a0 -> hartid
+    // a1 -> satp
+
+    csrw satp, a1
+
+    // Use the boot stack
+    la sp, riscv64_boot_stack_base
+
+    ld a2, riscv64_boot_ap_init_ptr
+    jalr a2
+
+    // Load our new stack
+    mv sp, a0
+
+    ld a2, riscv64_virtual_ap_init_ptr
+    jalr a2
+
+    // We should never reach here
+    j .
+
 // Boot Page Tables
 .section .boot.data, "aw"
 
@@ -99,6 +124,13 @@ riscv64_boot_bsp_init_ptr:
 riscv64_virtual_bsp_init_ptr:
 .quad riscv64_virtual_bsp_init
 
+.align 3
+riscv64_boot_ap_init_ptr:
+.quad riscv64_boot_ap_init
+
+.align 3
+riscv64_virtual_ap_init_ptr:
+.quad riscv64_virtual_ap_init
 
 // Boot Stack
 .section .boot.data, "aw"

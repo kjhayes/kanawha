@@ -5,6 +5,29 @@
 #include <kanawha/types.h>
 #include <kanawha/irq.h>
 
+#define RISCV64_EXCEPTION_XLIST(X)\
+X(0, "Instruction Address Misaligned")\
+X(1, "Instruction Access Fault")\
+X(2, "Illegal Instruction")\
+X(3, "Breakpoint")\
+X(4, "Load Address Misaligned")\
+X(5, "Load Access Fault")\
+X(6, "Store/AMO Address Misaligned")\
+X(7, "Store/AMO Access Fault")\
+X(8, "Environment Call From U-Mode")\
+X(9, "Environment Call From S-Mode")\
+X(12, "Instruction Page Fault")\
+X(13, "Load Page Fault")\
+X(15, "Store/AMO Page Fault")
+
+#define RISCV64_INTERRUPT_XLIST(X)\
+X(1, "Supervisor Software Interrupt")\
+X(5, "Supervisor Timer Interrupt")\
+X(9, "Supervisor External Interrupt")\
+
+#define RISCV64_EXCEPTION_IRQ_DOMAIN_SIZE 64
+#define RISCV64_INTERRUPT_IRQ_DOMAIN_SIZE 64
+
 struct riscv64_excp_state
 {
 
@@ -24,5 +47,10 @@ riscv64_exception_irq_desc(hwirq_t hwirq);
 
 struct irq_desc *
 riscv64_interrupt_irq_desc(hwirq_t hwirq);
+
+struct irq_domain *
+riscv64_shared_interrupt_domain(void);
+struct irq_domain *
+riscv64_shared_exception_domain(void);
 
 #endif

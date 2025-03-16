@@ -28,7 +28,7 @@ riscv64_vmem_page_fault_handler(
     struct vmem_map *cur_map = vmem_map_get_current();
     DEBUG_ASSERT(KERNEL_ADDR(cur_map));
 
-    arch_dump_vmem_map(do_printk, cur_map);
+    //arch_dump_vmem_map(do_printk, cur_map);
 
     unsigned long flags = 0;
     switch(action->desc->hwirq) {

@@ -9,6 +9,27 @@
 #include <kanawha/mmio.h>
 #include <kanawha/kmalloc.h>
 
+static int
+sifive_plic_ctx_irq_handler(
+        struct excp_state *excp_state,
+        struct irq_action *action)
+{
+    printk("sifive_plic IRQ!\n");
+    struct sifive_plic_context *ctx = action->handler_data.priv_data;
+    DEBUG_ASSERT(KERNEL_ADDR(ctx));
+
+    return IRQ_UNHANDLED;
+}
+
+struct sifive_plic_context
+{
+    struct sifive_plic *plic;
+    irq_t irq;
+    struct irq_action *action;
+
+    void __mmio *mmio_block;
+};
+
 struct sifive_plic
 {
     struct irq_dev irq_dev;
@@ -16,6 +37,9 @@ struct sifive_plic
     void __phys *phys_base;
     void __mmio *mmio_base;
     size_t mmio_size;
+
+    size_t ctx_count;
+    struct sifive_plic_context *contexts;
 
     struct irq_domain *irq_domain;
 };
@@ -128,7 +152,68 @@ sifive_plic_dt_init(
         return res;
     }
 
-    printk("Found SiFive PLIC with 0x%lx Interrupts\n", (ul_t)irq_count);
+    size_t ctx_count;
+    res = dt_node_irq_count(node, &ctx_count);
+    if(res) {
+        mmio_unmap(plic->mmio_base, plic->mmio_size);
+        free_irq_domain_linear(plic->irq_domain);
+        kfree(plic);
+        return res;
+    }
+
+    if(ctx_count < 1) {
+        wprintk("Found SiFive PLIC without any contexts!\n");
+    }
+
+    printk("Found SiFive PLIC with 0x%lx Interrupts and 0x%lx Contexts\n", (ul_t)irq_count, (ul_t)ctx_count);
+
+    plic->ctx_count = ctx_count;
+    plic->contexts = kmalloc(sizeof(struct sifive_plic_context) * ctx_count);
+    if(plic->contexts == NULL) {
+        mmio_unmap(plic->mmio_base, plic->mmio_size);
+        free_irq_domain_linear(plic->irq_domain);
+        kfree(plic);
+        return -ENOMEM;
+    }
+    // Default everything to NULL
+    for(size_t i = 0; i < plic->ctx_count; i++) {
+        plic->contexts[i].irq = NULL_IRQ;
+    }
+
+    // Actually initialize each context
+    for(size_t i = 0; i < plic->ctx_count; i++) {
+        irq_t irq;
+        res = dt_node_read_irq(node, i, &irq);
+        if(res) {
+            panic("Failed to read IRQ for PLIC context %lu! (err=%s)\n", (ul_t)i, errnostr(res));
+        }
+
+        plic->contexts[i].irq = irq;
+        plic->contexts[i].plic = plic;
+
+        if(irq == NULL_IRQ) {
+            plic->contexts[i].mmio_block = NULL;
+            plic->contexts[i].action = NULL;
+            printk("SiFive PLIC Context(%lu) Does Not Exist\n", (ul_t)i);
+        } else {
+
+            struct irq_desc *parent_desc = irq_to_desc(irq);
+            if(parent_desc == NULL) {
+                panic("Failed to get IRQ descriptor for PLIC context %lu!\n", (ul_t)i);
+            }
+
+            plic->contexts[i].mmio_block = plic->mmio_base + 0x200000ULL + (i * 0x1000ULL);
+            plic->contexts[i].action =
+                irq_install_handler(
+                        parent_desc,
+                        &plic->contexts[i],
+                        sifive_plic_ctx_irq_handler);
+            if(plic->contexts[i].action == NULL) {
+                panic("Failed to install PLIC IRQ handler!\n");
+            }
+            printk("SiFive PLIC Context(%lu) IRQ=0x%lx\n", (ul_t)i, (ul_t)irq);
+        }
+    }
 
     return 0;
 }
@@ -183,5 +268,5 @@ register_sifive_plic_driver(void) {
     }
     return 0;
 }
-declare_init_desc(dynamic, register_sifive_plic_driver, "Registering SiFive PLIC Driver");
+declare_init_desc(post_topo, register_sifive_plic_driver, "Registering SiFive PLIC Driver");
 

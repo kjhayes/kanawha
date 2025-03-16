@@ -12,6 +12,7 @@
 #include <kanawha/string.h>
 #include <kanawha/usermode.h>
 #include <arch/riscv64/mem_flags.h>
+#include <arch/riscv64/cpu.h>
 
 #include <devtree/devtree.h>
 #include <devtree/flat.h>
@@ -67,7 +68,7 @@ void *
 riscv64_boot_bsp_init(
         void __phys *kernel_phys_base,
         struct fdt __phys *dtb,
-        uint64_t hartid,
+        hartid_t hartid,
         void * identity_map_base)
 {
     int res;
@@ -86,6 +87,10 @@ riscv64_boot_bsp_init(
     }
 
     printk("Booting on HARTID=0x%lx\n", hartid);
+    res = provide_bsp_hartid(hartid);
+    if(res) {
+        panic("Failed to set BSP Hartid!\n");
+    }
 
     res = riscv64_provide_kernel_phys_base(kernel_phys_base);
     if(res) {

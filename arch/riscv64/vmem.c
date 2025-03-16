@@ -919,15 +919,8 @@ int arch_vmem_map_unmap_region(struct vmem_map *map, struct vmem_region_ref *ref
 
 int arch_vmem_map_activate(struct vmem_map *map)
 {
-    uint64_t satp_value = ((uintptr_t)map->arch_state.root_table >> 12);
-
-    switch(map->arch_state.root_level) {
-        case 2: satp_value |= ( 8ULL<<60); break;
-        case 3: satp_value |= ( 9ULL<<60); break;
-        case 4: satp_value |= (10ULL<<60); break;
-        default:
-            return -EINVAL;
-    }
+    uint64_t satp_value =
+        riscv64_format_satp(map->arch_state.root_table, map->arch_state.root_level);
 
     write_csr(satp, satp_value);
 

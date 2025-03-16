@@ -1,6 +1,8 @@
 #ifndef __KANAWHA_ARCH_RISCV64__CSR_H__
 #define __KANAWHA_ARCH_RISCV64__CSR_H__
 
+#include <kanawha/time.h>
+
 #define read_csr(__csr)\
     ({\
       uint64_t val;\
@@ -25,5 +27,21 @@
 #define SSTATUS_MASK_MXR  (0b1ULL<<19)
 #define SSTATUS_MASK_UXL  (0b11ULL<<32)
 #define SSTATUS_MASK_SD   (0b1ULL<<63)
+
+static inline cycles_t
+riscv64_rdtime(void)
+{
+    uint64_t value;
+    asm volatile ("rdtime %0" : "=r" (value));
+    return (cycles_t)value;
+}
+
+static inline cycles_t
+riscv64_rdcycle(void)
+{
+    uint64_t value;
+    asm volatile ("rdcycle %0" : "=r" (value));
+    return (cycles_t)value;
+}
 
 #endif

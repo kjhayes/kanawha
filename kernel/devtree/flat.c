@@ -505,6 +505,10 @@ fdt_node_read_reg(
     uint32_t addr_cells = fdt_node_address_cells(fdt, node);
     uint32_t size_cells = fdt_node_size_cells(fdt, node);
 
+    dprintk("fdt_node_read_reg (addr_cells=0x%lx, size_cells=0x%lx)\n",
+            (ul_t)addr_cells,
+            (ul_t)size_cells);
+
     for(size_t i = 0; i < buflen; i++) {
         if(cells > prop_end) {
             addr_buf[i] = NULL;
@@ -514,6 +518,9 @@ fdt_node_read_reg(
 
         void *addr_ptr = (void*)cells;
         switch(addr_cells) {
+            case 0:
+                addr_buf[i] = NULL;
+                break;
             case 1:
                 addr_buf[i] = (void __phys *)(uintptr_t)fdttoh32(*(fdt32_t*)addr_ptr);
                 break;
@@ -526,6 +533,8 @@ fdt_node_read_reg(
 
         void *size_ptr = (void*)(cells + addr_cells);
         switch(size_cells) {
+            case 0:
+                size_buf[i] = 0;
             case 1:
                 size_buf[i] = (size_t)fdttoh32(*(fdt32_t*)size_ptr);
                 break;

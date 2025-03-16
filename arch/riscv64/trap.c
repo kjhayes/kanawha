@@ -8,6 +8,31 @@
 
 extern void __riscv64_trap_entry(void);
 
+static const char *
+riscv64_scause_desc(uint64_t scause)
+{
+#define SCAUSE_CASE(__NUM, __STR)\
+    case __NUM: \
+        return __STR;\
+
+    int interrupt = !!(scause & (1ULL<<63));
+    uint64_t code = scause & ~(1ULL<<63);
+    if(interrupt) {
+        switch(code) {
+            RISCV64_INTERRUPT_XLIST(SCAUSE_CASE);
+            default:
+                return "Unknown Interrupt";
+        }
+    } else {
+        switch(code) {
+            RISCV64_EXCEPTION_XLIST(SCAUSE_CASE);
+            default:
+                return "Unknown Exception";
+        }
+    }
+#undef SCAUSE_CASE
+}
+
 #define STVEC_MODE_MASK 0b11
 #define STVEC_DIRECT    0b00
 #define STVEC_VECTORED  0b01
@@ -37,12 +62,12 @@ static int
 riscv64_alloc_root_irq_domains(void)
 {
     riscv64_exception_irq_domain =
-        alloc_irq_domain_linear(0, 64);
+        alloc_irq_domain_linear(0, RISCV64_EXCEPTION_IRQ_DOMAIN_SIZE);
     if(riscv64_exception_irq_domain == NULL) {
         return -ENOMEM;
     }
     riscv64_interrupt_irq_domain =
-        alloc_irq_domain_linear(0, 64);
+        alloc_irq_domain_linear(0, RISCV64_INTERRUPT_IRQ_DOMAIN_SIZE);
     if(riscv64_interrupt_irq_domain == NULL) {
         return -ENOMEM;
     }
@@ -52,11 +77,13 @@ declare_init_desc(dynamic, riscv64_alloc_root_irq_domains, "Creating RISC-V Root
 
 __attribute__((noreturn))
 static void
-riscv64_unhandled_exception(
+riscv64_unhandled_trap(
         struct riscv64_excp_state *state)
 {
-    // TODO Usermode
-    printk("==== UNHANDLED EXCEPTION ====\n");
+    const char *excp_desc = riscv64_scause_desc(state->scause);
+
+    printk("==== UNHANDLED \"%s\" TRAP ====\n",
+            excp_desc);
 
     printk("\tSCAUSE = %p\n", state->scause);
     printk("\tSTVAL  = %p\n", state->stval);
@@ -75,40 +102,40 @@ riscv64_route_trap(
 
     struct irq_desc *desc = NULL;
 
-    int is_interrupt = state->scause & (1ULL<<63);
+    int is_interrupt = !!(state->scause & (1ULL<<63));
     hwirq_t hwirq = state->scause & ~(1ULL<<63);
     if(hwirq >= 64) {
         eprintk("riscv64_route_trap: exception with cause >=64! (scause=0x%lx)\n", state->scause);
-        riscv64_unhandled_exception(state);
+        riscv64_unhandled_trap(state);
     }
 
     if(is_interrupt) {
         if(riscv64_interrupt_irq_domain == NULL) {
             eprintk("riscv64_route_trap: Interrupt occurred before setting up root interrupt IRQ domain!\n");
-            riscv64_unhandled_exception(state);
+            riscv64_unhandled_trap(state);
         }
         irq_t irq = irq_domain_revmap(riscv64_interrupt_irq_domain, hwirq);
         if(irq == NULL_IRQ) {
             eprintk("riscv64_route_trap: Failed to map root interrupt hwirq=0x%lx!\n", (ul_t)hwirq);
-            riscv64_unhandled_exception(state);
+            riscv64_unhandled_trap(state);
         }
         desc = irq_to_desc(irq);
     } else {
         if(riscv64_exception_irq_domain == NULL) {
             eprintk("riscv64_route_trap: Exception occurred before setting up root exception IRQ domain!\n");
-            riscv64_unhandled_exception(state);
+            riscv64_unhandled_trap(state);
         }
         irq_t irq = irq_domain_revmap(riscv64_exception_irq_domain, hwirq);
         if(irq == NULL_IRQ) {
             eprintk("riscv64_route_trap: Failed to map root exception hwirq=0x%lx!\n", (ul_t)hwirq);
-            riscv64_unhandled_exception(state);
+            riscv64_unhandled_trap(state);
         }
         desc = irq_to_desc(irq);
     }
 
     if(desc == NULL) {
         eprintk("riscv64_route_trap: Failed to get root trap IRQ descriptor!\n");
-        riscv64_unhandled_exception(state);
+        riscv64_unhandled_trap(state);
     }
 
     dprintk("hwirq=0x%lx, num_actions=0x%lx\n", desc->hwirq, desc->num_actions);
@@ -119,14 +146,15 @@ riscv64_route_trap(
     if(res == IRQ_UNHANDLED) {
         eprintk("Failed to handle IRQ 0x%lx (scause=0x%lx) on CPU (%ld)\n",
                 (ul_t)desc->irq, (ul_t)state->scause, (sl_t)current_cpu_id());
-        riscv64_unhandled_exception(state);
+        riscv64_unhandled_trap(state);
     }
 
-exit:
-    panic("RISC-V Trap! (sepc=%p, scause=0x%lx, stval=0x%lx)\n",
-            state->sepc,
-            state->scause,
-            state->stval);
+    return;
+
+//    panic("RISC-V Trap! (sepc=%p, scause=0x%lx, stval=0x%lx)\n",
+//            state->sepc,
+//            state->scause,
+//            state->stval);
 }
 
 struct irq_desc *
@@ -153,5 +181,14 @@ riscv64_interrupt_irq_desc(hwirq_t hwirq)
         return NULL;
     }
     return irq_to_desc(irq);
+}
+
+struct irq_domain *
+riscv64_shared_interrupt_domain(void) {
+    return riscv64_interrupt_irq_domain;
+}
+struct irq_domain *
+riscv64_shared_exception_domain(void) {
+    return riscv64_exception_irq_domain;
 }
 

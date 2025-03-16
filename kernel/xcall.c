@@ -114,6 +114,7 @@ xcall_provide_ipi_irq(cpu_id_t cpu, irq_t irq)
 {
     int res;
     struct xcall_state *state = percpu_ptr_specific(percpu_addr(xcall_state), cpu);
+    printk("xcall_provide_ipi_irq: state_ptr=%p\n", state);
 
     int irq_state = spin_lock_irq_save(&state->lock);
     if(state->ipi != NULL_IRQ && state->action == NULL) {
@@ -133,6 +134,10 @@ xcall_provide_ipi_irq(cpu_id_t cpu, irq_t irq)
             return -EINVAL;
         }
         state->ipi = irq;
+    } else {
+        wprintk("Ignoring provided IPI (%lu) on CPU (%lu)\n",
+                (ul_t)irq,
+                (ul_t)cpu);
     }
     spin_unlock_irq_restore(&state->lock, irq_state);
     return 0;

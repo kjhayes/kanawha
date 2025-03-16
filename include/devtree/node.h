@@ -7,8 +7,12 @@
 #include <kanawha/irq.h>
 #include <devtree/types.h>
 
+#define DT_NODE_FLAG_MATCHED (1ULL<<0)
+
 struct dt_node 
 {
+    unsigned long flags;
+
     struct devtree *dt;
     struct fdt_node *backing_data;
 
@@ -19,6 +23,7 @@ struct dt_node
     ilist_node_t child_node;
 
     struct dt_driver *driver;
+    void *driver_state;
     ilist_node_t driver_node;
 
     // Phandle
@@ -46,13 +51,21 @@ dt_node_read_reg(
         void __phys **reg_out,
         size_t *size_out);
 
-size_t
-dt_node_irq_count(
-        struct dt_node *node);
+// Returns 0 if the device_type matches
+int
+dt_node_check_device_type(
+        struct dt_node *node,
+        const char *device_type);
 
-irq_t
+int
+dt_node_irq_count(
+        struct dt_node *node,
+        size_t *size_out);
+
+int
 dt_node_read_irq(
         struct dt_node *node,
-        size_t index);
+        size_t index,
+        irq_t *irq_out);
 
 #endif

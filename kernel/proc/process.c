@@ -311,6 +311,11 @@ launch_init_process(void)
 {
     int res;
 
+#ifdef CONFIG_RISCV64
+    printk("Not Launching init Process on RISC-V\n");
+    return 0;
+#endif
+
     if(init_process != NULL) {
         panic("launch_init_process: init_process is not NULL!\n");
     }

@@ -57,10 +57,15 @@ struct irq_desc *
 irq_to_desc(irq_t irq)
 {
     struct irq_domain *domain = irq_to_domain(irq);
+    DEBUG_ASSERT(KERNEL_ADDR(domain));
     if(domain == NULL) {
         return NULL;
     }
+
+    DEBUG_ASSERT(irq >= domain->base_irq);
     size_t index = irq - domain->base_irq;
+
+    DEBUG_ASSERT(index < domain->num_irq);
     struct irq_desc *desc = &domain->irq_descs[index];
 
     DEBUG_ASSERT_MSG(
@@ -491,6 +496,12 @@ free_irq_domain_linear(
 {
     struct linear_irq_domain *linear =
         container_of(domain, struct linear_irq_domain, domain);
+
+    rlock_write_lock(&irq_domain_map_lock);
+    struct ptree_node *rem = ptree_remove(&irq_domain_map, domain->tree_node.key);
+    DEBUG_ASSERT(rem == &domain->tree_node);
+    rlock_write_unlock(&irq_domain_map_lock);
+
     kfree(domain->irq_descs);
     kfree(linear);
     return 0;
@@ -500,6 +511,7 @@ irq_t irq_domain_revmap(
         struct irq_domain *domain,
         hwirq_t hwirq)
 {
+    DEBUG_ASSERT(KERNEL_ADDR(domain->revmap));
     return (*domain->revmap)(domain, hwirq);
 }
 

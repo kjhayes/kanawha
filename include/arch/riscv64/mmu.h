@@ -62,6 +62,8 @@
 #ifndef __ASSEMBLER__
 
 #include <kanawha/types.h>
+#include <kanawha/pointer.h>
+#include <kanawha/printk.h>
 
 struct
 __attribute__((aligned(1<<RISCV64_SV_TABLE_ALIGN),packed))
@@ -73,6 +75,23 @@ riscv64_sv_page_table
 static inline void
 riscv64_flush_tlb(void) {
     asm volatile ("sfence.vma");
+}
+
+static inline uint64_t
+riscv64_format_satp(
+        void __phys *root_table,
+        int root_level)
+{
+    uint64_t satp_value = ((uintptr_t)root_table >> 12);
+
+    switch(root_level) {
+        case 2: satp_value |= ( 8ULL<<60); break;
+        case 3: satp_value |= ( 9ULL<<60); break;
+        case 4: satp_value |= (10ULL<<60); break;
+        default:
+            panic("Trying to format an invalid SATP value!\n");
+    }
+    return satp_value;
 }
 
 #endif

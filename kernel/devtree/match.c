@@ -10,8 +10,7 @@
 // Driver/Node Matching
 static DECLARE_SPINLOCK(devtree_match_lock);
 static DECLARE_ILIST(dt_driver_list);
-static DECLARE_ILIST(devtree_unmatched_node_list);
-static DECLARE_ILIST(devtree_matched_node_list);
+static DECLARE_ILIST(devtree_node_list);
 #define MATCH_LOCK()\
     do {\
         spin_lock(&devtree_match_lock);\
@@ -22,7 +21,7 @@ static DECLARE_ILIST(devtree_matched_node_list);
     } while(0)
 
 // Returns 0 if the id matches the node
-static int
+int
 dt_node_check_id(
         struct dt_node *node,
         struct dt_node_id *id)
@@ -120,20 +119,36 @@ devtree_try_match(
     return 0;
 }
 
+static int
+__init_dt_driver(
+        struct dt_driver *driver)
+{
+    ilist_init(&driver->devices);
+    return 0;
+}
+
 int
 register_dt_driver(
         struct dt_driver *driver)
 {
-    ilist_init(&driver->devices);
+    int res;
+
+    res = __init_dt_driver(driver);
+    if(res) {
+        return res;
+    }
 
     MATCH_LOCK();
 
     ilist_push_tail(&dt_driver_list, &driver->global_node);
 
     ilist_node_t *list_node;
-    ilist_for_each(list_node, &devtree_unmatched_node_list) {
+    ilist_for_each(list_node, &devtree_node_list) {
         struct dt_node *node =
             container_of(list_node, struct dt_node, global_node);
+        if(node->flags & DT_NODE_FLAG_MATCHED) {
+            continue;
+        }
         int res = devtree_try_match(
                 driver,
                 node);
@@ -141,17 +156,23 @@ register_dt_driver(
             // We don't actually care if we fail to match with any given node
             continue;
         }
-    }
-
-    ilist_for_each(list_node, &driver->devices) {
-        struct dt_node *node
-            = container_of(list_node, struct dt_node, driver_node);
-        ilist_remove(&devtree_unmatched_node_list, &node->global_node);
-        ilist_push_tail(&devtree_matched_node_list, &node->global_node);
+        node->flags |= DT_NODE_FLAG_MATCHED;
     }
 
     MATCH_UNLOCK();
 
+    return 0;
+}
+
+int
+register_dt_driver_nomatch(
+        struct dt_driver *driver)
+{
+    int res;
+    res = __init_dt_driver(driver);
+    if(res) {
+        return res;
+    }
     return 0;
 }
 
@@ -160,8 +181,9 @@ register_dt_node(
         struct dt_node *node)
 {
     int res;
+
     MATCH_LOCK();
-    ilist_push_tail(&devtree_unmatched_node_list, &node->global_node);
+    ilist_push_tail(&devtree_node_list, &node->global_node);
 
     ilist_node_t *list_node;
     ilist_for_each(list_node, &dt_driver_list) {
@@ -171,8 +193,7 @@ register_dt_node(
                 driver,
                 node);
         if(res == 0) {
-            ilist_remove(&devtree_unmatched_node_list, &node->global_node);
-            ilist_push_tail(&devtree_matched_node_list, &node->global_node);
+            node->flags |= DT_NODE_FLAG_MATCHED;
             break;
         }
     }
@@ -208,5 +229,24 @@ int
 register_devtree(struct devtree *dt)
 {
     return register_dt_node_and_children(dt->root_node);
+}
+
+int
+dt_driver_claim_node(
+        struct dt_driver *driver,
+        struct dt_node *node)
+{
+    int res;
+
+    if((node->flags & DT_NODE_FLAG_MATCHED) || node->driver) {
+        MATCH_UNLOCK();
+        return -EALREADY;
+    }
+    node->driver = driver;
+    ilist_push_tail(&driver->devices, &node->driver_node);
+
+    node->flags |= DT_NODE_FLAG_MATCHED;
+
+    return 0;
 }
 

@@ -2,6 +2,9 @@
 #define __KANAWHA_ARCH_RISCV64__SBI_H__
 
 #include <kanawha/types.h>
+#include <kanawha/errno.h>
+
+#define SBI_EXTID_BASE 0x10
 
 #define SBI_SUCCESS               ( 0)
 #define SBI_ERR_FAILED            (-1)
@@ -13,10 +16,27 @@
 #define SBI_ERR_ALREADY_STARTED   (-7)
 #define SBI_ERR_ALREADY_STOPPED   (-8)
 
+
 struct sbiret {
     long error;
     long value;
 };
+
+static inline int
+sbiret_to_errno(struct sbiret *ret) {
+    switch(ret->error) {
+        case SBI_SUCCESS: return 0;
+        case SBI_ERR_FAILED: return -EFAULT;
+        case SBI_ERR_NOT_SUPPORTED: return -EUNIMPL;
+        case SBI_ERR_INVALID_PARAM: return -EINVAL;
+        case SBI_ERR_DENIED: return -EPERM;
+        case SBI_ERR_INVALID_ADDRESS: return -EINVAL;
+        case SBI_ERR_ALREADY_AVAILABLE: return -EALREADY;
+        case SBI_ERR_ALREADY_STARTED: return -EALREADY;
+        case SBI_ERR_ALREADY_STOPPED: return -EALREADY;
+        default: return -EINVAL;
+    }
+}
 
 static inline struct sbiret
 sbi_ecall(
@@ -43,8 +63,8 @@ sbi_ecall(
             "ecall;"
             "mv %0, a0;"
             "mv %1, a1;"
-            : "=r" (value),
-              "=r" (err)
+            : "=r" (err),
+              "=r" (value)
             : "r" (a0),
               "r" (a1),
               "r" (a2),
@@ -60,6 +80,33 @@ sbi_ecall(
         .value = value,
     };
     return ret;
+}
+
+// Returns 0 if the extension exists, negative errno if not
+static int
+sbi_probe_extension(
+        long ext_id)
+{
+    struct sbiret ret;
+    ret = sbi_ecall(
+            SBI_EXTID_BASE,
+            0x3,
+            ext_id,
+            0,
+            0,
+            0,
+            0,
+            0);
+
+    if(ret.error != SBI_SUCCESS) {
+        return sbiret_to_errno(&ret);
+    }
+
+    if(ret.value == 0) {
+        return -ENXIO;
+    } else {
+        return 0;
+    }
 }
 
 #endif

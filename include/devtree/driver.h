@@ -65,6 +65,24 @@ DEFINE_OP_LIST_WRAPPERS(
 #undef DT_DRIVER_DEINIT_NODE_SIG
 #undef DT_DRIVER_OP_LIST
 
+// Default function implementations
+
+// Always Return -EUNIMPL
+int
+dt_driver_cannot_probe(
+        struct dt_driver *driver,
+        struct dt_node *node);
+// Always Return -EUNIMPL
+int
+dt_driver_cannot_init_node(
+        struct dt_driver *driver,
+        struct dt_node *node);
+// Always Return -EUNIMPL
+int
+dt_driver_cannot_deinit_node(
+        struct dt_driver *driver,
+        struct dt_node *node);
+
 // Always returns NULL_IRQ
 irq_t
 dt_driver_cannot_xlate_irq(
