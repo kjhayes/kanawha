@@ -13,19 +13,19 @@
 #define VBASE_PD_OFFSET CONFIG_X64_VIRTUAL_BASE & (X64_PD_ENTRY_REGION_SIZE-1)
 #define VBASE_PDPT_OFFSET CONFIG_X64_VIRTUAL_BASE & (X64_PDPT_ENTRY_REGION_SIZE-1)
 
-#if CONFIG_IDENTITY_MAP_ORDER > 21
+#if CONFIG_IDENTITY_MAP_ORDER >= 21
     #define IDENT_MAP_PT_TABLES_ORDER   (CONFIG_IDENTITY_MAP_ORDER - 21)
 #else
     #define IDENT_MAP_PT_TABLES_ORDER 0
 #endif
 
-#if CONFIG_IDENTITY_MAP_ORDER > 30
+#if CONFIG_IDENTITY_MAP_ORDER >= 30
     #define IDENT_MAP_PD_TABLES_ORDER   (CONFIG_IDENTITY_MAP_ORDER - 30)
 #else
     #define IDENT_MAP_PD_TABLES_ORDER 0
 #endif
 
-#if CONFIG_IDENTITY_MAP_ORDER > 39
+#if CONFIG_IDENTITY_MAP_ORDER >= 39
     #define IDENT_MAP_PDPT_TABLES_ORDER (CONFIG_IDENTITY_MAP_ORDER - 39)
 #else
     #define IDENT_MAP_PDPT_TABLES_ORDER 0
@@ -154,7 +154,7 @@ __x64_prot_to_long_fill_pd_loop:
     jb __x64_prot_to_long_fill_pd_loop
 
 #else
-#error "NO"
+#error "Boot Method Requires Assuming Either 2MB Pages or 1 GB Pages"
 #endif
 
 #endif

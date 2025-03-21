@@ -11,12 +11,25 @@
 
 struct process;
 
+#define SYSCALL_MAX_ARG_COUNT 6
+
+struct syscall_args {
+    uint64_t args[SYSCALL_MAX_ARG_COUNT];
+};
+
 #define DECLARE_SYSCALL_HANDLER_FUNCTIONS(__name, __id, __NAME, __SIG, ...)\
 SIG_RETURN_TYPE(__SIG) syscall_ ## __name (struct process *process SIG_ARG_DECLS(__SIG));
 SYSCALL_XLIST(DECLARE_SYSCALL_HANDLER_FUNCTIONS)
 #undef DECLARE_SYSCALL_HANDLER_FUNCTIONS
 
 int syscall_unknown(struct process *process, syscall_id_t id);
+
+int
+handle_syscall(
+        struct process *process,
+        syscall_id_t id,
+        struct syscall_args *args,
+        uint64_t *ret_out);
 
 const char *
 syscall_id_string(syscall_id_t id);

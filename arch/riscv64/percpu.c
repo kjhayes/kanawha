@@ -2,6 +2,7 @@
 #include <kanawha/percpu.h>
 #include <kanawha/types.h>
 #include <kanawha/errno.h>
+#include <arch/riscv64/csr.h>
 
 struct riscv64_percpu_state
 __riscv64_percpu_data[CONFIG_MAX_CPUS] = { 0 };
@@ -30,7 +31,9 @@ arch_set_percpu_area(cpu_id_t cur_cpu_id, void *percpu_area)
     }
     uintptr_t offset = (uintptr_t)percpu_area - (uintptr_t)__builtin_kpercpu_start;
     __riscv64_percpu_data[cur_cpu_id].percpu_offset = offset;
-    asm volatile("mv tp, %0" :: "r" ((uint64_t)&__riscv64_percpu_data[cur_cpu_id]));
+    uint64_t tp_value = ((uint64_t)&__riscv64_percpu_data[cur_cpu_id]);
+    asm volatile("mv tp, %0" :: "r" (tp_value));
+    write_csr(sscratch, tp_value);
     return 0;
 }
 

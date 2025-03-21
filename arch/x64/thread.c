@@ -8,13 +8,14 @@
 #include <kanawha/printk.h>
 #include <kanawha/percpu.h>
 #include <kanawha/assert.h>
+#include <kanawha/attribute.h>
 
 extern void __x64_thread_entry(void);
 
 extern void *
 __x64_thread_run_threadless(void *in, threadless_f *func, uint64_t *rsp_ptr);
 
-extern __attribute__((noreturn)) void
+extern __noreturn void
 __x64_thread_run_thread(void *rsp);
 
 void 
@@ -27,7 +28,7 @@ arch_thread_run_threadless(
             &current_thread()->arch_state.stack.stack_pointer);
 }
 
-__attribute__((noreturn)) void
+__noreturn void
 arch_thread_run_thread(struct thread_state *to_run)
 {
     dprintk("running thread %p with rsp=%p\n",

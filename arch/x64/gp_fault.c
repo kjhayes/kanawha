@@ -36,6 +36,7 @@ x64_gp_fault_handler(
                     errnostr(res));
             return res;
         }
+        thread_abandon(force_resched());
     }
 
     return IRQ_HANDLED;

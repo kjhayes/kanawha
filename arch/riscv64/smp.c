@@ -8,6 +8,7 @@
 #include <arch/riscv64/sbi.h>
 #include <arch/riscv64/sbi_hsm.h>
 #include <arch/riscv64/mmu.h>
+#include <kanawha/attribute.h>
 
 #if CONFIG_MAX_CPUS > 1
 
@@ -40,7 +41,7 @@ riscv64_boot_ap_init(
     return trampoline->stack;
 }
 
-__attribute__((noreturn))
+__noreturn
 void
 riscv64_virtual_ap_init(void)
 {

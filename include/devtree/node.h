@@ -28,17 +28,41 @@ struct dt_node
 
     // Phandle
     struct ptree_node phandle_node;
+
+    // Formatted Name
+    spinlock_t name_lock;
+    char *name;
 };
 
 struct fdt_node *
 dt_node_get_fdt_node(
         struct dt_node *node);
 
+const char *
+dt_node_get_name(
+        struct dt_node *node);
+
+// Read the property as a single u32
 int
 dt_node_read_property_u32(
         struct dt_node *node,
         const char *prop_name,
         uint32_t *val_out);
+
+// Read the property as a single u64
+int
+dt_node_read_property_u64(
+        struct dt_node *node,
+        const char *prop_name,
+        uint64_t *val_out);
+
+// Tries reading the property as a single unsigned value
+// (Allows for both 32-bit and 64-bit values)
+int
+dt_node_read_property_unsigned(
+        struct dt_node *node,
+        const char *prop_name,
+        uintptr_t *val_out);
 
 size_t
 dt_node_reg_count(

@@ -3,6 +3,10 @@
 #include <kanawha/printk.h>
 #include <kanawha/irq.h>
 #include <kanawha/irq_domain.h>
+#include <kanawha/scheduler.h>
+#include <kanawha/thread.h>
+#include <kanawha/attribute.h>
+#include <kanawha/proc/process.h>
 #include <arch/riscv64/csr.h>
 #include <arch/riscv64/trap.h>
 
@@ -75,7 +79,7 @@ riscv64_alloc_root_irq_domains(void)
 }
 declare_init_desc(dynamic, riscv64_alloc_root_irq_domains, "Creating RISC-V Root IRQ Domains");
 
-__attribute__((noreturn))
+__noreturn
 static void
 riscv64_unhandled_trap(
         struct riscv64_excp_state *state)
@@ -99,6 +103,11 @@ riscv64_route_trap(
     struct thread_state *cur_thread = current_thread();
 
     // TODO update process->user_ip if we came from usermode
+    if((state->sstatus & SSTATUS_MASK_SPP) == 0) {
+        struct process *process = current_process();
+        DEBUG_ASSERT(KERNEL_ADDR(process));
+        process->user_ip = (void __user *)state->sepc;
+    }
 
     struct irq_desc *desc = NULL;
 
@@ -147,6 +156,13 @@ riscv64_route_trap(
         eprintk("Failed to handle IRQ 0x%lx (scause=0x%lx) on CPU (%ld)\n",
                 (ul_t)desc->irq, (ul_t)state->scause, (sl_t)current_cpu_id());
         riscv64_unhandled_trap(state);
+    }
+
+    struct thread_state *new_thread = query_resched();
+    if(new_thread != NULL) {
+        thread_switch(new_thread);
+    } else {
+        // No thread switch
     }
 
     return;

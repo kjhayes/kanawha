@@ -14,6 +14,7 @@
 #include <kanawha/stddef.h>
 #include <kanawha/assert.h>
 #include <kanawha/cpu.h>
+#include <kanawha/attribute.h>
 #include <kanawha/proc/process.h>
 
 struct irq_domain *x64_vector_irq_domain = NULL;
@@ -111,7 +112,8 @@ irq_t x64_request_cpu_irq_vector(cpu_id_t cpu_id)
 
     return min_irq;
 }
-__attribute__((noreturn))
+
+__noreturn
 void
 x64_unhandled_exception(struct x64_excp_state *state)
 {
@@ -146,7 +148,7 @@ X64_EXCP_XLIST(UNHANDLED_EXCEPTION_CASE)
     panic("Unhandled %s Exception! (vector=0x%x)\n", desc_str, (unsigned)state->vector);
 }
 
-__attribute__((noreturn))
+__noreturn
 static void
 x64_unhandled_interrupt(struct x64_excp_state *state)
 {

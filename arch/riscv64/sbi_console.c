@@ -44,3 +44,4 @@ sbi_boot_console_init(void)
     return 0;
 }
 declare_init_desc(boot, sbi_boot_console_init, "Registering Boot SBI Console");
+

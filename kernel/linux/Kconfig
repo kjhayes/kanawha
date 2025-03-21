@@ -1,0 +1,6 @@
+
+config LINUX_DEVICETREE_CHOSEN
+    bool "Process Device Tree /chosen Node"
+    depends on DEVICETREE
+    default y
+

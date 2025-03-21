@@ -15,6 +15,7 @@
 #include <kanawha/slab.h>
 #include <kanawha/proc/process.h>
 #include <kanawha/assert.h>
+#include <kanawha/attribute.h>
 
 static DECLARE_SPINLOCK(thread_tree_lock);
 static DECLARE_PTREE(thread_tree);
@@ -75,10 +76,10 @@ get_thread_id(struct thread_state *state)
     }
 }
 
-DECLARE_STATIC_PERCPU_VAR(struct thread_state *, __current_thread);
+DECLARE_PERCPU_VAR(struct thread_state *, __current_thread);
 DECLARE_STATIC_PERCPU_VAR(struct thread_state *, __idle_thread);
 
-__attribute__((noreturn))
+__noreturn
 void
 idle_loop(void) {
     printk("Entered Idle Thread On CPU %d\n", current_cpu_id());
@@ -293,7 +294,7 @@ thread_schedule(struct thread_state *state)
     return 0;
 }
 
-static __attribute__((noreturn)) void 
+static __noreturn void 
 __thread_switch_threadless(void *in)
 {
     // We should be running with IRQ(s) disabled, and thus pinned to the current CPU
@@ -339,7 +340,7 @@ __thread_switch_threadless(void *in)
     panic("Returned from arch_thread_run_thread!\n");
 }
 
-static __attribute__((noreturn)) void 
+static __noreturn void 
 __thread_sleep_threadless(void *in)
 {
     // We should be running with IRQ(s) disabled, and thus pinned to the current CPU
@@ -366,6 +367,8 @@ int
 thread_switch(struct thread_state *state)
 {
     int res;
+
+    DEBUG_ASSERT(KERNEL_ADDR(state));
 
     struct thread_state *cur_thread;
     cur_thread = current_thread();
@@ -509,7 +512,7 @@ thread_switch(struct thread_state *state)
 }
 */
 
-__attribute__((noreturn))
+__noreturn
 void thread_abandon(struct thread_state *scheduled)
 {
     int res;
@@ -577,7 +580,7 @@ void thread_abandon(struct thread_state *scheduled)
     arch_thread_run_thread(scheduled);
 }
 
-__attribute__((noreturn))
+__noreturn
 void cpu_start_threading(thread_f *func, void *state)
 {
     int res;

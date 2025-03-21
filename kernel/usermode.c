@@ -1,9 +1,10 @@
 
 #include <kanawha/usermode.h>
 #include <kanawha/thread.h>
+#include <kanawha/attribute.h>
 #include <kanawha/proc/process.h>
 
-__attribute__((noreturn))
+__noreturn
 void enter_usermode(void *arg)
 {
     struct process *process = current_process();

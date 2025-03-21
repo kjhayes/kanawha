@@ -30,7 +30,7 @@ syscall_spawn(
         return -ENOMEM;
     }
 
-    dprintk("spawned child %lld of parent %lld\n", (sll_t)child->id, (sll_t)process->id);
+    dprintk("spawned child %lld of parent %lld child_func=%p\n", (sll_t)child->id, (sll_t)process->id, child_func);
 
     dprintk("Writing PID to user address %p\n", child_pid);
     res = process_write_usermem(
@@ -43,6 +43,8 @@ syscall_spawn(
                 errnostr(res));
         // Still return zero because we spawned the process
     }
+
+    dprintk("syscall_spawn: wrote to usermem!\n");
 
     return 0;
 }

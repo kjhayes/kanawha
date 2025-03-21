@@ -592,6 +592,7 @@ static int
 vmem_map_unhandled_user_page_fault(
         void * faulting_address,
         unsigned long access_flags,
+        struct vmem_region_ref *ref,
         struct vmem_map *map)
 {
     int res;
@@ -606,16 +607,24 @@ vmem_map_unhandled_user_page_fault(
     // TODO: Signal something like SIGSEGV once we have
     // signalling implemented
 
-//#ifdef CONFIG_DEBUG_TRACK_PROCESS_EXEC
-//    eprintk("Terminating PID(%ld) [EXEC(%s)] for Invalid Memory Access (user_ip=%p)!\n",
-//            (sl_t)process->id,
-//            process->tracked_exec == NULL ? "???" : process->tracked_exec,
-//            process->user_ip);
-//#else
-//    eprintk("Terminating PID(%ld) for Invalid Memory Access (user_ip=%p)!\n",
-//            (sl_t)process->id,
-//            process->user_ip);
-//#endif
+#ifdef CONFIG_DEBUG_TRACK_PROCESS_EXEC
+    eprintk("Terminating PID(%ld) [EXEC(%s)] for Invalid Memory Access (user_ip=%p) (addr=%p)!\n"
+            "\taccess_flags={%s%s%s%s%s}\n",
+            (sl_t)process->id,
+            process->tracked_exec == NULL ? "???" : process->tracked_exec,
+            process->user_ip,
+            faulting_address,
+            access_flags & PF_FLAG_READ ? "[READ]" : "",
+            access_flags & PF_FLAG_WRITE ? "[WRITE]" : "",
+            access_flags & PF_FLAG_EXEC ? "[EXEC]" : "",
+            access_flags & PF_FLAG_USERMODE ? "[USERMODE]" : "",
+            access_flags & PF_FLAG_NOT_PRESENT ? "" : "[PRESENT]"
+            );
+#else
+    eprintk("Terminating PID(%ld) for Invalid Memory Access (user_ip=%p)!\n",
+            (sl_t)process->id,
+            process->user_ip);
+#endif
 
     res = signal_deliver(process, SIGNAL_ID_MEMFAULT, 0);
     if(res) {
@@ -675,6 +684,7 @@ vmem_map_handle_page_fault(
                 res = vmem_map_unhandled_user_page_fault(
                         faulting_address,
                         access_flags,
+                        ref,
                         map);
                 return res; // res should be zero assuming there are no kernel errors,
                             // even if we end up killing the user-process

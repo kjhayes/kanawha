@@ -6,3 +6,10 @@ config PC_COM_8250
     help
       Driver for platform serial ports on x64
 
+config DEVTREE_8250
+    tristate "Device Tree 8250 Driver"
+    default y
+    depends on DEVICETREE && SERIAL_8250
+    help
+      Driver for generic device tree 8250 devices
+

@@ -30,10 +30,12 @@ X(9, "Supervisor External Interrupt")\
 
 struct riscv64_excp_state
 {
-
     uint64_t sepc;
     uint64_t stval;
     uint64_t scause;
+    uint64_t sstatus;
+    uint64_t tp;
+    uint64_t gp;
     uint64_t caller_regs[RISCV64_THREAD_NUM_CALLER_REGS];
     uint64_t callee_regs[RISCV64_THREAD_NUM_CALLEE_REGS];
 

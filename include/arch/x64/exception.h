@@ -96,7 +96,7 @@ x64_excp_state
     uint64_t rflags;
 } __attribute__((packed));
 
-__attribute__((noreturn)) void
+__noreturn void
 x64_unhandled_exception(struct x64_excp_state *state);
 
 #endif

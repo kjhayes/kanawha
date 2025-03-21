@@ -687,12 +687,14 @@ free_phys_mem(void)
               return res;
           }
 
-          dprintk("Registered Buddy Allocator for region [%p - %p)\n",
+          printk("Registered Buddy Allocator for region [%p - %p)\n",
                   (void*)entry->base, (void*)(entry->base + entry->size));
           freed_something = 1;
           break;
       }
     } while(freed_something);
+
+    printk("Finished freeing physical memory!\n");
 
     return 0;
 }

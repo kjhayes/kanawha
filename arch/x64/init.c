@@ -8,6 +8,7 @@
 #include <kanawha/thread.h>
 #include <kanawha/irq_domain.h>
 #include <kanawha/clk.h>
+#include <kanawha/attribute.h>
 #include <kanawha/usermode.h>
 
 #include <arch/x64/fpu.h>
@@ -185,7 +186,7 @@ void x64_init(void *in)
 
 void x64_ap_init(void*);
 
-__attribute__((noreturn))
+__noreturn
 void x64_boot_ap_init(void) 
 {
     int res;

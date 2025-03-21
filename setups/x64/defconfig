@@ -1,4 +1,5 @@
 CONFIG_X64=y
+# CONFIG_RISCV64 is not set
 CONFIG_CLANG=y
 # CONFIG_GCC is not set
 CONFIG_OPT_FLAGS="-O0"
@@ -27,10 +28,13 @@ CONFIG_TIMESTAMP_RESOLUTION_MS=10
 # Firmware Interfaces
 #
 CONFIG_ACPI=y
+CONFIG_ACPI_REQUIRED=y
+# CONFIG_DEVICETREE is not set
+# CONFIG_DEVICETREE_REQUIRED is not set
 # end of Firmware Interfaces
 
 CONFIG_INIT_PROCESS_PATH="sh"
-CONFIG_INIT_PROCESS_ARGS="init.sh"
+CONFIG_INIT_PROCESS_ARGS="init-x64.sh"
 CONFIG_ROOT_FS_RAMFILE="initrd"
 CONFIG_ROOT_FS_FILESYSTEM="cpio"
 
@@ -60,6 +64,8 @@ CONFIG_DEBUG_ASSERTIONS=y
 # CONFIG_STRACE_LOG_SYSCALL_END is not set
 CONFIG_STRACE_LOG_SIGNALS=y
 # end of Strace Options
+
+CONFIG_DISABLE_NORETURN_ATTRIBUTE=y
 
 #
 # Kernel Address Checking
@@ -111,6 +117,11 @@ CONFIG_EXT2_FS=y
 #
 CONFIG_ACPI_PM_TIMER_CLK=y
 # end of Clock Devices
+
+#
+# IRQ Devices
+#
+# end of IRQ Devices
 
 #
 # Serial Devices
@@ -185,6 +196,16 @@ CONFIG_ROUND_ROBIN_SCHED=y
 #
 # Misc. Modules
 #
+
+#
+# Device Tree
+#
+
+#
+# Linux Compatibility
+#
+# end of Linux Compatibility
+
 CONFIG_MULTIBOOT2=y
 
 #

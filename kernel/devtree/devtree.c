@@ -99,6 +99,10 @@ alloc_dt_node_struct(void) {
         return NULL;
     }
     memset(node, 0, sizeof(struct dt_node));
+
+    spinlock_init(&node->name_lock);
+    node->name = NULL;
+
     return node;
 }
 
@@ -106,6 +110,10 @@ static inline void
 free_dt_node_struct(
         struct dt_node *node)
 {
+    spin_lock(&node->name_lock);
+    if(node->name) {
+        kfree(node->name);
+    }
     kfree(node);
 }
 

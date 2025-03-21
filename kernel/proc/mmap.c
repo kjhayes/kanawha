@@ -344,6 +344,7 @@ __mmap_locked_hint_offset(
     size_t mmap_size = mmap->vmem_region->size;
 
     if(size >= mmap_size) {
+        wprintk("Process MMAP requested too large of a region!\n");
         return -ENOMEM;
     }
 
@@ -364,6 +365,7 @@ __mmap_locked_hint_offset(
 
         if((mmap_size - size) < cur_offset) {
             // Would run off the end of user memory
+            wprintk("Process MMAP ran out of virtual memory!\n");
             return -ENOMEM;
         }
 
@@ -1369,8 +1371,14 @@ mmap_page_fault_handler(
         unsigned long pf_flags,
         void *priv_state)
 {
-    dprintk("mmap_page_fault_handler offset=%p, pf_flags=0x%llx\n",
-            offset, (ull_t)pf_flags);
+    dprintk("mmap_page_fault_handler offset=%p, pf_flags={%s%s%s%s%s}\n",
+            offset,
+            pf_flags & PF_FLAG_READ ? "[READ]" : "",
+            pf_flags & PF_FLAG_WRITE ? "[WRITE]" : "",
+            pf_flags & PF_FLAG_EXEC ? "[EXEC]" : "",
+            pf_flags & PF_FLAG_USERMODE ? "[USER]" : "",
+            pf_flags & PF_FLAG_NOT_PRESENT ? "" : "[PRESENT]"
+            );
     struct mmap *mmap = priv_state;
 
     if((pf_flags & PF_FLAG_USERMODE) == 0) {
@@ -1415,7 +1423,7 @@ mmap_page_fault_handler(
     struct mmap_page *page =
         container_of(pnode, struct mmap_page, tree_node);
 
-    if((page->flags & MMAP_PAGE_COPY_ON_WRITE)&&(pf_flags & PF_FLAG_WRITE))
+    if((page->flags & MMAP_PAGE_COPY_ON_WRITE) && (pf_flags & PF_FLAG_WRITE))
     {
         res = mmap_page_do_copy_on_write(region, page); 
         if(res) {

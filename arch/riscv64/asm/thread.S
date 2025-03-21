@@ -30,7 +30,8 @@ __riscv64_thread_run_threadless:
     sd sp, 0(a2)
 
     // a0 is already our argument
-    jalr a1
+    // DO NOT OVERWRITE RA
+    jr a1
 
     // We should never return
     j .
@@ -48,5 +49,5 @@ __riscv64_thread_run_thread:
 
     POP_CALLEE_REGS()
     POP_CALLER_REGS()
-    sret
+    ret
 

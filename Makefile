@@ -129,7 +129,8 @@ $(OUTPUT_DIR)/kanawha.bin: $(OUTPUT_DIR)/kanawha.o
 	$(call qinfo, OBJCOPY, $(call rel-dir, $@, $(OUTPUT_DIR)))
 	$(Q)$(OBJCOPY) -O binary $< $@
 
-default: kanawha
+DEFAULT_BUILD_RULE ?= kanawha
+default: $(DEFAULT_BUILD_RULE)
 
 modules: $(KERNEL_MOD_RULES) FORCE
 

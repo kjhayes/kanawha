@@ -104,7 +104,11 @@ assign_cpu_scheduler(
 
 struct scheduler *
 current_sched(void) {
-    return *(struct scheduler**)percpu_ptr(percpu_addr(current_scheduler));
+    struct scheduler ** current_sched_ptr = percpu_ptr(percpu_addr(current_scheduler));
+
+    DEBUG_ASSERT(KERNEL_ADDR(current_sched_ptr));
+
+    return *current_sched_ptr;
 }
 
 static int

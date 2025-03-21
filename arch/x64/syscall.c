@@ -40,6 +40,8 @@ struct x64_syscall_state {
 void
 x64_route_syscall(struct x64_syscall_state *state)
 {
+    int res;
+
     enable_irqs();
 
     syscall_id_t id = state->caller_regs[PUSHED_CALLER_REGS_INDEX_RAX];
@@ -57,8 +59,6 @@ x64_route_syscall(struct x64_syscall_state *state)
 
     process->user_ip = user_return;
 
-    strace_begin_syscall(process, id);
-
     struct x64_syscall_trampoline *tramp = 
             percpu_ptr(percpu_addr(x64_local_syscall_trampoline));
     dprintk("TRAMPOLINE (user_stack=%p) (user_rip=%p) (trampoline_stack=%p)\n",
@@ -66,300 +66,18 @@ x64_route_syscall(struct x64_syscall_state *state)
             tramp->user_return,
             tramp->trampoline_stack_base);
 
-    switch(id) {
-        case SYSCALL_ID_EXIT:
-            syscall_exit(process, state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDI]);
-            break;
-        case SYSCALL_ID_OPEN:
-            *ret_val = (uint64_t)(fd_t)
-                syscall_open(
-                        process,
-                        (const char __user *)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDI], // path
-                        (unsigned long)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RSI], // access_flags
-                        (unsigned long)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDX], // mode_flags
-                        (fd_t __user *)state->caller_regs[PUSHED_CALLER_REGS_INDEX_R8] // fd_out
-                        );
-            break;
-        case SYSCALL_ID_CLOSE:
-            *ret_val = (int)
-                syscall_close(
-                        process,
-                        (fd_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDI]);
-            break;
-        case SYSCALL_ID_READ:
-            *ret_val = (uint64_t)(ssize_t)
-                syscall_read(
-                        process,
-                        (fd_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDI], // file
-                        (void __user *)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RSI], // dst
-                        (size_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDX] // size
-                        );
-            break;
-        case SYSCALL_ID_WRITE:
-            *ret_val = (uint64_t)(ssize_t)
-                syscall_write(
-                        process,
-                        (fd_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDI], // file
-                        (void __user *)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RSI], // src
-                        (size_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDX] // size
-                        );
-            break;
-        case SYSCALL_ID_FLUSH:
-            *ret_val = (uint64_t)(int)
-                syscall_flush(
-                        process,
-                        (fd_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDI], // file
-                        (unsigned long)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RSI] // flags
-                        );
-            break;
-        case SYSCALL_ID_SEEK:
-            *ret_val = (uint64_t)(ssize_t)
-                syscall_seek(
-                        process,
-                        (fd_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDI], // file
-                        (ssize_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RSI], // offset
-                        (int)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDX] // whence
-                        );
-            break;
-        case SYSCALL_ID_MMAP:
-            *ret_val = (uint64_t)(int)
-                syscall_mmap(
-                        process,
-                        (fd_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDI], // file
-                        (size_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RSI], // file offset
-                        (void __user * __user *)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDX], // where
-                        (size_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_R8], // size
-                        (unsigned long)state->caller_regs[PUSHED_CALLER_REGS_INDEX_R9] // mmap_flags
-                        );
-            break;
-        case SYSCALL_ID_MUNMAP:
-            *ret_val = (uint64_t)(int)
-                syscall_munmap(
-                        process,
-                        (void __user *)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDI] // mapping
-                        );
-            break;
-        case SYSCALL_ID_EXEC:
-            *ret_val = (uint64_t)(int)
-                syscall_exec(
-                        process,
-                        (fd_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDI], // file
-                        (unsigned long)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RSI] // exec_flags
-                        );
-            break;
-        case SYSCALL_ID_ENVIRON:
-            *ret_val = (uint64_t)(int)
-                syscall_environ(
-                        process,
-                        (const char __user *)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDI], // key
-                        (char __user *)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RSI], // value
-                        (size_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDX], // len
-                        (int)state->caller_regs[PUSHED_CALLER_REGS_INDEX_R8] // operation
-                        );
-            break;
-        case SYSCALL_ID_SPAWN:
-            *ret_val = (uint64_t)(int)
-                syscall_spawn(
-                        process,
-                        (void __user *)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDI], // entry
-                        (void *)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RSI], // arg
-                        (unsigned long)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDX], // flags
-                        (pid_t __user *)state->caller_regs[PUSHED_CALLER_REGS_INDEX_R8] // child
-                        );
-            break;
-        case SYSCALL_ID_REAP:
-            *ret_val = (uint64_t)(int)
-                syscall_reap(
-                        process,
-                        (unsigned long)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDI], // flags
-                        (pid_t __user *)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RSI], // pid_inout
-                        (int __user *)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDX] // exitcode
-                        );
-            break;
-        case SYSCALL_ID_GETPID:
-            *ret_val = (uint64_t)(pid_t)
-                syscall_getpid(
-                        process
-                        );
-            break;
-        case SYSCALL_ID_MOUNT:
-            *ret_val = (uint64_t)(int)
-                syscall_mount(
-                        process,
-                        (const char __user *)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDI], // source
-                        (fd_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RSI], // dst_dir
-                        (const char __user *)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDX], // dst_name
-                        (const char __user *)state->caller_regs[PUSHED_CALLER_REGS_INDEX_R8], // fs_type
-                        (unsigned long)state->caller_regs[PUSHED_CALLER_REGS_INDEX_R9] // flags
-                        );
-            break;
-        case SYSCALL_ID_UNMOUNT:
-            *ret_val = (uint64_t)(int)
-                syscall_unmount(
-                        process,
-                        (fd_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDI] // mount point
-                        );
-            break;
-       case SYSCALL_ID_DIRBEGIN:
-            *ret_val = (uint64_t)(int)
-                syscall_dirbegin(
-                        process,
-                        (fd_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDI] // dir
-                        );
-            break;
-       case SYSCALL_ID_DIRNEXT:
-            *ret_val = (uint64_t)(int)
-                syscall_dirnext(
-                        process,
-                        (fd_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDI] // dir
-                        );
-            break;
-       case SYSCALL_ID_DIRATTR:
-            *ret_val = (uint64_t)(int)
-                syscall_dirattr(
-                        process,
-                        (fd_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDI], // mount point
-                        (int)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RSI], // attr
-                        (size_t __user *)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDX] // value
-                        );
-            break;
-       case SYSCALL_ID_DIRNAME:
-            *ret_val = (uint64_t)(int)
-                syscall_dirname(
-                        process,
-                        (fd_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDI], // mount point
-                        (char __user *)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RSI], // buffer
-                        (size_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDX] // buflen
-                        );
-            break;
-        case SYSCALL_ID_FMOVE:
-            *ret_val = (uint64_t)(int)
-                syscall_fmove(
-                        process,
-                        (fd_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDI], // fd0
-                        (fd_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RSI],  // fd1
-                        (unsigned long)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDX], // flags
-                        (fd_t __user *)state->caller_regs[PUSHED_CALLER_REGS_INDEX_R8] // out
-                        );
-            break;
-        case SYSCALL_ID_MKFILE:
-            *ret_val = (uint64_t)(int)
-                syscall_mkfile(
-                        process,
-                        (fd_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDI], // dir
-                        (const char __user *)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RSI], // file_name
-                        (unsigned long)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDX] 
-                        );
-            break;
-        case SYSCALL_ID_MKDIR:
-            *ret_val = (uint64_t)(int)
-                syscall_mkdir(
-                        process,
-                        (fd_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDI], // dir
-                        (const char __user *)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RSI], // name
-                        (unsigned long)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDX] // flags
-                        );
-            break;
-        case SYSCALL_ID_LINK:
-            *ret_val = (uint64_t)(int)
-                syscall_link(
-                        process,
-                        (fd_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDI], // from
-                        (fd_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RSI], // dir
-                        (const char __user *)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDX], // link_name
-                        (unsigned long)state->caller_regs[PUSHED_CALLER_REGS_INDEX_R8] // flags
-                        );
-            break;
-        case SYSCALL_ID_SYMLINK:
-            *ret_val = (uint64_t)(int)
-                syscall_symlink(
-                        process,
-                        (const char __user *)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDI], // path
-                        (fd_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RSI], // dir
-                        (const char __user *)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDX], // link_name
-                        (unsigned long)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDX] // flags
-                        );
-            break;
-        case SYSCALL_ID_UNLINK:
-            *ret_val = (uint64_t)(int)
-                syscall_unlink(
-                        process,
-                        (fd_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDI], // dir
-                        (const char __user *)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RSI] // name
-                        );
-            break;
-        case SYSCALL_ID_CHROOT:
-            *ret_val = (uint64_t)(int)
-                syscall_chroot(
-                        process,
-                        (fd_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDI]
-                        );
-            break;
-        case SYSCALL_ID_PIPE:
-            *ret_val = (uint64_t)(int)
-                syscall_pipe(
-                        process,
-                        (unsigned long)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDI],
-                        (fd_t __user *)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RSI]
-                        );
-            break;
-        case SYSCALL_ID_INSMOD:
-            *ret_val = (uint64_t)(int)
-                syscall_insmod(
-                        process,
-                        (fd_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDI],
-                        (const char __user *)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RSI],
-                        (unsigned long)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDX]
-                        );
-            break;
-        case SYSCALL_ID_RMMOD:
-            *ret_val = (uint64_t)(int)
-                syscall_rmmod(
-                        process,
-                        (const char __user *)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDI],
-                        (unsigned long)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RSI]
-                        );
-            break;
-        case SYSCALL_ID_CHWDIR:
-            *ret_val = (uint64_t)(int)
-                syscall_chwdir(
-                        process,
-                        (fd_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDI]
-                        );
-            break;
-        case SYSCALL_ID_SLEEP:
-            *ret_val = (uint64_t)(int)
-                syscall_sleep(
-                        process,
-                        (size_t)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDI],
-                        (unsigned long)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RSI]
-                        );
-            break;
-        case SYSCALL_ID_TIME:
-            *ret_val = (uint64_t)(ssize_t)
-                syscall_time(
-                        process,
-                        (unsigned long)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDI]
-                        );
-            break;
-        case SYSCALL_ID_SIGRET:
-            *ret_val = (uint64_t)(int)
-                syscall_sigret(
-                        process
-                        );
-            break;
-        case SYSCALL_ID_SIGROUTE:
-            *ret_val = (uint64_t)(int)
-                syscall_sigroute(
-                        process,
-                        (void __user *)state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDI]
-                        );
-            break;
-        default:
-            syscall_unknown(process, id);
-    }
+    struct syscall_args args;
+    args.args[0] = state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDI];
+    args.args[1] = state->caller_regs[PUSHED_CALLER_REGS_INDEX_RSI];
+    args.args[2] = state->caller_regs[PUSHED_CALLER_REGS_INDEX_RDX];
+    args.args[3] = state->caller_regs[PUSHED_CALLER_REGS_INDEX_R8];
+    args.args[4] = state->caller_regs[PUSHED_CALLER_REGS_INDEX_R9];
+    args.args[5] = state->caller_regs[PUSHED_CALLER_REGS_INDEX_R10];
 
-    strace_end_syscall(process, id);
+    res = handle_syscall(process, id, &args, ret_val);
+    if(res) {
+        wprintk("handle_syscall returned (%s)\n", errnostr(res));
+    }
 
     disable_irqs();
 

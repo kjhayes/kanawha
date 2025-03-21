@@ -4,8 +4,9 @@
 #include <kanawha/types.h>
 #include <kanawha/proc/process.h>
 #include <kanawha/thread.h>
+#include <kanawha/attribute.h>
 
-__attribute__((noreturn))
+__noreturn
 void
 syscall_exit(
         struct process *process,

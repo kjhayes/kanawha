@@ -6,17 +6,17 @@
 
 struct thread_stack
 {
+    uintptr_t stack_pointer; // Offset 0 DO NOT MOVE
+
+    uintptr_t stack_base; // highest address
+    uintptr_t stack_top; // lowest address
+
     struct vmem_region *region;
     uintptr_t virt_base;
     order_t virt_order;
 
     order_t order;
     void __phys * page;
-
-    uintptr_t stack_pointer;
-
-    uintptr_t stack_base; // highest address
-    uintptr_t stack_top; // lowest address
 };
 
 int

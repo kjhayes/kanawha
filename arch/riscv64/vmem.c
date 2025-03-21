@@ -1046,7 +1046,8 @@ int arch_vmem_paged_region_map(
         } while(cur_level != entry_level);
 
         struct riscv64_sv_page_table *cur_table = __va(cur_phys_table);
-        size_t cur_index = cur_offset / sv_level_page_size(cur_level);
+        size_t cur_index = (cur_offset % sv_level_page_size(cur_level+1)) / sv_level_page_size(cur_level);
+        DEBUG_ASSERT(cur_index < RISCV64_SV_ENTRIES_PER_LEVEL);
         uint64_t *entry = &cur_table->entries[cur_index];
 
         res = create_sv_leaf_entry(
@@ -1062,8 +1063,9 @@ int arch_vmem_paged_region_map(
                 *entry,
                 cur_level,
                 offset,
-                index,
+                cur_index,
                 phys_addr);
+
         size_t page_size = sv_level_page_size(cur_level);
         offset += page_size;
         phys_addr += page_size;

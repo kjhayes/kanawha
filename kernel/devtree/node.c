@@ -5,6 +5,7 @@
 #include <devtree/driver.h>
 
 #include <kanawha/string.h>
+#include <kanawha/kmalloc.h>
 
 struct fdt_node *
 dt_node_get_fdt_node(
@@ -12,6 +13,38 @@ dt_node_get_fdt_node(
 {
     return node->backing_data;
 }
+
+const char *
+dt_node_get_name(
+        struct dt_node *node)
+{
+    const char *name;
+    int irq_flags = spin_lock_irq_save(&node->name_lock);
+    if(node->name == NULL) {
+        struct fdt *fdt = devtree_get_fdt(node->dt);
+        struct fdt_node *fdt_node = dt_node_get_fdt_node(node);
+        char *unitname = fdt_node_unitname(fdt, fdt_node);
+        size_t len = 0;
+        while(unitname[len] && unitname[len] != '@') {
+            len++;
+        }
+
+        char *name_buf = kmalloc(len+1);
+        if(name_buf == NULL) {
+            spin_unlock_irq_restore(&node->name_lock, irq_flags);
+            return NULL;
+        }
+
+        strncpy(name_buf, unitname, len+1);
+        name_buf[len] = '\0';
+
+        node->name = name_buf;
+    }
+    name = node->name;
+    spin_unlock_irq_restore(&node->name_lock, irq_flags);
+    return name;
+}
+
 int
 dt_node_read_property_u32(
         struct dt_node *node,
@@ -30,11 +63,77 @@ dt_node_read_property_u32(
     size_t datalen = fdt_property_size(fdt, prop);
     fdt32_t *data = fdt_property_data(fdt, prop);
 
-    if(datalen < 4) {
+    if(datalen != 4) {
         return -EINVAL;
     }
 
     uint32_t value = fdttoh32(*data);
+    if(val_out) {
+        *val_out = value;
+    }
+
+    return 0;
+}
+
+int
+dt_node_read_property_u64(
+        struct dt_node *node,
+        const char *prop_name,
+        uint64_t *val_out)
+{
+    struct fdt *fdt = devtree_get_fdt(node->dt);
+    struct fdt_node *fdt_node = dt_node_get_fdt_node(node);
+ 
+    struct fdt_property *prop =
+        fdt_find_property_by_name(fdt, fdt_node, prop_name);
+    if(prop == NULL) {
+        return -ENXIO;
+    }
+
+    size_t datalen = fdt_property_size(fdt, prop);
+    fdt64_t *data = fdt_property_data(fdt, prop);
+
+    if(datalen != 8) {
+        return -EINVAL;
+    }
+
+    uint64_t value = fdttoh64(*data);
+    if(val_out) {
+        *val_out = value;
+    }
+
+    return 0;
+}
+
+int
+dt_node_read_property_unsigned(
+        struct dt_node *node,
+        const char *prop_name,
+        uintptr_t *val_out)
+{
+    struct fdt *fdt = devtree_get_fdt(node->dt);
+    struct fdt_node *fdt_node = dt_node_get_fdt_node(node);
+ 
+    struct fdt_property *prop =
+        fdt_find_property_by_name(fdt, fdt_node, prop_name);
+    if(prop == NULL) {
+        return -ENXIO;
+    }
+
+    size_t datalen = fdt_property_size(fdt, prop);
+    void *data = fdt_property_data(fdt, prop);
+
+    uintptr_t value;
+
+    switch(datalen) {
+        case 1: value = *(uint8_t*)data; break;
+        case 2: value = fdttoh16(*(fdt16_t*)data); break;
+        case 4: value = fdttoh32(*(fdt32_t*)data); break;
+        case 8: value = fdttoh64(*(fdt64_t*)data); break;
+        default:
+            return -EINVAL;
+    }
+
     if(val_out) {
         *val_out = value;
     }

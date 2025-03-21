@@ -237,3 +237,20 @@ char_dev_init_fs_mount(void)
 }
 declare_init_desc(fs, char_dev_init_fs_mount, "Registering chardev Sysfs Mount");
 
+static int
+char_dev_dump_list(void) {
+    int res;
+    spin_lock(&char_dev_tree_lock);
+    struct stree_node *snode;
+    printk("chardev {\n");
+    for(snode = stree_get_first(&char_dev_tree);
+        snode != NULL;
+        snode = stree_get_next(snode)) {
+        printk("\t%s\n", snode->key);
+    }
+    printk("}\n");
+    spin_unlock(&char_dev_tree_lock);
+    return 0;
+}
+declare_init(late, char_dev_dump_list);
+

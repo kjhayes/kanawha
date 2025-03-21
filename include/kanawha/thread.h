@@ -7,6 +7,8 @@
 #include <kanawha/printk.h>
 #include <kanawha/cpu.h>
 #include <kanawha/vmem.h>
+#include <kanawha/percpu.h>
+#include <kanawha/attribute.h>
 
 #if defined(CONFIG_X64)
 #include <arch/x64/thread.h>
@@ -20,7 +22,7 @@ typedef long thread_id_t;
 #define NULL_THREAD_ID (thread_id_t)(-1)
 
 typedef void(thread_f)(void *in);
-typedef __attribute__((noreturn)) void(threadless_f)(void *in);
+typedef __noreturn void(threadless_f)(void *in);
 
 typedef uint32_t thread_status_t;
 
@@ -145,11 +147,11 @@ int thread_switch(struct thread_state *scheduled);
 //
 // If "scheduled == NULL", then we will begin running the current CPU's
 // idle thread.
-__attribute__((noreturn))
+__noreturn
 void thread_abandon(struct thread_state *scheduled);
 
 // Start threading on the current CPU (assumes preemption is disabled)
-__attribute__((noreturn))
+__noreturn
 void cpu_start_threading(thread_f *func, void *state);
 
 int arch_init_thread_state(struct thread_state *thread);
@@ -167,7 +169,7 @@ void arch_thread_run_threadless(threadless_f *func, void *in);
 
 // Restore the state of "to_run" and begin executing it
 // (Does not save state, so it should be run from a "threadless" context
-__attribute__((noreturn))
+__noreturn
 void arch_thread_run_thread(struct thread_state *to_run);
 
 int
@@ -176,7 +178,7 @@ arch_dump_thread(printk_f *printer, struct thread_state *state);
 int
 dump_threads(printk_f *printer);
 
-__attribute__((noreturn))
+__noreturn
 void
 idle_loop(void);
 
@@ -194,5 +196,7 @@ thread_force_mapping(struct vmem_region *region, void * virtual_addr);
 // threads which contain it already though)
 int
 thread_relax_mapping(void * virtual_addr);
+
+DECLARE_EXTERN_PERCPU_VAR(struct thread_state *, __current_thread);
 
 #endif

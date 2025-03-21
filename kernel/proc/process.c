@@ -182,6 +182,8 @@ init_process_kernel_entry(void *in)
             NULL);
 
     enter_usermode(NULL);
+
+    panic("enter_usermode Returned!\n");
 }
 
 struct spawned_process_state {
@@ -310,11 +312,6 @@ static int
 launch_init_process(void)
 {
     int res;
-
-#ifdef CONFIG_RISCV64
-    printk("Not Launching init Process on RISC-V\n");
-    return 0;
-#endif
 
     if(init_process != NULL) {
         panic("launch_init_process: init_process is not NULL!\n");
