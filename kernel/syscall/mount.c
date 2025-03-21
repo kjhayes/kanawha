@@ -95,6 +95,9 @@ syscall_mount(
               (void __user *)src,
               src_strlen);
       if(res) {
+          eprintk("PID(%ld) syscall_mount: Failed to read string from usermem! (err=%s)\n",
+                  (sl_t)process->id,
+                  errnostr(res));
           kfree(src_buf);
           return res;
       }
@@ -118,6 +121,9 @@ syscall_mount(
                   0,
                   &src_fd);
           if(res) {
+              eprintk("PID(%ld) syscall_mount: Failed to open file \"%s\"\n",
+                      (sl_t)process->id,
+                      src_buf);
               kfree(src_buf);
               return res;
           }
@@ -128,6 +134,9 @@ syscall_mount(
                       process,
                       src_fd);
           if(src_desc == NULL) {
+              eprintk("PID(%ld) syscall_mount: Failed to get file descriptor for \"%s\"\n",
+                      (sl_t)process->id,
+                      src_buf);
               kfree(src_buf);
               file_table_close(
                       process->file_table,
@@ -162,6 +171,8 @@ syscall_mount(
     }
 
     if(mnt == NULL) {
+        eprintk("PID(%ld) syscall_mount: Returned NULL mount!\n",
+            (sl_t)process->id);
         return -EINVAL;
     }
 
@@ -173,6 +184,9 @@ syscall_mount(
             MOUNT_MAX_DST_LEN,
             &dst_name_strlen);
     if(res) {
+        eprintk("PID(%ld) syscall_mount: Failed to get destination strlen from userspace! (err=%s)\n",
+                (sl_t)process->id,
+                errnostr(res));
         return res;
     }
     char *dst_name_buf = kmalloc(dst_name_strlen+1);
@@ -186,6 +200,9 @@ syscall_mount(
             (void __user*)dst_name,
             dst_name_strlen);
     if(res) {
+        eprintk("PID(%ld) syscall_mount: Failed to read destination string from userspace! (err=%s)\n",
+                (sl_t)process->id,
+                errnostr(res));
         kfree(dst_name_buf);
         return res;
     }
@@ -210,6 +227,9 @@ syscall_mount(
             mnt,
             &mnt_point);
     if(res) {
+        eprintk("PID(%ld) syscall_mount: Failed to attach mount point to directory! (err=%s)\n",
+                (sl_t)process->id,
+                errnostr(res));
         kfree(dst_name_buf);
         file_table_put_file(
                 process->file_table,
