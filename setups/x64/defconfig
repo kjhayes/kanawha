@@ -1,0 +1,11 @@
+CONFIG_X64=y
+# CONFIG_RISCV64 is not set
+CONFIG_GCC=y
+CONFIG_GCC_CROSS_COMPILE_PREFIX="x86_64-kanawha-"
+CONFIG_OPT_FLAGS="-O3"
+CONFIG_KANAWHA_INCLUDE_PATH="../kanawha/include"
+
+#
+# Libc Options
+#
+CONFIG_ELK=y

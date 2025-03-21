@@ -12,9 +12,10 @@ CRT_SOURCE_DIR := $(ROOT_DIR)/crt
 INCLUDE_DIR := $(ROOT_DIR)/include
 LIBC_INCLUDE_DIR := $(ROOT_DIR)/include/libc
 
-SETUPS_DIR := $(ROOT_DIR)/setups
-OUTPUT_DIR := $(ROOT_DIR)/build
+OUTPUT_DIR := $(ROOT_DIR)/build/
 MODULE_OUTPUT_DIR := $(OUTPUT_DIR)/modules
+
+SETUPS_DIR := $(ROOT_DIR)/setups
 
 PYTHON := python3
 
@@ -22,9 +23,6 @@ CFLAGS += -g
 
 default:
 	@
-
-$(OUTPUT_DIR): FORCE
-	$(Q)mkdir -p $@
 
 include $(MK_SCRIPTS_DIR)/include.mk
 include $(MK_SCRIPTS_DIR)/config.mk
@@ -43,6 +41,9 @@ else
 
 ifdef CONFIG_X64
 	ARCH := x64
+endif
+ifdef CONFIG_RISCV64
+	ARCH := riscv64
 endif
 
 ifdef ARCH
@@ -63,6 +64,9 @@ ifdef TOOLCHAIN
 else
 	$(error "No Toolchain Specified!")
 endif
+
+$(OUTPUT_DIR): FORCE
+	$(Q)mkdir -p $@
 
 ARCH_SOURCE_DIR := $(ARCH_ROOT_DIR)/$(ARCH)
 
@@ -112,17 +116,21 @@ $(OUTPUT_DIR)/libc.a: $(OUTPUT_DIR)/libc/obj.o
 
 crt0: $(OUTPUT_DIR)/crt0.o
 $(OUTPUT_DIR)/crt0.o: $(OUTPUT_DIR)/crt/crt0-obj.o
-	$(Q)mv $< $@
+	$(Q)cp $< $@
+
+crt1: $(OUTPUT_DIR)/crt1.o
+$(OUTPUT_DIR)/crt1.o: $(OUTPUT_DIR)/crt0.o
+	$(Q)cp $< $@
 
 crti: $(OUTPUT_DIR)/crti.o
 $(OUTPUT_DIR)/crti.o: $(OUTPUT_DIR)/crt/crti-obj.o
-	$(Q)mv $< $@
+	$(Q)cp $< $@
 
 crtn: $(OUTPUT_DIR)/crtn.o
 $(OUTPUT_DIR)/crtn.o: $(OUTPUT_DIR)/crt/crtn-obj.o
-	$(Q)mv $< $@
+	$(Q)cp $< $@
 
-default: libkfb libc crt0 crti crtn 
+default: libkfb libc crt0 crt1 crti crtn 
 
 -include $(MK_SCRIPTS_DIR)/asm.mk
 -include $(MK_SCRIPTS_DIR)/initrd.mk

@@ -2,7 +2,6 @@
 obj-y += \
 	close.o \
 	fork.o \
-	fork_impl.o \
 	dup.o \
 	dup2.o \
 	pipe.o \
@@ -12,3 +11,5 @@ obj-y += \
 	sleep.o \
 	usleep.o \
 
+obj-$(CONFIG_X64) += x64_fork_impl.o
+obj-$(CONFIG_RISCV64) += riscv64_fork_impl.o

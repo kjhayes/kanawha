@@ -1,15 +1,12 @@
-ifndef __ELK_CONFIG_MK__
-define __ELK_CONFIG_MK__
+ifndef __ELK_CONFIG_H__
+define __ELK_CONFIG_H__
 endef
 
 DOT_CONFIG ?= $(ROOT_DIR)/.config
 AUTOCONF ?= $(OUTPUT_DIR)/autoconf.h
 
-#defconfig: FORCE
-#	$(Q)$(PYTHON) -m defconfig $(SETUPS_DIR)/$(ARCH)/$@
-#
-#%defconfig: FORCE
-#	$(Q)$(PYTHON) -m defconfig $(SETUPS_DIR)/$@
+%/defconfig: $(SETUPS_DIR)/%/defconfig FORCE
+	$(Q)cp $(SETUPS_DIR)/$@ $(DOT_CONFIG)
 
 menuconfig: FORCE
 	$(Q)$(PYTHON) -m menuconfig
@@ -19,7 +16,5 @@ $(AUTOCONF): $(OUTPUT_DIR) $(DOT_CONFIG)
 
 export
 -include $(DOT_CONFIG)
-
-.PHONY: menuconfig defconfig
 
 endif

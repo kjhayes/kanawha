@@ -4,6 +4,8 @@ choice
   default X64
   config X64
     bool "x86_64"
+  config RISCV64
+    bool "RISCV64"
 endchoice
 
 choice

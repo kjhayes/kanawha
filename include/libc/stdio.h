@@ -43,6 +43,7 @@ int fclose(FILE *stream);
 int fflush(FILE *stream);
 FILE *fopen(const char * restrict filename, const char * restrict mode);
 FILE *freopen(const char * restrict filename, const char * restrict mode, FILE * restrict stream);
+FILE *fdopen(int fildes, const char *mode);
 void setbuf(FILE * restrict stream, char * restrict buf);
 int setvbuf(FILE * restrict stream, char * restrict buf, int mode, size_t size);
 int fprintf(FILE * restrict stream, const char * restrict format, ...);

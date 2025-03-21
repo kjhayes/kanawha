@@ -8,7 +8,8 @@ obj-y += \
 	locale.o \
 	errno.o \
 	getopt.o \
-	syscall.o \
 	posix/ \
 	argv.o \
 
+obj-$(CONFIG_X64) += x64_syscall.o
+obj-$(CONFIG_RISCV64) += riscv64_syscall.o
