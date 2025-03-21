@@ -6,6 +6,7 @@
 #include <kanawha/spinlock.h>
 #include <kanawha/string.h>
 #include <kanawha/thread.h>
+#include <kanawha/attribute.h>
 #include <kanawha/proc/process.h>
 #include <kanawha/klog.h>
 #include <kanawha/irq.h>
@@ -640,7 +641,7 @@ snprintk(char *buf, size_t size, const char *fmt, ...) {
     return state.chars_attempted;
 }
 
-__attribute__((noreturn))
+__noreturn
 void do_panic(void)
 {
     disable_irqs();
