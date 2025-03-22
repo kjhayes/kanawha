@@ -12,7 +12,7 @@ lapic_msi_msg_addr(
     uint32_t destination_mode = 0;
 
     return 0xFEE00000ULL
-        | ((lapic->id << 12) & 0xFF)
+        | ((lapic->id & 0xFF) << 12)
         | (redirection_hint << 3)
         | (destination_mode << 2)
         ;
