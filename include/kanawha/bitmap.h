@@ -12,7 +12,8 @@
 #define BITS_PER_LONG (sizeof(unsigned long)*8)
 
 #define BITMAP_ENTRIES(entries)\
-    ((entries)/BITS_PER_LONG) + ((((entries) % BITS_PER_LONG)!=0))
+    (((entries)/BITS_PER_LONG) + ((((entries) % BITS_PER_LONG)!=0)))
+
 #define BITMAP_SIZE(entries)\
     (BITMAP_ENTRIES(entries) * sizeof(unsigned long))
 
@@ -25,19 +26,19 @@
 static inline int
 bitmap_check(unsigned long *bitmap, size_t bit)
 {
-    return (bitmap[bit/BITS_PER_LONG] >> (bit%BITS_PER_LONG)) & 1;
+    return (bitmap[bit/BITS_PER_LONG] >> (bit%BITS_PER_LONG)) & 1ULL;
 }
 
 static inline void
 bitmap_set(unsigned long *bitmap, size_t bit)
 {
-    bitmap[bit/BITS_PER_LONG] |= 1UL<<(bit%BITS_PER_LONG);
+    bitmap[bit/BITS_PER_LONG] |= 1ULL<<(bit%BITS_PER_LONG);
 }
 
 static inline void
 bitmap_clear(unsigned long *bitmap, size_t bit)
 {
-    bitmap[bit/BITS_PER_LONG] &= ~(1UL<<(bit%BITS_PER_LONG));
+    bitmap[bit/BITS_PER_LONG] &= ~(1ULL<<(bit%BITS_PER_LONG));
 }
 
 // Search functions for a bitmap with "num_entries" number of bits,
