@@ -76,6 +76,32 @@ mmio_map(void __phys * paddr, size_t size)
 {
     int res;
 
+    struct mem_flags *flags = get_phys_mem_flags();
+    res = mem_flags_check_region(
+            flags,
+            (uintptr_t)paddr,
+            size,
+            0,
+            PHYS_MEM_FLAGS_MMIO);
+    if(res) {
+        eprintk("mmio_map: Failed because physical region is already mapped! (paddr=%p, size=%p)\n",
+                (uintptr_t)paddr,
+                (uintptr_t)size);
+        return NULL;
+    }
+
+    res = mem_flags_set_flags(
+            flags,
+            (uintptr_t)paddr,
+            size,
+            PHYS_MEM_FLAGS_MMIO);
+    if(res) {
+        eprintk("mmio_map: Failed to mark physical region as MMIO! (paddr=%p, size=%p)\n",
+                (uintptr_t)paddr,
+                (uintptr_t)size);
+        return NULL;
+    }
+
     size_t pad_below = (uintptr_t)paddr & ((1ULL<<VMEM_MIN_PAGE_ORDER)-1);
     size_t pad_above = (1ULL<<VMEM_MIN_PAGE_ORDER) - ((size + pad_below) % (1ULL<<VMEM_MIN_PAGE_ORDER));
     if(pad_above == (1ULL<<VMEM_MIN_PAGE_ORDER)) {
@@ -98,6 +124,7 @@ mmio_map(void __phys * paddr, size_t size)
 
     size_t page_bit = bitmap_find_clear_range(mmio_region_bitmap, MMIO_REGION_BITMAP_NUM_ENTRIES, num_pages);
     if(page_bit == MMIO_REGION_BITMAP_NUM_ENTRIES) {
+        eprintk("mmio_map: not enough space in MMIO virtual memory region!\n");
         return NULL;
     }
     dprintk("bitmap_find_clear_range(num_bits=0x%lx) -> bit=0x%lx\n",
@@ -123,6 +150,7 @@ mmio_map(void __phys * paddr, size_t size)
         for(size_t i = 0; i < num_pages; i++) {
             bitmap_clear(mmio_region_bitmap, page_bit + i);
         }       
+        eprintk("mmio_map: vmem failed to map region!\n");
         return NULL;
     }
 

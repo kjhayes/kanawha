@@ -558,6 +558,7 @@ phys_mem_flags_printer(printk_f *printer, unsigned long flags)
     if(flags & PHYS_MEM_FLAGS_PAGE_ALLOC) {(*printer)("[PAGE_ALLOC]");}
     if(flags & PHYS_MEM_FLAGS_16_BIT)     {(*printer)("[16]");}
     if(flags & PHYS_MEM_FLAGS_32_BIT)     {(*printer)("[32]");}
+    if(flags & PHYS_MEM_FLAGS_MMIO)       {(*printer)("[MMIO]");}
 }
 
 int
@@ -647,6 +648,7 @@ free_phys_mem(void)
           if(!(entry->flags & PHYS_MEM_FLAGS_RAM)) {
               continue;
           }
+          DEBUG_ASSERT(!(entry->flags & PHYS_MEM_FLAGS_PAGE_ALLOC));
           
           // Free this region
           dprintk("Registering Buddy Allocator for region [%p - %p)\n",

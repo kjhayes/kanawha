@@ -99,6 +99,7 @@ mem_flags_print(
 #define PHYS_MEM_FLAGS_PAGE_ALLOC (1UL<<7)
 #define PHYS_MEM_FLAGS_16_BIT     (1UL<<8)
 #define PHYS_MEM_FLAGS_32_BIT     (1UL<<9)
+#define PHYS_MEM_FLAGS_MMIO       (1UL<<10)
 
 int phys_mem_flags_dump(void);
 struct mem_flags * get_phys_mem_flags(void);
