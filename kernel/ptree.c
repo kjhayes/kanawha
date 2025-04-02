@@ -350,6 +350,7 @@ ptree_subtree_for_each(
         return;
     }
     if(subtree->left != NULL) {
+        DEBUG_ASSERT(subtree->left != subtree);
         ptree_subtree_for_each(
                 subtree->left,
                 func,
@@ -357,6 +358,7 @@ ptree_subtree_for_each(
     }
     (*func)(subtree, state);
     if(subtree->right != NULL) {
+        DEBUG_ASSERT(subtree->right != subtree);
         ptree_subtree_for_each(
                 subtree->right,
                 func,
