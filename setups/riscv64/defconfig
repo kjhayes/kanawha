@@ -147,11 +147,13 @@ CONFIG_VIRTIO_RNG=y
 # PCI Options
 #
 CONFIG_PCI=y
-CONFIG_PCI_ASSUME_CONTIGUOUS_DEVICES=y
+# CONFIG_PCI_ASSUME_CONTIGUOUS_DEVICES is not set
+CONFIG_PCI_ALLOC_UNINITIALIZED_MMIO_BARS=y
 
 #
 # PCI Configuration Space Access Mechanisms
 #
+CONFIG_PCI_DEVTREE=y
 # end of PCI Configuration Space Access Mechanisms
 # end of PCI Options
 
