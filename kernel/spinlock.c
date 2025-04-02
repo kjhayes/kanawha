@@ -3,6 +3,9 @@
 #include <kanawha/init.h>
 
 #ifdef CONFIG_DEBUG_SPINLOCK_TRACK_THREADS
+
+int __debug_spinlock_tracking_enabled = 0;
+
 static int
 enable_spinlock_tracking(void)
 {

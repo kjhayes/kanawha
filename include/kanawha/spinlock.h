@@ -7,12 +7,12 @@
 #include <kanawha/printk.h>
 
 #ifdef CONFIG_DEBUG_SPINLOCK_TRACK_THREADS
+#include <kanawha/mbarrier.h>
 
 extern struct thread_state *
 current_thread(void);
 
-static int
-__debug_spinlock_tracking_enabled = 0;
+extern int __debug_spinlock_tracking_enabled;
 
 static inline int
 debug_spinlock_tracking(void)
@@ -47,7 +47,7 @@ static inline int
 spin_try_lock(spinlock_t *lock) {
     int val = atomic_bool_test_and_set(&lock->held);
 #ifdef CONFIG_DEBUG_SPINLOCK_TRACK_THREADS
-    if(debug_spinlock_tracking() && val) {
+    if(debug_spinlock_tracking() && (val == 0)) {
         lock->held_by = current_thread();
     }
 #endif
@@ -70,6 +70,10 @@ spin_lock(spinlock_t *lock) {
 
 static inline void
 spin_unlock(spinlock_t *lock) {
+#ifdef CONFIG_DEBUG_SPINLOCK_TRACK_THREADS
+    lock->held_by = NULL;
+    mbarrier();
+#endif
     atomic_bool_clear(&lock->held);
 }
 
