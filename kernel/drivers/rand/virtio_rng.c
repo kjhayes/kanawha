@@ -41,14 +41,17 @@ virtio_rng_read(
         container_of(rand_dev, struct virtio_rng_device, rand_dev);
     
     if(dev->data_avail == 0) {
+        dprintk("Launching Request queue=%p, index=0x%lx\n", dev->request->queue, dev->request->queue->index);
         res = virtio_request_launch(dev->request);
         if(res) {
             return res;
         }
+        dprintk("Awaiting Request queue=%p, index=0x%lx\n", dev->request->queue, dev->request->queue->index);
         res = virtio_request_await(dev->request);
         if(res) {
             return res;
         }
+        dprintk("Received Response queue=%p, index=0x%lx\n", dev->request->queue, dev->request->queue->index);
         DEBUG_ASSERT_MSG(dev->request->len_written <= VIRTIO_RNG_BUFSIZE, "WTF (len_written=0x%lx)\n", dev->request->len_written);
         dev->data_avail = dev->request->len_written;
     }
@@ -231,5 +234,5 @@ register_virtio_rng_driver(void)
 {
     return register_virtio_driver(&virtio_rng_driver);
 }
-declare_init_desc(device, register_virtio_rng_driver, "Registered Virtio RNG Driver");
+declare_init_desc(device, register_virtio_rng_driver, "Registering Virtio RNG Driver");
 
