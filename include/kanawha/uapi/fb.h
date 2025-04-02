@@ -43,7 +43,7 @@ struct fb_layer_info {
     uint64_t height;
 
     uint64_t offset; // Offset before the first pixel in this layer
-    uint64_t stride; // Stride between pixels (0 if packed)
+    uint64_t stride; // Stride between pixels (1 for single byte pixels)
 };
 
 // Mode Info
