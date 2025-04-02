@@ -166,7 +166,7 @@ virtio_console_init_device(
         dprintk("enabled queues\n");
 
         char namebuf[128];
-        snprintk(namebuf, 128, "virt-cons-%ld", 
+        snprintk(namebuf, 128, "virtio-console-%ld", 
                 (sl_t)port_i);
         namebuf[127] = '\0';
 
