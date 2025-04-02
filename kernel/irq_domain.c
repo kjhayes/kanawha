@@ -385,6 +385,18 @@ unmask_irq_desc_chain(struct irq_desc *desc)
     return 0;
 }
 
+unsigned long
+irq_desc_status(struct irq_desc *desc)
+{
+    unsigned long flags;
+    if(desc->dev != NULL) {
+        flags = irq_dev_irq_status(desc->dev, desc->hwirq);
+    } else {
+        flags = IRQ_STATUS_UNKNOWN;
+    }
+    return flags;
+}
+
 int
 trigger_irq_desc(struct irq_desc *desc)
 {
@@ -527,6 +539,26 @@ irq_domain_set_all_irq_dev(
 }
 
 int
+describe_irq_desc(
+        printk_f *printer,
+        struct irq_desc *desc)
+{
+#define BUFLEN 256
+    if(desc->dev) {
+        char buffer[BUFLEN];
+        irq_dev_describe_irq(
+                desc->dev,
+                desc->hwirq,
+                buffer,
+                BUFLEN);
+        buffer[BUFLEN-1] = '\0';
+        (*printer)(buffer);
+    }
+#undef BUFLEN
+    return 0;
+}
+
+int
 dump_irq_descs(printk_f *printer)
 {
     char dev_name_buf[64];
@@ -570,9 +602,24 @@ irq_domain_dump(
         if(desc == NULL) {
             (*printer)("NULL");
         } else {
-            (*printer)("HWIRQ(0x%x)",
+            (*printer)("HWIRQ(0x%x) \"",
                     desc->hwirq);
+            describe_irq_desc(printer, desc);
+            (*printer)("\"");
         }
+
+        unsigned long status = irq_desc_status(desc);
+        if(status & IRQ_STATUS_INVALID) {
+            (*printer)(" [INVALID]");
+        } else if(status & IRQ_STATUS_UNKNOWN) {
+            // Don't print any status info
+        } else {
+            (*printer)(" %s%s",
+                    status & IRQ_STATUS_MASKED  ? "[MASKED]"  : "",
+                    status & IRQ_STATUS_PENDING ? "[PENDING]" : ""
+                    );
+        }
+
 
         (*printer)("\n");
 
@@ -594,8 +641,14 @@ irq_domain_dump(
                 case IRQ_ACTION_PERCPU_LINK:
                     (*printer)("PERCPU-LINK\n");
                     for(cpu_id_t id = 0; id < total_num_cpus(); id++) {
-                        (*printer)("\t\t\tCPU(%d) DESC(%p)\n",
-                                id, percpu_ptr_specific(action->percpu_link_data.link, id));
+                        (*printer)("\t\t\tCPU(%lu)", (ul_t)id);
+                        struct irq_desc **percpu_desc = percpu_ptr_specific(action->percpu_link_data.link, id);
+                        if(*percpu_desc == NULL) {
+                            (*printer)(" INVALID-DESC(%p)", *percpu_desc);
+                        } else {
+                            (*printer)(" IRQ(0x%lx)", (ul_t)(*percpu_desc)->irq);
+                        }
+                        (*printer)("\n");
                     }
                     break;      
                 case IRQ_ACTION_RESOLVED_LINK:

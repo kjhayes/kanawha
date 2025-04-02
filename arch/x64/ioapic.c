@@ -129,13 +129,35 @@ ioapic_unmask_irq(
     return 0;
 }
 
+static unsigned long
+ioapic_irq_status(
+        struct irq_dev *dev,
+        hwirq_t hwirq)
+{
+    struct ioapic *ioapic =
+        container_of(dev, struct ioapic, dev);
+
+    unsigned long flags = 0;
+
+    uint64_t iored = ioapic_read_iored(ioapic, hwirq);
+
+    if(iored & 1ULL<<16) {
+        flags |= IRQ_STATUS_MASKED;
+    }
+
+    return flags;
+}
+
+
 static struct irq_dev_driver
 ioapic_irq_driver = {
     .ack_irq = ioapic_ack_irq,
     .eoi_irq = ioapic_eoi_irq,
     .mask_irq = ioapic_mask_irq,
     .unmask_irq = ioapic_unmask_irq,
+    .irq_status = ioapic_irq_status,
     .trigger_irq = ioapic_trigger_irq,
+    .describe_irq = irq_dev_default_describe_irq,
 };
 
 int

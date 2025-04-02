@@ -345,9 +345,54 @@ msi_unmask_irq(
     }
 }
 
+static unsigned long
+msi_irq_status(
+        struct irq_dev *dev,
+        hwirq_t hwirq)
+{
+    struct msi_irq_dev *msi_dev =
+        container_of(dev, struct msi_irq_dev, irq_dev);
+    struct pci_func *func = msi_dev->func;
+
+    unsigned long flags = 0;
+
+    uint16_t msg_ctrl = pci_msi_read_msg_ctrl(func, func->msi_info);
+    if(msg_ctrl & (1ULL<<7)) {
+        uint32_t mask = pci_cap_readl(func, func->msi_info->cap, 0x10);
+        if(mask & (1ULL<<hwirq)) {
+            flags |= IRQ_STATUS_MASKED;
+        }
+    } else {
+        // 32-Bit MSI is always unmasked
+    }
+
+    return flags;
+}
+
+static int
+msi_describe_irq(
+        struct irq_dev *dev,
+        hwirq_t hwirq,
+        char *buffer,
+        size_t buflen)
+{
+    struct msi_irq_dev *msi_dev =
+        container_of(dev, struct msi_irq_dev, irq_dev);
+    struct pci_func *func = msi_dev->func;
+
+    snprintk(buffer, buflen,
+            "msix-%lu.%lu",
+            (ul_t)func->device->index,
+            (ul_t)func->index);
+
+    return 0;
+}
+
 static struct irq_dev_driver
 msi_irq_driver = {
     .mask_irq = msi_mask_irq,
     .unmask_irq = msi_unmask_irq,
+    .irq_status = msi_irq_status,
+    .describe_irq = irq_dev_default_describe_irq,
 };
 

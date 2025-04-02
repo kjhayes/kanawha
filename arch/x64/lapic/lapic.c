@@ -80,6 +80,57 @@ lapic_lvt_unmask_irq(
     return 0;
 }
 
+static unsigned long 
+lapic_lvt_irq_status(
+        struct irq_dev *dev,
+        hwirq_t hwirq)
+{
+    unsigned long flags = 0;
+
+    size_t reg = lapic_hwirq_to_lvt_reg[hwirq];
+    struct lapic *apic =
+        container_of(dev, struct lapic, lvt_dev);
+    if(apic_id_from_cpu(cpu_from_id(current_cpu_id())) != apic->id) {
+        return -EINVAL;
+    }
+    uint64_t lvt = lapic_read_reg(apic, reg);
+    if(lvt & (1ULL<<16)) {
+        flags |= IRQ_STATUS_MASKED;
+    }
+
+    return flags;
+}
+
+static int
+lapic_lvt_describe_irq(
+        struct irq_dev *dev,
+        hwirq_t hwirq,
+        char *buffer,
+        size_t buflen)
+{
+
+    struct lapic *lapic =
+        container_of(dev, struct lapic, lvt_dev);
+
+    char *str;
+    switch(hwirq) {
+        case LAPIC_LVT_TIMER_HWIRQ: str = "timer"; break;
+        case LAPIC_LVT_PERF_HWIRQ: str = "perf"; break;
+        case LAPIC_LVT_CMCI_HWIRQ: str = "cmci"; break;
+        case LAPIC_LVT_LINT0_HWIRQ: str = "lint0"; break;
+        case LAPIC_LVT_LINT1_HWIRQ: str = "lint1"; break;
+        case LAPIC_LVT_THERMAL_HWIRQ: str = "thermal"; break;
+        case LAPIC_LVT_ERROR_HWIRQ: str = "error"; break;
+        default: str = "???"; break;
+    }
+
+    snprintk(buffer, buflen,
+            "lapic-%lu-lvt-%s",
+            (ul_t)lapic->id,
+            str);
+    return 0;
+}
+
 static int
 lapic_ack_irq(
         struct irq_dev *dev,
@@ -130,7 +181,7 @@ lapic_trigger_irq(
     return res;
 }
 
-int
+static int
 lapic_mask_irq(
         struct irq_dev *dev,
         hwirq_t hwirq)
@@ -139,7 +190,7 @@ lapic_mask_irq(
     return -EINVAL;
 }
 
-int
+static int
 lapic_unmask_irq(
         struct irq_dev *dev,
         hwirq_t hwirq)
@@ -148,22 +199,51 @@ lapic_unmask_irq(
     return 0;
 }
 
+static unsigned long 
+lapic_irq_status(
+        struct irq_dev *dev,
+        hwirq_t hwirq)
+{
+    unsigned long flags = 0;
+    return flags;
+}
+
+static int
+lapic_describe_irq(
+        struct irq_dev *dev,
+        hwirq_t hwirq,
+        char *buffer,
+        size_t buflen)
+{
+
+    struct lapic *lapic =
+        container_of(dev, struct lapic, irq_dev);
+    snprintk(buffer, buflen,
+            "lapic-%lu",
+            (ul_t)lapic->id);
+    return 0;
+}
+
 static struct irq_dev_driver
 lapic_irq_driver = {
     .mask_irq = lapic_mask_irq,
     .unmask_irq = lapic_unmask_irq,
+    .irq_status = lapic_irq_status,
     .trigger_irq = lapic_trigger_irq,
     .ack_irq = lapic_ack_irq,
     .eoi_irq = lapic_eoi_irq,
+    .describe_irq = lapic_describe_irq,
 };
 
 static struct irq_dev_driver
 lapic_lvt_irq_driver = {
     .mask_irq = lapic_lvt_mask_irq,
     .unmask_irq = lapic_lvt_unmask_irq,
+    .irq_status = lapic_lvt_irq_status,
     .trigger_irq = NULL,
     .eoi_irq = NULL,
     .ack_irq = NULL,
+    .describe_irq = lapic_lvt_describe_irq,
 };
 
 static int

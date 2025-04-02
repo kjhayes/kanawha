@@ -74,6 +74,13 @@ sifive_plic_eoi_irq(
 {
     return -EUNIMPL;
 }
+static unsigned long
+sifive_plic_irq_status(
+        struct irq_dev *irq_dev,
+        hwirq_t hwirq)
+{
+    return IRQ_STATUS_UNKNOWN;
+}
 int
 sifive_plic_trigger_irq(
         struct irq_dev *irq_dev,
@@ -88,7 +95,9 @@ sifive_plic_irq_driver = {
     .eoi_irq = sifive_plic_eoi_irq,
     .mask_irq = sifive_plic_mask_irq,
     .unmask_irq = sifive_plic_unmask_irq,
+    .irq_status = sifive_plic_irq_status,
     .trigger_irq = sifive_plic_trigger_irq,
+    .describe_irq = irq_dev_default_describe_irq,
 };
 
 static int

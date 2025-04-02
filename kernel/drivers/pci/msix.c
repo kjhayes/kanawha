@@ -330,8 +330,8 @@ pci_func_start_msix(struct pci_func *func)
         uint64_t addr = addrs[i];
         uint32_t data = datas[i];
 
-        printk("addrs[%d] = 0x%llx\n", i, addr);
-        printk("data[%d] = 0x%lx\n", i, data);
+        dprintk("addrs[%d] = 0x%llx\n", i, addr);
+        dprintk("data[%d] = 0x%lx\n", i, data);
 
         pci_msix_bir_write_addr(func, info, i, addr);
         DEBUG_ASSERT(pci_msix_bir_read_addr(func, info, i) == addr);
@@ -386,8 +386,11 @@ pci_func_start_msix(struct pci_func *func)
         }
 
         printk("Installing Link from IRQ 0x%lx (hwirq=0x%lx) to IRQ 0x%lx (hwirq=0x%lx)\n",
-                link_from->irq, link_from->hwirq,
-                link_to->irq, link_to->hwirq);
+                (ul_t)link_from->irq,
+                (ul_t)link_from->hwirq,
+                (ul_t)link_to->irq,
+                (ul_t)link_to->hwirq);
+
         msix_dev->link_actions[i] = irq_install_direct_link(link_from, link_to);
         if(msix_dev->link_actions[i] == NULL) {
             failed_link = 1;
@@ -467,12 +470,70 @@ msix_unmask_irq(
     return pci_msix_bir_unmask(func, info, hwirq);
 }
 
+static unsigned long
+msix_irq_status(
+        struct irq_dev *dev,
+        hwirq_t hwirq)
+{
+    DEBUG_ASSERT(KERNEL_ADDR(dev));
+
+    struct msix_irq_dev *msix_dev =
+        container_of(dev, struct msix_irq_dev, irq_dev);
+    DEBUG_ASSERT(KERNEL_ADDR(msix_dev));
+
+    struct pci_func *func = msix_dev->func;
+    DEBUG_ASSERT(KERNEL_ADDR(func));
+
+    struct pci_msix_info *info = func->msix_info;
+    DEBUG_ASSERT(KERNEL_ADDR(info));
+
+    unsigned long flags = 0;
+
+    // Get whether the HWIRQ is masked
+    if(0b1 & pci_msix_bir_readl(
+            func,
+            info,
+            (hwirq * 0x10) + 0xC))
+    {
+        flags |= IRQ_STATUS_MASKED;
+    }
+
+    return flags;
+}
+
+static int
+msix_describe_irq(
+        struct irq_dev *dev,
+        hwirq_t hwirq,
+        char *buffer,
+        size_t buflen)
+{
+    struct msix_irq_dev *msix_dev =
+        container_of(dev, struct msix_irq_dev, irq_dev);
+    DEBUG_ASSERT(KERNEL_ADDR(msix_dev));
+
+    struct pci_func *func = msix_dev->func;
+    DEBUG_ASSERT(KERNEL_ADDR(func));
+
+    struct pci_msix_info *info = func->msix_info;
+    DEBUG_ASSERT(KERNEL_ADDR(info));
+
+    snprintk(buffer, buflen,
+            "msix-%lu.%lu",
+            (ul_t)func->device->index,
+            (ul_t)func->index);
+
+    return 0;
+}
+
 static struct irq_dev_driver
 msix_irq_driver = {
     .ack_irq = NULL,
     .eoi_irq = NULL,
     .mask_irq = msix_mask_irq,
     .unmask_irq = msix_unmask_irq,
+    .irq_status = msix_irq_status,
     .trigger_irq = NULL,
+    .describe_irq = msix_describe_irq,
 };
 

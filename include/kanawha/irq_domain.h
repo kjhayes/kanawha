@@ -6,6 +6,7 @@
 #include <kanawha/rwlock.h>
 #include <kanawha/cpu.h>
 #include <kanawha/percpu.h>
+#include <kanawha/irq_dev.h>
 
 struct irq_domain;
 struct irq_desc;
@@ -137,6 +138,9 @@ unmask_irq_desc(struct irq_desc *desc)
     return unmask_irq_desc_chain(desc);
 }
 
+unsigned long
+irq_desc_status(struct irq_desc *desc);
+
 int trigger_irq_desc(struct irq_desc *desc);
 
 // IRQ Actions
@@ -195,6 +199,16 @@ unmask_irq(irq_t irq) {
     return unmask_irq_desc(desc);
 }
 
+static inline unsigned long
+irq_status(irq_t irq)
+{
+    struct irq_desc *desc = irq_to_desc(irq);
+    if(desc == NULL) {
+        return IRQ_STATUS_INVALID;
+    }
+    return irq_desc_status(desc);   
+}
+
 static inline int
 trigger_irq(irq_t irq) {
     struct irq_desc *desc = irq_to_desc(irq);
@@ -214,6 +228,23 @@ int
 irq_domain_set_all_irq_dev(
         struct irq_domain *domain,
         struct irq_dev *dev);
+
+int
+describe_irq_desc(
+        printk_f *printer,
+        struct irq_desc *desc);
+
+static inline int
+describe_irq(
+        printk_f *printer,
+        irq_t irq)
+{
+    struct irq_desc *desc = irq_to_desc(irq);
+    if(desc == NULL) {
+        return -ENXIO;
+    }
+    return describe_irq_desc(printer, desc);
+}
 
 int
 dump_irq_descs(printk_f *printer);

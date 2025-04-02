@@ -119,6 +119,30 @@ riscv64_hlic_irq_dev_unmask_irq(
     return 0;
 }
 
+static unsigned long
+riscv64_hlic_irq_dev_irq_status(
+        struct irq_dev *dev,
+        hwirq_t hwirq)
+{
+    switch(hwirq) {
+        case 1:
+        case 5:
+        case 9:
+            break;
+        default:
+            return IRQ_STATUS_INVALID;
+    }
+
+    unsigned long flags = 0;
+    uint64_t sie = read_csr(sie);
+    if(!(sie & (1ULL<<hwirq))) {
+        flags |= IRQ_STATUS_MASKED;
+    }
+
+    return flags;
+}
+
+
 static int
 riscv64_hlic_irq_dev_trigger_irq(
         struct irq_dev *dev,
@@ -141,7 +165,9 @@ riscv64_hlic_irq_dev_driver = {
     .eoi_irq = riscv64_hlic_irq_dev_eoi_irq,
     .mask_irq = riscv64_hlic_irq_dev_mask_irq,
     .unmask_irq = riscv64_hlic_irq_dev_unmask_irq,
+    .irq_status = riscv64_hlic_irq_dev_irq_status,
     .trigger_irq = riscv64_hlic_irq_dev_trigger_irq,
+    .describe_irq = irq_dev_default_describe_irq,
 };
 
 int
