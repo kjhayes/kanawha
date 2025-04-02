@@ -41,10 +41,13 @@ pci_probe_device(
         if(res == -ENXIO) {
             break;
         } else if(res) {
-            return res;
-        } else {
-            func_index++;
+            wprintk("Failed to probe PCI function (bus=%lu, device=%lu, func=%lu) (err=%s)\n",
+                    (ul_t)bus->bus_index,
+                    (ul_t)dev_index,
+                    (ul_t)func_index,
+                    errnostr(res));
         }
+        func_index++;
     }
 
     return 0;

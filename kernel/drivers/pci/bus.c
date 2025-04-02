@@ -35,7 +35,10 @@ pci_probe_bus(
 #endif
         }
         else if(res) {
-            return res;
+            wprintk("Failed to probe PCI device (bus=%lu, device=%lu) (err=%s)\n",
+                    (ul_t)bus,
+                    (ul_t)dev_index,
+                    errnostr(res));
         }
     }
 

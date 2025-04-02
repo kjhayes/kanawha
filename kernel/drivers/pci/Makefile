@@ -15,6 +15,7 @@ pci-y += \
 	mailbox.o
 
 pci-$(CONFIG_PCI_PORT_CAM) += port_cam.o
+pci-$(CONFIG_PCI_DEVTREE) += devtree.o
 
 pci-$(CONFIG_SYSFS_PCI) += sysfs.o
 

@@ -13,16 +13,41 @@ static size_t __next_domain_id = 0;
 
 static int
 pci_domain_enumerate(
-        struct pci_domain *domain) 
+        struct pci_domain *domain,
+        size_t assumed_bus_start,
+        size_t assumed_bus_count) 
 {
-    // We assume Bus 0 exists, and we will recursively search for devices/buses from there
-    return pci_probe_bus(domain, 0);
+    int res;
+    for(size_t bus_index = 0; bus_index < assumed_bus_count; bus_index++) {
+        size_t bus = assumed_bus_start + bus_index;
+        res = pci_probe_bus(domain, bus);
+        if(res) {
+            wprintk("Failed to probe PCI bus %lu! (err=%s)\n",
+                    (ul_t)bus,
+                    errnostr(res));
+        }
+    }
+    return 0;
 }
 
 int
 register_pci_domain(
         struct pci_domain *domain,
         struct pci_cam *cam)
+{
+    return register_pci_domain_with_assumed_buses(
+            domain,
+            cam,
+            0,
+            1);
+}
+
+int
+register_pci_domain_with_assumed_buses(
+        struct pci_domain *domain,
+        struct pci_cam *cam,
+        size_t assumed_bus_start,
+        size_t assumed_bus_count)
 {
     int res;
 
@@ -38,7 +63,7 @@ register_pci_domain(
     printk("Registered PCI Domain %lu\n", domain->domain_id);
 
     // Enumerate the devices we find on the bus
-    res = pci_domain_enumerate(domain);
+    res = pci_domain_enumerate(domain, assumed_bus_start, assumed_bus_count);
     if(res) {
         eprintk("Encountered error (%s) when enumerating devices of PCI Domain %lu!\n",
                 errnostr(res), domain->domain_id);

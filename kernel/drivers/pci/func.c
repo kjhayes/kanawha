@@ -2,6 +2,7 @@
 #include <kanawha/types.h>
 #include <kanawha/kmalloc.h>
 #include <kanawha/string.h>
+#include <kanawha/page_alloc.h>
 #include <drivers/pci/cfg.h>
 #include <drivers/pci/pci.h>
 #include <drivers/pci/cap.h>
@@ -82,7 +83,7 @@ pci_setup_bars(
 #ifdef CONFIG_PORT_IO
         masked &= ~(bar->type == PCI_BAR_PIO ? 0x3ULL : 0xFULL);
 #else
-        masked &= 0xFULL;
+        masked &= ~0xFULL;
 #endif
         dprintk("masked=0x%llx\n", (ull_t)masked);
         uint64_t size_mask = 0xFFFFFFFFULL;
@@ -115,16 +116,44 @@ pci_setup_bars(
 
 #ifdef CONFIG_PORT_IO
         if(bar->type == PCI_BAR_PIO) {
-            bar->phys_addr = original & ~0x3ULL;
-            bar->pio.base = bar->phys_addr;
+            bar->phys_addr = (void __phys *)(uintptr_t)(original & ~0x3ULL);
+            bar->pio.base = (uintptr_t)(bar->phys_addr);
         } else {
 #endif
             // MMIO
-            bar->phys_addr = original & ~0xFULL;
+            bar->phys_addr = (void __phys *)(uintptr_t)(original & ~0xFULL);
+
+#ifdef CONFIG_PCI_ALLOC_UNINITIALIZED_MMIO_BARS
+            if(bar->phys_addr == 0) {
+                int res;
+                order_t order = ptr_orderof(bar->size);
+                if(order < 12) {
+                    order = 12;
+                }
+                unsigned long flags = 0;
+                if(bar->mmio.type == 2) {
+                    // 64-bit bar
+                } else {
+                    flags |= PAGE_ALLOC_32BIT;
+                }
+                res = page_alloc(order, &bar->phys_addr, flags);
+                if(res) {
+                    wprintk("Failed to remap uninitialized PCI MMIO BAR! (err=%s)\n",
+                            errnostr(res));
+                    bar->phys_addr = 0;
+                } else {
+                    pci_func_raw_write_bar(func, bar_index, ((uint32_t)(uintptr_t)bar->phys_addr) | (original & 0xFULL));
+                    if(bar->mmio.type == 2) {
+                        pci_func_raw_write_bar(func, upper_bar_index, (uint32_t)((uintptr_t)bar->phys_addr>>32));
+                    }
+                    printk("Remapped Uninitialized PCI MMIO BAR to physical addr=%p\n", bar->phys_addr);
+                }
+            }
+#endif
 
             bar->mmio.base = mmio_map((void __phys *)bar->phys_addr, size);
             if(bar->mmio.base == NULL) {
-                eprintk("Failed to map PCI MMIO BAR (phys_addr=%p)\n",
+                eprintk("Failed to map PCI MMIO BAR (phys_addr=%p) (err=%s)\n",
                         bar->phys_addr);
                 bar->type = PCI_BAR_NONE;
                 continue;

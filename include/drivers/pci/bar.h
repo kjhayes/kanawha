@@ -11,7 +11,7 @@
 struct pci_bar
 {
     size_t size;
-    uint64_t phys_addr;
+    void __phys *phys_addr;
 
     enum
     {

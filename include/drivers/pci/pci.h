@@ -15,7 +15,7 @@
 #endif
 
 #define PCI_MAX_BUSES_PER_DOMAIN (1ULL<<8)
-#define PCI_MAX_DEVICES_PER_BUS  (1ULL<<6)
+#define PCI_MAX_DEVICES_PER_BUS  (1ULL<<5)
 #define PCI_MAX_FUNC_PER_DEVICE  (1ULL<<3)
 
 struct pci_domain
@@ -162,10 +162,20 @@ pci_probe_func(
         struct pci_device *device,
         uint8_t function);
 
+// Probes the domain assuming bus zero exists
 int
 register_pci_domain(
         struct pci_domain *domain,
         struct pci_cam *cam);
+
+// Instead of probing from bus zero, probe a range of assumed to exist buses
+// [assumed_bus_start, assumed_bus_start + assumed_bus_count)
+int
+register_pci_domain_with_assumed_buses(
+        struct pci_domain *domain,
+        struct pci_cam *cam,
+        size_t assumed_bus_start,
+        size_t assumed_bus_count);
 
 int
 register_pci_driver(

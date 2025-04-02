@@ -7,9 +7,18 @@ config PCI
 
 config PCI_ASSUME_CONTIGUOUS_DEVICES
     bool "Assume Contiguous Devices"
+    depends on PCI
     default n
     help
       Assume PCI devices are contiguous within a bus, this is not required, but may speed up boot times by avoiding enumerating every possible bus:device:func.
+
+config PCI_ALLOC_UNINITIALIZED_MMIO_BARS
+    bool "Map Uninitialized MMIO BAR(s) Onto RAM"
+    depends on PCI
+    default n
+    help
+      If the kernel comes across an uninitialized MMIO BAR (physical address 0)
+      then it will attempt to allocate physical memory and re-map the BAR to the memory
 
 menu "PCI Configuration Space Access Mechanisms"
 depends on PCI
@@ -20,6 +29,13 @@ config PCI_PORT_CAM
     default y
     help
       Assume a PCI domain exists which can be accessed using the ports 0xCF8 and 0xCFC
+
+config PCI_DEVTREE
+    bool "Device Tree PCI Node"
+    depends on DEVICETREE && PCI
+    default y
+    help
+      Look for PCI domain nodes in the device tree
 
 endmenu
 
