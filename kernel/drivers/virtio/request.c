@@ -112,6 +112,8 @@ virtio_request_append(
         return res;
     }
 
+    req->num_buffers++;
+
     return 0;
 }
 
@@ -139,5 +141,105 @@ virtio_request_append_output(
             buffer,
             bufsize,
             1);
+}
+
+int
+virtio_transact(
+        struct virtio_queue *queue,
+        size_t input_count,
+        void **input_datas,
+        size_t *input_sizes,
+        size_t output_count,
+        void **output_datas,
+        size_t *output_sizes)
+{
+    int res;
+
+    size_t allocated_inputs = 0;
+    size_t allocated_outputs = 0;
+    dma_addr_t input_buffers[input_count];
+    dma_addr_t output_buffers[output_count];
+    struct virtio_request *req = NULL;
+
+    req = virtio_request_create(queue);
+    if(req == NULL) {
+        res = -ENOMEM;
+        goto exit;
+    }
+
+    for(size_t i = 0; i < input_count; i++) {
+        res = dma_alloc(
+                input_sizes[i],
+                0,
+                0,
+                &input_buffers[i]);
+        if(res) {
+            goto exit;
+        }
+        allocated_inputs++;
+
+        void *data = dma_virt_addr(input_buffers[i]);
+        memcpy(data, input_datas[i], input_sizes[i]);
+
+        res = virtio_request_append_input(
+                req,
+                dma_phys_addr(input_buffers[i]),
+                input_sizes[i]);
+        if(res) {
+            goto exit;
+        }
+    }
+    for(size_t i = 0; i < output_count; i++) {
+        res = dma_alloc(
+                output_sizes[i],
+                0,
+                0,
+                &output_buffers[i]);
+        if(res) {
+            goto exit;
+        }
+        allocated_outputs++;
+
+        res = virtio_request_append_output(
+                req,
+                dma_phys_addr(output_buffers[i]),
+                output_sizes[i]);
+        if(res) {
+            goto exit;
+        }
+    }
+
+    res = virtio_request_launch(req);
+    if(res) {
+        goto exit;
+    }
+
+    res = virtio_request_await(req);
+    if(res) {
+        goto exit;
+    }
+
+    for(size_t i = 0; i < output_count; i++) {
+        memcpy(
+            output_datas[i],
+            dma_virt_addr(output_buffers[i]),
+            output_sizes[i]); 
+    }
+
+    res = 0;
+
+exit:
+    if(req) {
+        virtio_request_destroy(req);
+    }
+
+    for(size_t i = 0; i < allocated_inputs; i++) {
+        dma_free(input_buffers[i], input_sizes[i]);
+    }
+    for(size_t i = 0; i < allocated_outputs; i++) {
+        dma_free(output_buffers[i], output_sizes[i]);
+    }
+
+    return res;
 }
 

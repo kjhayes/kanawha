@@ -113,6 +113,8 @@ virtio_queue_init_struct(
         return res;
     }
 
+    dprintk("VIRTIO Initialized Queue %p\n", queue);
+
     return 0;
 }
 
@@ -240,9 +242,6 @@ virtio_queue_point_desc(
     desc->addr = (uintptr_t)buffer;
     desc->len = size;
 
-    desc->flags = 0; // Default to no flags
-    desc->next = 0; // NULL
-
     if(output) {
         desc->flags |= VIRTQ_DESC_F_WRITE;
     } else {
@@ -272,7 +271,7 @@ virtio_queue_try_push_avail_ring(
         return -EBUSY;
     }
 
-    bitmap_set(queue->avail_bitmap, idx);
+    bitmap_set(queue->avail_bitmap, req->avail_slot);
 
     avail_ring->ring[req->avail_slot] = req->root_descriptor;
     mbarrier();
@@ -346,6 +345,7 @@ virtio_queue_find_launched_req_by_desc(
         uint16_t desc_id)
 {
     ilist_node_t *node;
+
     ilist_for_each(node, &queue->launched_reqs) {
         struct virtio_request *req =
             container_of(node, struct virtio_request, queue_node);
@@ -353,6 +353,7 @@ virtio_queue_find_launched_req_by_desc(
             return req;
         }
     }
+
     return NULL;
 }
 
@@ -362,6 +363,8 @@ virtio_queue_handle_used_notification(
 {
     int res;
 
+    DEBUG_ASSERT(KERNEL_ADDR(queue));
+
     int irq_flags = spin_lock_irq_save(&queue->used_lock);
 
     struct virtio_queue_used *used_ring =
@@ -370,7 +373,12 @@ virtio_queue_handle_used_notification(
     size_t last_idx = queue->last_used_idx;
     size_t idx = used_ring->idx;
 
-    size_t num_new_elem = idx - last_idx;
+    size_t num_new_elem;
+    if(idx >= last_idx) {
+        num_new_elem = idx - last_idx;
+    } else {
+        num_new_elem = ((1ULL<<16) - last_idx) + idx;
+    }
     dprintk("virtio_queue_handle_used_notification (num_new_elem = 0x%lx)\n",
             num_new_elem);
 
@@ -386,10 +394,12 @@ virtio_queue_handle_used_notification(
                     queue,
                     id);
         if(req == NULL) {
-            eprintk("virtio_queue: Device or Driver Issue, Descriptor in Used Buffer without a corresponding launched request! (id=0x%lx)\n",
+            wprintk("virtio_queue: Device or Driver Issue, Descriptor in Used Buffer without a corresponding launched request! (id=0x%lx)\n",
                     (ul_t)id);
             continue;
         }
+
+        size_t avail_slot = req->avail_slot;
 
         spin_lock(&queue->req_lock);
         ilist_remove(&req->queue_node, &queue->launched_reqs);
@@ -399,7 +409,7 @@ virtio_queue_handle_used_notification(
         spin_unlock(&queue->req_lock);
 
         spin_lock(&queue->avail_lock);
-        bitmap_clear(queue->avail_bitmap, req->avail_slot);
+        bitmap_clear(queue->avail_bitmap, avail_slot);
         spin_unlock(&queue->avail_lock);
     }
 

@@ -71,12 +71,41 @@ virtio_request_await(
         res = virtio_queue_try_finish_request(req->queue, req);
         if(res) {
             virtio_queue_notify(req->queue);
+            virtio_queue_handle_used_notification(req->queue);
             continue;
         }
         break;
     }
 
     return 0;
+}
+
+int
+virtio_transact(
+        struct virtio_queue *queue,
+        size_t input_count,
+        void **input_datas,
+        size_t *input_sizes,
+        size_t output_count,
+        void **output_datas,
+        size_t *output_sizes);
+
+static inline int
+virtio_transact_1_1(
+        struct virtio_queue *queue,
+        void *input_buffer,
+        size_t input_buflen,
+        void *output_buffer,
+        size_t output_buflen)
+{
+    return virtio_transact(
+            queue,
+            1,
+            &input_buffer,
+            &input_buflen,
+            1,
+            &output_buffer,
+            &output_buflen);
 }
 
 #endif

@@ -20,7 +20,8 @@ virtio_pci_queue_used_notification_irq_handler(
     struct virtio_pci_queue *queue =
         action->handler_data.priv_data;
 
-    dprintk("virtio_pci_queue: Queue(0x%lx) IRQ Handler!\n",
+    dprintk("virtio_pci_queue: queue=%p, Queue(0x%lx) IRQ Handler!\n",
+            &queue->queue,
             queue->queue.index);
 
     res = virtio_queue_handle_used_notification(&queue->queue);
