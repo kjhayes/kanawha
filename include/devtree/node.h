@@ -71,7 +71,7 @@ dt_node_reg_count(
 int
 dt_node_read_reg(
         struct dt_node *node,
-        size_t index,
+        size_t buflen,
         void __phys **reg_out,
         size_t *size_out);
 
