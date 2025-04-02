@@ -2,6 +2,7 @@
 #include <kanawha/syscall.h>
 #include <kanawha/proc/process.h>
 #include <kanawha/strace.h>
+#include <kanawha/irq.h>
 
 #define __KANAWHA_SYSCALL_KEEP_XLIST
 #include <kanawha/uapi/syscall.h>
@@ -321,6 +322,8 @@ handle_syscall(
             syscall_unknown(process, id);
             ret_val = -EINVAL;
     }
+
+    DEBUG_ASSERT_MSG(irqs_enabled(), "Returned from syscall with IRQ's disabled!");
 
     strace_end_syscall(process, id);
 
