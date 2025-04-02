@@ -34,4 +34,10 @@ config DEBUG_SYSCALL_ENVIRON
     help
       Log info about environ system calls
 
+config DEBUG_SYSCALL_MMAP
+    bool "Debug mmap"
+    depends on DEBUGGING
+    default n
+    help
+      Log info about each mmap syscall
 

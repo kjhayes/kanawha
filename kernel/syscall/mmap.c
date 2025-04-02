@@ -39,6 +39,17 @@ syscall_mmap(
         return res;
     }
 
+#ifdef CONFIG_DEBUG_SYSCALL_MMAP
+    printk("PID(%ld) syscall_mmap(file=%ld, file_offset=0x%lx, where=%p, *where=%p, size=0x%lx, flags=0x%lx)\n",
+            (sl_t)process->id,
+            (sl_t)file,
+            (ul_t)file_offset,
+            (void*)where,
+            (void*)requested,
+            (ul_t)size,
+            (ul_t)mmap_flags);
+#endif
+
     uint8_t type = mmap_flags & 0b11;
 
     // Mis-aligned/Mis-sized
@@ -91,11 +102,10 @@ syscall_mmap(
         // we need to write the actual region base
         // back to usermem
         if(hint_offset != (uintptr_t)requested) {
-            requested = (void __user *)hint_offset;
             res = process_write_usermem(
                     process,
                     where,
-                    &requested,
+                    &hint_offset,
                     sizeof(void __user *));
             if(res) {
                 // TODO: this is tricky, it's not really possible to
@@ -105,6 +115,15 @@ syscall_mmap(
                         errnostr(res));
                 return res;
             }
+#ifdef CONFIG_DEBUG_SYSCALL_MMAP
+            if((uintptr_t)hint_offset != (uintptr_t)requested) {
+                printk("PID(%ld) syscall_mmap: re-mapped hint offset (%p) to (%p)\n",
+                    (sl_t)process->id,
+                    (void*)requested,
+                    (void*)hint_offset
+                    );
+            }
+#endif
         }
     }
 
@@ -137,7 +156,9 @@ syscall_munmap(
             process,
             (uintptr_t)mapping);
     if(res) {
-        wprintk("syscall_munmap: mmap_unmap_region returned %s\n",
+        wprintk("syscall_munmap: PID(%ld) mapping=%p, mmap_unmap_region returned %s\n",
+                (sl_t)process->id,
+                (void*)mapping,
                 errnostr(res));
         return res;
     }

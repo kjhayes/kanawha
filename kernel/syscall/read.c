@@ -19,10 +19,11 @@ syscall_read(
     ssize_t res;
 
 #ifdef CONFIG_DEBUG_SYSCALL_READ
-    printk("PID(%ld) syscall_read(file=%ld, size=0x%llx)\n",
+    printk("PID(%ld) syscall_read(file=%ld, size=0x%llx, dst=%p)\n",
             (sl_t)process->id,
             (sl_t)file,
-            (ull_t)size);
+            (ull_t)size,
+            (void*)dst);
 #endif
 
     struct file *desc
