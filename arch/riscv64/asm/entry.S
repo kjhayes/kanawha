@@ -17,8 +17,19 @@
 .global riscv64_kernel_entry
 .type riscv64_kernel_entry, @function
 
+    // Emulate the Linux RISCV boot header
 riscv64_kernel_entry:
     j riscv64_kernel_boot
+    j .
+    .quad 0x0 /* Image load offset, little endian */
+    .quad 0x0 /* Effective Image size, little endian */
+    .long 0x0 /* kernel flags, little endian */
+    .long 0x0 /* Version of this header */
+    .long 0x0 /* Reserved */
+    .quad 0x0 /* Reserved */
+    .quad 0x5643534952 /* Magic number, little endian, "RISCV" */
+    .long 0x05435352   /* Magic number 2, little endian, "RSC\x05" */
+    .long 0x0 /* Reserved for PE COFF offset */
 
 .section .boot.text, "ax"
 
