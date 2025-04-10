@@ -4,7 +4,7 @@ obj-y += \
 	stree.o \
 	buddy.o \
 	kheap.o \
-	kmalloc.o \
+	kmalloc/ \
 	printk.o \
 	klog.o \
 	mem_flags.o \

@@ -21,6 +21,7 @@ kheap_dump(struct kheap *heap, printk_f *printer)
     {
         struct kheap_free_region *region =
             container_of(free_region, struct kheap_free_region, list_node);
+        DEBUG_ASSERT(KERNEL_ADDR(region));
         (*printer)("FREE [%p - %p)\n",
                 (void*)region,
                 (void*)region + region->size);
@@ -111,7 +112,6 @@ kheap_merge(struct kheap *heap)
             dprintk("kheap_merge cur=%p, next=%p\n",
                     cur, next);
 
-
             uintptr_t cur_end = (uintptr_t)cur + cur->size;
             if(cur_end == (uintptr_t)next) {
                 // We can merge the two regions
@@ -122,8 +122,10 @@ kheap_merge(struct kheap *heap)
 //#ifdef DEBUG
             else if(cur_end > (uintptr_t)next) {
                 // Something is wrong
-                panic("kheap_merge found overlapping regions in the kheap free list! cur_end=%p, next=%p, free_list=%p\n",
+                eprintk("kheap_merge found overlapping regions in the kheap free list! cur_end=%p, next=%p, free_list=%p\n",
                         (uintptr_t)cur_end, (uintptr_t)next, (uintptr_t)&heap->free_list);
+                kheap_dump(heap, do_panic_printk);
+                panic("kheap is corrupted!\n");
                 return;
             }
 //#endif

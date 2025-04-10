@@ -1,5 +1,4 @@
 
-//#define DEBUG
 #include <kanawha/printk.h>
 
 #include <kanawha/kmalloc.h>
@@ -34,7 +33,7 @@ static struct kheap kmalloc_heap = {
 };
 
 static int
-kmalloc_init(void)
+kmalloc_kheap_init(void)
 {
     int res;
 
@@ -57,7 +56,7 @@ kmalloc_init(void)
 
     return kheap_init(&kmalloc_heap, (void*)vbase, (1ULL<<CONFIG_HEAP_SIZE_ORDER));
 }
-declare_init_desc(kmalloc, kmalloc_init, "Initializing Kernel Heap");
+declare_init_desc(kmalloc, kmalloc_kheap_init, "Initializing Kernel Heap");
 
 
 void * kmalloc(size_t size)

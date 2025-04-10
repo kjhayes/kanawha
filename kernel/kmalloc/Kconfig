@@ -1,0 +1,8 @@
+
+choice
+    prompt "Kmalloc Backend"
+    default KMALLOC_KHEAP
+    config KMALLOC_KHEAP
+        bool "Heap Allocator"
+endchoice
+

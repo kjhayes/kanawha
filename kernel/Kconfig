@@ -144,7 +144,7 @@ config DEBUG_KHEAP_TOUCH
 
 config DEBUG_KMALLOC_BITMAP
     bool "Track kmalloc Allocations in a Global Bitmap"
-    depends on DEBUGGING
+    depends on DEBUGGING && KMALLOC_KHEAP
     default n
     help
       Track every byte in the kmalloc heap with a large bitmap of allocations,
@@ -179,6 +179,10 @@ menu "syscall Logging"
 source "kernel/syscall/Kconfig"
 endmenu
 
+endmenu
+
+menu "kmalloc Options"
+source "kernel/kmalloc/Kconfig"
 endmenu
 
 menu "Filesystems"
