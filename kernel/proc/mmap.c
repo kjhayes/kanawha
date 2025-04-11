@@ -119,6 +119,7 @@ mmap_deattach(
         
         // Don't unlock the lock just to be extra safe,
         // we'd rather deadlock than use an invalid vmem_region
+        enable_restore_irqs(irq_flags);
         return 0;
     }
 
