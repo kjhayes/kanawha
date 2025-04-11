@@ -20,12 +20,15 @@ syscall_unknown(
 
 int
 handle_syscall(
-        struct process *process,
         syscall_id_t id,
         struct syscall_args *args,
         uint64_t *ret_out)
 {
     uint64_t ret_val;
+
+    struct process *process = current_process();
+
+    DEBUG_ASSERT_MSG(irqs_enabled(), "Handling syscall with IRQ(s) disabled!");
 
     strace_begin_syscall(process, id);
 
@@ -323,7 +326,7 @@ handle_syscall(
             ret_val = -EINVAL;
     }
 
-    DEBUG_ASSERT_MSG(irqs_enabled(), "Returned from syscall with IRQ's disabled!");
+    DEBUG_ASSERT_MSG(irqs_enabled(), "Returned from syscall (%s) with IRQ's disabled!", syscall_id_string(id));
 
     strace_end_syscall(process, id);
 

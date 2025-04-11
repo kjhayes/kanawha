@@ -74,7 +74,7 @@ x64_route_syscall(struct x64_syscall_state *state)
     args.args[4] = state->caller_regs[PUSHED_CALLER_REGS_INDEX_R9];
     args.args[5] = state->caller_regs[PUSHED_CALLER_REGS_INDEX_R10];
 
-    res = handle_syscall(process, id, &args, ret_val);
+    res = handle_syscall(id, &args, ret_val);
     if(res) {
         wprintk("handle_syscall returned (%s)\n", errnostr(res));
     }

@@ -26,7 +26,6 @@ int syscall_unknown(struct process *process, syscall_id_t id);
 
 int
 handle_syscall(
-        struct process *process,
         syscall_id_t id,
         struct syscall_args *args,
         uint64_t *ret_out);

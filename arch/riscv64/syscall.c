@@ -30,7 +30,6 @@ riscv64_syscall_handler(
 
     enable_irqs();
     res = handle_syscall(
-            current_process(),
             state->caller_regs[RISCV64_PUSHED_CALLER_REGS_INDEX_A7],
             &args,
             &state->caller_regs[RISCV64_PUSHED_CALLER_REGS_INDEX_A0]);
