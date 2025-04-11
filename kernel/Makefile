@@ -16,6 +16,7 @@ obj-y += \
 	common.o \
 	bitmap.o \
 	ramfile.o \
+	blk_dev.o \
 	char_dev.o \
 	fb_dev.o \
 	rand_dev.o \

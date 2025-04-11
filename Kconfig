@@ -37,12 +37,12 @@ config MAX_CPUS
 
 choice
   prompt "Unhandled Interrupt Reaction"
-  default PANIC
-  config PANIC
+  default UNHANDLED_IRQ_PANIC
+  config UNHANDLED_IRQ_PANIC
     bool "Panic"
-  config WARN
+  config UNHANDLED_IRQ_WARN
     bool "Warn"
-  config IGNORE
+  config UNHANDLED_IRQ_IGNORE
     bool "Ignore"
 endchoice
 

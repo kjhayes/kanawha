@@ -7,8 +7,7 @@
 #include <kanawha/atomic.h>
 #include <kanawha/ptree.h>
 #include <kanawha/stree.h>
-
-#define MIN_BLOCK_DEVICE_PAGE_ORDER 12
+#include <kanawha/fs/flat.h>
 
 struct blk_dev;
 struct blk_driver;
@@ -22,7 +21,6 @@ ARG(struct blk_dev_request *, req)
 // Get the total size of the disk in sectors
 #define BLOCK_DEVICE_NUM_SECTORS_SIG(RET,ARG)\
 RET(int)\
-ARG(size_t, disk_index)\
 ARG(size_t *, num_sec)
 
 #define BLOCK_DEVICE_OP_LIST(OP, ...)\
@@ -33,18 +31,12 @@ struct blk_driver {
 DECLARE_OP_LIST_PTRS(BLOCK_DEVICE_OP_LIST, struct blk_dev *)
 };
 
-struct blk_dev_disk;
-
 struct blk_dev
 {
     struct blk_driver *driver;
 
     struct stree_node blk_dev_node;
-
-    order_t sector_order; // Order of a sector on the disk
-    size_t num_disks;
-
-    struct blk_dev_disk *disks;
+    struct flat_node flat_fs_node;
 };
 
 DEFINE_OP_LIST_WRAPPERS(
@@ -61,48 +53,6 @@ DEFINE_OP_LIST_WRAPPERS(
 #undef BLOCK_DEVICE_OP_LIST
 
 /*
- * External Cached API
- */
-
-static inline order_t
-blk_dev_sector_order(
-        struct blk_dev *dev)
-{
-    return dev->sector_order;
-}
-
-struct cached_page *
-blk_dev_get_sector(
-        struct blk_dev *dev,
-        size_t disk,
-        size_t sector);
-
-int
-blk_dev_put_sector(
-        struct cached_page *page);
-
-// Read/Write Functions Using Cached Pages
-//
-// returns 0 on success, if less is read or
-// written than expected, len is modified to
-// indicate the amount actually read or written
-int
-blk_dev_read(
-        struct blk_dev *dev,
-        size_t disk_index,
-        void *buffer,
-        size_t offset,
-        size_t *len);
-
-int
-blk_dev_write(
-        struct blk_dev *dev,
-        size_t disk_index,
-        void *buffer,
-        size_t offset,
-        size_t *len);
-
-/*
  * Internal API(s)
  */
 
@@ -110,34 +60,13 @@ blk_dev_write(
 int
 register_blk_dev(struct blk_dev *blk,
         const char *name,
-        struct blk_driver *driver,
-        order_t sector_order,
-        size_t num_disks);
+        struct blk_driver *driver);
 
 int
 unregister_blk_dev(struct blk_dev *blk);
 
 struct blk_dev *
 blk_dev_find(const char *name);
-
-/*
- * Blocking Direct Read/Write Function
- */
-int
-blk_dev_read_direct(
-        struct blk_dev *dev,
-        size_t disk_index,
-        void *buffer,
-        size_t base_sector,
-        size_t num_sectors);
-
-int
-blk_dev_write_direct(
-        struct blk_dev *dev,
-        size_t disk_index,
-        void *buffer,
-        size_t base_sector,
-        size_t num_sectors);
 
 // blk_dev request API
 struct blk_dev_request {
