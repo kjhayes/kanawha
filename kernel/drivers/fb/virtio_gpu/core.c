@@ -95,7 +95,7 @@ virtio_gpu_fb_load_buffer(
 {
     int res;
 
-    printk("virtio_gpu_fb_load_buffer\n");
+    dprintk("virtio_gpu_fb_load_buffer\n");
 
     struct virtio_gpu *gpu =
         container_of(dev, struct virtio_gpu, fb_dev);
@@ -204,7 +204,7 @@ virtio_gpu_fb_unload_buffer(
 {
     int res;
 
-    printk("virtio_gpu_fb_unload_buffer\n");
+    dprintk("virtio_gpu_fb_unload_buffer\n");
 
     struct virtio_gpu *gpu =
         container_of(dev, struct virtio_gpu, fb_dev);
@@ -227,7 +227,7 @@ virtio_gpu_fb_flush_buffer(
 {
     int res;
 
-    printk("virtio_gpu_fb_flush_buffer\n");
+    dprintk("virtio_gpu_fb_flush_buffer\n");
 
     struct virtio_gpu *gpu =
         container_of(dev, struct virtio_gpu, fb_dev);
