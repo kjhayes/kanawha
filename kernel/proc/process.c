@@ -169,6 +169,8 @@ init_process_kernel_entry(void *in)
                 binary_path, errnostr(res));
     }
 
+    enable_irqs();
+
     res = syscall_exec(
             process,
             binary_fd,
@@ -177,6 +179,8 @@ init_process_kernel_entry(void *in)
         panic("Failed to exec the init process file \"%s\"! (err=%s)\n",
                 binary_path, errnostr(res));
     }
+
+    disable_irqs();
 
     dprintk("init_process_kernel_entry(%p)\n",
             NULL);
@@ -312,6 +316,8 @@ static int
 launch_init_process(void)
 {
     int res;
+
+    DEBUG_ASSERT_MSG(irqs_enabled(), "Running launch_init_process with interrupts disabled!");
 
     if(init_process != NULL) {
         panic("launch_init_process: init_process is not NULL!\n");
