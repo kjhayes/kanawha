@@ -105,6 +105,7 @@ klog_putc(char c)
             return -ENOMEM;
         }
         ptree_insert(&klog_tree, &new_frame->tree_node, offset);
+        frame = new_frame;
     }
 
     frame->data[frame->filled_len] = c;
