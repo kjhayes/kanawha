@@ -39,4 +39,8 @@ kheap_free_specific(
         void *addr,
         size_t size);
 
+// Returns 0 if no problems are detected with the heap
+int
+kheap_validate(struct kheap *heap);
+
 #endif

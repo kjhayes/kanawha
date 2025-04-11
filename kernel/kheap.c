@@ -2,11 +2,9 @@
 #include <kanawha/kheap.h>
 #include <kanawha/assert.h>
 
-#define KHEAP_GROWTH_ORDER 21
-
 // This assertion enforces that we stay aligned virtually
-_Static_assert(KHEAP_GROWTH_ORDER <= CONFIG_HEAP_ALIGN_ORDER,
-        "KHEAP_GROWTH_ORDER > CONFIG_HEAP_ALIGN_ORDER!");
+_Static_assert(CONFIG_HEAP_GROWTH_ORDER <= CONFIG_HEAP_ALIGN_ORDER,
+        "CONFIG_HEAP_GROWTH_ORDER > CONFIG_HEAP_ALIGN_ORDER!");
 
 struct kheap_free_region {
     ilist_node_t list_node;
@@ -17,6 +15,9 @@ static void
 kheap_dump(struct kheap *heap, printk_f *printer)
 {
     ilist_node_t *free_region;
+
+    DEBUG_ASSERT(kheap_validate(heap) == 0);
+
     ilist_for_each(free_region, &heap->free_list)
     {
         struct kheap_free_region *region =
@@ -35,13 +36,13 @@ kheap_grow(
     int res;
     dprintk("kheap_grow\n");
 
-    size_t page_size = (1ULL << KHEAP_GROWTH_ORDER);
+    size_t page_size = (1ULL << CONFIG_HEAP_GROWTH_ORDER);
     if(heap->heap_size - heap->mapped < page_size) {
         return -ENOMEM;
     }
 
     void __phys * page_phys;
-    res = page_alloc(KHEAP_GROWTH_ORDER, &page_phys, 0);
+    res = page_alloc(CONFIG_HEAP_GROWTH_ORDER, &page_phys, 0);
     if(res) {
         eprintk("kheap_grow: failed to allocate heap page! (err=%s)\n", errnostr(res));
         return res;
@@ -57,7 +58,7 @@ kheap_grow(
             VMEM_REGION_WRITE|VMEM_REGION_READ|VMEM_REGION_EXEC);
     if(res) {
         eprintk("kheap_grow: failed to map heap page! (err=%s)\n", errnostr(res));
-        page_free(KHEAP_GROWTH_ORDER, page_phys);
+        page_free(CONFIG_HEAP_GROWTH_ORDER, page_phys);
         return res;
     }
 
@@ -76,10 +77,8 @@ kheap_grow(
 static int
 kheap_shrink(struct kheap *heap)
 {
-    // TODO (LOCK ME)
-
     int res;
-    size_t page_size = (1ULL << KHEAP_GROWTH_ORDER);
+    size_t page_size = (1ULL << CONFIG_HEAP_GROWTH_ORDER);
     if(heap->mapped < page_size) {
         return -EINVAL;
     }
@@ -88,7 +87,7 @@ kheap_shrink(struct kheap *heap)
     // heap region page tables and determine what physical
     // page to free
 
-    // heap->mapped -= (1ULL << KHEAP_GROWTH_ORDER);
+    // heap->mapped -= (1ULL << CONFIG_HEAP_GROWTH_ORDER);
 
     return -EUNIMPL;
 }
@@ -139,6 +138,7 @@ kheap_merge(struct kheap *heap)
 size_t kheap_amount_free(struct kheap *heap)
 {
     size_t size = 0;
+
     ilist_node_t *node;
     ilist_for_each(node, &heap->free_list) {
         struct kheap_free_region *region =
@@ -294,11 +294,16 @@ kheap_free_specific(struct kheap *heap, void *addr, size_t size)
         return -EINVAL;
     }
 
+    DEBUG_ASSERT((uintptr_t)heap->vbase <= (uintptr_t)addr);
+    DEBUG_ASSERT(((uintptr_t)heap->vbase + (size_t)heap->heap_size) >= ((uintptr_t)addr + (size_t)size));
+
 #ifdef CONFIG_DEBUG_KHEAP_TOUCH
     memset(addr, 0xAA, size);
 #endif
 
     struct kheap_free_region *region = (struct kheap_free_region*)addr;
+    DEBUG_ASSERT(KERNEL_ADDR(region));
+
     region->size = size;
 
     ilist_node_t *node;
@@ -371,6 +376,13 @@ kheap_init(
         return res;
     }
 
+    return 0;
+}
+
+int
+kheap_validate(struct kheap *heap)
+{
+    DEBUG_KERNEL_ILIST_CHECK(&heap->free_list);
     return 0;
 }
 

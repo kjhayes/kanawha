@@ -60,6 +60,12 @@ config HEAP_SIZE_ORDER
   help
     Order which the kernel heap's virtual memory region should be sized as.
 
+config HEAP_GROWTH_ORDER
+  int "Heap Growth Order"
+  default 21
+  help
+    Order of increments to grow the kernel heaps at.
+
 config PERCPU_HEAP_SIZE_ORDER
   int "percpu Heap Virtual Size Order"
   default 32

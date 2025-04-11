@@ -22,6 +22,21 @@ typedef struct ilist_head ilist_node_t;
 #define ilist_for_each(node, list)\
     for(node = (list)->next; node != (list); node = (node)->next)
 
+// Check that a list has not become corrupted (it must have valid kernel addr for every node
+#ifdef CONFIG_DEBUG_ASSERTIONS
+#define DEBUG_KERNEL_ILIST_CHECK(list_ptr)\
+    do {\
+        ilist_node_t *node;\
+        ilist_for_each(node, (list_ptr)) {\
+            DEBUG_ASSERT(KERNEL_ADDR(node));\
+            DEBUG_ASSERT(KERNEL_ADDR(node->prev));\
+            DEBUG_ASSERT(KERNEL_ADDR(node->next));\
+        }\
+    } while(0)
+#else
+#define DEBUG_KERNEL_ILIST_CHECK(list_ptr)
+#endif
+
 static inline void
 ilist_init(ilist_t *list) {
     list->next = list;
@@ -146,6 +161,7 @@ ilist_contains(ilist_t *list, ilist_node_t *node)
 static inline void
 ilist_insert_before(ilist_t *list, ilist_node_t *to_insert, ilist_node_t *ref)
 {
+    DEBUG_KERNEL_ILIST_CHECK(list);
     dprintk("ilist_insert_before list=%p, to_insert=%p, ref=%p\n",
             list, to_insert, ref);
 
@@ -176,6 +192,7 @@ ilist_insert_before(ilist_t *list, ilist_node_t *to_insert, ilist_node_t *ref)
     dprintk("to_insert->prev = %p\n", to_insert->prev);
     dprintk("to_insert->next = %p\n", to_insert->next);
 
+    DEBUG_KERNEL_ILIST_CHECK(list);
     return;
 }
 

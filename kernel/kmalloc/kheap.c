@@ -52,8 +52,6 @@ kmalloc_kheap_init(void)
         return res;
     }
 
-    virt_mem_flags_dump();
-
     return kheap_init(&kmalloc_heap, (void*)vbase, (1ULL<<CONFIG_HEAP_SIZE_ORDER));
 }
 declare_init_desc(kmalloc, kmalloc_kheap_init, "Initializing Kernel Heap");
@@ -80,6 +78,9 @@ void * kmalloc(size_t size)
     size_t req_size = size + bookkeeping_size;
 
     int irq_flags = spin_lock_irq_save(&kmalloc_lock);
+
+    DEBUG_ASSERT_MSG(kheap_validate(&kmalloc_heap) == 0, "Failed to validate kmalloc heap on entry to kmalloc!");
+
     void *alloc = kheap_alloc_specific(&kmalloc_heap, KMALLOC_ALIGN_ORDER, &req_size);
     if(alloc == NULL) {
         spin_unlock_irq_restore(&kmalloc_lock, irq_flags);
@@ -87,6 +88,11 @@ void * kmalloc(size_t size)
                 KMALLOC_ALIGN_ORDER, size + bookkeeping_size);
         return alloc;
     }
+
+    DEBUG_ASSERT(req_size >= size);
+    DEBUG_ASSERT(req_size >= bookkeeping_size);
+    DEBUG_ASSERT(req_size >= size + bookkeeping_size);
+
 #ifdef CONFIG_DEBUG_KMALLOC_BITMAP
     for(size_t i = 0; i < req_size; i++)
     {
@@ -102,6 +108,7 @@ void * kmalloc(size_t size)
     }
 #endif
 
+    DEBUG_ASSERT_MSG(kheap_validate(&kmalloc_heap) == 0, "Failed to validate kmalloc heap on entry to kmalloc!");
     spin_unlock_irq_restore(&kmalloc_lock, irq_flags);
 
     size_t *size_ptr = (size_t*)alloc;
@@ -124,6 +131,9 @@ void kfree(void *addr)
     size_t size = *size_ptr;
 
     int irq_flags = spin_lock_irq_save(&kmalloc_lock);
+
+    DEBUG_ASSERT_MSG(kheap_validate(&kmalloc_heap) == 0, "Failed to validate kmalloc heap on entry to kfree!");
+
     int res = kheap_free_specific(&kmalloc_heap, (void*)size_ptr, size);
     if(res) {
         dprintk("kfree call to kfree_specific failed! (err=%s)\n", errnostr(res));
@@ -141,6 +151,7 @@ void kfree(void *addr)
     }
 #endif
 
+    DEBUG_ASSERT_MSG(kheap_validate(&kmalloc_heap) == 0, "Failed to validate kmalloc heap on exit from kfree!");
     spin_unlock_irq_restore(&kmalloc_lock, irq_flags);
 
     dprintk("kfree(%p)\n", addr);
