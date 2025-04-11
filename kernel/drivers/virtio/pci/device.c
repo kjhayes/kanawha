@@ -343,14 +343,14 @@ virtio_pci_device_ops = {
     .deinit_queues = virtio_pci_deinit_queues,
 
     // Write Device Specific Config
-    .writeb = virtio_pci_device_cfg_writeb,
-    .writew = virtio_pci_device_cfg_writew,
-    .writel = virtio_pci_device_cfg_writel,
-    .writeq = virtio_pci_device_cfg_writeq,
+    .cfg_writeb = virtio_pci_device_cfg_writeb,
+    .cfg_writew = virtio_pci_device_cfg_writew,
+    .cfg_writel = virtio_pci_device_cfg_writel,
+    .cfg_writeq = virtio_pci_device_cfg_writeq,
     // Read Device Specific Config
-    .readb = virtio_pci_device_cfg_readb,
-    .readw = virtio_pci_device_cfg_readw,
-    .readl = virtio_pci_device_cfg_readl,
-    .readq = virtio_pci_device_cfg_readq,
+    .cfg_readb = virtio_pci_device_cfg_readb,
+    .cfg_readw = virtio_pci_device_cfg_readw,
+    .cfg_readl = virtio_pci_device_cfg_readl,
+    .cfg_readq = virtio_pci_device_cfg_readq,
 };
 
