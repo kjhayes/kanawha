@@ -13,4 +13,8 @@ int
 sysfs_unregister_mount(
         const char *id);
 
+struct fs_mount *
+sysfs_mount_find(
+        const char *id);
+
 #endif

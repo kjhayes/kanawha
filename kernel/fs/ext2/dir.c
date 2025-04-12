@@ -364,6 +364,8 @@ ext2_dir_mkfile(
         return res;
     }
 
+    fs_node_flush_all_fs_pages(&node->fs_node);
+
     spin_unlock(&node->lock);
 
     return 0;
@@ -466,6 +468,7 @@ ext2_dir_mkdir(
                 inode);
         return res;
     }
+    fs_node_flush_all_fs_pages(&child_node->fs_node);
 
     // Create a link from the parent directory to the new directory
     spin_lock(&parent_node->lock);
@@ -484,6 +487,7 @@ ext2_dir_mkdir(
                 inode);
         return res;
     }
+    fs_node_flush_all_fs_pages(&parent_node->fs_node);
 
     spin_unlock(&parent_node->lock);
 

@@ -92,7 +92,7 @@ unregister_blk_dev(struct blk_dev *blk)
 }
 
 struct blk_dev *
-find_blk_dev(const char *name)
+blk_dev_find(const char *name)
 {
     spin_lock(&blk_dev_tree_lock);
     struct stree_node *node = stree_get(&blk_dev_tree, name);

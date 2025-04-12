@@ -116,6 +116,23 @@ sysfs_unmount(
     return 0;
 }
 
+struct fs_mount *
+sysfs_mount_find(
+        const char *id)
+{
+    struct fs_mount *mnt;
+    spin_lock(&sysfs_mount_lock);
+    struct stree_node *snode = stree_get(&sysfs_mount_tree, id);
+    if(snode == NULL) {
+        mnt = NULL;
+    } else {
+        struct sysfs_mount *sysfs_mount = container_of(snode, struct sysfs_mount, tree_node);
+        mnt = sysfs_mount->mount;
+    }
+    spin_unlock(&sysfs_mount_lock);
+    return mnt;
+}
+
 struct fs_type sysfs_fs_type = {
     .mount_file = fs_type_cannot_mount_file,
     .mount_special = sysfs_mount_special,

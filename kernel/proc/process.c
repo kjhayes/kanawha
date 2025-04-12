@@ -14,6 +14,7 @@
 #include <kanawha/fs/mount.h>
 #include <kanawha/stddef.h>
 #include <kanawha/timer.h>
+#include <kanawha/fs/sys/sysfs.h>
 #include <kanawha/assert.h>
 #include <kanawha/proc/mmap.h>
 #include <kanawha/uapi/spawn.h>
@@ -333,7 +334,7 @@ launch_init_process(void)
         panic("Failed to alloc init process!\n");
     }
 
-    const char *fs_name = CONFIG_ROOT_FS_FILESYSTEM;
+    const char *fs_name = CONFIG_INITIAL_FS_FILESYSTEM;
 
     struct fs_type *type =
         fs_type_find(fs_name);
@@ -343,33 +344,55 @@ launch_init_process(void)
         return -ENXIO;
     }
 
-    const char *backing_name;
-    struct fs_node *backing_file = NULL;
-#if defined(CONFIG_ROOT_FS_BACKEND_RAMFILE)
-    backing_name = CONFIG_ROOT_FS_RAMFILE;
-    backing_file = ramfile_get(backing_name);
-#elif defined(CONFIG_ROOT_FS_BACKEND_BLK_DEV)
-    backing_name = CONFIG_ROOT_FS_BLK_DEV;
-    struct blk_dev *dev = find_blk_dev(backing_name);
-    if(dev == NULL) {
-        eprintk("Cannot find root fs blk dev (%s)\n", backing_name);
+    struct fs_mount *sysfs_mount = sysfs_mount_find(CONFIG_INITIAL_FS_BACKEND_SYSFS_DIR);
+    if(sysfs_mount == NULL) {
+        eprintk("Cannot find initial filesystem backing sysfs \"%s\"!\n",
+                CONFIG_INITIAL_FS_BACKEND_SYSFS_DIR);
         return -ENXIO;
     }
-    backing_file = fs_node_get(&dev->flat_node.fs_node);
-#else
-#error "No ROOT_FS_BACKEND Specified!"
-#endif
+
+    size_t sysfs_root_index;
+    res = fs_mount_root_index(sysfs_mount, &sysfs_root_index);
+    if(res) {
+        eprintk("Failed to get root index of initial filesystem backing sysfs!\n");
+        return res;
+    }
+
+
+    struct fs_node *sysfs_root = fs_mount_get_node(sysfs_mount, sysfs_root_index);
+    if(sysfs_root == NULL) {
+        eprintk("Cannot get initial filesystem sysfs root node \"%s\"!\n",
+                CONFIG_INITIAL_FS_BACKEND_SYSFS_DIR);
+        return -EINVAL;
+    }
+
+    size_t sysfs_file_index;
+    res = fs_node_lookup(sysfs_root, CONFIG_INITIAL_FS_BACKEND_FILE_NAME, &sysfs_file_index);
+    fs_mount_put_node(sysfs_mount, sysfs_root);
+    if(res) {
+        eprintk("Failed to lookup initial filesystem backing file \"%s\"!\n",
+                CONFIG_INITIAL_FS_BACKEND_FILE_NAME);
+        return res;
+    }
+
+    struct fs_node *backing_node = fs_mount_get_node(sysfs_mount, sysfs_file_index);
+    if(backing_node == NULL) {
+        eprintk("Failed to get initial filesystem backing file \"%s\"!\n",
+                CONFIG_INITIAL_FS_BACKEND_FILE_NAME);
+        return -EINVAL;
+    }
 
     struct fs_mount *root_fs_mnt;
     res = fs_type_mount_file(
             type,
-            backing_file,
+            backing_node,
             &root_fs_mnt);
+
+    fs_node_put(backing_node);
+
     if(res) {
-        ramfile_put(backing_file);
         return res;
     }
-    ramfile_put(backing_file);
 
     struct fs_path *root;
     res = fs_path_mount_root(root_fs_mnt, &root);
@@ -377,7 +400,6 @@ launch_init_process(void)
         process_free(process);
         return res;
     }
-    ramfile_put(backing_file);
 
     res = process_set_root_directory(process, root);
     if(res) {
