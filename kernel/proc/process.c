@@ -333,7 +333,6 @@ launch_init_process(void)
         panic("Failed to alloc init process!\n");
     }
 
-    const char *file_path = CONFIG_ROOT_FS_RAMFILE;
     const char *fs_name = CONFIG_ROOT_FS_FILESYSTEM;
 
     struct fs_type *type =
@@ -344,8 +343,22 @@ launch_init_process(void)
         return -ENXIO;
     }
 
-    struct fs_node *backing_file =
-        ramfile_get(file_path);
+    const char *backing_name;
+    struct fs_node *backing_file = NULL;
+#if defined(CONFIG_ROOT_FS_BACKEND_RAMFILE)
+    backing_name = CONFIG_ROOT_FS_RAMFILE;
+    backing_file = ramfile_get(backing_name);
+#elif defined(CONFIG_ROOT_FS_BACKEND_BLK_DEV)
+    backing_name = CONFIG_ROOT_FS_BLK_DEV;
+    struct blk_dev *dev = find_blk_dev(backing_name);
+    if(dev == NULL) {
+        eprintk("Cannot find root fs blk dev (%s)\n", backing_name);
+        return -ENXIO;
+    }
+    backing_file = fs_node_get(&dev->flat_node.fs_node);
+#else
+#error "No ROOT_FS_BACKEND Specified!"
+#endif
 
     struct fs_mount *root_fs_mnt;
     res = fs_type_mount_file(

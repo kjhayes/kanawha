@@ -11,11 +11,28 @@ config INIT_PROCESS_ARGS
     help
       Value to append to "INIT_PROCESS_PATH" to pass as the "ARGV" environment variable to on entry to the init process.
 
+choice
+    prompt "Root FS Backend"
+    default ROOT_FS_BACKEND_RAMFILE
+    config ROOT_FS_BACKEND_RAMFILE
+        bool "ramfile"
+    config ROOT_FS_BACKEND_BLK_DEV
+        bool "blkdev"
+endchoice
+
 config ROOT_FS_RAMFILE
-    string "Root FS Ramfile"
+    string "Root FS ramfile Name"
     default "initrd"
+    depends on ROOT_FS_BACKEND_RAMFILE
     help
-      Path to mount the initial ramdisk from
+      Name of ramfile to mount the initial process on
+
+config ROOT_FS_BLK_DEV
+    string "Root FS blkdev Name"
+    default "blk0"
+    depends on ROOT_FS_BACKEND_BLK_DEV
+    help
+      Name of block device to mount the initial process on
 
 config ROOT_FS_FILESYSTEM
     string "Root FS Filesystem"

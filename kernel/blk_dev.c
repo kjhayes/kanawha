@@ -6,6 +6,7 @@
 #include <kanawha/stree.h>
 #include <kanawha/ptree.h>
 #include <kanawha/spinlock.h>
+#include <kanawha/page_alloc.h>
 #include <kanawha/fs/type.h>
 #include <kanawha/fs/mount.h>
 #include <kanawha/fs/node.h>
@@ -28,7 +29,9 @@ static struct fs_file_ops blk_dev_fs_file_ops;
 int
 register_blk_dev(struct blk_dev *blk,
         const char *name,
-        struct blk_driver *driver)
+        struct blk_driver *driver,
+        size_t num_sectors,
+        order_t sector_order)
 {
     int res;
 
@@ -47,6 +50,19 @@ register_blk_dev(struct blk_dev *blk,
     blk->blk_dev_node.key = name;
     blk->flat_fs_node.fs_node.file_ops = &blk_dev_fs_file_ops;
     blk->flat_fs_node.fs_node.node_ops = &blk_dev_fs_node_ops;
+
+    blk->num_sectors = num_sectors;
+    blk->sector_order = sector_order;
+
+    blk->page_order = blk->sector_order;
+    if(blk->page_order < PAGE_ALLOC_MIN_ORDER) {
+        blk->page_order = PAGE_ALLOC_MIN_ORDER;
+    }
+    if(blk->page_order < VMEM_MIN_PAGE_ORDER) {
+        blk->page_order = VMEM_MIN_PAGE_ORDER;
+    }
+
+    blk->sectors_per_page = 1ULL<<(blk->page_order - blk->sector_order);
 
     stree_insert(&blk_dev_tree, &blk->blk_dev_node);
 
@@ -127,27 +143,116 @@ blk_dev_init_fs_mount(void)
 }
 declare_init_desc(fs, blk_dev_init_fs_mount, "Registering blkdev Sysfs Mount");
 
-static struct fs_node_ops blk_dev_fs_node_ops = {
+static int
+blk_dev_read_page(
+        struct fs_node *fs_node,
+        void *buffer,
+        uintptr_t pfn,
+        unsigned long flags)
+{
+    int res;
+
+    struct blk_dev *blk_dev =
+        container_of(fs_node, struct blk_dev, flat_fs_node.fs_node);
+
+    res = blk_dev_read(
+            blk_dev,
+            buffer,
+            pfn * blk_dev->sectors_per_page,
+            blk_dev->sectors_per_page);
+    if(res) {
+        return res;
+    }
+
+    return 0;
+}
+
+static int
+blk_dev_write_page(
+        struct fs_node *fs_node,
+        void *buffer,
+        uintptr_t pfn,
+        unsigned long flags)
+{
+    int res;
+
+    struct blk_dev *blk_dev =
+        container_of(fs_node, struct blk_dev, flat_fs_node.fs_node);
+
+    res = blk_dev_write(
+            blk_dev,
+            buffer,
+            pfn * blk_dev->sectors_per_page,
+            blk_dev->sectors_per_page);
+    if(res) {
+        return res;
+    }
+
+    return 0;
+}
+
+static int
+blk_dev_getattr(
+        struct fs_node *fs_node,
+        int attr,
+        size_t *value)
+{
+    int res;
+
+    struct blk_dev *blk_dev =
+        container_of(fs_node, struct blk_dev, flat_fs_node.fs_node);
+
+    switch(attr) {
+        case FS_NODE_ATTR_DATA_SIZE:
+            *value = (size_t)blk_dev->num_sectors << blk_dev->sector_order;
+            break;
+        case FS_NODE_ATTR_PAGE_ORDER:
+            *value = blk_dev->page_order;
+            break;
+        default:
+            return -EINVAL;
+    }
+
+    return 0;
+}
+
+static int
+blk_dev_setattr(
+        struct fs_node *fs_node,
+        int attr,
+        size_t value)
+{
+    return -EINVAL;
+}
+
+static struct fs_node_ops blk_dev_fs_node_ops =
+{
+    .read_page = blk_dev_read_page,
+    .write_page = blk_dev_write_page,
+
+    .load_page = fs_node_load_page_read_alloc,
+    .unload_page = fs_node_unload_page_free,
+    .flush_page = fs_node_flush_page_write,
+
+    .getattr = blk_dev_getattr,
+    .setattr = blk_dev_setattr,
+
     .link = fs_node_cannot_link,
     .unlink = fs_node_cannot_unlink,
     .mkdir = fs_node_cannot_mkdir,
     .lookup = fs_node_cannot_lookup,
     .mkfifo = fs_node_cannot_mkfifo,
     .mkfile = fs_node_cannot_mkfile,
-    .getattr = fs_node_cannot_getattr,
-    .setattr = fs_node_cannot_setattr,
     .symlink = fs_node_cannot_symlink,
-    .load_page = fs_node_cannot_load_page,
-    .unload_page = fs_node_cannot_unload_page,
-    .read_page = fs_node_cannot_read_page,
-    .write_page = fs_node_cannot_write_page,
-    .flush_page = fs_node_cannot_flush_page,
 };
-static struct fs_file_ops blk_dev_fs_file_ops = {
-    .read = fs_file_cannot_read,
-    .write = fs_file_cannot_write,
-    .seek = fs_file_cannot_seek,
-    .flush = fs_file_cannot_flush,
+static struct fs_file_ops blk_dev_fs_file_ops =
+{
+    .read = fs_file_paged_read,
+    .write = fs_file_paged_write,
+    .seek = fs_file_paged_seek,
+
+    .flush = fs_file_paged_flush,
+
     .dir_next = fs_file_cannot_dir_next,
     .dir_begin = fs_file_cannot_dir_begin,
     .dir_readattr = fs_file_cannot_dir_readattr,

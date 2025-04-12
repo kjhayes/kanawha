@@ -234,9 +234,15 @@ virtio_pci_init_device(
         kfree(vpci_dev);
         return -EINVAL;
     }
-
     vpci_dev->notify_multiplier = virtio_pci_cap_ext_cfg_readl(
             vpci_dev, vpci_dev->notify_cap, 0);
+
+    dprintk("virito_pci: finding device_cap\n");
+    vpci_dev->device_cap =
+        virtio_pci_find_cap(vpci_dev, VIRTIO_PCI_CAP_DEVICE_CFG);
+    if(vpci_dev->device_cap == NULL) {
+        // This is cap is optional
+    }
 
     spin_lock(&virtio_pci_device_list_lock);
 

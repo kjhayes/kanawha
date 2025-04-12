@@ -200,6 +200,10 @@ virtio_pci_device_cfg_writeb(
     struct virtio_pci_device *dev =
         container_of(virtio_dev, struct virtio_pci_device, virtio_dev);
 
+    if(dev->device_cap == NULL) {
+        return -ENXIO;
+    }
+
     virtio_pci_cap_bar_writeb(
             dev,
             dev->device_cap,
@@ -217,6 +221,10 @@ virtio_pci_device_cfg_writew(
     int res;
     struct virtio_pci_device *dev =
         container_of(virtio_dev, struct virtio_pci_device, virtio_dev);
+
+    if(dev->device_cap == NULL) {
+        return -ENXIO;
+    }
 
     virtio_pci_cap_bar_writew(
             dev,
@@ -236,6 +244,10 @@ virtio_pci_device_cfg_writel(
     struct virtio_pci_device *dev =
         container_of(virtio_dev, struct virtio_pci_device, virtio_dev);
 
+    if(dev->device_cap == NULL) {
+        return -ENXIO;
+    }
+
     virtio_pci_cap_bar_writel(
             dev,
             dev->device_cap,
@@ -253,6 +265,10 @@ virtio_pci_device_cfg_writeq(
     int res;
     struct virtio_pci_device *dev =
         container_of(virtio_dev, struct virtio_pci_device, virtio_dev);
+
+    if(dev->device_cap == NULL) {
+        return -ENXIO;
+    }
 
     virtio_pci_cap_bar_writeq(
             dev,
@@ -273,6 +289,10 @@ virtio_pci_device_cfg_readb(
     struct virtio_pci_device *dev =
         container_of(virtio_dev, struct virtio_pci_device, virtio_dev);
 
+    if(dev->device_cap == NULL) {
+        return -ENXIO;
+    }
+
     *value = virtio_pci_cap_bar_readb(
             dev,
             dev->device_cap,
@@ -289,6 +309,10 @@ virtio_pci_device_cfg_readw(
     int res;
     struct virtio_pci_device *dev =
         container_of(virtio_dev, struct virtio_pci_device, virtio_dev);
+
+    if(dev->device_cap == NULL) {
+        return -ENXIO;
+    }
 
     *value = virtio_pci_cap_bar_readw(
             dev,
@@ -307,6 +331,10 @@ virtio_pci_device_cfg_readl(
     struct virtio_pci_device *dev =
         container_of(virtio_dev, struct virtio_pci_device, virtio_dev);
 
+    if(dev->device_cap == NULL) {
+        return -ENXIO;
+    }
+
     *value = virtio_pci_cap_bar_readl(
             dev,
             dev->device_cap,
@@ -323,6 +351,10 @@ virtio_pci_device_cfg_readq(
     int res;
     struct virtio_pci_device *dev =
         container_of(virtio_dev, struct virtio_pci_device, virtio_dev);
+
+    if(dev->device_cap == NULL) {
+        return -ENXIO;
+    }
 
     *value = virtio_pci_cap_bar_readq(
             dev,

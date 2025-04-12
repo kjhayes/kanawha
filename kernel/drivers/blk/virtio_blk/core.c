@@ -10,35 +10,140 @@
 #include <drivers/virtio/queue.h>
 #include <drivers/virtio/request.h>
 
+#define VIRTIO_BLK_T_IN 0
+#define VIRTIO_BLK_T_OUT 1
+#define VIRTIO_BLK_T_FLUSH 4
+#define VIRTIO_BLK_T_GET_ID 8
+#define VIRTIO_BLK_T_GET_LIFETIME 10
+#define VIRTIO_BLK_T_DISCARD 11
+#define VIRTIO_BLK_T_WRITE_ZEROES 13
+#define VIRTIO_BLK_T_SECURE_ERASE 14
+
+#define VIRTIO_BLK_S_OK 0
+#define VIRTIO_BLK_S_IOERR 1
+#define VIRTIO_BLK_S_UNSUPP 2
+
+struct virtio_blk_req {
+    le32_t type;
+    le32_t reserved;
+    le64_t sector;
+};
+
 static DECLARE_SPINLOCK(virtio_blk_count_lock);
 static unsigned long virtio_blk_count = 0;
 
 struct virtio_blk {
     struct blk_dev blk_dev;
     struct virtio_device *virtio_dev;
+    struct virtio_queue *queue;
     char *name;
 };
 
 static int
-virtio_blk_dev_request(
+virtio_blk_dev_write(
         struct blk_dev *dev,
-        struct blk_dev_request *req)
+        void *data,
+        size_t base_sector,
+        size_t num_sectors
+        )
 {
-    return -EUNIMPL;
+    int res;
+
+    struct virtio_blk *blk = container_of(dev, struct virtio_blk, blk_dev);
+
+    struct virtio_blk_req req;
+    req.type = VIRTIO_BLK_T_OUT;
+    req.sector = base_sector;
+
+    uint8_t status;
+
+    void * input_datas[2] = { &req, data };
+    size_t input_sizes[2] = { sizeof(struct virtio_blk_req), 512ULL * num_sectors };
+
+    void * output_datas[1] = { &status };
+    size_t output_sizes[1] = { 1 };
+
+    res = virtio_transact(
+            blk->queue,
+            2,
+            input_datas,
+            input_sizes,
+            1,
+            output_datas,
+            output_sizes);
+    if(res) {
+        return res;
+    }
+
+    switch(status) {
+        case VIRTIO_BLK_S_OK: return 0;
+        case VIRTIO_BLK_S_IOERR: return -EIO;
+        case VIRTIO_BLK_S_UNSUPP: return -EUNIMPL;
+        default: return -EINVAL;
+    }
 }
 
 static int
-virtio_blk_dev_num_sectors(
+virtio_blk_dev_read(
         struct blk_dev *dev,
-        size_t *sectors_out)
+        void *data,
+        size_t base_sector,
+        size_t num_sectors
+        )
 {
-    return -EUNIMPL;
+    int res;
+
+    dprintk("virtio_blk_read (base_sector=0x%lx, num_sectors=0x%lx)\n",
+            base_sector,
+            num_sectors);
+
+    struct virtio_blk *blk = container_of(dev, struct virtio_blk, blk_dev);
+
+    struct virtio_blk_req req;
+    req.type = VIRTIO_BLK_T_IN;
+    req.sector = base_sector;
+
+    uint8_t status;
+
+    void * input_datas[1] = { &req };
+    size_t input_sizes[1] = { sizeof(struct virtio_blk_req) };
+
+    void * output_datas[2] = { data, &status };
+    size_t output_sizes[2] = { 512ULL * num_sectors, 1 };
+
+    res = virtio_transact(
+            blk->queue,
+            1,
+            input_datas,
+            input_sizes,
+            2,
+            output_datas,
+            output_sizes);
+    if(res) {
+        dprintk("virtio_blk_read: virtio_transact returned %s\n", errnostr(res));
+        return res;
+    }
+
+    switch(status) {
+        case VIRTIO_BLK_S_OK:
+            dprintk("virtio_blk_read SUCCESS\n");
+            return 0;
+        case VIRTIO_BLK_S_IOERR:
+            dprintk("virtio_blk_read IOERR\n");
+            return -EIO;
+        case VIRTIO_BLK_S_UNSUPP:
+            dprintk("virtio_blk_read UNSUPP\n");
+            return -EUNIMPL;
+        default:
+            dprintk("virtio_blk_read UNKNOWN ERROR\n");
+            return -EINVAL;
+    }
 }
 
 static struct blk_driver
 virtio_blk_driver = {
-    .request = virtio_blk_dev_request,
-    .num_sectors = virtio_blk_dev_num_sectors,
+    .read = virtio_blk_dev_read,
+    .write = virtio_blk_dev_write,
 };
 
 static int
@@ -68,9 +173,21 @@ virtio_blk_init_device(
 
     dprintk("virtio_blk_init_device\n");
 
-    if(device->num_queues != 2) {
+    if(device->num_queues < 1) {
         return -EINVAL;
     }
+
+    size_t capacity;
+    {
+    le64_t le_capacity;
+    res = virtio_device_cfg_readq(device, 0, &le_capacity);
+    if(res) {
+        return -EINVAL;
+    }
+    capacity = letoh64(le_capacity);
+    }
+
+    dprintk("virtio-blk (capacity = 0x%lx sectors)\n", capacity);
 
     struct virtio_blk *blk = kmalloc(sizeof(struct virtio_blk));
     if(blk == NULL) {
@@ -79,6 +196,14 @@ virtio_blk_init_device(
     memset(blk, 0, sizeof(struct virtio_blk));
 
     blk->virtio_dev = device;
+    blk->queue = device->queues[0];
+    DEBUG_ASSERT(KERNEL_ADDR(blk->queue));
+
+    res = virtio_queue_enable(blk->queue);
+    if(res) {
+        kfree(blk);
+        return res;
+    }
 
     unsigned long dev_index;
     spin_lock(&virtio_blk_count_lock);
@@ -90,6 +215,7 @@ virtio_blk_init_device(
     char namebuf[NAMEBUFLEN];
     snprintk(namebuf, NAMEBUFLEN, "virtio-blk-%ld", dev_index);
     namebuf[NAMEBUFLEN-1] = '\0';
+#undef NAMEBUFLEN
 
     blk->name = kstrdup(namebuf);
     if(blk->name == NULL) {
@@ -100,7 +226,9 @@ virtio_blk_init_device(
     res = register_blk_dev(
             &blk->blk_dev,
             blk->name,
-            &virtio_blk_driver);
+            &virtio_blk_driver,
+            capacity,
+            9);
     if(res) {
         kfree(blk->name);
         kfree(blk);
