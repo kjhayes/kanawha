@@ -442,9 +442,7 @@ buddy_region_init(
     // Figure out how many bytes our bitmap needs to be
     // (We prioritize the bitmap because if a bit doesn't have a page, that's fine,
     //  but if a page doesn't have a bit, we have big problems)
-    region->bitmap_bytes = (num_bitmap_bits / BITS_PER_LONG
-        + ((num_bitmap_bits % BITS_PER_LONG) ? 1 : 0))
-        * sizeof(unsigned long);
+    region->bitmap_bytes = BITMAP_SIZE(num_bitmap_bits);
 
     region->page_bytes = useful_memory - region->bitmap_bytes;
     size_t num_pages = region->page_bytes / min_page_size;
@@ -464,7 +462,9 @@ buddy_region_init(
     // This is a "free" bitmap, so a zero means everything is allocated currently
     // We also assume that the region will be mapped in with an identity mapping for now
 
+    dprintk("Clearing bitmap %p of size 0x%lx\n", region->bitmap, region->bitmap_bytes);
     memset((void*)region->bitmap, 0, region->bitmap_bytes);
+    dprintk("Cleared bitmap\n");
 
     // All that's left now is to free all of the pages and let them coalesce together
 
@@ -529,7 +529,7 @@ register_buddy_page_allocator(
         unsigned long flags)
 {
     int res;
-    dprintk("Register Buddy Page Allocator VA: %p PA: %p size=0x%lx\n",
+    dprintk("Registering Buddy Page Allocator VA: %p PA: %p size=0x%lx\n",
             __va(phys_base), phys_base, (unsigned long)size);
 
     struct buddy_region *region;
