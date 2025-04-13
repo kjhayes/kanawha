@@ -7,6 +7,7 @@
 #include <kanawha/ptree.h>
 #include <kanawha/spinlock.h>
 #include <kanawha/page_alloc.h>
+#include <kanawha/string.h>
 #include <kanawha/fs/type.h>
 #include <kanawha/fs/mount.h>
 #include <kanawha/fs/node.h>
@@ -155,13 +156,30 @@ blk_dev_read_page(
     struct blk_dev *blk_dev =
         container_of(fs_node, struct blk_dev, flat_fs_node.fs_node);
 
+    size_t start_sector = pfn * blk_dev->sectors_per_page;
+    size_t sectors_to_read = blk_dev->sectors_per_page;
+    size_t end_sector = start_sector + sectors_to_read;
+
+    size_t extra_sectors = 0;
+    if(end_sector > blk_dev->num_sectors) {
+        extra_sectors = end_sector - blk_dev->num_sectors;
+        sectors_to_read -= extra_sectors;
+    }
+
     res = blk_dev_read(
             blk_dev,
             buffer,
-            pfn * blk_dev->sectors_per_page,
-            blk_dev->sectors_per_page);
+            start_sector,
+            sectors_to_read);
     if(res) {
         return res;
+    }
+
+    // Zero out any extra data
+    for(size_t i = 0; i < extra_sectors; i++) {
+        size_t offset = sectors_to_read<<blk_dev->sector_order;
+        size_t extra_size = extra_sectors<<blk_dev->sector_order;
+        memset(buffer + offset, 0, extra_size);
     }
 
     return 0;
@@ -179,11 +197,21 @@ blk_dev_write_page(
     struct blk_dev *blk_dev =
         container_of(fs_node, struct blk_dev, flat_fs_node.fs_node);
 
+    size_t start_sector = pfn * blk_dev->sectors_per_page;
+    size_t sectors_to_write = blk_dev->sectors_per_page;
+    size_t end_sector = start_sector + sectors_to_write;
+
+    size_t extra_sectors = 0;
+    if(end_sector > blk_dev->num_sectors) {
+        extra_sectors = end_sector - blk_dev->num_sectors;
+        sectors_to_write -= extra_sectors;
+    }
+
     res = blk_dev_write(
             blk_dev,
             buffer,
-            pfn * blk_dev->sectors_per_page,
-            blk_dev->sectors_per_page);
+            start_sector,
+            sectors_to_write);
     if(res) {
         return res;
     }
