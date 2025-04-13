@@ -127,12 +127,19 @@ void kfree(void *addr)
         // Free is allowed to ignore NULL pointers
         return;
     }
-    size_t *size_ptr = (size_t*)(addr - (1ULL<<KMALLOC_ALIGN_ORDER));
-    size_t size = *size_ptr;
 
     int irq_flags = spin_lock_irq_save(&kmalloc_lock);
 
+    DEBUG_ASSERT_MSG(
+            (uintptr_t)addr >= (uintptr_t)kmalloc_heap.vbase
+            && (uintptr_t)addr < (uintptr_t)(kmalloc_heap.vbase + kmalloc_heap.heap_size),
+            "kfree: trying to free a pointer which is not inside the kernel heap!"
+            );
+
     DEBUG_ASSERT_MSG(kheap_validate(&kmalloc_heap) == 0, "Failed to validate kmalloc heap on entry to kfree!");
+
+    size_t *size_ptr = (size_t*)(addr - (1ULL<<KMALLOC_ALIGN_ORDER));
+    size_t size = *size_ptr;
 
     int res = kheap_free_specific(&kmalloc_heap, (void*)size_ptr, size);
     if(res) {
