@@ -61,6 +61,7 @@ flat_mount_ops = {
     .load_node = flat_mount_load_node,
     .unload_node = flat_mount_unload_node,
     .root_index = flat_mount_root_index,
+    .sync = fs_mount_nop_sync,
 };
 
 int

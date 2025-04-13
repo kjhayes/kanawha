@@ -38,6 +38,11 @@ ext2_put_group(
         struct ext2_mount *mnt,
         struct ext2_group *group);
 
+int
+ext2_flush_group(
+        struct ext2_mount *mnt,
+        struct ext2_group *group);
+
 // blk Bitmap
 int
 ext2_group_blk_bitmap_check(

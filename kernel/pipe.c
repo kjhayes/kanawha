@@ -253,6 +253,8 @@ pipe_fs_mount_ops =
 
     .load_node = pipe_fs_mount_load_node,
     .unload_node = pipe_fs_mount_unload_node,
+
+    .sync = fs_mount_nop_sync,
 };
 
 static struct fs_mount pipe_fs_mount;

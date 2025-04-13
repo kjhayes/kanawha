@@ -63,6 +63,7 @@ vfs_mount_ops = {
     .load_node = vfs_mount_load_node,
     .unload_node = vfs_mount_unload_node,
     .root_index = vfs_mount_root_index,
+    .sync = fs_mount_nop_sync,
 };
 
 // Internal structure to maintain list of links
@@ -90,11 +91,16 @@ vfs_dir_lookup(
     DEBUG_ASSERT(KERNEL_ADDR(fs_node));
     DEBUG_ASSERT(KERNEL_ADDR(node));
 
-    spin_lock(&node->children_lock);
+    if(strcmp(name, ".") == 0) {
+        *inode = fs_node->cache_node.key;
+        return 0;
+    }
+
+    spin_lock(&node->hierarchy_lock);
 
     struct stree_node *snode = stree_get(&node->children_tree, name);
     if(snode == NULL) {
-        spin_unlock(&node->children_lock);
+        spin_unlock(&node->hierarchy_lock);
         return -ENXIO;
     }
 
@@ -108,7 +114,7 @@ vfs_dir_lookup(
         *inode = link->inode;
     }
 
-    spin_unlock(&node->children_lock);
+    spin_unlock(&node->hierarchy_lock);
 
     return 0;
 }
@@ -166,9 +172,9 @@ vfs_dir_readname(
     struct vfs_node *node =
         container_of(fs_node, struct vfs_node, fs_node);
 
-    spin_lock(&node->children_lock);
+    spin_lock(&node->hierarchy_lock);
     if(dir->dir_offset+1 > node->children_count) {
-        spin_unlock(&node->children_lock);
+        spin_unlock(&node->hierarchy_lock);
         dprintk("Not searching (dir_offset=0x%lx, children_count=0x%lx)\n",
                 dir->dir_offset, node->children_count);
         return -ENXIO;
@@ -183,7 +189,7 @@ vfs_dir_readname(
     }
 
     if(snode == NULL) {
-        spin_unlock(&node->children_lock);
+        spin_unlock(&node->hierarchy_lock);
         dprintk("Failed after search\n");
         return -ENXIO;
     }
@@ -194,7 +200,7 @@ vfs_dir_readname(
 
     dprintk("link=%s\n", link->name);
 
-    spin_unlock(&node->children_lock);
+    spin_unlock(&node->hierarchy_lock);
     return 0;
 }
 
@@ -284,7 +290,7 @@ vfs_mount_insert_node(
     dprintk("vfs_mount_insert_node -> %p\n",
             node->inode_node.key);
 
-    spinlock_init(&node->children_lock);
+    spinlock_init(&node->hierarchy_lock);
     stree_init(&node->children_tree);
     node->children_count = 0;
     node->fs_node.mount = &mnt->fs_mount;
@@ -358,11 +364,11 @@ vfs_node_link(
     dprintk("vfs_node_link(%s, inode=0x%llx)\n",
             name, inode);
 
-    spin_lock(&node->children_lock);
+    spin_lock(&node->hierarchy_lock);
 
     struct vfs_link *link = kmalloc(sizeof(struct vfs_link));
     if(link == NULL) {
-        spin_unlock(&node->children_lock);
+        spin_unlock(&node->hierarchy_lock);
         return -ENOMEM;
     }
     memset(link, 0, sizeof(struct vfs_link));
@@ -375,13 +381,13 @@ vfs_node_link(
     if(res) {
         kfree(link->name);
         kfree(link);
-        spin_unlock(&node->children_lock);
+        spin_unlock(&node->hierarchy_lock);
         return res;
     }
 
     node->children_count++;
 
-    spin_unlock(&node->children_lock);
+    spin_unlock(&node->hierarchy_lock);
     return 0;
 }
 
@@ -390,7 +396,7 @@ vfs_node_unlink(
         struct vfs_node *node,
         const char *name)
 {
-    spin_lock(&node->children_lock);
+    spin_lock(&node->hierarchy_lock);
 
     DEBUG_ASSERT(node->children_count > 0);
 
@@ -405,7 +411,7 @@ vfs_node_unlink(
 
     node->children_count--;
 
-    spin_unlock(&node->children_lock);
+    spin_unlock(&node->hierarchy_lock);
     return 0;
 }
 
@@ -414,7 +420,7 @@ int
 vfs_node_unlink_all(
         struct vfs_node *node)
 {
-    spin_lock(&node->children_lock);
+    spin_lock(&node->hierarchy_lock);
 
     struct stree_node *snode = stree_get_first(&node->children_tree);
     while(snode)
@@ -432,7 +438,7 @@ vfs_node_unlink_all(
 
     node->children_count = 0;
 
-    spin_unlock(&node->children_lock);
+    spin_unlock(&node->hierarchy_lock);
     return 0;
 }
 

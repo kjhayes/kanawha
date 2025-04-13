@@ -163,6 +163,23 @@ cpio_mount_root_index(
     return 0;
 }
 
+static int
+cpio_mount_sync(
+        struct fs_mount *fs_mount)
+{
+    int res;
+
+    struct cpio_mount *mnt =
+        container_of(fs_mount, struct cpio_mount, fs_mount);
+
+    res = fs_node_flush_all_fs_pages(mnt->backing_file);
+    if(res) {
+        return res;
+    }
+
+    return 0;
+}
+
 int
 cpio_mount_file(
         struct fs_type *fs_type,
@@ -223,6 +240,7 @@ cpio_fs_mount_ops = {
     .load_node = cpio_mount_load_node,
     .unload_node = cpio_mount_unload_node,
     .root_index = cpio_mount_root_index,
+    .sync = cpio_mount_sync,
 };
 
 static struct fs_type

@@ -11,6 +11,7 @@
 #include <kanawha/string.h>
 #include <kanawha/stddef.h>
 #include <kanawha/init.h>
+#include <kanawha/irq.h>
 
 int
 ext2_mount_read_inode(
@@ -204,11 +205,45 @@ ext2_mount_root_index(
     return 0;
 }
 
+static int
+ext2_mount_sync(
+        struct fs_mount *fs_mount)
+{
+    int res;
+
+    struct ext2_mount *mnt =
+        container_of(fs_mount, struct ext2_mount, fs_mount);
+
+    int irq_flags = spin_lock_irq_save(&mnt->group_cache_lock);
+
+    for(size_t i = 0; i < mnt->num_groups; i++) {
+        struct ext2_group *grp = mnt->group_cache[i];
+        if(grp == NULL) {
+            continue;
+        }
+
+        res = ext2_flush_group(mnt, grp);
+        if(res) {
+            return res;
+        }
+    }
+
+    spin_unlock_irq_restore(&mnt->group_cache_lock, irq_flags);
+
+    res = fs_node_flush_all_fs_pages(mnt->backing_node);
+    if(res) {
+        return res;
+    }
+
+    return 0;
+}
+
 static struct fs_mount_ops
 ext2_mount_ops = {
     .load_node = ext2_mount_load_node,
     .unload_node = ext2_mount_unload_node,
     .root_index = ext2_mount_root_index,
+    .sync = ext2_mount_sync,
 };
 
 static int

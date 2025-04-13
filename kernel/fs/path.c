@@ -18,6 +18,7 @@ static DECLARE_SPINLOCK(fs_path_global_lock);
 
 static int
 __fs_path_traverse(
+        struct process *process,
         struct fs_path *dir,
         const char *child_name,
         struct fs_path **out)
@@ -55,6 +56,22 @@ __fs_path_traverse(
             child_name,
             &mount_index);
     if(res) {
+
+        // Failed to lookup the file, check for special cases like .. and .
+        if(strcmp(child_name, ".") == 0) {
+            *out = dir;
+            spin_unlock(&fs_path_global_lock);
+            return 0;
+        } else if(strcmp(child_name, "..") == 0
+              && dir != process->root_directory
+              && dir->parent != NULL)
+        {
+            *out = dir->parent;
+            spin_unlock(&fs_path_global_lock);
+            return 0;
+        }
+
+        // Not a special case, the file just doesn't exist or an error occurred
         dprintk("fs_node_lookup: %s returned (%s)\n",
                 child_name, errnostr(res));
         spin_unlock(&fs_path_global_lock);
@@ -371,8 +388,7 @@ fs_path_lookup_for_process(
 
           struct fs_path *next;
 
-          // Special cases
-          res = __fs_path_traverse(cur, iter, &next); 
+          res = __fs_path_traverse(process, cur, iter, &next); 
           if(res) {
               fs_path_put(cur);
               dprintk("fs_path_lookup_for_process(pid=%ld, %s) __fs_path_traverse(%p, %s) returned %s\n",

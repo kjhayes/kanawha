@@ -130,3 +130,12 @@ err:
     return res;
 }
 
+// Default Implementations
+
+int
+fs_mount_nop_sync(
+        struct fs_mount *mnt)
+{
+    return 0;
+}
+

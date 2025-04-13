@@ -11,7 +11,7 @@ struct vfs_node
 {
     struct ptree_node inode_node;
 
-    spinlock_t children_lock;
+    spinlock_t hierarchy_lock;
     size_t children_count;
     struct stree children_tree;
 

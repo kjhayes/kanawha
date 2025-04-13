@@ -306,32 +306,10 @@ ext2_put_group(
     if(group->refs <= 0) {
 
         // Flush any dirty data to disk
-        if(group->desc_dirty) {
-            res = ext2_mount_write_group_desc(
-                    mnt,
-                    group->index,
-                    &group->desc);
-            if(res) {
-                eprintk("Failed to write EXT2 group descriptor back to disk! (err=%s)\n",
-                        errnostr(res));
-                // We'll just have to continue :(
-                // (Once we setup caching fully we could leave it in the cache for a bit
-                //  and defer dealing with this though)
-            }
-        }
-
-        // Write the blk bitmap out to disk
-        res = ext2_group_flush_blk_bitmap(group);
+        res = ext2_flush_group(mnt, group);
         if(res) {
-            eprintk("Failed to write EXT2 group block bitmap back to disk! (err=%s)\n",
-                    errnostr(res));
-        }
-
-        // Write the inode bitmap out to disk
-        res = ext2_group_flush_inode_bitmap(group);
-        if(res) {
-            eprintk("Failed to write EXT2 group inode bitmap back to disk! (err=%s)\n",
-                    errnostr(res));
+            wprintk("Failed to flush ext2 group! (may corrupt disk but continuing...)\n");
+            // :(((
         }
 
         // Free our data structures
@@ -347,6 +325,46 @@ ext2_put_group(
     }
 
     spin_unlock(&mnt->group_cache_lock);
+
+    return 0;
+}
+
+int
+ext2_flush_group(
+        struct ext2_mount *mnt,
+        struct ext2_group *group)
+{
+    int res;
+
+    // Flush any dirty data to disk
+    if(group->desc_dirty) {
+        group->desc_dirty = 0;
+        res = ext2_mount_write_group_desc(
+                mnt,
+                group->index,
+                &group->desc);
+        if(res) {
+            eprintk("Failed to write EXT2 group descriptor back to disk! (err=%s)\n",
+                    errnostr(res));
+            return res;
+        }
+    }
+
+    // Write the blk bitmap out to disk
+    res = ext2_group_flush_blk_bitmap(group);
+    if(res) {
+        eprintk("Failed to write EXT2 group block bitmap back to disk! (err=%s)\n",
+                errnostr(res));
+        return res;
+    }
+
+    // Write the inode bitmap out to disk
+    res = ext2_group_flush_inode_bitmap(group);
+    if(res) {
+        eprintk("Failed to write EXT2 group inode bitmap back to disk! (err=%s)\n",
+                errnostr(res));
+        return res;
+    }
 
     return 0;
 }

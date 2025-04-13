@@ -25,10 +25,16 @@ ARG(size_t, node_index)
 RET(int)\
 ARG(struct fs_node *, node)
 
+// Synchronize any mount global state with whatever backing store may exist
+// (usually flushes FS global state to disk)
+#define FS_MOUNT_SYNC_SIG(RET,ARG)\
+RET(int)
+
 #define FS_MOUNT_OP_LIST(OP, ...)\
 OP(root_index, FS_MOUNT_ROOT_INDEX_SIG, ##__VA_ARGS__)\
 OP(load_node, FS_MOUNT_LOAD_NODE_SIG, ##__VA_ARGS__)\
-OP(unload_node, FS_MOUNT_UNLOAD_NODE_SIG, ##__VA_ARGS__)
+OP(unload_node, FS_MOUNT_UNLOAD_NODE_SIG, ##__VA_ARGS__)\
+OP(sync, FS_MOUNT_SYNC_SIG, ##__VA_ARGS__)
 
 struct fs_mount_ops {
 DECLARE_OP_LIST_PTRS(FS_MOUNT_OP_LIST, struct fs_mount *)
@@ -70,5 +76,15 @@ DEFINE_OP_LIST_WRAPPERS(
 int init_fs_mount_struct(
         struct fs_mount *mnt,
         struct fs_mount_ops *ops);
+
+/*
+ * Default Implementations
+ */
+
+// Simply returns 0 always, for mounts which do not have a backing store
+// (sysfs is a notable example)
+int
+fs_mount_nop_sync(
+        struct fs_mount *mnt);
 
 #endif
