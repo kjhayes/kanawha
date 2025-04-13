@@ -39,6 +39,7 @@ struct vprintk_state {
 static int vprintk(struct vprintk_state *state, const char *fmt, va_list *args_ptr);
 static int vprintk_flush(struct vprintk_state *state);
 static int vprintk_putc(struct vprintk_state *state, char c);
+static int vprintk_print_pointer(struct vprintk_state *state, void *ptr);
 
 static char printk_state_buffer[CONFIG_PRINTK_BUFFER_SIZE] = { 0 };
 static struct vprintk_state printk_state = { 0 };
@@ -113,6 +114,12 @@ int vprintk_putc(struct vprintk_state *state, char c)
 static
 int vprintk_puts(struct vprintk_state *state, char *str) {
     int res;
+    if(!KERNEL_ADDR(str)) {
+        vprintk_puts(state, "<ERROR-NON-KERNEL-STRING(");
+        vprintk_print_pointer(state, str);
+        vprintk_puts(state, ")>");
+        return 0;
+    }
     while(*str) {
         res = vprintk_putc(state, *str);
         if(res) {
