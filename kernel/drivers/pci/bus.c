@@ -14,7 +14,7 @@ pci_probe_bus(
 {
     int res;
 
-    printk("Enumerating PCI Domain %lu Bus %u\n",
+    dprintk("Enumerating PCI Domain %lu Bus %u\n",
             domain->domain_id, bus_index);
 
     struct pci_bus *bus = kmalloc(sizeof(struct pci_bus));

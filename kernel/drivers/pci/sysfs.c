@@ -74,7 +74,7 @@ pci_fs_node_ops =
     .write_page = fs_node_cannot_write_page,
     .load_page = fs_node_load_page_read_alloc,
     .unload_page = fs_node_unload_page_free,
-    .flush = fs_node_cannot_flush,
+    .flush_page = fs_node_cannot_flush_page,
     .getattr = pci_cfg_fs_node_getattr,
     .setattr = fs_node_cannot_setattr,
     .lookup = fs_node_cannot_lookup,
@@ -108,7 +108,9 @@ insert_func_with_match_lock(
     func->flat_node.fs_node.unload = NULL;
 
     char namebuf[32];
-    snprintk(namebuf, 32, "%d.%d",
+    snprintk(namebuf, 32, "%d.%d.%d.%d",
+            func->device->domain->domain_id,
+            func->device->bus->bus_index,
             func->device->index,
             func->index);
     namebuf[31] = '\0';

@@ -39,7 +39,7 @@ register_pci_domain(
             domain,
             cam,
             0,
-            1);
+            256);
 }
 
 int
