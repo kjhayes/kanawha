@@ -4,6 +4,12 @@
 #include <kanawha/assert.h>
 #include <kanawha/vmem.h>
 
+#ifdef CONFIG_DEBUG_SYSCALL_CHWDIR
+#define LOG(...) printk(__VA_ARGS__)
+#else
+#define LOG(...)
+#endif
+
 int
 syscall_chwdir(
         struct process *process,
@@ -14,7 +20,7 @@ syscall_chwdir(
     DEBUG_ASSERT(KERNEL_ADDR(process));
     DEBUG_ASSERT(KERNEL_ADDR(process->file_table));
 
-    dprintk("PID(%ld) chwdir(%ld)\n",
+    LOG("PID(%ld) chwdir(%ld)\n",
             process->id, fd);
 
     struct file *file = file_table_get_file(
@@ -26,7 +32,7 @@ syscall_chwdir(
     }
 
     if(file->path == NULL) {
-        dprintk("PID(%ld) chwdir(%ld), file has NULL fs_path!\n");
+        LOG("PID(%ld) chwdir(%ld), file has NULL fs_path!\n");
         return -EINVAL;
     }
 
@@ -36,7 +42,7 @@ syscall_chwdir(
                 process->file_table,
                 process,
                 file);
-        eprintk("PID(%ld) chwdir(%ld), process_set_working_directory returned %s\n",
+        LOG("PID(%ld) chwdir(%ld), process_set_working_directory returned %s\n",
                 process->id, fd, errnostr(res));
         return res;
     }
@@ -46,7 +52,7 @@ syscall_chwdir(
             process,
             file);
     if(res) {
-        eprintk("PID(%ld) chwdir: failed to put file! (err=%s)\n",
+        LOG("PID(%ld) chwdir: failed to put file! (err=%s)\n",
                 process->id, errnostr(res));
         return res;
     }
