@@ -67,6 +67,9 @@ struct pci_func
 
     uint16_t vendor_id;
     uint16_t device_id;
+    uint8_t class_id;
+    uint8_t subclass_id;
+    uint8_t prog_if_id;
 
     struct pci_bar bars[6];
 
@@ -90,9 +93,23 @@ struct pci_func
 #endif
 };
 
-struct pci_id {
+// By default pci_ids only match against "vendor" and "device"
+#define PCI_ID_CHECK_CLASS    (1ULL<<0)
+#define PCI_ID_CHECK_SUBCLASS (1ULL<<1)
+#define PCI_ID_CHECK_PROG_IF  (1ULL<<2)
+#define PCI_ID_IGNORE_VENDOR  (1ULL<<3)
+#define PCI_ID_IGNORE_DEVICE  (1ULL<<4)
+
+struct pci_id
+{
     uint16_t vendor;
     uint16_t device;
+
+    uint8_t class;
+    uint8_t subclass;
+    uint8_t prog_if;
+
+    unsigned long flags;
 };
 
 // Returns zero if this driver can control the device

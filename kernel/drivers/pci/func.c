@@ -194,6 +194,9 @@ pci_probe_func(
 
     pci_bus_readw(bus, device->index, index, PCI_CFG_VENDOR_ID, &func->vendor_id);
     pci_bus_readw(bus, device->index, index, PCI_CFG_DEVICE_ID, &func->device_id);
+    pci_bus_readb(bus, device->index, index, PCI_CFG_CLASS,     &func->class_id);
+    pci_bus_readb(bus, device->index, index, PCI_CFG_SUBCLASS,  &func->subclass_id);
+    pci_bus_readb(bus, device->index, index, PCI_CFG_PROG_IF,   &func->prog_if_id);
 
     printk("PCI Function: %d.%d -> ID(%x:%x)\n",
             device->index, index, func->vendor_id, func->device_id);

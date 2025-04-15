@@ -11,6 +11,44 @@ DECLARE_ILIST(pci_driver_list);
 DECLARE_ILIST(pci_unmatched_func_list);
 DECLARE_ILIST(pci_matched_func_list);
 
+static inline int
+pci_id_match(
+        struct pci_func *func,
+        struct pci_id *id)
+{
+    if(!(id->flags & PCI_ID_IGNORE_VENDOR)) {
+        if(id->vendor != func->vendor_id) {
+            return 0;
+        }
+    }
+
+    if(!(id->flags & PCI_ID_IGNORE_DEVICE)) {
+        if(id->device != func->device_id) {
+            return 0;
+        }
+    }
+
+    if(id->flags & PCI_ID_CHECK_CLASS) {
+        if(id->class != func->class_id) {
+            return 0;
+        }
+    }
+
+    if(id->flags & PCI_ID_CHECK_SUBCLASS) {
+        if(id->subclass != func->subclass_id) {
+            return 0;
+        }
+    }
+
+    if(id->flags & PCI_ID_CHECK_PROG_IF) {
+        if(id->prog_if != func->prog_if_id) {
+            return 0;
+        }
+    }
+
+    return 1;
+}
+
 static int
 pci_try_match(
         struct pci_driver *driver,
@@ -21,9 +59,7 @@ pci_try_match(
     int matched_id = 0;
     for(size_t i = 0; i < driver->num_ids; i++) {
         struct pci_id *id = &driver->ids[i];
-        if(id->device == func->device_id &&
-           id->vendor == func->vendor_id)
-        {
+        if(pci_id_match(func, id)) {
             matched_id = 1;
             break;
         }
