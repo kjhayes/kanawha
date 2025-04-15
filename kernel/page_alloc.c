@@ -184,6 +184,9 @@ page_alloc_get_allocator(
                 spin_unlock(&alloc->lock);
                 continue;
             }
+            DEBUG_ASSERT_MSG(ptr_orderof(*addr) >= order,
+                "addr paddr = %p, order = %lu",
+                (void*)alloc, (ul_t)order);
             spin_unlock(&alloc->lock);
 
             //printk("page_alloc -> %p\n", *addr);
@@ -214,6 +217,9 @@ page_alloc_get_allocator(
                 spin_unlock(&alloc->lock);
                 continue;
             }
+            DEBUG_ASSERT_MSG(ptr_orderof(*addr) >= order,
+                "addr paddr = %p, order = %lu",
+                (void*)alloc, (ul_t)order);
             spin_unlock(&alloc->lock);
 
             dprintk("page_alloc -> %p\n", *addr);
@@ -240,9 +246,6 @@ page_alloc(order_t order, void __phys * *addr, unsigned long flags)
     DEBUG_ASSERT_MSG(KERNEL_ADDR(__va(*addr)),
             "addr paddr = %p, vaddr %p",
             (void*)*addr, (void*)__va((*addr)));
-    DEBUG_ASSERT_MSG(ptr_orderof(*addr) >= order,
-            "addr paddr = %p, order = %lu",
-            (void*)alloc, (ul_t)order);
     return 0;
 }
 
