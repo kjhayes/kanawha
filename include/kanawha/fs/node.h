@@ -54,6 +54,11 @@ ARG(uintptr_t, pfn)\
 ARG(unsigned long, flags)\
 ARG(void __phys *, addr)
 
+// Flush any node meta-data/directory info
+#define FS_NODE_FLUSH_SIG(RET,ARG)\
+RET(int)\
+ARG(unsigned long, flags)
+
 #define FS_NODE_ATTR_PAGE_ORDER 0
 #define FS_NODE_ATTR_DATA_SIZE  1
 #define FS_NODE_ATTR_TYPE       2
@@ -114,6 +119,7 @@ OP(write_page, FS_NODE_WRITE_PAGE_SIG, ##__VA_ARGS__)\
 OP(load_page, FS_NODE_LOAD_PAGE_SIG, ##__VA_ARGS__)\
 OP(unload_page, FS_NODE_UNLOAD_PAGE_SIG, ##__VA_ARGS__)\
 OP(flush_page, FS_NODE_FLUSH_PAGE_SIG, ##__VA_ARGS__)\
+OP(flush, FS_NODE_FLUSH_SIG, ##__VA_ARGS__)\
 OP(getattr, FS_NODE_GETATTR_SIG, ##__VA_ARGS__)\
 OP(setattr, FS_NODE_SETATTR_SIG, ##__VA_ARGS__)\
 OP(lookup, FS_NODE_LOOKUP_SIG, ##__VA_ARGS__)\
@@ -275,6 +281,10 @@ fs_node_cannot_flush_page(
         unsigned long flags,
         void __phys *addr);
 int
+fs_node_cannot_flush(
+        struct fs_node *node,
+        unsigned long flags);
+int
 fs_node_cannot_getattr(
         struct fs_node *node,
         int attr,
@@ -343,5 +353,9 @@ fs_node_flush_page_write(
         uintptr_t pfn,
         unsigned long flags,
         void __phys * addr);
+int
+fs_node_flush_nop(
+        struct fs_node *node,
+        unsigned long flags);
 
 #endif

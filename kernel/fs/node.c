@@ -467,6 +467,13 @@ fs_node_cannot_flush_page(
     return -EINVAL;
 }
 int
+fs_node_cannot_flush(
+        struct fs_node *node,
+        unsigned long flags)
+{
+    return -EINVAL;
+}
+int
 fs_node_cannot_getattr(
         struct fs_node *node,
         int attr,
@@ -619,6 +626,14 @@ fs_node_flush_page_write(
         return res;
     }
 
+    return 0;
+}
+
+int
+fs_node_flush_nop(
+        struct fs_node *node,
+        unsigned long flags)
+{
     return 0;
 }
 
