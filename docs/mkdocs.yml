@@ -1,2 +1,15 @@
 site_name: Kanawha Kernel Documentation
-theme: bootstrap386
+theme:
+  name: terminal
+  palette: dark
+
+nav:
+  - Home: index.md
+  - Documentation:
+    - buildsystem/index.md
+    - interfaces/index.md
+    - arch/index.md
+  - Contributors: contributors.md
+
+plugins:
+- search

@@ -15,6 +15,7 @@ memory, and the rest of the kernel will take advantage of both because they get 
 And most of all it just makes the process of toying with the kernel and trying out dumb ideas a bit easier, which
 is really what this hobby project is all about.
 
+- Documentation (https://kjhayes.github.io/kanawha)
 - Elk (C Library) (https://github.com/kjhayes/elk)
 - Cabin (init And Other Utilities) (https://github.com/kjhayes/cabin)
 

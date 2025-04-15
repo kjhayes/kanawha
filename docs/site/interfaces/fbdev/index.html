@@ -18,7 +18,7 @@
 
     
  
-<title>Building Kanawha - Kanawha Kernel Documentation</title>
+<title>Kanawha Framebuffer Device Interface - Kanawha Kernel Documentation</title>
 
 
 <link href="../../css/fontawesome/css/fontawesome.min.css" rel="stylesheet">
@@ -188,7 +188,7 @@
         
             <a class="
 
-    terminal-mkdocs-side-nav-item" href="../">Buildsystem</a>
+    terminal-mkdocs-side-nav-item" href="../../buildsystem/">Buildsystem</a>
         
     
     </li>
@@ -204,7 +204,7 @@
         
             <a class="
 
-    terminal-mkdocs-side-nav-item" href="../../interfaces/">Device/Driver APIs</a>
+    terminal-mkdocs-side-nav-item" href="../">Device/Driver APIs</a>
         
     
     </li>
@@ -255,35 +255,94 @@
 </nav><hr>
 <nav>
     <ul>
-        <li><a href="#building-kanawha">Building Kanawha</a></li>
-        <li><a href="#quickstart">Quickstart</a></li><li><a href="#buildsystem-overview">Buildsystem Overview</a></li>
+        <li><a href="#kanawha-framebuffer-device-interface">Kanawha Framebuffer Device Interface</a></li>
+        <li><a href="#framebuffer-modes">Framebuffer Modes</a></li><li><a href="#framebuffer-device-methods">Framebuffer Device Methods</a></li><li><a href="#sysfs">Sysfs</a></li>
     </ul>
 </nav>
 </aside>
             <main id="terminal-mkdocs-main-content">
 <section id="mkdocs-terminal-content">
-    <h1 id="building-kanawha">Building Kanawha</h1>
-<h2 id="quickstart">Quickstart</h2>
-<p>To build the kernel ensure that there is a valid <code>.config</code> file
-in the root directory, or generate one with:</p>
-<pre><code>$ make defconfig
+    <h1 id="kanawha-framebuffer-device-interface">Kanawha Framebuffer Device Interface</h1>
+<h2 id="framebuffer-modes">Framebuffer Modes</h2>
+<p>Every framebuffer device should have at least 1 "mode" of operation.
+How many/what format of modes are presented is device/driver specific,
+but the numbering should begin from mode zero (which must always exist)
+and increase contiguously from zero.</p>
+<p>Modes can be thought of as a collection of layers of the same resolution with
+varying formats (RGBA,RBGA,Mono,etc.).</p>
+<p>Modes are described using <code>struct fb_mode_info</code>, <code>struct fb_layer_info</code> and the macros defiend in <code>uapi/fb.h</code>.</p>
+<h2 id="framebuffer-device-methods">Framebuffer Device Methods</h2>
+<p>Every framebuffer device driver is expected to implement the following methods.</p>
+<h3 id="fb_dev_get_mode_info">fb_dev_get_mode_info</h3>
+<pre><code class="language-C">struct fb_mode_info *
+fb_dev_get_mode_info(struct fb_dev *dev, size_t index);
 </code></pre>
-<p>or modify the current config with:</p>
-<pre><code>$ make menuconfig
+<p>Returns a pointer to <code>struct fb_mode_info</code> describing mode <code>index</code> of the device,
+or returns <code>NULL</code> if no mode <code>index</code> exists.</p>
+<p>If non-<code>NULL</code> the pointer must remain valid until a call to <code>fb_dev_put_mode_info</code> with the same index and device.</p>
+<h3 id="fb_dev_put_mode_info">fb_dev_put_mode_info</h3>
+<pre><code class="language-C">int
+fb_dev_put_mode_info(struct fb_dev *dev, size_t index);
 </code></pre>
-<p>Once there is a valid <code>.config</code> all you need to do is run:</p>
-<pre><code>$ make
+<p>Must be called after <code>fb_dev_get_mode_info</code> to release the <code>struct fb_mode_info</code> associated with mode <code>index</code>.</p>
+<h3 id="fb_dev_set_mode">fb_dev_set_mode</h3>
+<pre><code class="language-C">int
+fb_dev_set_mode(struct fb_dev *dev, size_t index);
 </code></pre>
-<p>and a kernel binary should be built at <code>build/kanawha.o</code>.</p>
-<h2 id="buildsystem-overview">Buildsystem Overview</h2>
-<p>Kanawha has a custom buildsystem, which is heavily
-inspired by the design of "kbuild" from the Linux
-kernel.</p>
-<p>Kanawha uses a version of the "kconfig" configuration system
-from the Linux kernel. However instead of building "kconfig" from
-source like Linux, we rely on <a href="https://pypi.org/project/kconfiglib/">kconfiglib</a>,
-a python implementation of the tools Linux uses for parsing/generating/editing
-<code>Kconfig</code> files.</p>
+<p>Changes the current mode of the framebuffer device to <code>index</code>.
+The driver may assume this function is only called when the buffer of <code>dev</code> is unloaded.</p>
+<p>Returns 0 on success or an <code>errno</code> on failure.</p>
+<h3 id="fb_dev_get_mode">fb_dev_get_mode</h3>
+<pre><code class="language-C">ssize_t
+fb_dev_get_mode(struct fb_dev *dev);
+</code></pre>
+<p>Get the current mode of the framebuffer device.</p>
+<p>Returns positive or zero mode, or a negative <code>errno</code> if the driver fails
+to determine the current mode of the device or the device is in an
+invalid/unconfigured state.</p>
+<h3 id="fb_dev_load_buffer">fb_dev_load_buffer</h3>
+<pre><code class="language-C">int
+fb_dev_load_buffer(struct fb_dev *dev, void __phys **base_out);
+</code></pre>
+<p>Load backing memory for the framebuffer.
+The size of the buffer should be at least as large as the current mode
+<code>struct fb_mode_info</code> field <code>buffer_size</code> indicates.
+The buffer must also be aligned to at least <code>VMEM_MIN_PAGE_ORDER</code>.</p>
+<p>However the buffer size does not need to be a multiple of <code>VMEM_MIN_PAGE_ORDER</code>.
+This is because kernel subsystem which manages framebuffer devices to present
+them to userspace will handle mapping strange sizes of framebuffers correctly.
+Note though, that if the buffer can be a multiple of <code>VMEM_MIN_PAGE_ORDER</code>,
+for performance reasons it should be.</p>
+<p>The driver may assume that there will only one call to <code>fb_dev_load_buffer</code>
+between calls to <code>fb_dev_unload_buffer</code>.</p>
+<h3 id="fb_dev_unload_buffer">fb_dev_unload_buffer</h3>
+<pre><code class="language-C">int
+fb_dev_unload_buffer(struct fb_dev *dev, void __phys **base);
+</code></pre>
+<p>Unloads the buffer previously loaded by <code>fb_dev_load_buffer</code>.
+<code>base</code> must be the same pointer as was returned by the last call to <code>fb_dev_load_buffer</code> in <code>base_out</code>.</p>
+<p><code>fb_dev_unload_buffer</code> may flush the buffer, but should not if it is not required.</p>
+<p>Returns 0 on success and a negative <code>errno</code> on failure.</p>
+<h3 id="fb_dev_flush_buffer">fb_dev_flush_buffer</h3>
+<pre><code class="language-C">int
+fb_dev_flush_buffer(struct fb_dev *dev);
+</code></pre>
+<p>Flush the currently loaded buffer to the display.</p>
+<p>The driver may assume that the buffer is currently loaded when a call is made to
+<code>fb_dev_flush_buffer</code>.
+The driver may also flush the buffer at any point when it is loaded. Though it
+is only required to during an explicit call to <code>fb_dev_flush_buffer</code>.</p>
+<p>Returns 0 on success or a negative <code>errno</code> on failure.</p>
+<h2 id="sysfs">Sysfs</h2>
+<p>All registered framebuffer devices should appear as a file under the <code>fbdev</code> sysfs mount.</p>
+<p>The root file of the device should give direct access to the backing buffer for the device.
+The root file should also have two children: <code>*/mode</code> and <code>*/info</code>.</p>
+<p>Reading <code>*/mode</code> returns the current mode of the device as a decimal number string.
+Writing <code>*/mode</code> with a integer string will attempt to set the mode of the device.
+This may fail if the device is pinned or if the mode does not exist, so the <code>*/mode</code> should
+be read again after writing to verify that the mode has actually be set correctly.</p>
+<p>Reading <code>*/info</code> should return the same data as the C struct <code>fb_dev_mode_info</code> for the last integer mode written to <code>*/info</code>. If <code>*/info</code> has size zero, this indicates an issue with the last integer string written to <code>*/info</code> (most likely that the mode does not exist).
+Writing <code>*/info</code> does not change the current mode of the device, and can be used safely to probe what modes are available on the device.</p>
 </section>
 
             </main>

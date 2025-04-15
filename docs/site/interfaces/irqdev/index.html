@@ -8,28 +8,28 @@
     <meta name="generator" content="mkdocs-1.6.1, mkdocs-terminal-4.7.0">
      
      
-    <link rel="icon" type="image/png" sizes="192x192" href="img/android-chrome-192x192.png" />
-<link rel="icon" type="image/png" sizes="512x512" href="img/android-chrome-512x512.png" />
-<link rel="apple-touch-icon" sizes="180x180" href="img/apple-touch-icon.png" />
-<link rel="shortcut icon" type="image/png" sizes="48x48" href="img/favicon.ico" />
-<link rel="icon" type="image/png" sizes="16x16" href="img/favicon-16x16.png" />
-<link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="../../img/android-chrome-192x192.png" />
+<link rel="icon" type="image/png" sizes="512x512" href="../../img/android-chrome-512x512.png" />
+<link rel="apple-touch-icon" sizes="180x180" href="../../img/apple-touch-icon.png" />
+<link rel="shortcut icon" type="image/png" sizes="48x48" href="../../img/favicon.ico" />
+<link rel="icon" type="image/png" sizes="16x16" href="../../img/favicon-16x16.png" />
+<link rel="icon" type="image/png" sizes="32x32" href="../../img/favicon-32x32.png" />
 
 
     
  
-<title>Home - Kanawha Kernel Documentation</title>
+<title>Kanawha IRQ Device Interface - Kanawha Kernel Documentation</title>
 
 
-<link href="css/fontawesome/css/fontawesome.min.css" rel="stylesheet">
-<link href="css/fontawesome/css/solid.min.css" rel="stylesheet">
-<link href="css/normalize.css" rel="stylesheet">
-<link href="css/terminal.css" rel="stylesheet">
-<link href="css/theme.css" rel="stylesheet">
-<link href="css/theme.tile_grid.css" rel="stylesheet">
-<link href="css/theme.footer.css" rel="stylesheet">
+<link href="../../css/fontawesome/css/fontawesome.min.css" rel="stylesheet">
+<link href="../../css/fontawesome/css/solid.min.css" rel="stylesheet">
+<link href="../../css/normalize.css" rel="stylesheet">
+<link href="../../css/terminal.css" rel="stylesheet">
+<link href="../../css/theme.css" rel="stylesheet">
+<link href="../../css/theme.tile_grid.css" rel="stylesheet">
+<link href="../../css/theme.footer.css" rel="stylesheet">
 <!-- dark color palette -->
-<link href="css/palettes/dark.css" rel="stylesheet">
+<link href="../../css/palettes/dark.css" rel="stylesheet">
 
 <!-- page layout -->
 <style>
@@ -60,20 +60,20 @@
 
     
     <!-- search css support -->
-<link href="css/search/bootstrap-modal.css" rel="stylesheet">
+<link href="../../css/search/bootstrap-modal.css" rel="stylesheet">
 <!-- search scripts -->
 <script>
-    var base_url = ".",
+    var base_url = "../..",
     shortcuts = "{}";
 </script>
-<script src="js/jquery/jquery-1.10.1.min.js" defer></script>
-<script src="js/bootstrap/bootstrap.min.js" defer></script>
-<script src="js/mkdocs/base.js" defer></script>
+<script src="../../js/jquery/jquery-1.10.1.min.js" defer></script>
+<script src="../../js/bootstrap/bootstrap.min.js" defer></script>
+<script src="../../js/mkdocs/base.js" defer></script>
     
     
     
     
-    <script src="search/main.js"></script>
+    <script src="../../search/main.js"></script>
     
 
     
@@ -91,7 +91,7 @@
                 
                 
                 <li property="itemListElement" typeof="ListItem">
-                    <a href="." class="menu-item active" property="item" typeof="WebPage">
+                    <a href="../.." class="menu-item " property="item" typeof="WebPage">
                         <span property="name">Home</span>
                     </a>
                     <meta property="position" content="0">
@@ -101,7 +101,7 @@
                 
                 
                 <li property="itemListElement" typeof="ListItem">
-                    <a href="contributors/" class="menu-item " property="item" typeof="WebPage">
+                    <a href="../../contributors/" class="menu-item " property="item" typeof="WebPage">
                         <span property="name">Contributors</span>
                     </a>
                     <meta property="position" content="1">
@@ -138,9 +138,11 @@
     
     
         
-        <span class="
+        
+            <a class="
 
-    terminal-mkdocs-side-nav-item--active">Home</span>
+    terminal-mkdocs-side-nav-item" href="../..">Home</a>
+        
     
     
     
@@ -186,7 +188,7 @@
         
             <a class="
 
-    terminal-mkdocs-side-nav-item" href="buildsystem/">Buildsystem</a>
+    terminal-mkdocs-side-nav-item" href="../../buildsystem/">Buildsystem</a>
         
     
     </li>
@@ -202,7 +204,7 @@
         
             <a class="
 
-    terminal-mkdocs-side-nav-item" href="interfaces/">Device/Driver APIs</a>
+    terminal-mkdocs-side-nav-item" href="../">Device/Driver APIs</a>
         
     
     </li>
@@ -218,7 +220,7 @@
         
             <a class="
 
-    terminal-mkdocs-side-nav-item" href="arch/">Architecture Specific Documentation</a>
+    terminal-mkdocs-side-nav-item" href="../../arch/">Architecture Specific Documentation</a>
         
     
     </li>
@@ -241,7 +243,7 @@
         
             <a class="
 
-    terminal-mkdocs-side-nav-item" href="contributors/">Contributors</a>
+    terminal-mkdocs-side-nav-item" href="../../contributors/">Contributors</a>
         
     
     
@@ -253,30 +255,57 @@
 </nav><hr>
 <nav>
     <ul>
-        <li><a href="#kanawha-kernel-documentation">Kanawha Kernel Documentation</a></li>
-        
+        <li><a href="#kanawha-irq-device-interface">Kanawha IRQ Device Interface</a></li>
+        <li><a href="#irq-device-methods">IRQ Device Methods</a></li>
     </ul>
 </nav>
 </aside>
             <main id="terminal-mkdocs-main-content">
 <section id="mkdocs-terminal-content">
-    <h1 id="kanawha-kernel-documentation">Kanawha Kernel Documentation</h1>
-<p>Welcome to the Kanawha Kernel!
-This is a simple hobby kernel I (Kevin) am writing in my free time.</p>
-<ul>
-<li><a href="buildsystem/overview/">Buildsystem Overview</a></li>
-<li><a href="interfaces/">Driver Interfaces</a></li>
-<li><a href="arch/">Architecture Specific Docs</a></li>
-</ul>
-<p>Kanawha is not <em>efficient</em>. There are many many levels of indirection do not have a fantastic reason
-for existing. For example, there is an interface to allow multiple "page_allocator's" to exist in the 
-system at once (this is pretty useless and slows down the entire system). But it means that you can play
-around with different schemes for how to allocate physical pages. If you have some bug, and you suspect it's
-the page allocator, you can just swap out the complicated buddy allocator for a dead simple slab allocator
-and see if the bug is still there. You can run two completely different allocators for different regions of
-memory, and the rest of the kernel will take advantage of both because they get presented through a single API.
-And most of all it just makes the process of toying with the kernel and trying out dumb ideas a bit easier, which
-is really what this hobby project is all about.</p>
+    <h1 id="kanawha-irq-device-interface">Kanawha IRQ Device Interface</h1>
+<h2 id="irq-device-methods">IRQ Device Methods</h2>
+<p>Every IRQ device driver must implement the following functions</p>
+<h3 id="irq_dev_mask_irq">irq_dev_mask_irq</h3>
+<pre><code class="language-C">int irq_dev_mask(struct irq_dev *dev, hwirq_t hwirq);
+</code></pre>
+<p>Masks the specified <code>hwirq</code> making it so the IRQ is not able to be delivered.</p>
+<p>Returns 0 on success or negative <code>errno</code> on failure.</p>
+<h3 id="irq_dev_unmask_irq">irq_dev_unmask_irq</h3>
+<pre><code class="language-C">int irq_dev_unmask(struct irq_dev *dev, hwirq_t hwirq);
+</code></pre>
+<p>Un-masks the specified <code>hwirq</code> allowing it to be delivered.</p>
+<p>Returns 0 on success or negative <code>errno</code> on failure.</p>
+<h3 id="irq_dev_irq_status">irq_dev_irq_status</h3>
+<pre><code class="language-C">unsigned long irq_dev_irq_status(struct irq_dev *dev, hwirq_t hwirq);
+</code></pre>
+<p>Returns the current status of the <code>hwirq</code> using the bit-wise or of the following macros
+- <code>IRQ_STATUS_INVALID</code> : An error occurred reading the status.
+- <code>IRQ_STATUS_UNKNOWN</code> : The status is currently unknown (ignore the following fields).
+- <code>IRQ_STATUS_MASKED</code> : The IRQ is masked.
+- <code>IRQ_STATUS_PENDING</code> : The IRQ is pending.</p>
+<p>The value returned by this function should not be relied upon by the kernel,
+and should only be used for debugging print-outs.</p>
+<h3 id="irq_dev_ack_irq">irq_dev_ack_irq</h3>
+<pre><code class="language-C">int irq_dev_ack_irq(struct irq_dev *dev, hwirq_t to_ack);
+</code></pre>
+<p>Called by generic IRQ handling functions when an interrupt specified by <code>to_ack</code> arrives.</p>
+<p>Returns 0 on success, negative <code>errno</code> on error.</p>
+<h3 id="irq_dev_eoi_irq">irq_dev_eoi_irq</h3>
+<pre><code class="language-C">int irq_dev_eoi_irq(struct irq_dev *dev, hwirq_t to_eoi);
+</code></pre>
+<p>Called by generic IRQ handling functions at the end of handling the interrupt specified by <code>to_eoi</code>.</p>
+<p>Returns 0 on success, negative <code>errno</code> on error.</p>
+<h3 id="irq_dev_trigger_irq">irq_dev_trigger_irq</h3>
+<pre><code class="language-C">int irq_dev_trigger_irq(struct irq_dev *dev, hwirq_t hwirq);
+</code></pre>
+<p>"Triggers" the specified <code>hwirq</code> this could simply mean running the associated descriptor's handlers. Or it could require sending an IPI if the hwirq is associated with a different core.</p>
+<p>Returns 0 on success or a negative <code>errno</code> on failure.</p>
+<h3 id="irq_dev_describe_irq">irq_dev_describe_irq</h3>
+<pre><code class="language-C">int
+irq_dev_describe_irq(struct irq_dev *dev, hwirq_t irq, char *buffer, size_t buflen);
+</code></pre>
+<p>Writes a string providing a more "descriptive" name of the specified <code>irq</code> into <code>buffer</code> which is of length <code>buflen</code>.</p>
+<p>Returns 0 on success or negative <code>errno</code> on failure.</p>
 </section>
 
             </main>
