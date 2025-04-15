@@ -47,7 +47,23 @@ __fs_path_traverse(
         }
     }
 
-    // Load the file from underlying fs_node's
+    // Check for special cases like .. and .
+    if(strcmp(child_name, ".") == 0) {
+        dir->refs++;
+        *out = dir;
+        spin_unlock(&fs_path_global_lock);
+        return 0;
+    } else if(strcmp(child_name, "..") == 0
+          && dir != process->root_directory
+          && dir->parent != NULL)
+    {
+        dir->parent->refs++;
+        *out = dir->parent;
+        spin_unlock(&fs_path_global_lock);
+        return 0;
+    }
+
+    // Load the file from underlying fs_node
     struct fs_node *dir_fs_node = dir->fs_node;
 
     size_t mount_index;
@@ -56,21 +72,6 @@ __fs_path_traverse(
             child_name,
             &mount_index);
     if(res) {
-
-        // Failed to lookup the file, check for special cases like .. and .
-        if(strcmp(child_name, ".") == 0) {
-            *out = dir;
-            spin_unlock(&fs_path_global_lock);
-            return 0;
-        } else if(strcmp(child_name, "..") == 0
-              && dir != process->root_directory
-              && dir->parent != NULL)
-        {
-            *out = dir->parent;
-            spin_unlock(&fs_path_global_lock);
-            return 0;
-        }
-
         // Not a special case, the file just doesn't exist or an error occurred
         dprintk("fs_node_lookup: %s returned (%s)\n",
                 child_name, errnostr(res));
@@ -120,19 +121,33 @@ __fs_path_traverse(
 int
 fs_path_get(struct fs_path *path)
 {
+    int res;
     spin_lock(&fs_path_global_lock);
-    path->refs++;
+    DEBUG_ASSERT(KERNEL_ADDR(path->name));
+    if(path->refs > 0) {
+        path->refs++;
+        res = 0;
+        dprintk("fs_path_get(%s)\n", path->name);
+    } else {
+        res = -EINVAL;
+        dprintk("fs_path_get(%s) FAILED\n", path->name);
+    }
     spin_unlock(&fs_path_global_lock);
-    return 0;
+    return res;
 }
 
 static int
 __fs_path_put(struct fs_path *path)
 {
+    int res;
+
     path->refs--;
-    if(path->refs != 0) {
+    dprintk("fs_path_put(%s)\n", path->name);
+    if(path->refs > 0) {
         return 0;
     }
+
+    DEBUG_ASSERT(path->refs == 0);
 
     struct fs_path *parent;
     parent = path->parent;
@@ -151,7 +166,8 @@ __fs_path_put(struct fs_path *path)
         return 0;
     }
 
-    return __fs_path_put(parent);
+    res = __fs_path_put(parent);
+    return res;
 }
 
 int
@@ -229,7 +245,7 @@ fs_path_mount_root(
 
     mntpoint->type = FS_PATH_MOUNT;
     mntpoint->parent = NULL;
-    mntpoint->name = NULL;
+    mntpoint->name = kstrdup("/");
     mntpoint->refs = 1; 
     ilist_init(&mntpoint->children);
 
