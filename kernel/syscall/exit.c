@@ -24,5 +24,7 @@ syscall_exit(
 #endif
 
     thread_abandon(force_resched());
+    panic("PID(%ld) syscall_exit: thread_abandon returned!\n",
+            (sl_t)process->id);
 }
 
