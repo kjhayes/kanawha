@@ -1,0 +1,9 @@
+
+Kanawha "exit" Syscall
+
+__attribute__((noreturn)
+exit(int exitcode);
+
+Unconditionally terminates the current process,
+and uses "exitcode" as the process exit code.
+

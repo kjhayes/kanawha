@@ -2,7 +2,6 @@
 build/**/*
 initrd/**/*
 doc/build/**/*
-doc/site/**/*
 doc/venv/**/*
 compile_commands.json
 .cache/
