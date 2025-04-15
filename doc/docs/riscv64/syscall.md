@@ -2,8 +2,7 @@
 RISCV64 Syscalls
 ================
 
-Calling Convention
-------------------
+# Calling Convention
 
 A syscall is invoked using the ``ecall`` instruction in u-mode.
 

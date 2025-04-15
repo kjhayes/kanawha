@@ -6,15 +6,15 @@ Quickstart
 ----------
 
 To build the kernel ensure that there is a valid ``.config`` file
-in the root directory, or generate one with::
+in the root directory, or generate one with:
 
     $ make defconfig
 
-or modify the current config with::
+or modify the current config with:
 
     $ make menuconfig
 
-Once there is a valid ``.config`` all you need to do is run::
+Once there is a valid ``.config`` all you need to do is run:
 
     $ make
 
@@ -29,7 +29,7 @@ kernel.
 
 Kanawha uses a version of the "kconfig" configuration system
 from the Linux kernel. However instead of building "kconfig" from
-source like Linux, we rely on `kconfiglib <https://pypi.org/project/kconfiglib/>`_,
+source like Linux, we rely on [kconfiglib](https://pypi.org/project/kconfiglib/),
 a python implementation of the tools Linux uses for parsing/generating/editing
 ``Kconfig`` files.
 
