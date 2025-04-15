@@ -3,6 +3,8 @@ build/**/*
 initrd/**/*
 doc/build/**/*
 doc/venv/**/*
+docs/build/**/*
+docs/venv/**/*
 compile_commands.json
 .cache/
 .config
