@@ -45,12 +45,6 @@ ARG(fd_t, file)\
 ARG(ssize_t, offset)\
 ARG(int, whence)
 
-#define SYSCALL_SIG_ATTR(RET,ARG)\
-RET(int)\
-ARG(fd_t, file)\
-ARG(int, attr)\
-ARG(size_t __user *, value)
-
 #define SYSCALL_SIG_MMAP(RET,ARG)\
 RET(int)\
 ARG(fd_t, file)\
