@@ -14,7 +14,10 @@ obj-y += \
 	reap.o \
 	getpid.o \
 	mount.o \
-	dir.o \
+	dirbegin.o \
+	dirnext.o \
+	dirattr.o \
+	dirname.o \
 	fmove.o \
 	mkfile.o \
 	mkdir.o \

@@ -56,3 +56,23 @@ config DEBUG_SYSCALL_CHROOT
     depends on DEBUGGING
     default n
 
+config DEBUG_SYSCALL_DIRATTR
+    bool "Debug dirattr"
+    depends on DEBUGGING
+    default n
+
+config DEBUG_SYSCALL_DIRBEGIN
+    bool "Debug dirbegin"
+    depends on DEBUGGING
+    default n
+
+config DEBUG_SYSCALL_DIRNAME
+    bool "Debug dirname"
+    depends on DEBUGGING
+    default n
+
+config DEBUG_SYSCALL_DIRNEXT
+    bool "Debug dirnext"
+    depends on DEBUGGING
+    default n
+
