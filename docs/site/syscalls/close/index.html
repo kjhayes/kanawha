@@ -281,6 +281,9 @@
     <h1 id="close-syscall"><code>close</code> syscall</h1>
 <pre><code class="language-C">int close(fd_t file);
 </code></pre>
+<p>Closes the file descriptor <code>file</code>. This does not necessarily immediately free the descriptor, as other processes or ongoing syscalls could still have a reference.</p>
+<p><code>close</code> merely decrements the reference count on the descriptor (initialized to 1 on <code>open</code>). When the reference count reaches zero the descriptor will actually be freed.</p>
+<p>Returns 0 on success, negative <code>errno</code> on failure.</p>
 </section>
 
             </main>

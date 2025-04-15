@@ -279,8 +279,22 @@
             <main id="terminal-mkdocs-main-content">
 <section id="mkdocs-terminal-content">
     <h1 id="open-syscall"><code>open</code> syscall</h1>
-<pre><code class="language-C">int open(const char __user *path, unsigned long access_flags, unsigned long mode_flags);
+<pre><code class="language-C">int open(const char __user *path, unsigned long access_flags, unsigned long mode_flags, fd_t __user *fd);
 </code></pre>
+<p>Open <code>path</code> and return the newly created file descriptor through <code>fd</code>.</p>
+<p>Returns 0 on success, a negative <code>errno</code> on failure.</p>
+<p><code>access_flags</code> is the bitwise-or of zero or more of the following macros defined in <code>uapi/file.h</code>.</p>
+<ul>
+<li><code>FILE_PERM_READ</code></li>
+<li><code>FILE_PERM_WRITE</code></li>
+<li><code>FILE_PERM_EXEC</code></li>
+</ul>
+<p><code>mode_flags</code> is the bitwise-or of zero or more of the following macros defined in <code>uapi/file.h</code>.</p>
+<ul>
+<li><code>FILE_MODE_WRITE_EXTEND</code></li>
+<li><code>FILE_MODE_OPEN_TRUNC</code></li>
+<li><code>FILE_MODE_NON_BLOCK</code></li>
+</ul>
 </section>
 
             </main>
