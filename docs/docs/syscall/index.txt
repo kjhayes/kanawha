@@ -1,5 +1,0 @@
-
---- Kanawha Kernel Syscall Master List ---
-
-[0] - exit
-

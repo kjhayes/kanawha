@@ -8,6 +8,7 @@ nav:
   - Documentation:
     - buildsystem/index.md
     - interfaces/index.md
+    - syscalls/index.md
     - arch/index.md
   - Contributors: contributors.md
 
