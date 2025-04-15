@@ -503,6 +503,8 @@ ext2_dir_node_ops = {
     .unload_page = fs_node_unload_page_free,
     .flush_page = fs_node_flush_page_write,
 
+    .flush = ext2_fs_node_flush,
+
     .getattr = ext2_fs_node_getattr,
     .setattr = ext2_fs_node_setattr,
 

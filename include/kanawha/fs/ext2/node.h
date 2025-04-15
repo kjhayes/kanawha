@@ -53,6 +53,7 @@ ext2_fs_node_setattr(
 
 int
 ext2_fs_node_flush(
-        struct fs_node *node);
+        struct fs_node *node,
+        unsigned long flags);
 
 #endif

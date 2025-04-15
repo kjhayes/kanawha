@@ -211,6 +211,8 @@ ext2_mount_sync(
 {
     int res;
 
+    dprintk("ext2_mount_sync\n");
+
     struct ext2_mount *mnt =
         container_of(fs_mount, struct ext2_mount, fs_mount);
 

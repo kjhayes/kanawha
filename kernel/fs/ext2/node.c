@@ -256,7 +256,8 @@ ext2_fs_node_setattr(
 
 int
 ext2_fs_node_flush(
-        struct fs_node *fs_node)
+        struct fs_node *fs_node,
+        unsigned long flags)
 {
     int res;
 
