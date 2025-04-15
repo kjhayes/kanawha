@@ -261,6 +261,7 @@ static struct fs_node_ops fb_dev_buffer_fs_node_ops = {
     .unload_page = fb_dev_buffer_fs_node_unload_page,
     .flush_page = fb_dev_buffer_fs_node_flush_page,
 
+    .flush = fs_node_flush_nop,
     .getattr = fb_dev_buffer_fs_node_getattr,
     .setattr = fs_node_cannot_setattr,
  
@@ -377,6 +378,8 @@ fb_dev_mode_set_fs_node_setattr(
 static struct fs_node_ops fb_dev_mode_set_fs_node_ops =
 {
     .setattr = fb_dev_mode_set_fs_node_setattr,
+
+    .flush = fs_node_flush_nop,
 
     .lookup = fs_node_cannot_lookup, 
     .link = fs_node_cannot_link,
@@ -527,6 +530,8 @@ static struct fs_node_ops fb_dev_mode_info_fs_node_ops =
 {
     .setattr = fb_dev_mode_info_fs_node_setattr,
     .getattr = fb_dev_mode_info_fs_node_getattr,
+
+    .flush = fs_node_flush_nop,
 
     .lookup = fs_node_cannot_lookup, 
     .link = fs_node_cannot_link,

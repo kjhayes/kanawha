@@ -36,6 +36,7 @@ pipe_fs_node_ops =
     .load_page = fs_node_cannot_load_page,
     .unload_page = fs_node_cannot_unload_page,
     .flush_page = fs_node_cannot_flush_page,
+    .flush = fs_node_flush_nop,
     .getattr = fs_node_cannot_getattr,
     .setattr = fs_node_cannot_setattr,
     .lookup = fs_node_cannot_lookup,

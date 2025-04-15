@@ -185,6 +185,7 @@ char_dev_fs_node_ops =
     .symlink = fs_node_cannot_symlink,
     .unlink = fs_node_cannot_unlink,
 
+    .flush = fs_node_flush_nop,
     .setattr = char_dev_fs_node_setattr,
     .getattr = char_dev_fs_node_getattr,
 };

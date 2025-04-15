@@ -144,6 +144,8 @@ cpio_node_ops = {
     .unload_page = fs_node_unload_page_free,
     .flush_page = fs_node_flush_page_write,
 
+    .flush = fs_node_flush_nop,
+
     .getattr = cpio_node_getattr,
     .setattr = cpio_node_setattr,
 

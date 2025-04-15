@@ -262,6 +262,8 @@ static struct fs_node_ops blk_dev_fs_node_ops =
     .unload_page = fs_node_unload_page_free,
     .flush_page = fs_node_flush_page_write,
 
+    .flush = fs_node_flush_nop,
+
     .getattr = blk_dev_getattr,
     .setattr = blk_dev_setattr,
 

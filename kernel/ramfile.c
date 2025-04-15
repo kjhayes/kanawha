@@ -208,6 +208,8 @@ ramfile_fs_node_ops =
     .unload_page = fs_node_unload_page_free,
     .flush_page = fs_node_flush_page_write,
 
+    .flush = fs_node_flush_nop,
+
     .getattr = ramfile_node_getattr,
     .setattr = ramfile_node_setattr,
 
