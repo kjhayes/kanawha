@@ -27,6 +27,11 @@ config DEBUG_SYSCALL_READ
     help
       Log info about read system calls
 
+config DEBUG_SYSCALL_FLUSH
+    bool "Debug flush"
+    depends on DEBUGGING
+    default n
+
 config DEBUG_SYSCALL_ENVIRON
     bool "Debug environ"
     depends on DEBUGGING

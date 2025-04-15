@@ -3,6 +3,12 @@
 #include <kanawha/fs/file.h>
 #include <kanawha/fs/mount.h>
 
+#ifdef CONFIG_DEBUG_SYSCALL_FLUSH
+#define LOG(...) printk(__VA_ARGS__)
+#else
+#define LOG(...)
+#endif
+
 int
 syscall_flush(
         struct process *process,
@@ -11,22 +17,38 @@ syscall_flush(
 {
     int res;
 
+    LOG("PID(%ld) syscall_flush: file=%ld, flags=0x%lx\n",
+            (sl_t)process->id,
+            (sl_t)file,
+            (ul_t)flags);
+
     struct file *desc
         = file_table_get_file(
                 process->file_table,
                 process,
                 file);
     if(desc == NULL) {
+        LOG("syscall_flush: failed to get file!\n");
         return -ENXIO;
     }
 
-    if((desc->access_flags & FILE_PERM_WRITE) == 0) {
-        file_table_put_file(process->file_table, process, desc);
-        return -EPERM;
-    }
+    // TODO We should be checking this in some capacity
+    // if((desc->access_flags & FILE_PERM_WRITE) == 0) {
+    //     file_table_put_file(process->file_table, process, desc);
+    //     LOG("syscall_flush: cannot flush a file not opened for writing!\n");
+    //     return -EPERM;
+    // }
 
     res = direct_file_flush(desc, flags);
     if(res) {
+        LOG("syscall_flush: direct_file_flush failed!\n");
+        file_table_put_file(process->file_table, process, desc);
+        return res;
+    }
+
+    res = fs_node_flush(desc->path->fs_node, 0);
+    if(res) {
+        LOG("syscall_flush: failed to flush fs_node!\n");
         file_table_put_file(process->file_table, process, desc);
         return res;
     }
@@ -38,6 +60,7 @@ syscall_flush(
     if(desc->path && desc->path->fs_node && desc->path->fs_node->mount) {
         res = fs_mount_sync(desc->path->fs_node->mount);
         if(res) {
+            LOG("syscall_flush: failed to sync file mount!\n");
             file_table_put_file(process->file_table, process, desc);
             return res;
         }
