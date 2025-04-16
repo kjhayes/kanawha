@@ -130,43 +130,47 @@ __dma_region_alloc(
         uintptr_t align_mask = ((1ULL<<align)-1);
         if((phys_base & align_mask) == 0) {
             // Start of region is aligned
+            dprintk("__dma_region_alloc: At Start\n");
             blk->phys_base += size;
             blk->size -= size;
             *out = (void __phys *)phys_base;
         }
         else if(((phys_end - size) & align_mask) == 0) {
             // End of region is aligned
+            dprintk("__dma_region_alloc: At End\n");
             blk->size -= size;
             *out = (void __phys *)(phys_end - size);
         }
         else {
-            size_t misalign_below = (1ULL<<align) - (phys_base & align_mask);
-            size_t misalign_above = (phys_end - size) & align_mask;
-            size_t total_size = blk->size;
-
-            struct dma_free_block *above = kmalloc(sizeof(struct dma_free_block));
-            if(above == NULL) {
-                // Not enough memory to split the block in two
-                continue;
-            }
-
-            // Is it better to keep one large block and one tiny block,
-            // or try to keep two medium sized blocks? (I'm not sure, but we'll go with the latter)
-            if(misalign_below > misalign_above)
-            {
-                *out = (void __phys *)phys_base + misalign_below;
-            }
-            else
-            {
-                *out = (void __phys *)(phys_end - (size + misalign_above));
-            }
-
-            above->phys_base = (*out + size);
-            above->size = (uintptr_t)phys_end - (uintptr_t)above->phys_base;
-
-            blk->size = (uintptr_t)(*out) - phys_base;
-
-            ilist_push_tail(&region->free_list, &above->list_node);
+            continue; // Don't try splitting blocks
+//            dprintk("__dma_region_alloc: Doubly Mis-Aligned\n");
+//            size_t misalign_below = (1ULL<<align) - (phys_base & align_mask);
+//            size_t misalign_above = (phys_end - size) & align_mask;
+//            size_t total_size = blk->size;
+//
+//            struct dma_free_block *above = kmalloc(sizeof(struct dma_free_block));
+//            if(above == NULL) {
+//                // Not enough memory to split the block in two
+//                continue;
+//            }
+//
+//            // Is it better to keep one large block and one tiny block,
+//            // or try to keep two medium sized blocks? (I'm not sure, but we'll go with the latter)
+//            if(misalign_below > misalign_above)
+//            {
+//                *out = (void __phys *)phys_base + misalign_below;
+//            }
+//            else
+//            {
+//                *out = (void __phys *)(phys_end - (size + misalign_above));
+//            }
+//
+//            above->phys_base = (*out + size);
+//            above->size = (uintptr_t)phys_end - (uintptr_t)above->phys_base;
+//
+//            blk->size = (uintptr_t)(*out) - phys_base;
+//
+//            ilist_push_tail(&region->free_list, &above->list_node);
         }
 
         if(blk->size == 0) {
@@ -295,11 +299,8 @@ dma_alloc(
         }
 
         *dma_out = (dma_addr_t)phys_base;
-        spin_unlock(&dma_region_list_lock);
-
-        return 0;
+        goto exit;
     }
-
 
     order_t size_order = ((sizeof(size_t)*8)-1) - __builtin_clzll(size);
 
@@ -335,6 +336,13 @@ dma_alloc(
 
     *dma_out = (dma_addr_t)phys_base;
 
+exit:
+    dprintk("dma_alloc: [%p - %p) -> [%p - %p)\n",
+            dma_virt_addr(*dma_out),
+            dma_virt_addr(*dma_out) + size,
+            dma_phys_addr(*dma_out),
+            dma_phys_addr(*dma_out) + size);
+
     spin_unlock(&dma_region_list_lock);
     return 0;
 }
@@ -349,6 +357,10 @@ dma_free(
     void __phys *phys_addr = addr;
     uintptr_t base = (uintptr_t)addr;
     uintptr_t end = (uintptr_t)base + size;
+
+    dprintk("dma_free: [%p - %p)\n",
+            dma_phys_addr(addr),
+            dma_phys_addr(addr) + size);
 
     spin_lock(&dma_region_list_lock);
     ilist_for_each(iter, &dma_region_list)
