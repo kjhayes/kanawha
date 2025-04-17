@@ -64,4 +64,8 @@ fs_path_lookup_for_process(
         unsigned long mode_flags,
         struct fs_path **out);
 
+int
+dump_fs_paths(
+        printk_f *printer);
+
 #endif
