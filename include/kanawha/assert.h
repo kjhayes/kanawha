@@ -4,6 +4,9 @@
 #include <kanawha/printk.h>
 #include <kanawha/types.h>
 
+#define ASSERT_TYPE_SIZE(__type, __size)\
+    _Static_assert(sizeof(__type) == (__size), "sizeof(" #__type ") is not exactly \"" #__size "\" bytes!");
+
 #ifdef CONFIG_DEBUG_ASSERTIONS
 
 #ifdef CONFIG_X64 

@@ -4,6 +4,7 @@
 #include <kanawha/arch.h>
 #include <kanawha/types.h>
 #include <kanawha/printk.h>
+#include <kanawha/assert.h>
 
 typedef __bitwise uint16_t le16_t;
 typedef __bitwise uint16_t be16_t;
@@ -139,6 +140,154 @@ static inline le64_t
 htole64(uint64_t from)
 {
     return letoh64(from);
+}
+
+// "both" endian encodings
+typedef struct {
+    le16_t little;
+    be16_t big;
+} lebe16_t;
+ASSERT_TYPE_SIZE(lebe16_t, 4);
+typedef struct {
+    le32_t little;
+    be32_t big;
+} lebe32_t;
+ASSERT_TYPE_SIZE(lebe32_t, 8);
+typedef struct {
+    le64_t little;
+    be64_t big;
+} lebe64_t;
+ASSERT_TYPE_SIZE(lebe64_t, 16);
+
+typedef struct {
+    be16_t big;
+    le16_t little;
+} bele16_t;
+ASSERT_TYPE_SIZE(bele16_t, 4);
+typedef struct {
+    be32_t big;
+    le32_t little;
+} bele32_t;
+ASSERT_TYPE_SIZE(bele32_t, 8);
+typedef struct {
+    be64_t big;
+    le64_t little;
+} bele64_t;
+ASSERT_TYPE_SIZE(bele64_t, 16);
+
+// To Host
+static inline uint16_t
+lebetoh16(lebe16_t from) {
+    switch(kernel_endian) {
+        case ENDIAN_BIG:
+            return from.big;
+        case ENDIAN_LITTLE:
+            return from.little;
+        default:
+            return letoh16(from.little);
+    }
+}
+static inline uint32_t
+lebetoh32(lebe32_t from) {
+    switch(kernel_endian) {
+        case ENDIAN_BIG:
+            return from.big;
+        case ENDIAN_LITTLE:
+            return from.little;
+        default:
+            return letoh32(from.little);
+    }
+}
+static inline uint64_t
+lebetoh64(lebe64_t from) {
+    switch(kernel_endian) {
+        case ENDIAN_BIG:
+            return from.big;
+        case ENDIAN_LITTLE:
+            return from.little;
+        default:
+            return letoh64(from.little);
+    }
+}
+
+static inline uint16_t
+beletoh16(bele16_t from) {
+    switch(kernel_endian) {
+        case ENDIAN_BIG:
+            return from.big;
+        case ENDIAN_LITTLE:
+            return from.little;
+        default:
+            return letoh16(from.little);
+    }
+}
+static inline uint32_t
+beletoh32(bele32_t from) {
+    switch(kernel_endian) {
+        case ENDIAN_BIG:
+            return from.big;
+        case ENDIAN_LITTLE:
+            return from.little;
+        default:
+            return letoh32(from.little);
+    }
+}
+static inline uint64_t
+beletoh64(bele64_t from) {
+    switch(kernel_endian) {
+        case ENDIAN_BIG:
+            return from.big;
+        case ENDIAN_LITTLE:
+            return from.little;
+        default:
+            return letoh64(from.little);
+    }
+}
+
+// To "Both Endian"
+
+static inline lebe16_t
+htolebe16(uint16_t from) {
+    lebe16_t to;
+    to.little = htole16(from);
+    to.big = htobe16(from);
+    return to;
+}
+static inline lebe32_t
+htolebe32(uint32_t from) {
+    lebe32_t to;
+    to.little = htole32(from);
+    to.big = htobe32(from);
+    return to;
+}
+static inline lebe64_t
+htolebe64(uint64_t from) {
+    lebe64_t to;
+    to.little = htole64(from);
+    to.big = htobe64(from);
+    return to;
+}
+
+static inline bele16_t
+htobele16(uint16_t from) {
+    bele16_t to;
+    to.little = htole16(from);
+    to.big = htobe16(from);
+    return to;
+}
+static inline bele32_t
+htobele32(uint32_t from) {
+    bele32_t to;
+    to.little = htole32(from);
+    to.big = htobe32(from);
+    return to;
+}
+static inline bele64_t
+htobele64(uint64_t from) {
+    bele64_t to;
+    to.little = htole64(from);
+    to.big = htobe64(from);
+    return to;
 }
 
 #endif
