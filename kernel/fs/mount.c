@@ -130,6 +130,46 @@ err:
     return res;
 }
 
+int
+fs_mount_begin_unlinking_node(
+        struct fs_mount *mnt,
+        struct fs_node *node)
+{
+    spin_lock(&mnt->cache_lock);
+    if(node->refcount > 1) {
+       spin_unlock(&mnt->cache_lock);
+       return -EBUSY;
+    }
+
+    return 0;
+}
+
+int
+fs_mount_end_unlinking_node(
+        struct fs_mount *mnt,
+        struct fs_node *node)
+{
+    int res;
+
+    node->refcount--;
+    DEBUG_ASSERT(node->refcount == 0);
+
+    size_t index = node->cache_node.key;
+
+    struct ptree_node *removed = ptree_remove(&mnt->node_cache, index);
+    DEBUG_ASSERT(removed == &node->cache_node);
+
+    res = fs_unload_node(node);
+    if(res) {
+        eprintk("Filesystem failed to unload fs_node!\n");
+        spin_unlock(&mnt->cache_lock);
+        return res;
+    }
+
+    spin_unlock(&mnt->cache_lock);
+    return 0;
+}
+
 // Default Implementations
 
 int

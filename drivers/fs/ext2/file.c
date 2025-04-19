@@ -1,10 +1,10 @@
 
 #include <kanawha/fs/node.h>
 #include <kanawha/fs/file.h>
-#include <kanawha/fs/ext2/ext2.h>
-#include <kanawha/fs/ext2/mount.h>
-#include <kanawha/fs/ext2/node.h>
-#include <kanawha/fs/ext2/group.h>
+#include <drivers/fs/ext2/ext2.h>
+#include <drivers/fs/ext2/mount.h>
+#include <drivers/fs/ext2/node.h>
+#include <drivers/fs/ext2/group.h>
 #include <kanawha/kmalloc.h>
 #include <kanawha/string.h>
 #include <kanawha/stddef.h>

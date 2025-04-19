@@ -3,8 +3,8 @@
 
 #include <kanawha/fs/node.h>
 #include <kanawha/fs/file.h>
-#include <kanawha/fs/ext2/ext2.h>
-#include <kanawha/fs/ext2/mount.h>
+#include <drivers/fs/ext2/ext2.h>
+#include <drivers/fs/ext2/mount.h>
 
 struct ext2_fs_node
 {
@@ -55,5 +55,15 @@ int
 ext2_fs_node_flush(
         struct fs_node *node,
         unsigned long flags);
+
+// Get the size of the node 
+size_t
+ext2_fs_node_inode_size(
+        struct ext2_fs_node *node);
+
+int
+ext2_fs_node_resize(
+        struct ext2_fs_node *node,
+        size_t size);
 
 #endif

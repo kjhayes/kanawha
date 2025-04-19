@@ -1,7 +1,7 @@
 #ifndef __KANAWHA__FS_EXT2_MOUNT_H__
 #define __KANAWHA__FS_EXT2_MOUNT_H__
 
-#include <kanawha/fs/ext2/ext2.h>
+#include <drivers/fs/ext2/ext2.h>
 
 struct ext2_mount {
     struct fs_mount fs_mount;
@@ -47,12 +47,12 @@ ext2_mount_free_block(
         size_t block);
 
 int
-ext2_mount_read_inode(
+ext2_mount_read_inode_data(
         struct ext2_mount *mnt,
         size_t inode_index,
         struct ext2_inode *inode_data);
 int
-ext2_mount_write_inode(
+ext2_mount_write_inode_data(
         struct ext2_mount *mnt,
         size_t inode_index,
         struct ext2_inode *inode_data);

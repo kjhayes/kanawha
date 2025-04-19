@@ -1,8 +1,8 @@
 
 #include <kanawha/fs/node.h>
 #include <kanawha/fs/file.h>
-#include <kanawha/fs/ext2/ext2.h>
-#include <kanawha/fs/ext2/node.h>
+#include <drivers/fs/ext2/ext2.h>
+#include <drivers/fs/ext2/node.h>
 #include <kanawha/stddef.h>
 #include <kanawha/string.h>
 
@@ -265,7 +265,7 @@ ext2_fs_node_flush(
         container_of(fs_node, struct ext2_fs_node, fs_node);
 
     if(node->inode_dirty) {
-        res = ext2_mount_write_inode(
+        res = ext2_mount_write_inode_data(
                 node->mount,
                 node->fs_node.cache_node.key,
                 &node->inode);
@@ -275,6 +275,133 @@ ext2_fs_node_flush(
         node->inode_dirty = 0;
     }
 
+    return 0;
+}
+
+size_t
+ext2_fs_node_inode_size(
+        struct ext2_fs_node *node)
+{
+    size_t size;
+    spin_lock(&node->lock);
+    size = letoh32(node->inode.size);
+    size |= ((uint64_t)letoh32(node->inode.dir_acl)) << 32;
+    spin_unlock(&node->lock);
+    return size;
+}
+
+int
+ext2_fs_node_resize(
+        struct ext2_fs_node *node,
+        size_t size)
+{
+    int res;
+    spin_lock(&node->lock);
+
+    size_t inode_size = ext2_fs_node_inode_size(node);
+    if(inode_size == size) {
+        spin_unlock(&node->lock);
+        return 0;
+    }
+
+    size_t current_blocks =
+        (inode_size / node->mount->block_size)
+        + ((inode_size % node->mount->block_size) > 0);
+    size_t blocks_needed =
+        (size / node->mount->block_size)
+        + ((size % node->mount->block_size) > 0);
+
+    // Set the size in the inode
+    node->inode.size = htole32(size & 0xFFFFFFFFULL);
+    node->inode.dir_acl = htole32(size >> 32);
+    node->inode_dirty = 1;
+
+    // Because we allocate blocks lazily this is actually
+    // all we need to do to increase the size
+    if(current_blocks <= blocks_needed) {
+        spin_unlock(&node->lock);
+        return 0;
+    }
+
+    // We need to shrink the allocation
+
+    // Free any direct blocks
+    for(size_t i = current_blocks; i < blocks_needed && i < EXT2_INODE_DIRECT_BLOCKS; i++) {
+        size_t blk_no = node->inode.block[i];
+        node->inode.block[i] = 0;
+        if(blk_no != 0) {
+            ext2_mount_free_block(node->mount, blk_no);
+        }
+    }
+
+    size_t entries_per_block = node->mount->block_size / sizeof(le32_t);
+    size_t num_singly_indirect = entries_per_block;
+
+    // Free any singly indirect blocks
+    {
+    size_t singly_indirect_block = (size_t)letoh32(node->inode.block[EXT2_INODE_INDIRECT_BLOCK]);
+
+    if(singly_indirect_block != 0 &&
+      (blocks_needed < EXT2_INODE_DIRECT_BLOCKS + num_singly_indirect))
+    {
+        size_t starting_index;
+        if(blocks_needed < EXT2_INODE_DIRECT_BLOCKS) {
+            starting_index = 0;
+        } else {
+            starting_index = blocks_needed - EXT2_INODE_DIRECT_BLOCKS;
+        }
+        
+        for(size_t i = starting_index; i < singly_indirect_block; i++) {
+            le32_t leentry;
+            uint32_t entry;
+            res = fs_node_paged_read(
+                    node->mount->backing_node,
+                    EXT2_BLOCK_OFFSET(singly_indirect_block, node->mount->block_size)
+                        + (sizeof(le32_t) * i),
+                    &leentry,
+                    sizeof(le32_t),
+                    0);
+            if(res) {
+                panic("Failed to read EXT2 indirect block!\n");
+            }
+
+            entry = letoh32(leentry);
+
+            if(entry == 0) {
+                continue;
+            }
+
+            res = ext2_mount_free_block(node->mount, entry);
+            if(res) {
+                panic("Failed to free EXT2 block!\n");
+            }
+
+            leentry = htole32(0);
+            res = fs_node_paged_write(
+                    node->mount->backing_node,
+                    EXT2_BLOCK_OFFSET(singly_indirect_block, node->mount->block_size)
+                        + (sizeof(le32_t) * i),
+                    &leentry,
+                    sizeof(le32_t),
+                    0);
+            if(res) {
+                panic("Failed to write to EXT2 indirect block!\n");
+            }
+        }
+
+        if(starting_index == 0) {
+            res = ext2_mount_free_block(node->mount, singly_indirect_block);
+            if(res) {
+                panic("Failed to free singly indirect EXT2 block!\n");
+            }
+            node->inode.block[EXT2_INODE_INDIRECT_BLOCK] = 0;
+        }
+    }
+    }
+
+    // TODO Doubly and Triply Indirect Blocks
+
+    spin_unlock(&node->lock);
     return 0;
 }
 

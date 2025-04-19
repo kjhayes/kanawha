@@ -58,6 +58,27 @@ fs_mount_put_node(
         struct fs_mount *mnt,
         struct fs_node *node);
 
+/*
+ * Called internally by FS implementations when a node is being
+ * unlinked. MUST be followed by a call to fs_mount_end_unlinking_node
+ * 
+ * While unlinking a node, no additional methods may be called on the fs_mount.
+ * (The cache_lock will remain held until a call to fs_mount_end_unlinking_node)
+ *
+ * Returns 0 on success, or negative errno on error.
+ * On error, fs_mount_end_unlinking_node MUST not be called.
+ */
+int
+fs_mount_begin_unlinking_node(
+        struct fs_mount *mnt,
+        struct fs_node *node);
+
+int
+fs_mount_end_unlinking_node(
+        struct fs_mount *mnt,
+        struct fs_node *node);
+
+
 DEFINE_OP_LIST_WRAPPERS(
         FS_MOUNT_OP_LIST,
         static inline,

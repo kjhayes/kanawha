@@ -1,9 +1,9 @@
 #ifndef __KANAWHA__FS_CPIO_MOUNT_H__
 #define __KANAWHA__FS_CPIO_MOUNT_H__
 
-#include <kanawha/fs/cpio/cpio.h>
+#include <drivers/fs/cpio/cpio.h>
+#include <drivers/fs/cpio/dir.h>
 #include <kanawha/fs/mount.h>
-#include <kanawha/fs/cpio/dir.h>
 
 struct cpio_mount
 {

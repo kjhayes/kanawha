@@ -1,0 +1,37 @@
+
+menu "Block Devices"
+source "drivers/blk/Kconfig"
+endmenu
+
+menu "Clock Devices"
+source "drivers/clk/Kconfig"
+endmenu
+
+menu "IRQ Devices"
+source "drivers/irq/Kconfig"
+endmenu
+
+menu "Serial Devices"
+source "drivers/serial/Kconfig"
+endmenu
+
+menu "Framebuffer Devices"
+source "drivers/fb/Kconfig"
+endmenu
+
+menu "Randomness Sources"
+source "drivers/rand/Kconfig"
+endmenu
+
+menu "PCI Options"
+source "drivers/pci/Kconfig"
+endmenu
+
+source "drivers/ps2/Kconfig"
+source "drivers/qemu/Kconfig"
+source "drivers/virtio/Kconfig"
+
+menu "VGA Options"
+depends on PORT_IO
+source "drivers/vga/Kconfig"
+endmenu

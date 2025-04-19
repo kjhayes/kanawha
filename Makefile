@@ -100,7 +100,8 @@ $(LD_SCRIPT): $(LD_SCRIPT_H) $(COMMON_DEPS) | $(OUTPUT_DIR)
 LDDEPS += $(LD_SCRIPT)
 
 KERNEL_SOURCE_DIRS := $(KERNEL_DIR) \
-					  $(ARCH_KERNEL_DIR)
+					  $(ARCH_KERNEL_DIR)\
+					  $(DRIVER_DIR)
 
 define build_kernel_directory =
 $$(OUTPUT_DIR)/$(1)/obj.o: $$(LDDEPS) FORCE

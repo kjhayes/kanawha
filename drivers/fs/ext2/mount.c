@@ -2,11 +2,11 @@
 #include <kanawha/fs/node.h>
 #include <kanawha/fs/mount.h>
 #include <kanawha/fs/type.h>
-#include <kanawha/fs/ext2/ext2.h>
-#include <kanawha/fs/ext2/mount.h>
-#include <kanawha/fs/ext2/node.h>
-#include <kanawha/fs/ext2/dir.h>
-#include <kanawha/fs/ext2/group.h>
+#include <drivers/fs/ext2/ext2.h>
+#include <drivers/fs/ext2/mount.h>
+#include <drivers/fs/ext2/node.h>
+#include <drivers/fs/ext2/dir.h>
+#include <drivers/fs/ext2/group.h>
 #include <kanawha/kmalloc.h>
 #include <kanawha/string.h>
 #include <kanawha/stddef.h>
@@ -14,7 +14,7 @@
 #include <kanawha/irq.h>
 
 int
-ext2_mount_read_inode(
+ext2_mount_read_inode_data(
         struct ext2_mount *mnt,
         size_t inode_index,
         struct ext2_inode *inode_data)
@@ -44,7 +44,7 @@ ext2_mount_read_inode(
 }
 
 int
-ext2_mount_write_inode(
+ext2_mount_write_inode_data(
         struct ext2_mount *mnt,
         size_t inode_index,
         struct ext2_inode *inode_data)
@@ -109,7 +109,7 @@ ext2_mount_load_node(
     spinlock_init(&node->lock);
 
     int is_inode_alloced;
-    res = ext2_group_inode_bitmap_check(group, index_in_group, &is_inode_alloced);
+    res = ext2_group_inode_allocated(group, index_in_group, &is_inode_alloced);
     if(res) {
         eprintk("ext2_mount_load_node: Failed to read from block group inode bitmap! (err=%s)\n",
                 errnostr(res));
@@ -450,7 +450,7 @@ ext2_mount_free_inode(
         return -ENXIO;
     }
 
-    ext2_group_inode_bitmap_free_specific(group, (inode-1) % mnt->inodes_per_group);
+    ext2_group_free_inode(group, inode);
 
     ext2_put_group(mnt, group);
 
@@ -504,7 +504,7 @@ ext2_mount_free_block(
         return -ENXIO;
     }
 
-    ext2_group_blk_bitmap_free_specific(group, block % mnt->blks_per_group);
+    ext2_group_free_block(group, block);
 
     ext2_put_group(mnt, group);
 

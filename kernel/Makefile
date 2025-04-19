@@ -50,7 +50,6 @@ obj-y += stack.o
 
 obj-y += fs/
 obj-y += syscall/
-obj-y += drivers/
 obj-y += sched/
 obj-y += elf/
 obj-y += mb2/

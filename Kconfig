@@ -127,6 +127,10 @@ endmenu
 source "kernel/Kconfig"
 source "arch/Kconfig"
 
+menu "Drivers"
+source "drivers/Kconfig"
+endmenu
+
 # Used to check that a .config exists
 config KANAWHA
     def_bool y

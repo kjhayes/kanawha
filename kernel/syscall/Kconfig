@@ -76,3 +76,8 @@ config DEBUG_SYSCALL_DIRNEXT
     depends on DEBUGGING
     default n
 
+config DEBUG_SYSCALL_UNLINK
+    bool "Debug unlink"
+    depends on DEBUGGING
+    default n
+

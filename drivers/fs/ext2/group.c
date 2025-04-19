@@ -2,9 +2,9 @@
 #include <kanawha/spinlock.h>
 #include <kanawha/kmalloc.h>
 #include <kanawha/bitmap.h>
-#include <kanawha/fs/ext2/ext2.h>
-#include <kanawha/fs/ext2/mount.h>
-#include <kanawha/fs/ext2/group.h>
+#include <drivers/fs/ext2/ext2.h>
+#include <drivers/fs/ext2/mount.h>
+#include <drivers/fs/ext2/group.h>
 #include <kanawha/string.h>
 
 static int
@@ -370,7 +370,7 @@ ext2_flush_group(
 }
 
 // blk Bitmap
-int
+static int
 ext2_group_blk_bitmap_check(
         struct ext2_group *group,
         size_t rel_index,
@@ -398,59 +398,8 @@ ext2_group_blk_bitmap_check(
     return 0;
 }
 
-int
-ext2_group_blk_bitmap_alloc_specific(
-        struct ext2_group *group,
-        size_t rel_index)
-{
-    int res;
-    if(rel_index > group->mnt->blks_per_group) {
-        return -EINVAL;
-    }
-
-    res = ext2_group_populate_blk_bitmap(group);
-    if(res) {
-        return res;
-    }
-
-    spin_lock(&group->blk_lock);
-    bitmap_set(group->blk_bitmap, rel_index);
-    group->blk_dirty = 1;
-    spin_unlock(&group->blk_lock);
-
-    return 0;
-}
-
-int
-ext2_group_blk_bitmap_free_specific(
-        struct ext2_group *group,
-        size_t rel_index)
-{
-    int res;
-    if(rel_index > group->mnt->blks_per_group) {
-        return -EINVAL;
-    }
-
-    res = ext2_group_populate_blk_bitmap(group);
-    if(res) {
-        return res;
-    }
-
-    spin_lock(&group->blk_lock);
-    bitmap_clear(group->blk_bitmap, rel_index);
-    group->blk_dirty = 1;
-    spin_unlock(&group->blk_lock);
-
-    spin_lock(&group->desc_lock);
-    group->desc.free_blocks_count++;
-    group->desc_dirty = 1;
-    spin_unlock(&group->desc_lock);
-
-    return 0;
-}
-
 // inode Bitmap
-int
+static int
 ext2_group_inode_bitmap_check(
         struct ext2_group *group,
         size_t rel_index,
@@ -479,56 +428,6 @@ ext2_group_inode_bitmap_check(
     return 0;
 }
 
-int
-ext2_group_inode_bitmap_alloc_specific(
-        struct ext2_group *group,
-        size_t rel_index)
-{
-    int res;
-    if(rel_index > group->mnt->inodes_per_group) {
-        return -EINVAL;
-    }
-
-    res = ext2_group_populate_inode_bitmap(group);
-    if(res) {
-        return res;
-    }
-
-    spin_lock(&group->inode_lock);
-    bitmap_set(group->inode_bitmap, rel_index);
-    group->inode_dirty = 1;
-    spin_unlock(&group->inode_lock);
-
-    return 0;
-}
-
-int
-ext2_group_inode_bitmap_free_specific(
-        struct ext2_group *group,
-        size_t rel_index)
-{
-    int res;
-    if(rel_index > group->mnt->inodes_per_group) {
-        return -EINVAL;
-    }
-
-    res = ext2_group_populate_inode_bitmap(group);
-    if(res) {
-        return res;
-    }
-
-    spin_lock(&group->inode_lock);
-    bitmap_clear(group->inode_bitmap, rel_index);
-    group->inode_dirty = 1;
-    spin_unlock(&group->inode_lock);
-
-    spin_lock(&group->desc_lock);
-    group->desc.free_inodes_count++;
-    group->desc_dirty = 1;
-    spin_unlock(&group->desc_lock);
-
-    return 0;
-}
 
 int
 ext2_group_read_inode(
@@ -670,7 +569,35 @@ ext2_group_alloc_inode(
 
     return 0;
 }
+int
+ext2_group_free_inode(
+        struct ext2_group *group,
+        size_t inode)
+{
+    int res;
 
+    size_t rel_index = (inode - 1) - (group->mnt->inodes_per_group * group->index);
+    if(rel_index > group->mnt->inodes_per_group) {
+        return -EINVAL;
+    }
+
+    res = ext2_group_populate_inode_bitmap(group);
+    if(res) {
+        return res;
+    }
+
+    spin_lock(&group->inode_lock);
+    bitmap_clear(group->inode_bitmap, rel_index);
+    group->inode_dirty = 1;
+    spin_unlock(&group->inode_lock);
+
+    spin_lock(&group->desc_lock);
+    group->desc.free_inodes_count++;
+    group->desc_dirty = 1;
+    spin_unlock(&group->desc_lock);
+
+    return 0;
+}
 int
 ext2_group_alloc_block(
         struct ext2_group *group,
@@ -701,6 +628,60 @@ ext2_group_alloc_block(
     group->desc.free_blocks_count--;
     group->desc_dirty = 1;
     spin_unlock(&group->desc_lock);
+
+    return 0;
+}
+
+int
+ext2_group_free_block(
+        struct ext2_group *group,
+        size_t block_index)
+{
+    int res;
+
+    size_t rel_index = block_index - (group->index * group->mnt->blks_per_group);
+    if(rel_index > group->mnt->blks_per_group) {
+        return -EINVAL;
+    }
+
+    res = ext2_group_populate_blk_bitmap(group);
+    if(res) {
+        return res;
+    }
+
+    spin_lock(&group->blk_lock);
+    bitmap_clear(group->blk_bitmap, rel_index);
+    group->blk_dirty = 1;
+    spin_unlock(&group->blk_lock);
+
+    spin_lock(&group->desc_lock);
+    group->desc.free_blocks_count++;
+    group->desc_dirty = 1;
+    spin_unlock(&group->desc_lock);
+
+    return 0;
+}
+
+int
+ext2_group_inode_allocated(
+        struct ext2_group *group,
+        size_t block_index,
+        int *value)
+{
+    int res;
+
+    size_t rel_index = block_index - (group->index * group->mnt->blks_per_group);
+    if(rel_index > group->mnt->blks_per_group) {
+        return -EINVAL;
+    }
+
+    res = ext2_group_inode_bitmap_check(
+            group,
+            rel_index,
+            value);
+    if(res) {
+        return res;
+    }
 
     return 0;
 }

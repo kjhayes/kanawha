@@ -10,9 +10,9 @@
 #include <kanawha/types.h>
 #include <kanawha/assert.h>
 #include <kanawha/vmem.h>
-#include <kanawha/fs/cpio/cpio.h>
-#include <kanawha/fs/cpio/mount.h>
-#include <kanawha/fs/cpio/file.h>
+#include <drivers/fs/cpio/cpio.h>
+#include <drivers/fs/cpio/mount.h>
+#include <drivers/fs/cpio/file.h>
 
 #define CPIO_FS_TYPE_NAME "cpio"
 #define CPIO_ROOT_INDEX 0x10000

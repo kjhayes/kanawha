@@ -9,6 +9,7 @@ obj-y += \
 	virtio/ \
 	fb/ \
 	irq/ \
+	fs/
 
 obj-$(CONFIG_PORT_IO) += vga/
 

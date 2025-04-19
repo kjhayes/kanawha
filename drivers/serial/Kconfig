@@ -15,5 +15,5 @@ config QEMU_SERIAL
     default n
     depends on PCI
 
-source "kernel/drivers/serial/8250/Kconfig"
+source "drivers/serial/8250/Kconfig"
 

@@ -1,11 +1,12 @@
 
 #include <kanawha/fs/node.h>
 #include <kanawha/fs/file.h>
-#include <kanawha/fs/ext2/ext2.h>
-#include <kanawha/fs/ext2/node.h>
-#include <kanawha/fs/ext2/mount.h>
+#include <drivers/fs/ext2/ext2.h>
+#include <drivers/fs/ext2/node.h>
+#include <drivers/fs/ext2/mount.h>
 #include <kanawha/stddef.h>
 #include <kanawha/string.h>
+#include <kanawha/irq.h>
 
 #define EXT2_DIR_FT_UNKNOWN  0
 #define EXT2_DIR_FT_REG_FILE 1
@@ -339,7 +340,7 @@ ext2_dir_mkfile(
         | (0666); // R/W for everyone
     inode_data.links_count = 1;
 
-    res = ext2_mount_write_inode(
+    res = ext2_mount_write_inode_data(
             node->mount,
             inode,
             &inode_data);
@@ -402,7 +403,7 @@ ext2_dir_mkdir(
 
     // TODO: We need to initialize the inode
     struct ext2_inode inode_data;
-    res = ext2_mount_read_inode(
+    res = ext2_mount_read_inode_data(
             parent_node->mount,
             inode,
             &inode_data);
@@ -420,7 +421,7 @@ ext2_dir_mkdir(
         | (0666); // R/W for everyone
     inode_data.links_count = 1;
 
-    res = ext2_mount_write_inode(
+    res = ext2_mount_write_inode_data(
             parent_node->mount,
             inode,
             &inode_data);
@@ -494,6 +495,38 @@ ext2_dir_mkdir(
     return 0;
 }
 
+static int
+ext2_dir_unlink(
+        struct fs_node *parent_fs_node,
+        const char *name)
+{
+    int res;
+
+    struct ext2_fs_node *parent_node =
+        container_of(parent_fs_node, struct ext2_fs_node, fs_node);
+
+    size_t child_inode;
+    res = ext2_dir_node_lookup(
+            parent_fs_node,
+            name,
+            &child_inode);
+    if(res) {
+        return res;
+    }
+
+    struct fs_node *child_fs_node =
+        fs_mount_get_node(parent_fs_node->mount, child_inode);
+    if(child_fs_node == NULL) {
+        return -ENXIO;
+    }
+
+    struct ext2_fs_node *child_node =
+        container_of(child_fs_node, struct ext2_fs_node, fs_node);
+
+
+    return -EUNIMPL;
+}
+
 struct fs_node_ops
 ext2_dir_node_ops = {
     .read_page = ext2_fs_node_read_page,
@@ -512,11 +545,11 @@ ext2_dir_node_ops = {
 
     .mkfile = ext2_dir_mkfile,
     .mkdir = ext2_dir_mkdir,
+    .unlink = ext2_dir_unlink,
 
     .mkfifo = fs_node_cannot_mkfifo,
     .link = fs_node_cannot_link,
     .symlink = fs_node_cannot_symlink,
-    .unlink = fs_node_cannot_unlink,
 };
 
 

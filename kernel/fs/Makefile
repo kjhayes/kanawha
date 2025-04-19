@@ -10,6 +10,3 @@ obj-y += \
 obj-y += \
 	sys/
 
-obj-y += ext2/
-obj-y += cpio/
-

@@ -191,10 +191,6 @@ menu "Filesystems"
 source "kernel/fs/Kconfig"
 endmenu
 
-menu "Drivers"
-source "kernel/drivers/Kconfig"
-endmenu
-
 menu "Schedulers"
 source "kernel/sched/Kconfig"
 endmenu
