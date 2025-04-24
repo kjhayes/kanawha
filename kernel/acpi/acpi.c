@@ -9,6 +9,10 @@
 #include <kanawha/init.h>
 #include <acpi/acpi.h>
 
+#ifdef CONFIG_ACPI_SYSFS
+#include <acpi/sysfs.h>
+#endif
+
 static DECLARE_SPINLOCK(acpi_table_lock);
 int found_global_xsdp = 0;
 int found_global_rsdp = 0;
@@ -17,14 +21,7 @@ static struct acpi_rsdp global_rsdp = { 0 };
 static struct acpi_xsdt *global_xsdt = NULL;
 static struct acpi_rsdt *global_rsdt = NULL;
 
-
 static DECLARE_STREE(acpi_table_tree);
-
-struct acpi_table_ptr {
-    struct acpi_table_hdr *table;
-    struct stree_node tree_node;
-    char signature_str[5];
-};
 
 static struct slab_allocator *acpi_table_ptr_slab_allocator;
 static uint8_t acpi_table_ptr_slab_buffer[sizeof(struct acpi_table_ptr) * 32];
@@ -32,6 +29,8 @@ static uint8_t acpi_table_ptr_slab_buffer[sizeof(struct acpi_table_ptr) * 32];
 static int
 acpi_register_table(struct acpi_table_hdr *table)
 {
+    int res;
+
     struct stree_node *node;
     char buf[5];
     memcpy(buf, table->signature, 4);
@@ -54,6 +53,13 @@ acpi_register_table(struct acpi_table_hdr *table)
     ptr->tree_node.key = ptr->signature_str;
 
     stree_insert(&acpi_table_tree, &ptr->tree_node);
+
+#ifdef CONFIG_ACPI_SYSFS
+    res = acpi_sysfs_on_register_table(ptr);
+    if(res) {
+        wprintk("Failed to register ACPI table with ACPI sysfs!\n");
+    }
+#endif
 
     printk("Registered ACPI Table: %s\n", ptr->signature_str);
 

@@ -1,4 +1,4 @@
 
 obj-y += acpi.o
-obj-y += madt.o
+obj-$(CONFIG_ACPI_SYSFS) += sysfs.o
 

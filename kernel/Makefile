@@ -54,9 +54,10 @@ obj-y += sched/
 obj-y += elf/
 obj-y += mb2/
 obj-y += proc/
-obj-$(CONFIG_ACPI) += acpi/
-obj-$(CONFIG_DEVICETREE) += devtree/
 obj-y += linux/
 
 obj-m += memdump.o
+
+obj-$(CONFIG_ACPI) += acpi/
+obj-$(CONFIG_DEVICETREE) += devtree/
 

@@ -110,6 +110,13 @@ config ACPI_REQUIRED
   help
     Should the kernel panic if ACPI tables cannot be found?
 
+config ACPI_SYSFS
+  bool "ACPI sysfs"
+  default y
+  depends on ACPI
+  help
+    Add a sysfs mount representing the ACPI tables registered with the kernel.
+
 config DEVICETREE
   bool "Device Tree"
   default n
