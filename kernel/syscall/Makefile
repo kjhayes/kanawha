@@ -10,6 +10,7 @@ obj-y += \
 	mmap.o \
 	exec.o \
 	environ.o \
+	getcwd.o \
 	spawn.o \
 	reap.o \
 	getpid.o \

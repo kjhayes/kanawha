@@ -113,6 +113,14 @@ handle_syscall(
                         (unsigned long)args->args[1] // exec_flags
                         );
             break;
+        case SYSCALL_ID_GETCWD:
+            ret_val = (uint64_t)(int)
+                syscall_getcwd(
+                        process,
+                        (char __user *)args->args[0], // buffer
+                        (size_t)args->args[1] // buflen
+                        );
+            break;
         case SYSCALL_ID_ENVIRON:
             ret_val = (uint64_t)(int)
                 syscall_environ(

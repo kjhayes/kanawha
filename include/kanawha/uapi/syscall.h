@@ -195,6 +195,11 @@ RET(int)
 RET(int)\
 ARG(void __user *, entry)
 
+#define SYSCALL_SIG_GETCWD(RET,ARG)\
+RET(int)\
+ARG(char __user *, buffer)\
+ARG(size_t, buflen)
+
 #define SYSCALL_XLIST(X)\
 X(exit,      0,  EXIT,       SYSCALL_SIG_EXIT)\
 X(open,      1,  OPEN,       SYSCALL_SIG_OPEN)\
@@ -207,6 +212,7 @@ X(mmap,      7,  MMAP,       SYSCALL_SIG_MMAP)\
 X(munmap,    8,  MUNMAP,     SYSCALL_SIG_MUNMAP)\
 X(exec,      9,  EXEC,       SYSCALL_SIG_EXEC)\
 X(environ,   10, ENVIRON,    SYSCALL_SIG_ENVIRON)\
+X(getcwd,    11, GETCWD,     SYSCALL_SIG_GETCWD)\
 X(spawn,     12, SPAWN,      SYSCALL_SIG_SPAWN)\
 X(reap,      13, REAP,       SYSCALL_SIG_REAP)\
 X(getpid,    14, GETPID,     SYSCALL_SIG_GETPID)\
@@ -247,6 +253,7 @@ SYSCALL_XLIST(DECLARE_SYSCALL_ID_CONSTANTS)
 #undef SYSCALL_SIG_MUNMAP
 #undef SYSCALL_SIG_EXEC
 #undef SYSCALL_SIG_ENVIRON
+#undef SYSCALL_SIG_GETCWD
 #undef SYSCALL_SIG_SPAWN
 #undef SYSCALL_SIG_REAP
 #undef SYSCALL_SIG_GETPID

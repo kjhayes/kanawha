@@ -255,7 +255,8 @@ syscall_exec(
 
     if((desc->access_flags & FILE_PERM_EXEC) == 0) {
         file_table_put_file(process->file_table, process, desc);
-        eprintk("syscall_exec: file does not have EXEC permissions!\n");
+        eprintk("syscall_exec: file does not have EXEC permissions! (path->name=\"%s\")\n",
+                desc->path->name);
         return -EPERM;
     }
 
