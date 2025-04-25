@@ -3,6 +3,7 @@
 
 #include <drivers/pci/pci.h>
 #include <kanawha/ops.h>
+#include <kanawha/list.h>
 
 #define PCI_HEADER_TYPE_DEVICE             0x0
 #define PCI_HEADER_TYPE_PCI_PCI_BRIDGE     0x1
@@ -89,18 +90,20 @@ OP(writeb, PCI_CAM_WRITE8_SIG, ##__VA_ARGS__)\
 OP(writew, PCI_CAM_WRITE16_SIG, ##__VA_ARGS__)\
 OP(writel, PCI_CAM_WRITE32_SIG, ##__VA_ARGS__)
 
-struct pci_domain;
+struct pci_segment;
 
 struct pci_cam {
-DECLARE_OP_LIST_PTRS(PCI_CAM_OP_LIST, struct pci_domain *)
+DECLARE_OP_LIST_PTRS(PCI_CAM_OP_LIST, struct pci_cam *)
+
+    ilist_node_t segment_node;
 };
 
 DEFINE_OP_LIST_WRAPPERS(
         PCI_CAM_OP_LIST,
         static inline,
         /* No Prefix */,
-        pci_domain,
-        ->cam->,
+        pci_cam,
+        ->,
         SELF_ACCESSOR)
 
 #undef PCI_CAM_OP_LIST
@@ -110,6 +113,232 @@ DEFINE_OP_LIST_WRAPPERS(
 #undef PCI_CAM_WRITE8_SIG
 #undef PCI_CAM_WRITE16_SIG
 #undef PCI_CAM_WRITE32_SIG
+
+// PCI Segment Config Access
+
+static inline int
+pci_segment_readb(
+        struct pci_segment *segment,
+        uint8_t bus,
+        uint8_t device,
+        uint8_t func,
+        uint16_t offset,
+        uint8_t *out)
+{
+    int res;
+    int not_first = 0;
+
+    int irq_flags = spin_lock_irq_save(&segment->cam_lock);
+    ilist_node_t *node;
+    ilist_for_each(node, &segment->cam_list) {
+        struct pci_cam *cam = container_of(node, struct pci_cam, segment_node);
+        res = pci_cam_readb(
+                cam,
+                bus,
+                device,
+                func,
+                offset,
+                out);
+        if(res == 0) {
+            if(not_first) {
+                ilist_remove(&segment->cam_list, node);
+                ilist_push_head(&segment->cam_list, node);
+            }
+            spin_unlock_irq_restore(&segment->cam_lock, irq_flags);
+            return 0;
+        }
+        not_first = 1;
+    }
+    spin_unlock_irq_restore(&segment->cam_lock, irq_flags);
+    return -EINVAL;
+}
+
+static inline int
+pci_segment_readw(
+        struct pci_segment *segment,
+        uint8_t bus,
+        uint8_t device,
+        uint8_t func,
+        uint16_t offset,
+        uint16_t *out)
+{
+    int res;
+    int not_first = 0;
+
+    int irq_flags = spin_lock_irq_save(&segment->cam_lock);
+    ilist_node_t *node;
+    ilist_for_each(node, &segment->cam_list) {
+        struct pci_cam *cam = container_of(node, struct pci_cam, segment_node);
+        res = pci_cam_readw(
+                cam,
+                bus,
+                device,
+                func,
+                offset,
+                out);
+        if(res == 0) {
+            if(not_first) {
+                ilist_remove(&segment->cam_list, node);
+                ilist_push_head(&segment->cam_list, node);
+            }
+            spin_unlock_irq_restore(&segment->cam_lock, irq_flags);
+            return 0;
+        }
+        not_first = 1;
+    }
+    spin_unlock_irq_restore(&segment->cam_lock, irq_flags);
+    return -EINVAL;
+}
+
+static inline int
+pci_segment_readl(
+        struct pci_segment *segment,
+        uint8_t bus,
+        uint8_t device,
+        uint8_t func,
+        uint16_t offset,
+        uint32_t *out)
+{
+    int res;
+    int not_first = 0;
+
+    int irq_flags = spin_lock_irq_save(&segment->cam_lock);
+    ilist_node_t *node;
+    ilist_for_each(node, &segment->cam_list) {
+        struct pci_cam *cam = container_of(node, struct pci_cam, segment_node);
+        res = pci_cam_readl(
+                cam,
+                bus,
+                device,
+                func,
+                offset,
+                out);
+        if(res == 0) {
+            if(not_first) {
+                ilist_remove(&segment->cam_list, node);
+                ilist_push_head(&segment->cam_list, node);
+            }
+            spin_unlock_irq_restore(&segment->cam_lock, irq_flags);
+            return 0;
+        }
+        not_first = 1;
+    }
+    spin_unlock_irq_restore(&segment->cam_lock, irq_flags);
+    return -EINVAL;
+}
+
+static inline int
+pci_segment_writeb(
+        struct pci_segment *segment,
+        uint8_t bus,
+        uint8_t device,
+        uint8_t func,
+        uint16_t offset,
+        uint8_t in)
+{
+    int res;
+    int not_first = 0;
+
+    int irq_flags = spin_lock_irq_save(&segment->cam_lock);
+    ilist_node_t *node;
+    ilist_for_each(node, &segment->cam_list) {
+        struct pci_cam *cam = container_of(node, struct pci_cam, segment_node);
+        res = pci_cam_writeb(
+                cam,
+                bus,
+                device,
+                func,
+                offset,
+                in);
+        if(res == 0) {
+            if(not_first) {
+                ilist_remove(&segment->cam_list, node);
+                ilist_push_head(&segment->cam_list, node);
+            }
+            spin_unlock_irq_restore(&segment->cam_lock, irq_flags);
+            return 0;
+        }
+        not_first = 1;
+    }
+    spin_unlock_irq_restore(&segment->cam_lock, irq_flags);
+    return -EINVAL;
+}
+
+static inline int
+pci_segment_writew(
+        struct pci_segment *segment,
+        uint8_t bus,
+        uint8_t device,
+        uint8_t func,
+        uint16_t offset,
+        uint16_t in)
+{
+    int res;
+    int not_first = 0;
+
+    int irq_flags = spin_lock_irq_save(&segment->cam_lock);
+    ilist_node_t *node;
+    ilist_for_each(node, &segment->cam_list) {
+        struct pci_cam *cam = container_of(node, struct pci_cam, segment_node);
+        res = pci_cam_writew(
+                cam,
+                bus,
+                device,
+                func,
+                offset,
+                in);
+        if(res == 0) {
+            if(not_first) {
+                ilist_remove(&segment->cam_list, node);
+                ilist_push_head(&segment->cam_list, node);
+            }
+            spin_unlock_irq_restore(&segment->cam_lock, irq_flags);
+            return 0;
+        }
+        not_first = 1;
+    }
+    spin_unlock_irq_restore(&segment->cam_lock, irq_flags);
+    return -EINVAL;
+}
+
+static inline int
+pci_segment_writel(
+        struct pci_segment *segment,
+        uint8_t bus,
+        uint8_t device,
+        uint8_t func,
+        uint16_t offset,
+        uint32_t in)
+{
+    int res;
+    int not_first = 0;
+
+    int irq_flags = spin_lock_irq_save(&segment->cam_lock);
+    ilist_node_t *node;
+    ilist_for_each(node, &segment->cam_list) {
+        struct pci_cam *cam = container_of(node, struct pci_cam, segment_node);
+        res = pci_cam_writel(
+                cam,
+                bus,
+                device,
+                func,
+                offset,
+                in);
+        if(res == 0) {
+            if(not_first) {
+                ilist_remove(&segment->cam_list, node);
+                ilist_push_head(&segment->cam_list, node);
+            }
+            spin_unlock_irq_restore(&segment->cam_lock, irq_flags);
+            return 0;
+        }
+        not_first = 1;
+    }
+    spin_unlock_irq_restore(&segment->cam_lock, irq_flags);
+    return -EINVAL;
+}
+
+
 
 // PCI Bus Config Access
 
@@ -121,8 +350,8 @@ pci_bus_readb(
         uint16_t offset,
         uint8_t *out)
 {
-    return pci_domain_readb(
-            bus->domain,
+    return pci_segment_readb(
+            bus->segment,
             bus->bus_index,
             device,
             func,
@@ -138,8 +367,8 @@ pci_bus_readw(
         uint16_t offset,
         uint16_t *out)
 {
-    return pci_domain_readw(
-            bus->domain,
+    return pci_segment_readw(
+            bus->segment,
             bus->bus_index,
             device,
             func,
@@ -155,8 +384,8 @@ pci_bus_readl(
         uint16_t offset,
         uint32_t *out)
 {
-    return pci_domain_readl(
-            bus->domain,
+    return pci_segment_readl(
+            bus->segment,
             bus->bus_index,
             device,
             func,
@@ -172,8 +401,8 @@ pci_bus_writeb(
         uint16_t offset,
         uint8_t in)
 {
-    return pci_domain_writeb(
-            bus->domain,
+    return pci_segment_writeb(
+            bus->segment,
             bus->bus_index,
             device,
             func,
@@ -189,8 +418,8 @@ pci_bus_writew(
         uint16_t offset,
         uint16_t in)
 {
-    return pci_domain_writew(
-            bus->domain,
+    return pci_segment_writew(
+            bus->segment,
             bus->bus_index,
             device,
             func,
@@ -206,8 +435,8 @@ pci_bus_writel(
         uint16_t offset,
         uint32_t in)
 {
-    return pci_domain_writel(
-            bus->domain,
+    return pci_segment_writel(
+            bus->segment,
             bus->bus_index,
             device,
             func,
@@ -223,8 +452,8 @@ pci_func_readb(
         uint16_t offset,
         uint8_t *out)
 {
-    return pci_domain_readb(
-            func->domain,
+    return pci_segment_readb(
+            func->segment,
             func->device->bus->bus_index,
             func->device->index,
             func->index,
@@ -238,8 +467,8 @@ pci_func_readw(
         uint16_t offset,
         uint16_t *out)
 {
-    return pci_domain_readw(
-            func->domain,
+    return pci_segment_readw(
+            func->segment,
             func->device->bus->bus_index,
             func->device->index,
             func->index,
@@ -253,8 +482,8 @@ pci_func_readl(
         uint16_t offset,
         uint32_t *out)
 {
-    return pci_domain_readl(
-            func->domain,
+    return pci_segment_readl(
+            func->segment,
             func->device->bus->bus_index,
             func->device->index,
             func->index,
@@ -268,8 +497,8 @@ pci_func_writeb(
         uint16_t offset,
         uint8_t in)
 {
-    return pci_domain_writeb(
-            func->domain,
+    return pci_segment_writeb(
+            func->segment,
             func->device->bus->bus_index,
             func->device->index,
             func->index,
@@ -283,8 +512,8 @@ pci_func_writew(
         uint16_t offset,
         uint16_t in)
 {
-    return pci_domain_writew(
-            func->domain,
+    return pci_segment_writew(
+            func->segment,
             func->device->bus->bus_index,
             func->device->index,
             func->index,
@@ -298,8 +527,8 @@ pci_func_writel(
         uint16_t offset,
         uint32_t in)
 {
-    return pci_domain_writel(
-            func->domain,
+    return pci_segment_writel(
+            func->segment,
             func->device->bus->bus_index,
             func->device->index,
             func->index,

@@ -14,16 +14,19 @@
 #include <kanawha/fs/flat.h>
 #endif
 
-#define PCI_MAX_BUSES_PER_DOMAIN (1ULL<<8)
+#define PCI_MAX_BUSES_PER_SEGMENT (1ULL<<8)
 #define PCI_MAX_DEVICES_PER_BUS  (1ULL<<5)
 #define PCI_MAX_FUNC_PER_DEVICE  (1ULL<<3)
 
-struct pci_domain
+struct pci_cam;
+
+struct pci_segment
 {
-    size_t domain_id;
+    uint16_t segment_id;
 
     // Configuration Access Mechanism
-    struct pci_cam *cam;
+    spinlock_t cam_lock;
+    ilist_t cam_list;
 
     ilist_node_t global_node;
 
@@ -32,9 +35,9 @@ struct pci_domain
 
 struct pci_bus
 {
-    struct pci_domain *domain;
+    struct pci_segment *segment;
 
-    ilist_node_t domain_node;
+    ilist_node_t segment_node;
 
     ilist_t device_list;
 
@@ -43,7 +46,7 @@ struct pci_bus
 
 struct pci_device
 {
-    struct pci_domain *domain;
+    struct pci_segment *segment;
     struct pci_bus *bus;
 
     ilist_node_t bus_node;
@@ -55,7 +58,7 @@ struct pci_device
 
 struct pci_func
 {
-    struct pci_domain *domain;
+    struct pci_segment *segment;
     struct pci_device *device;
     struct pci_driver *driver;
 
@@ -168,7 +171,7 @@ DEFINE_OP_LIST_WRAPPERS(
 
 int
 pci_probe_bus(
-        struct pci_domain *domain,
+        struct pci_segment *segment,
         uint8_t bus_index);
 int
 pci_probe_device(
@@ -179,17 +182,17 @@ pci_probe_func(
         struct pci_device *device,
         uint8_t function);
 
-// Probes the domain assuming bus zero exists
+// Adds a configuration access mechanism for the specified segment
 int
-register_pci_domain(
-        struct pci_domain *domain,
+register_pci_cam(
+        uint16_t segment_id,
         struct pci_cam *cam);
 
 // Instead of probing from bus zero, probe a range of assumed to exist buses
 // [assumed_bus_start, assumed_bus_start + assumed_bus_count)
 int
-register_pci_domain_with_assumed_buses(
-        struct pci_domain *domain,
+register_pci_cam_with_assumed_buses(
+        uint16_t segment_id,
         struct pci_cam *cam,
         size_t assumed_bus_start,
         size_t assumed_bus_count);

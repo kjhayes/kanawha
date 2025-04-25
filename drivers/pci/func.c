@@ -22,10 +22,10 @@ pci_probe_bridge(
         uint8_t sec_bus;
         printk("Found PCI-to-PCI Bridge\n");
         pci_func_readb(func, PCI_CFG_PCI_BRIDGE_SECONDARY_BUS, &sec_bus);
-        res = pci_probe_bus(func->device->bus->domain, sec_bus);
+        res = pci_probe_bus(func->device->bus->segment, sec_bus);
         if(res) {
-            eprintk("Failed to enumerate secondary PCI bus %u of domain %lu\n",
-                    sec_bus, func->domain->domain_id);
+            eprintk("Failed to enumerate secondary PCI bus %u of segment %lu\n",
+                    sec_bus, func->segment->segment_id);
         }
     }
 
@@ -186,7 +186,7 @@ pci_probe_func(
         return -ENOMEM;
     }
 
-    func->domain = bus->domain;
+    func->segment = bus->segment;
     func->index = index;
 
     ilist_push_tail(&device->function_list, &func->device_node);

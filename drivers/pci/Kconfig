@@ -30,6 +30,11 @@ config PCI_PORT_CAM
     help
       Assume a PCI domain exists which can be accessed using the ports 0xCF8 and 0xCFC
 
+config PCI_MMIO_ECAM
+    bool "MMIO Enhanced Configuration Access"
+    depends on PCI
+    default y
+
 config PCI_DEVTREE
     bool "Device Tree PCI Node"
     depends on DEVICETREE && PCI

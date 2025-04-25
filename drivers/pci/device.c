@@ -24,7 +24,7 @@ pci_probe_device(
         kfree(device);
         return -ENOMEM;
     }
-    device->domain = bus->domain;
+    device->segment = bus->segment;
     device->bus = bus;
     device->index = dev_index;
     ilist_init(&device->function_list);

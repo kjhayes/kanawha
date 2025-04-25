@@ -110,7 +110,7 @@ insert_func_with_match_lock(
 
     char namebuf[32];
     snprintk(namebuf, 32, "%d.%d.%d.%d",
-            func->device->domain->domain_id,
+            func->device->segment->segment_id,
             func->device->bus->bus_index,
             func->device->index,
             func->index);

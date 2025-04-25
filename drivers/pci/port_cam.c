@@ -1,11 +1,9 @@
 
 #include <drivers/pci/cfg.h>
 #include <drivers/pci/pci.h>
+#include <drivers/pci/port_cam.h>
 #include <kanawha/pio.h>
 #include <kanawha/init.h>
-
-#define PORT_PCI_ADDR_PORT 0xCF8
-#define PORT_PCI_DATA_PORT 0xCFC
 
 static inline uint32_t
 port_pci_address(
@@ -23,7 +21,7 @@ port_pci_address(
 
 static int
 port_pci_readb(
-        struct pci_domain *domain,
+        struct pci_cam *cam,
         uint8_t bus,
         uint8_t device,
         uint8_t func,
@@ -31,15 +29,18 @@ port_pci_readb(
         uint8_t *out
         )
 {
+    if(offset >= 0xFF) {return -EINVAL;}
+
+    struct port_pci_cam *pcam = container_of(cam, struct port_pci_cam, cam);
     uint32_t addr = port_pci_address(bus,device,func,offset);
-    outl(PORT_PCI_ADDR_PORT, addr);
-    *out = inb(PORT_PCI_DATA_PORT);
+    outl(pcam->addr_port, addr);
+    *out = inb(pcam->data_port);
     return 0;
 }
 
 static int
 port_pci_readw(
-        struct pci_domain *domain,
+        struct pci_cam *cam,
         uint8_t bus,
         uint8_t device,
         uint8_t func,
@@ -47,15 +48,18 @@ port_pci_readw(
         uint16_t *out
         )
 {
+    if(offset >= 0xFF) {return -EINVAL;}
+
+    struct port_pci_cam *pcam = container_of(cam, struct port_pci_cam, cam);
     uint32_t addr = port_pci_address(bus,device,func,offset);
-    outl(PORT_PCI_ADDR_PORT, addr);
-    *out = inw(PORT_PCI_DATA_PORT);
+    outl(pcam->addr_port, addr);
+    *out = inw(pcam->data_port);
     return 0;
 }
 
 static int
 port_pci_readl(
-        struct pci_domain *domain,
+        struct pci_cam *cam,
         uint8_t bus,
         uint8_t device,
         uint8_t func,
@@ -63,15 +67,18 @@ port_pci_readl(
         uint32_t *out
         )
 {
+    if(offset >= 0xFF) {return -EINVAL;}
+
+    struct port_pci_cam *pcam = container_of(cam, struct port_pci_cam, cam);
     uint32_t addr = port_pci_address(bus,device,func,offset);
-    outl(PORT_PCI_ADDR_PORT, addr);
-    *out = inl(PORT_PCI_DATA_PORT);
+    outl(pcam->addr_port, addr);
+    *out = inl(pcam->data_port);
     return 0;
 }
 
 static int
 port_pci_writeb(
-        struct pci_domain *domain,
+        struct pci_cam *cam,
         uint8_t bus,
         uint8_t device,
         uint8_t func,
@@ -79,15 +86,18 @@ port_pci_writeb(
         uint8_t in 
         )
 {
+    if(offset >= 0xFF) {return -EINVAL;}
+
+    struct port_pci_cam *pcam = container_of(cam, struct port_pci_cam, cam);
     uint32_t addr = port_pci_address(bus,device,func,offset);
-    outl(PORT_PCI_ADDR_PORT, addr);
-    outb(PORT_PCI_DATA_PORT, in);
+    outl(pcam->addr_port, addr);
+    outb(pcam->data_port, in);
     return 0;
 }
 
 static int
 port_pci_writew(
-        struct pci_domain *domain,
+        struct pci_cam *cam,
         uint8_t bus,
         uint8_t device,
         uint8_t func,
@@ -95,15 +105,18 @@ port_pci_writew(
         uint16_t in 
         )
 {
+    if(offset >= 0xFF) {return -EINVAL;}
+
+    struct port_pci_cam *pcam = container_of(cam, struct port_pci_cam, cam);
     uint32_t addr = port_pci_address(bus,device,func,offset);
-    outl(PORT_PCI_ADDR_PORT, addr);
-    outw(PORT_PCI_DATA_PORT, in);
+    outl(pcam->addr_port, addr);
+    outw(pcam->data_port, in);
     return 0;
 }
 
 static int
 port_pci_writel(
-        struct pci_domain *domain,
+        struct pci_cam *cam,
         uint8_t bus,
         uint8_t device,
         uint8_t func,
@@ -111,14 +124,32 @@ port_pci_writel(
         uint32_t in 
         )
 {
+    if(offset >= 0xFF) {return -EINVAL;}
+
+    struct port_pci_cam *pcam = container_of(cam, struct port_pci_cam, cam);
     uint32_t addr = port_pci_address(bus,device,func,offset);
-    outl(PORT_PCI_ADDR_PORT, addr);
-    outl(PORT_PCI_DATA_PORT, in);
+    outl(pcam->addr_port, addr);
+    outl(pcam->data_port, in);
     return 0;
 }
 
-static struct pci_cam
-port_pci_cam = {
+int
+register_port_pci_cam(
+        struct port_pci_cam *cam,
+        uint16_t segment_id,
+        pio_t addr_port,
+        pio_t data_port)
+{
+    cam->addr_port = addr_port;
+    cam->data_port = data_port;
+
+    return register_pci_cam(
+            segment_id,
+            &cam->cam);
+}
+
+const static struct pci_cam
+port_pci_cam_table = {
     .readb   = port_pci_readb,
     .readw  = port_pci_readw,
     .readl  = port_pci_readl,
@@ -127,16 +158,23 @@ port_pci_cam = {
     .writel = port_pci_writel,
 };
 
-static struct pci_domain
-port_pci_domain = { 0 };
+#define DEFAULT_PORT_PCI_ADDR_PORT 0xCF8
+#define DEFAULT_PORT_PCI_DATA_PORT 0xCFC
 
-static int
-register_port_pci_cam_domain(void)
+static struct port_pci_cam default_port_cam_segment =
 {
-    return register_pci_domain(
-            &port_pci_domain,
-            &port_pci_cam);
-
+    .addr_port = DEFAULT_PORT_PCI_ADDR_PORT,
+    .data_port = DEFAULT_PORT_PCI_DATA_PORT,
+    .cam = port_pci_cam_table,
+};
+static int
+register_default_port_pci_cam(void)
+{
+    return register_port_pci_cam(
+            &default_port_cam_segment,
+            0,
+            DEFAULT_PORT_PCI_ADDR_PORT,
+            DEFAULT_PORT_PCI_DATA_PORT);
 }
-declare_init_desc(bus, register_port_pci_cam_domain, "Registering Port PCI Domain");
+declare_init_desc(bus, register_default_port_pci_cam, "Registering Port PCI CAM");
 
