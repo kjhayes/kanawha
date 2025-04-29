@@ -10,6 +10,7 @@ typedef struct {
     spinlock_t lock;
 } refcount_t;
 
+// Initializes the refcount to "alive" and zero references
 static inline void refcount_init(refcount_t *count);
 
 // Returns zero on sucess (errno on error)
