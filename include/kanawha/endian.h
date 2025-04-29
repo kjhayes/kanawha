@@ -8,12 +8,18 @@
 
 typedef __bitwise uint16_t le16_t;
 typedef __bitwise uint16_t be16_t;
+ASSERT_TYPE_SIZE(le16_t, 2)
+ASSERT_TYPE_SIZE(be16_t, 2)
 
 typedef __bitwise uint32_t le32_t;
 typedef __bitwise uint32_t be32_t;
+ASSERT_TYPE_SIZE(le32_t, 4)
+ASSERT_TYPE_SIZE(be32_t, 4)
 
 typedef __bitwise uint64_t le64_t;
 typedef __bitwise uint64_t be64_t;
+ASSERT_TYPE_SIZE(le32_t, 4)
+ASSERT_TYPE_SIZE(be32_t, 4)
 
 static inline uint16_t
 byteswap16(uint16_t value)

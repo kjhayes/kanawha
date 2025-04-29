@@ -7,6 +7,10 @@
 #define ASSERT_TYPE_SIZE(__type, __size)\
     _Static_assert(sizeof(__type) == (__size), "sizeof(" #__type ") is not exactly \"" #__size "\" bytes!");
 
+#define ASSERT_FIELD_OFFSET(__type, __field, __offset)\
+    _Static_assert(offsetof(__type, __field) == (__offset), "offsetof(" #__type "." #__field ") is not exactly \"" #__offset "\" bytes!");
+
+
 #ifdef CONFIG_DEBUG_ASSERTIONS
 
 #ifdef CONFIG_X64 
