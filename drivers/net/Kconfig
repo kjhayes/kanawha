@@ -1,0 +1,7 @@
+
+config VIRTIO_NET
+    tristate "Virtio Network Device Driver"
+    default y
+    help
+      Include a driver for the virtio-net device.
+
