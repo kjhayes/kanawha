@@ -6,12 +6,14 @@
 
 static inline void * 
 mmio_ecam_compute_pointer(
-        struct pci_domain *generic_domain,
+        struct pci_cam *cam,
+        uint16_t seg,
         uint8_t bus,
         uint8_t device,
         uint8_t func,
         uint16_t offset)
 {
+    // TODO Add the segment into the computation
     size_t base = 
         ((size_t)bus) << 20
       | ((size_t)device) << 15
@@ -19,17 +21,18 @@ mmio_ecam_compute_pointer(
 
     size_t final_offset = base + offset;
 
-    struct mmio_ecam_pci_domain *domain =
-        container_of(generic_domain, struct mmio_ecam_pci_domain, domain);
+    struct mmio_pci_ecam *ecam =
+        container_of(cam, struct mmio_pci_ecam, cam);
 
-    DEBUG_ASSERT(final_offset <= domain->size);
+    DEBUG_ASSERT(final_offset <= ecam->size);
 
-    return __va(domain->base_addr + final_offset);
+    return __va(ecam->base_addr + final_offset);
 }
 
 static int
 mmio_ecam_pci_readb(
-        struct pci_domain *domain,
+        struct pci_cam *cam,
+        uint16_t seg,
         uint8_t bus,
         uint8_t device,
         uint8_t func,
@@ -37,14 +40,15 @@ mmio_ecam_pci_readb(
         uint8_t *out
         )
 {
-    void *ptr = mmio_ecam_compute_pointer(domain, bus, device, func, offset);
+    void *ptr = mmio_ecam_compute_pointer(cam, seg, bus, device, func, offset);
     *out = *(volatile uint8_t*)ptr;
     return 0;
 }
 
 static int
 mmio_ecam_pci_readw(
-        struct pci_domain *domain,
+        struct pci_cam *cam,
+        uint16_t seg,
         uint8_t bus,
         uint8_t device,
         uint8_t func,
@@ -52,14 +56,15 @@ mmio_ecam_pci_readw(
         uint16_t *out
         )
 {
-    void *ptr = mmio_ecam_compute_pointer(domain, bus, device, func, offset);
+    void *ptr = mmio_ecam_compute_pointer(cam, seg, bus, device, func, offset);
     *out = *(volatile uint16_t*)ptr;
     return 0;
 }
 
 static int
 mmio_ecam_pci_readl(
-        struct pci_domain *domain,
+        struct pci_cam *cam,
+        uint16_t seg,
         uint8_t bus,
         uint8_t device,
         uint8_t func,
@@ -67,14 +72,15 @@ mmio_ecam_pci_readl(
         uint32_t *out
         )
 {
-    void *ptr = mmio_ecam_compute_pointer(domain, bus, device, func, offset);
+    void *ptr = mmio_ecam_compute_pointer(cam, seg, bus, device, func, offset);
     *out = *(volatile uint32_t*)ptr;
     return 0;
 }
 
 static int
 mmio_ecam_pci_writeb(
-        struct pci_domain *domain,
+        struct pci_cam *cam,
+        uint16_t seg,
         uint8_t bus,
         uint8_t device,
         uint8_t func,
@@ -82,14 +88,15 @@ mmio_ecam_pci_writeb(
         uint8_t in 
         )
 {
-    void *ptr = mmio_ecam_compute_pointer(domain, bus, device, func, offset);
+    void *ptr = mmio_ecam_compute_pointer(cam, seg, bus, device, func, offset);
     *(volatile uint8_t*)ptr = in;
     return 0;
 }
 
 static int
 mmio_ecam_pci_writew(
-        struct pci_domain *domain,
+        struct pci_cam *cam,
+        uint16_t seg,
         uint8_t bus,
         uint8_t device,
         uint8_t func,
@@ -97,14 +104,15 @@ mmio_ecam_pci_writew(
         uint16_t in 
         )
 {
-    void *ptr = mmio_ecam_compute_pointer(domain, bus, device, func, offset);
+    void *ptr = mmio_ecam_compute_pointer(cam, seg, bus, device, func, offset);
     *(volatile uint16_t*)ptr = in;
     return 0;
 }
 
 static int
 mmio_ecam_pci_writel(
-        struct pci_domain *domain,
+        struct pci_cam *cam,
+        uint16_t seg,
         uint8_t bus,
         uint8_t device,
         uint8_t func,
@@ -112,7 +120,7 @@ mmio_ecam_pci_writel(
         uint32_t in 
         )
 {
-    void *ptr = mmio_ecam_compute_pointer(domain, bus, device, func, offset);
+    void *ptr = mmio_ecam_compute_pointer(cam, seg, bus, device, func, offset);
     *(volatile uint32_t*)ptr = in;
     return 0;
 }
@@ -129,19 +137,21 @@ mmio_ecam_pci_cam = {
 
 
 int
-register_mmio_ecam_pci_domain(
-        struct mmio_ecam_pci_domain *domain,
+register_pci_mmio_ecam(
+        struct mmio_pci_ecam *cam,
+        uint16_t segment_id,
         void __phys *base_addr,
         size_t size)
 {
     int res;
 
-    domain->base_addr = base_addr;
-    domain->size = size;
+    cam->base_addr = base_addr;
+    cam->size = size;
+    cam->segment_id = segment_id;
 
-    res = register_pci_domain(
-            &domain->domain,
-            &mmio_ecam_pci_cam);
+    res = register_pci_cam(
+            cam->segment_id,
+            &cam->cam);
     if(res) {
         return res;
     }

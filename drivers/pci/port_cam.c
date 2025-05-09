@@ -22,6 +22,7 @@ port_pci_address(
 static int
 port_pci_readb(
         struct pci_cam *cam,
+        uint16_t seg,
         uint8_t bus,
         uint8_t device,
         uint8_t func,
@@ -29,6 +30,7 @@ port_pci_readb(
         uint8_t *out
         )
 {
+    if(seg != 0) {return -EINVAL;}
     if(offset >= 0xFF) {return -EINVAL;}
 
     struct port_pci_cam *pcam = container_of(cam, struct port_pci_cam, cam);
@@ -41,6 +43,7 @@ port_pci_readb(
 static int
 port_pci_readw(
         struct pci_cam *cam,
+        uint16_t seg,
         uint8_t bus,
         uint8_t device,
         uint8_t func,
@@ -48,6 +51,7 @@ port_pci_readw(
         uint16_t *out
         )
 {
+    if(seg != 0) {return -EINVAL;}
     if(offset >= 0xFF) {return -EINVAL;}
 
     struct port_pci_cam *pcam = container_of(cam, struct port_pci_cam, cam);
@@ -60,6 +64,7 @@ port_pci_readw(
 static int
 port_pci_readl(
         struct pci_cam *cam,
+        uint16_t seg,
         uint8_t bus,
         uint8_t device,
         uint8_t func,
@@ -67,6 +72,7 @@ port_pci_readl(
         uint32_t *out
         )
 {
+    if(seg != 0) {return -EINVAL;}
     if(offset >= 0xFF) {return -EINVAL;}
 
     struct port_pci_cam *pcam = container_of(cam, struct port_pci_cam, cam);
@@ -79,6 +85,7 @@ port_pci_readl(
 static int
 port_pci_writeb(
         struct pci_cam *cam,
+        uint16_t seg,
         uint8_t bus,
         uint8_t device,
         uint8_t func,
@@ -86,6 +93,7 @@ port_pci_writeb(
         uint8_t in 
         )
 {
+    if(seg != 0) {return -EINVAL;}
     if(offset >= 0xFF) {return -EINVAL;}
 
     struct port_pci_cam *pcam = container_of(cam, struct port_pci_cam, cam);
@@ -98,6 +106,7 @@ port_pci_writeb(
 static int
 port_pci_writew(
         struct pci_cam *cam,
+        uint16_t seg,
         uint8_t bus,
         uint8_t device,
         uint8_t func,
@@ -105,6 +114,7 @@ port_pci_writew(
         uint16_t in 
         )
 {
+    if(seg != 0) {return -EINVAL;}
     if(offset >= 0xFF) {return -EINVAL;}
 
     struct port_pci_cam *pcam = container_of(cam, struct port_pci_cam, cam);
@@ -117,6 +127,7 @@ port_pci_writew(
 static int
 port_pci_writel(
         struct pci_cam *cam,
+        uint16_t seg,
         uint8_t bus,
         uint8_t device,
         uint8_t func,
@@ -124,6 +135,7 @@ port_pci_writel(
         uint32_t in 
         )
 {
+    if(seg != 0) {return -EINVAL;}
     if(offset >= 0xFF) {return -EINVAL;}
 
     struct port_pci_cam *pcam = container_of(cam, struct port_pci_cam, cam);

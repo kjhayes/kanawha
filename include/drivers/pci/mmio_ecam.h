@@ -4,18 +4,20 @@
 #include <kanawha/pointer.h>
 #include <kanawha/types.h>
 #include <drivers/pci/pci.h>
+#include <drivers/pci/cfg.h>
 
-struct mmio_ecam_pci_domain
+struct mmio_pci_ecam
 {
+    struct pci_cam cam;
+    uint16_t segment_id;
     void __phys *base_addr;
     size_t size;
-
-    struct pci_domain domain;
 };
 
 int
-register_mmio_ecam_pci_domain(
-        struct mmio_ecam_pci_domain *domain,
+register_mmio_pci_ecam(
+        struct mmio_pci_ecam *ecam,
+        uint16_t segment_id,
         void __phys *base_addr,
         size_t size);
 

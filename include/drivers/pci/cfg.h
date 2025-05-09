@@ -36,6 +36,7 @@
 
 #define PCI_CAM_READ8_SIG(RET,ARG)\
 RET(int)\
+ARG(uint16_t, seg)\
 ARG(uint8_t, bus)\
 ARG(uint8_t, device)\
 ARG(uint8_t, func)\
@@ -44,6 +45,7 @@ ARG(uint8_t*, out)
 
 #define PCI_CAM_READ16_SIG(RET,ARG)\
 RET(int)\
+ARG(uint16_t, seg)\
 ARG(uint8_t, bus)\
 ARG(uint8_t, device)\
 ARG(uint8_t, func)\
@@ -52,6 +54,7 @@ ARG(uint16_t*, out)
 
 #define PCI_CAM_READ32_SIG(RET,ARG)\
 RET(int)\
+ARG(uint16_t, seg)\
 ARG(uint8_t, bus)\
 ARG(uint8_t, device)\
 ARG(uint8_t, func)\
@@ -60,6 +63,7 @@ ARG(uint32_t*, out)
 
 #define PCI_CAM_WRITE8_SIG(RET,ARG)\
 RET(int)\
+ARG(uint16_t, seg)\
 ARG(uint8_t, bus)\
 ARG(uint8_t, device)\
 ARG(uint8_t, func)\
@@ -68,6 +72,7 @@ ARG(uint8_t, in)
 
 #define PCI_CAM_WRITE16_SIG(RET,ARG)\
 RET(int)\
+ARG(uint16_t, seg)\
 ARG(uint8_t, bus)\
 ARG(uint8_t, device)\
 ARG(uint8_t, func)\
@@ -76,6 +81,7 @@ ARG(uint16_t, in)
 
 #define PCI_CAM_WRITE32_SIG(RET,ARG)\
 RET(int)\
+ARG(uint16_t, seg)\
 ARG(uint8_t, bus)\
 ARG(uint8_t, device)\
 ARG(uint8_t, func)\
@@ -134,6 +140,7 @@ pci_segment_readb(
         struct pci_cam *cam = container_of(node, struct pci_cam, segment_node);
         res = pci_cam_readb(
                 cam,
+                segment->segment_id,
                 bus,
                 device,
                 func,
@@ -171,6 +178,7 @@ pci_segment_readw(
         struct pci_cam *cam = container_of(node, struct pci_cam, segment_node);
         res = pci_cam_readw(
                 cam,
+                segment->segment_id,
                 bus,
                 device,
                 func,
@@ -208,6 +216,7 @@ pci_segment_readl(
         struct pci_cam *cam = container_of(node, struct pci_cam, segment_node);
         res = pci_cam_readl(
                 cam,
+                segment->segment_id,
                 bus,
                 device,
                 func,
@@ -245,6 +254,7 @@ pci_segment_writeb(
         struct pci_cam *cam = container_of(node, struct pci_cam, segment_node);
         res = pci_cam_writeb(
                 cam,
+                segment->segment_id,
                 bus,
                 device,
                 func,
@@ -282,6 +292,7 @@ pci_segment_writew(
         struct pci_cam *cam = container_of(node, struct pci_cam, segment_node);
         res = pci_cam_writew(
                 cam,
+                segment->segment_id,
                 bus,
                 device,
                 func,
@@ -319,6 +330,7 @@ pci_segment_writel(
         struct pci_cam *cam = container_of(node, struct pci_cam, segment_node);
         res = pci_cam_writel(
                 cam,
+                segment->segment_id,
                 bus,
                 device,
                 func,
