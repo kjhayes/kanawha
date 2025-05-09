@@ -32,7 +32,7 @@ acpi_fs_node_read_page(
         container_of(fs_node, struct acpi_table, sysfs_node.fs_node);
 
     uintptr_t offset = pfn << ACPI_SYSFS_PAGE_ORDER;
-    ssize_t room_left = ptr->table->length - offset;
+    ssize_t room_left = ptr->table->hdr.length - offset;
     if(room_left > (1ULL<<ACPI_SYSFS_PAGE_ORDER)) {
         room_left = 1ULL<<ACPI_SYSFS_PAGE_ORDER;
     }
@@ -63,7 +63,7 @@ acpi_fs_node_getattr(
 
     switch(attr) {
         case FS_NODE_ATTR_DATA_SIZE:
-            *value = ptr->table->length;
+            *value = ptr->table->hdr.length;
             break;
         case FS_NODE_ATTR_PAGE_ORDER:
             *value = ACPI_SYSFS_PAGE_ORDER;

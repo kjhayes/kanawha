@@ -40,15 +40,15 @@ static struct slab_allocator *acpi_table_slab_allocator;
 static uint8_t acpi_table_slab_buffer[sizeof(struct acpi_table) * 32];
 
 int
-acpi_register_raw_table(struct acpi_table_hdr *table)
+acpi_register_raw_table(struct acpi_table_data *table)
 {
     int res;
 
     // Special Cases
-    if(table->signature[0] == 'S'
-    &&(table->signature[1] == 'S')
-    &&(table->signature[2] == 'D')
-    &&(table->signature[3] == 'T'))
+    if(table->hdr.signature[0] == 'S'
+    &&(table->hdr.signature[1] == 'S')
+    &&(table->hdr.signature[2] == 'D')
+    &&(table->hdr.signature[3] == 'T'))
     {
         struct acpi_table *ptr;
 
@@ -63,7 +63,7 @@ acpi_register_raw_table(struct acpi_table_hdr *table)
 
     struct stree_node *node;
     char buf[5];
-    memcpy(buf, table->signature, 4);
+    memcpy(buf, table->hdr.signature, 4);
     buf[4] = '\0';
     node = stree_get(&acpi_table_tree, buf);
     if(node != NULL) {
@@ -128,7 +128,7 @@ acpi_load_tables(void)
     } else if(global_rsdt != NULL) {
         size_t num_tables =
             (global_rsdt->hdr.length - sizeof(struct acpi_table_hdr))
-            / sizeof(uint64_t);
+            / sizeof(uint32_t);
         printk("Loading %lu Tables from RSDT\n", num_tables);
         for(size_t i = 0; i < num_tables; i++) {
             uint32_t phys_ptr = global_rsdt->table_ptrs[i];

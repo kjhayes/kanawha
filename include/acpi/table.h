@@ -57,7 +57,21 @@ struct acpi_table {
 #endif
 
     unsigned long flags;
-    struct acpi_table_hdr *table;
+    struct acpi_table_data *table;
 };
+
+static inline size_t
+acpi_table_get_data_len(
+        struct acpi_table_data *table)
+{
+    return table->hdr.length - sizeof(struct acpi_table_hdr);
+}
+
+static inline void *
+acpi_table_get_data_ptr(
+        struct acpi_table_data *table)
+{
+    return table->data;
+}
 
 #endif

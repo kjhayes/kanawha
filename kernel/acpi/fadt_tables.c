@@ -35,7 +35,7 @@ acpi_add_fadt_tables(void)
 
     if(dsdt_ptr != NULL) {
         printk("DSDT Physical Address = %p\n", dsdt_ptr);
-        struct acpi_table_hdr *dsdt_table = __va(dsdt_ptr);
+        struct acpi_table_data *dsdt_table = __va(dsdt_ptr);
         res = acpi_register_raw_table(dsdt_table);
         if(res) {
             wprintk("Failed to register ACPI DSDT!\n");
@@ -59,7 +59,7 @@ acpi_add_fadt_tables(void)
 
     if(facs_ptr != NULL) {
         printk("FACS Physical Address = %p\n", facs_ptr);
-        struct acpi_table_hdr *facs_table = __va(facs_ptr);
+        struct acpi_table_data *facs_table = __va(facs_ptr);
         res = acpi_register_raw_table(facs_table);
         if(res) {
             wprintk("Failed to register ACPI FACS!\n");

@@ -14,6 +14,6 @@ acpi_find_table(const char *signature);
 uint32_t acpi_revision(void);
 
 int
-acpi_register_raw_table(struct acpi_table_hdr *table);
+acpi_register_raw_table(struct acpi_table_data *table);
 
 #endif
