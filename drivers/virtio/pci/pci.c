@@ -181,7 +181,11 @@ virtio_pci_init_device(
 
     res = pci_func_start_irqs(func);
     if(res) {
-        eprintk("Failed to start IRQ's on virtio-pci device! (err=%s)\n",
+        eprintk("Failed to start IRQ's on virtio-pci device (%d.%d.%d.%d)! (err=%s)\n",
+                (int)func->segment->segment_id,
+                (int)func->device->bus->bus_index,
+                (int)func->device->index,
+                (int)func->index,
                 errnostr(res));
         return res;
     }
