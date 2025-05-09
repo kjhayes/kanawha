@@ -28,8 +28,8 @@ acpi_fs_node_read_page(
 {
     int res;
 
-    struct acpi_table_ptr *ptr =
-        container_of(fs_node, struct acpi_table_ptr, sysfs_node.fs_node);
+    struct acpi_table *ptr =
+        container_of(fs_node, struct acpi_table, sysfs_node.fs_node);
 
     uintptr_t offset = pfn << ACPI_SYSFS_PAGE_ORDER;
     ssize_t room_left = ptr->table->length - offset;
@@ -58,8 +58,8 @@ acpi_fs_node_getattr(
 {
     int res;
 
-    struct acpi_table_ptr *ptr =
-        container_of(fs_node, struct acpi_table_ptr, sysfs_node.fs_node);
+    struct acpi_table *ptr =
+        container_of(fs_node, struct acpi_table, sysfs_node.fs_node);
 
     switch(attr) {
         case FS_NODE_ATTR_DATA_SIZE:
@@ -107,19 +107,19 @@ acpi_fs_file_ops = {
 // NOTE: Assumes that sysfs_lock is held
 static int
 do_register_table(
-        struct acpi_table_ptr *ptr)
+        struct acpi_table *table)
 {
     int res;
 
     DEBUG_ASSERT(KERNEL_ADDR(acpi_fs_mount));
 
-    ptr->sysfs_node.fs_node.node_ops = &acpi_fs_node_ops;
-    ptr->sysfs_node.fs_node.file_ops = &acpi_fs_file_ops;
+    table->sysfs_node.fs_node.node_ops = &acpi_fs_node_ops;
+    table->sysfs_node.fs_node.file_ops = &acpi_fs_file_ops;
 
     size_t inode;
     res = vfs_mount_insert_node(
             acpi_fs_mount,
-            &ptr->sysfs_node,
+            &table->sysfs_node,
             &inode);
     if(res) {
         return res;
@@ -127,12 +127,12 @@ do_register_table(
 
     res = vfs_mount_link_root(
             acpi_fs_mount,
-            ptr->signature_str,
+            table->signature_str,
             inode);
     if(res) {
         vfs_mount_remove_node(
                 acpi_fs_mount,
-                &ptr->sysfs_node);
+                &table->sysfs_node);
         return res;
     }
 
@@ -153,7 +153,7 @@ acpi_sysfs_init_mount(void)
     acpi_fs_mount = mnt;
     ilist_node_t *node;
     ilist_for_each(node, &sysfs_temp_list) {
-        struct acpi_table_ptr *ptr = container_of(node, struct acpi_table_ptr, sysfs_temp_list_node);
+        struct acpi_table *ptr = container_of(node, struct acpi_table, sysfs_temp_list_node);
         res = do_register_table(ptr);
         if(res) {
             spin_unlock(&sysfs_lock);
@@ -176,18 +176,18 @@ declare_init_desc(fs, acpi_sysfs_init_mount, "Registering ACPI Sysfs Mount");
 
 int
 acpi_sysfs_on_register_table(
-        struct acpi_table_ptr *table_ptr)
+        struct acpi_table *table)
 {
     int res;
 
     spin_lock(&sysfs_lock);
     if(acpi_fs_mount == NULL) {
-        ilist_push_tail(&sysfs_temp_list, &table_ptr->sysfs_temp_list_node);
+        ilist_push_tail(&sysfs_temp_list, &table->sysfs_temp_list_node);
         spin_unlock(&sysfs_lock);
         return 0;
     }
 
-    res = do_register_table(table_ptr);
+    res = do_register_table(table);
     spin_unlock(&sysfs_lock);
     return res;
 }

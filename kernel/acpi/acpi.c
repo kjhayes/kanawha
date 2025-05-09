@@ -8,10 +8,21 @@
 #include <kanawha/stddef.h>
 #include <kanawha/init.h>
 #include <acpi/acpi.h>
+#include <acpi/table.h>
 
 #ifdef CONFIG_ACPI_SYSFS
 #include <acpi/sysfs.h>
 #endif
+
+struct acpi_rsdt {
+    struct acpi_table_hdr hdr;
+    uint32_t table_ptrs[];
+} __attribute__((packed));
+
+struct acpi_xsdt {
+    struct acpi_table_hdr hdr;
+    uint64_t table_ptrs[];
+} __attribute__((packed));
 
 static DECLARE_SPINLOCK(acpi_table_lock);
 int found_global_xsdp = 0;
@@ -22,14 +33,33 @@ static struct acpi_xsdt *global_xsdt = NULL;
 static struct acpi_rsdt *global_rsdt = NULL;
 
 static DECLARE_STREE(acpi_table_tree);
+static DECLARE_ILIST(acpi_ssdt_list);
 
-static struct slab_allocator *acpi_table_ptr_slab_allocator;
-static uint8_t acpi_table_ptr_slab_buffer[sizeof(struct acpi_table_ptr) * 32];
+// TODO: This slab allocator is not locked properly
+static struct slab_allocator *acpi_table_slab_allocator;
+static uint8_t acpi_table_slab_buffer[sizeof(struct acpi_table) * 32];
 
-static int
-acpi_register_table(struct acpi_table_hdr *table)
+int
+acpi_register_raw_table(struct acpi_table_hdr *table)
 {
     int res;
+
+    // Special Cases
+    if(table->signature[0] == 'S'
+    &&(table->signature[1] == 'S')
+    &&(table->signature[2] == 'D')
+    &&(table->signature[3] == 'T'))
+    {
+        struct acpi_table *ptr;
+
+        ptr = slab_alloc(acpi_table_slab_allocator);
+        if(ptr == NULL) {
+            return -ENOMEM;
+        }
+        ptr->table = table;
+        wprintk("Ignoring ACPI SSDT Table!\n");
+        return 0;
+    }
 
     struct stree_node *node;
     char buf[5];
@@ -41,8 +71,8 @@ acpi_register_table(struct acpi_table_hdr *table)
         return 0;
     }
 
-    struct acpi_table_ptr *ptr;
-    ptr = slab_alloc(acpi_table_ptr_slab_allocator);
+    struct acpi_table *ptr;
+    ptr = slab_alloc(acpi_table_slab_allocator);
     if(ptr == NULL) {
         eprintk("Failed to allocate ACPI table node!\n");
         return -ENOMEM;
@@ -69,14 +99,14 @@ acpi_register_table(struct acpi_table_hdr *table)
 static int
 acpi_load_tables(void)
 {
-    acpi_table_ptr_slab_allocator =
+    acpi_table_slab_allocator =
         create_static_slab_allocator(
-                acpi_table_ptr_slab_buffer,
-                sizeof(acpi_table_ptr_slab_buffer),
-                sizeof(struct acpi_table_ptr),
-                alignof(struct acpi_table_ptr));
+                acpi_table_slab_buffer,
+                sizeof(acpi_table_slab_buffer),
+                sizeof(struct acpi_table),
+                alignof(struct acpi_table));
 
-    if(acpi_table_ptr_slab_allocator == NULL) {
+    if(acpi_table_slab_allocator == NULL) {
         return -ENOMEM;
     }
 
@@ -88,7 +118,7 @@ acpi_load_tables(void)
         for(size_t i = 0; i < num_tables; i++) {
             uint64_t phys_ptr = global_xsdt->table_ptrs[i];
             void *table = (void*)__va((void __phys *)phys_ptr);
-            int res = acpi_register_table(table);
+            int res = acpi_register_raw_table(table);
             if(res) {
                 eprintk("Failed to register APCI table at address (%p)!\n",
                         table);
@@ -103,7 +133,7 @@ acpi_load_tables(void)
         for(size_t i = 0; i < num_tables; i++) {
             uint32_t phys_ptr = global_rsdt->table_ptrs[i];
             void *table = (void*)__va((void __phys *)(uintptr_t)phys_ptr);
-            int res = acpi_register_table(table);
+            int res = acpi_register_raw_table(table);
             if(res) {
                 eprintk("Failed to register APCI table at address (%p)!\n",
                         table);
@@ -161,18 +191,16 @@ acpi_provide_xsdp(struct acpi_xsdp *xsdp)
     return 0;
 }
 
-struct acpi_table_hdr *
+struct acpi_table *
 acpi_find_table(const char *signature) {
-    struct acpi_table_hdr *table;
+    struct acpi_table *table;
     spin_lock(&acpi_table_lock);
     struct stree_node *node;
     node = stree_get(&acpi_table_tree, signature);
     if(node == NULL) {
         table = NULL;
     } else {
-        struct acpi_table_ptr *ptr =
-            container_of(node, struct acpi_table_ptr, tree_node);
-        table = ptr->table;
+        table = container_of(node, struct acpi_table, tree_node);
     }
     spin_unlock(&acpi_table_lock);
     return table;

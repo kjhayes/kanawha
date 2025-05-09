@@ -34,7 +34,7 @@ struct acpi_gas {
     uint8_t reg_bit_offset;
     uint8_t access_size;
     uint64_t address;
-};
+} __attribute__((packed));
 
 #undef DECLARE_U8_CONSTANTS
 

@@ -253,13 +253,14 @@ parse_madt_lapic_nmi(
 
 static int
 x64_parse_acpi_madt(void) {
-    struct acpi_madt *madt;
-    madt = (struct acpi_madt*)acpi_find_table("APIC");
-
-    if(madt == NULL) {
+    struct acpi_table *madt_table;
+    madt_table = acpi_find_table("APIC");
+    if(madt_table == NULL) {
         eprintk("Cannot Find ACPI MADT Table!\n");
         return -ENXIO;
     }
+
+    struct acpi_madt *madt = (struct acpi_madt *)madt_table->table;
 
     uint64_t lapic_address = (uint64_t)(madt->lapic_address);
 

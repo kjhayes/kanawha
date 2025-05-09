@@ -115,6 +115,15 @@ struct acpi_fadt {
     struct acpi_gas sleep_ctrl_reg;
     struct acpi_gas sleep_status_reg;
     uint64_t hypervisor_vendor_id;
-};
+} __attribute__((packed));
+
+ASSERT_TYPE_SIZE(struct acpi_fadt, 276);
+
+ASSERT_FIELD_OFFSET(struct acpi_fadt, pm_tmr_len, 91);
+ASSERT_FIELD_OFFSET(struct acpi_fadt, flush_size, 100);
+ASSERT_FIELD_OFFSET(struct acpi_fadt, century, 108);
+ASSERT_FIELD_OFFSET(struct acpi_fadt, flags, 112);
+ASSERT_FIELD_OFFSET(struct acpi_fadt, reset_value, 128);
+ASSERT_FIELD_OFFSET(struct acpi_fadt, dsdt_xptr, 140);
 
 #endif

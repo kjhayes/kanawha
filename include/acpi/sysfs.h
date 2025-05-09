@@ -5,6 +5,6 @@
 
 int
 acpi_sysfs_on_register_table(
-        struct acpi_table_ptr *table_ptr);
+        struct acpi_table *table);
 
 #endif
