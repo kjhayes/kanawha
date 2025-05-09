@@ -77,13 +77,13 @@ acpi_pm_clk_driver_mmio = {
 static int
 init_acpi_pm_timer_clk(void)
 {
-    struct acpi_table_hdr *hdr = acpi_find_table(FADT_SIG_STRING);
-    if(hdr == NULL) {
+    struct acpi_table *table = acpi_find_table(FADT_SIG_STRING);
+    if(table == NULL) {
         printk("Could not find ACPI FADT Table to initialize ACPI PM Timer\n");
         return 0;
     }
 
-    struct acpi_fadt *fadt = (struct acpi_fadt*)hdr;
+    struct acpi_fadt *fadt = (struct acpi_fadt*)table->table;
 
     struct acpi_pm_timer *clk = kmalloc(sizeof(struct acpi_pm_timer));
     if(clk == NULL) {
