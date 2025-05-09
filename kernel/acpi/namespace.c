@@ -60,5 +60,5 @@ acpi_load_namespace(void)
 
     return 0;
 }
-declare_init_desc(bus, acpi_load_namespace, "Loading ACPI Namespace");
+//declare_init_desc(bus, acpi_load_namespace, "Loading ACPI Namespace");
 
