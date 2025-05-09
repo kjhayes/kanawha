@@ -11,7 +11,6 @@
 
 struct blk_dev;
 struct blk_driver;
-struct blk_dev_request;
 
 #define BLOCK_DEVICE_WRITE_SIG(RET,ARG)\
 RET(int)\
