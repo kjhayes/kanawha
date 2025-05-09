@@ -20,6 +20,7 @@ obj-y += \
 	char_dev.o \
 	fb_dev.o \
 	rand_dev.o \
+	net_dev.o \
 	irq_domain.o \
 	irq_dev.o \
 	thread.o \
@@ -54,6 +55,7 @@ obj-y += sched/
 obj-y += elf/
 obj-y += mb2/
 obj-y += proc/
+obj-y += net/
 obj-y += linux/
 
 obj-m += memdump.o

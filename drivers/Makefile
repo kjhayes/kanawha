@@ -4,6 +4,7 @@ obj-y += \
 	pci/ \
 	serial/ \
 	rand/ \
+	net/ \
 	clk/ \
 	qemu/ \
 	virtio/ \
