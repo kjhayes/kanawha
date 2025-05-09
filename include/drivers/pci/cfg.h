@@ -98,10 +98,14 @@ OP(writel, PCI_CAM_WRITE32_SIG, ##__VA_ARGS__)
 
 struct pci_segment;
 
+#define PCI_CAM_FLAG_EXTENDED (1ULL<<0)
+
 struct pci_cam {
 DECLARE_OP_LIST_PTRS(PCI_CAM_OP_LIST, struct pci_cam *)
 
-    ilist_node_t segment_node;
+    unsigned long flags;
+
+    ilist_node_t global_node;
 };
 
 DEFINE_OP_LIST_WRAPPERS(
@@ -120,237 +124,72 @@ DEFINE_OP_LIST_WRAPPERS(
 #undef PCI_CAM_WRITE16_SIG
 #undef PCI_CAM_WRITE32_SIG
 
+// Segment Registration
+
+int
+probe_pci_segment(
+        uint16_t segment_id);
+int
+probe_pci_segment_with_assumed_buses(
+        uint16_t segment_id,
+        size_t assumed_bus_start,
+        size_t assumed_bus_count);
+
 // PCI Segment Config Access
 
-static inline int
+int
 pci_segment_readb(
         struct pci_segment *segment,
         uint8_t bus,
         uint8_t device,
         uint8_t func,
         uint16_t offset,
-        uint8_t *out)
-{
-    int res;
-    int not_first = 0;
+        uint8_t *out);
 
-    int irq_flags = spin_lock_irq_save(&segment->cam_lock);
-    ilist_node_t *node;
-    ilist_for_each(node, &segment->cam_list) {
-        struct pci_cam *cam = container_of(node, struct pci_cam, segment_node);
-        res = pci_cam_readb(
-                cam,
-                segment->segment_id,
-                bus,
-                device,
-                func,
-                offset,
-                out);
-        if(res == 0) {
-            if(not_first) {
-                ilist_remove(&segment->cam_list, node);
-                ilist_push_head(&segment->cam_list, node);
-            }
-            spin_unlock_irq_restore(&segment->cam_lock, irq_flags);
-            return 0;
-        }
-        not_first = 1;
-    }
-    spin_unlock_irq_restore(&segment->cam_lock, irq_flags);
-    return -EINVAL;
-}
-
-static inline int
+int
 pci_segment_readw(
         struct pci_segment *segment,
         uint8_t bus,
         uint8_t device,
         uint8_t func,
         uint16_t offset,
-        uint16_t *out)
-{
-    int res;
-    int not_first = 0;
+        uint16_t *out);
 
-    int irq_flags = spin_lock_irq_save(&segment->cam_lock);
-    ilist_node_t *node;
-    ilist_for_each(node, &segment->cam_list) {
-        struct pci_cam *cam = container_of(node, struct pci_cam, segment_node);
-        res = pci_cam_readw(
-                cam,
-                segment->segment_id,
-                bus,
-                device,
-                func,
-                offset,
-                out);
-        if(res == 0) {
-            if(not_first) {
-                ilist_remove(&segment->cam_list, node);
-                ilist_push_head(&segment->cam_list, node);
-            }
-            spin_unlock_irq_restore(&segment->cam_lock, irq_flags);
-            return 0;
-        }
-        not_first = 1;
-    }
-    spin_unlock_irq_restore(&segment->cam_lock, irq_flags);
-    return -EINVAL;
-}
-
-static inline int
+int
 pci_segment_readl(
         struct pci_segment *segment,
         uint8_t bus,
         uint8_t device,
         uint8_t func,
         uint16_t offset,
-        uint32_t *out)
-{
-    int res;
-    int not_first = 0;
+        uint32_t *out);
 
-    int irq_flags = spin_lock_irq_save(&segment->cam_lock);
-    ilist_node_t *node;
-    ilist_for_each(node, &segment->cam_list) {
-        struct pci_cam *cam = container_of(node, struct pci_cam, segment_node);
-        res = pci_cam_readl(
-                cam,
-                segment->segment_id,
-                bus,
-                device,
-                func,
-                offset,
-                out);
-        if(res == 0) {
-            if(not_first) {
-                ilist_remove(&segment->cam_list, node);
-                ilist_push_head(&segment->cam_list, node);
-            }
-            spin_unlock_irq_restore(&segment->cam_lock, irq_flags);
-            return 0;
-        }
-        not_first = 1;
-    }
-    spin_unlock_irq_restore(&segment->cam_lock, irq_flags);
-    return -EINVAL;
-}
-
-static inline int
+int
 pci_segment_writeb(
         struct pci_segment *segment,
         uint8_t bus,
         uint8_t device,
         uint8_t func,
         uint16_t offset,
-        uint8_t in)
-{
-    int res;
-    int not_first = 0;
+        uint8_t in);
 
-    int irq_flags = spin_lock_irq_save(&segment->cam_lock);
-    ilist_node_t *node;
-    ilist_for_each(node, &segment->cam_list) {
-        struct pci_cam *cam = container_of(node, struct pci_cam, segment_node);
-        res = pci_cam_writeb(
-                cam,
-                segment->segment_id,
-                bus,
-                device,
-                func,
-                offset,
-                in);
-        if(res == 0) {
-            if(not_first) {
-                ilist_remove(&segment->cam_list, node);
-                ilist_push_head(&segment->cam_list, node);
-            }
-            spin_unlock_irq_restore(&segment->cam_lock, irq_flags);
-            return 0;
-        }
-        not_first = 1;
-    }
-    spin_unlock_irq_restore(&segment->cam_lock, irq_flags);
-    return -EINVAL;
-}
-
-static inline int
+int
 pci_segment_writew(
         struct pci_segment *segment,
         uint8_t bus,
         uint8_t device,
         uint8_t func,
         uint16_t offset,
-        uint16_t in)
-{
-    int res;
-    int not_first = 0;
+        uint16_t in);
 
-    int irq_flags = spin_lock_irq_save(&segment->cam_lock);
-    ilist_node_t *node;
-    ilist_for_each(node, &segment->cam_list) {
-        struct pci_cam *cam = container_of(node, struct pci_cam, segment_node);
-        res = pci_cam_writew(
-                cam,
-                segment->segment_id,
-                bus,
-                device,
-                func,
-                offset,
-                in);
-        if(res == 0) {
-            if(not_first) {
-                ilist_remove(&segment->cam_list, node);
-                ilist_push_head(&segment->cam_list, node);
-            }
-            spin_unlock_irq_restore(&segment->cam_lock, irq_flags);
-            return 0;
-        }
-        not_first = 1;
-    }
-    spin_unlock_irq_restore(&segment->cam_lock, irq_flags);
-    return -EINVAL;
-}
-
-static inline int
+int
 pci_segment_writel(
         struct pci_segment *segment,
         uint8_t bus,
         uint8_t device,
         uint8_t func,
         uint16_t offset,
-        uint32_t in)
-{
-    int res;
-    int not_first = 0;
-
-    int irq_flags = spin_lock_irq_save(&segment->cam_lock);
-    ilist_node_t *node;
-    ilist_for_each(node, &segment->cam_list) {
-        struct pci_cam *cam = container_of(node, struct pci_cam, segment_node);
-        res = pci_cam_writel(
-                cam,
-                segment->segment_id,
-                bus,
-                device,
-                func,
-                offset,
-                in);
-        if(res == 0) {
-            if(not_first) {
-                ilist_remove(&segment->cam_list, node);
-                ilist_push_head(&segment->cam_list, node);
-            }
-            spin_unlock_irq_restore(&segment->cam_lock, irq_flags);
-            return 0;
-        }
-        not_first = 1;
-    }
-    spin_unlock_irq_restore(&segment->cam_lock, irq_flags);
-    return -EINVAL;
-}
-
-
+        uint32_t in);
 
 // PCI Bus Config Access
 

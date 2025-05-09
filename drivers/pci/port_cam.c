@@ -148,7 +148,6 @@ port_pci_writel(
 int
 register_port_pci_cam(
         struct port_pci_cam *cam,
-        uint16_t segment_id,
         pio_t addr_port,
         pio_t data_port)
 {
@@ -156,8 +155,8 @@ register_port_pci_cam(
     cam->data_port = data_port;
 
     return register_pci_cam(
-            segment_id,
-            &cam->cam);
+            &cam->cam,
+            0);
 }
 
 const static struct pci_cam
@@ -173,7 +172,7 @@ port_pci_cam_table = {
 #define DEFAULT_PORT_PCI_ADDR_PORT 0xCF8
 #define DEFAULT_PORT_PCI_DATA_PORT 0xCFC
 
-static struct port_pci_cam default_port_cam_segment =
+static struct port_pci_cam default_port_cam =
 {
     .addr_port = DEFAULT_PORT_PCI_ADDR_PORT,
     .data_port = DEFAULT_PORT_PCI_DATA_PORT,
@@ -182,11 +181,19 @@ static struct port_pci_cam default_port_cam_segment =
 static int
 register_default_port_pci_cam(void)
 {
-    return register_port_pci_cam(
-            &default_port_cam_segment,
-            0,
+    int res;
+    res = register_port_pci_cam(
+            &default_port_cam,
             DEFAULT_PORT_PCI_ADDR_PORT,
             DEFAULT_PORT_PCI_DATA_PORT);
+    if(res) {
+        return res;
+    }
+    res = probe_pci_segment(0);
+    if(res) {
+        return res;
+    }
+    return 0;
 }
 declare_init_desc(bus, register_default_port_pci_cam, "Registering Port PCI CAM");
 

@@ -14,7 +14,6 @@ struct port_pci_cam {
 int
 register_port_pci_cam(
         struct port_pci_cam *cam,
-        uint16_t segment_id,
         pio_t addr_port,
         pio_t data_port);
 

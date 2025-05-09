@@ -24,10 +24,6 @@ struct pci_segment
 {
     uint16_t segment_id;
 
-    // Configuration Access Mechanism
-    spinlock_t cam_lock;
-    ilist_t cam_list;
-
     ilist_node_t global_node;
 
     ilist_t bus_list;
@@ -182,20 +178,10 @@ pci_probe_func(
         struct pci_device *device,
         uint8_t function);
 
-// Adds a configuration access mechanism for the specified segment
 int
 register_pci_cam(
-        uint16_t segment_id,
-        struct pci_cam *cam);
-
-// Instead of probing from bus zero, probe a range of assumed to exist buses
-// [assumed_bus_start, assumed_bus_start + assumed_bus_count)
-int
-register_pci_cam_with_assumed_buses(
-        uint16_t segment_id,
         struct pci_cam *cam,
-        size_t assumed_bus_start,
-        size_t assumed_bus_count);
+        unsigned long flags);
 
 int
 register_pci_driver(

@@ -139,7 +139,6 @@ mmio_ecam_pci_cam = {
 int
 register_pci_mmio_ecam(
         struct mmio_pci_ecam *cam,
-        uint16_t segment_id,
         void __phys *base_addr,
         size_t size)
 {
@@ -147,11 +146,10 @@ register_pci_mmio_ecam(
 
     cam->base_addr = base_addr;
     cam->size = size;
-    cam->segment_id = segment_id;
 
     res = register_pci_cam(
-            cam->segment_id,
-            &cam->cam);
+            &cam->cam,
+            PCI_CAM_FLAG_EXTENDED);
     if(res) {
         return res;
     }
