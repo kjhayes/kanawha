@@ -1,6 +1,7 @@
 #ifndef __KANAWHA__PRINTK_H__
 #define __KANAWHA__PRINTK_H__
 
+#include <stdarg.h>
 #include <kanawha/common.h>
 #include <kanawha/types.h>
 #include <kanawha/time.h>
@@ -17,6 +18,7 @@ typedef int(printk_handler_f)(char);
 typedef int(printk_f)(const char *fmt, ...);
 
 int do_printk(const char *fmt, ...);
+int do_vprintk(const char *fmt, va_list args);
 
 #define printk(fmt, ...) \
     do {\

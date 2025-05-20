@@ -1,4 +1,6 @@
 
+#include <stdarg.h>
+
 #include <kanawha/printk.h>
 #include <kanawha/types.h>
 #include <kanawha/export.h>
@@ -10,9 +12,6 @@
 #include <kanawha/proc/process.h>
 #include <kanawha/klog.h>
 #include <kanawha/irq.h>
-
-// Freestanding Compiler Includes
-#include <stdarg.h>
 
 static DECLARE_SPINLOCK(printk_lock);
 
@@ -36,7 +35,7 @@ struct vprintk_state {
     size_t buffer_size;
     char *buffer;
 };
-static int vprintk(struct vprintk_state *state, const char *fmt, va_list *args_ptr);
+static int vprintk(struct vprintk_state *state, const char *fmt, va_list *args);
 static int vprintk_flush(struct vprintk_state *state);
 static int vprintk_putc(struct vprintk_state *state, char c);
 static int vprintk_print_pointer(struct vprintk_state *state, void *ptr);
@@ -59,6 +58,16 @@ int do_printk(const char *fmt, ...)
     return res;
 }
 
+int do_vprintk(const char *fmt, va_list args) 
+{
+    int res;
+
+    int irq_state = spin_lock_irq_save(&printk_lock);
+    res = vprintk(&printk_state, fmt, (va_list*)&args);
+    spin_unlock_irq_restore(&printk_lock, irq_state);
+
+    return res;
+}
 static char panic_state_buffer[CONFIG_PANIC_BUFFER_SIZE] = { 0 };
 static struct vprintk_state panic_state = { 0 };
 
@@ -508,12 +517,12 @@ int vprintk_handle_escaped(struct vprintk_state *state) {
 }
 
 static
-int vprintk(struct vprintk_state *state, const char *fmt, va_list *args_ptr) 
+int vprintk(struct vprintk_state *state, const char *fmt, va_list *args) 
 {
     int res;
 
     state->fmt_iter = fmt;
-    state->args_ptr = args_ptr;
+    state->args_ptr = args;
     state->escaped = 0;
     state->buffer_head = 0;
 

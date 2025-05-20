@@ -214,9 +214,6 @@ fb_dev_buffer_fs_node_getattr(
         case FS_NODE_ATTR_PAGE_ORDER:
             *value = VMEM_MIN_PAGE_ORDER;
             break;
-        case FS_NODE_ATTR_TYPE:
-            *value = FS_NODE_TYPE_SPECIAL;
-            break;
         default:
             res = -ENXIO;
             break;

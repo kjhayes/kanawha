@@ -19,6 +19,11 @@ static DECLARE_SPINLOCK(fs_path_global_lock);
 static DECLARE_ILIST(root_fs_path_list);
 
 static int
+__fs_path_put(struct fs_path *path);
+static int
+__fs_path_get(struct fs_path *path);
+
+static int
 __fs_path_traverse(
         struct process *process,
         struct fs_path *dir,
@@ -103,6 +108,10 @@ __fs_path_traverse(
     }
     memset(child, 0, sizeof(struct fs_path));
 
+#ifdef CONFIG_DEBUG_CHECKSUM_FS_PATH
+    child->__checksum = FS_PATH_CHECKSUM;
+#endif
+
     child->refs = 1;
     child->name = kstrdup(child_name);
     if(child->name == NULL) {
@@ -112,6 +121,8 @@ __fs_path_traverse(
     }
     child->fs_node = child_fs_node;
 
+    res = __fs_path_get(dir);
+    DEBUG_ASSERT(res == 0);
     child->parent = dir;
     ilist_push_tail(&dir->children, &child->child_node);
     ilist_init(&child->children);
@@ -121,11 +132,10 @@ __fs_path_traverse(
     return 0;
 }
 
-int
-fs_path_get(struct fs_path *path)
+static int
+__fs_path_get(struct fs_path *path)
 {
     int res;
-    int irq_flags = spin_lock_irq_save(&fs_path_global_lock);
     DEBUG_ASSERT(KERNEL_ADDR(path->name));
     if(path->refs > 0) {
         path->refs++;
@@ -135,6 +145,14 @@ fs_path_get(struct fs_path *path)
         res = -EINVAL;
         dprintk("fs_path_get(%s) FAILED\n", path->name);
     }
+    return res;
+}
+
+int
+fs_path_get(struct fs_path *path) {
+    int res;
+    int irq_flags = spin_lock_irq_save(&fs_path_global_lock);
+    res = __fs_path_get(path);
     spin_unlock_irq_restore(&fs_path_global_lock, irq_flags);
     return res;
 }
@@ -151,6 +169,7 @@ __fs_path_put(struct fs_path *path)
     }
 
     DEBUG_ASSERT(path->refs == 0);
+    DEBUG_ASSERT(ilist_empty(&path->children));
 
     struct fs_path *parent;
     parent = path->parent;
@@ -196,6 +215,10 @@ fs_path_create_anon_pipe(
     }
     memset(pipe, 0, sizeof(struct fs_path));
 
+#ifdef CONFIG_DEBUG_CHECKSUM_FS_PATH
+    pipe->__checksum = FS_PATH_CHECKSUM;
+#endif
+
     pipe->fs_node = pipe_fs_get_anon_pipe();
     if(pipe->fs_node == NULL) {
         kfree(pipe);
@@ -237,6 +260,10 @@ fs_path_mount_root(
         return -ENOMEM;
     }
     memset(mntpoint, 0, sizeof(struct fs_path));
+
+#ifdef CONFIG_DEBUG_CHECKSUM_FS_PATH
+    mntpoint->__checksum = FS_PATH_CHECKSUM;
+#endif
 
     size_t root_index;
     res = fs_mount_root_index(mnt, &root_index);
@@ -283,6 +310,10 @@ fs_path_mount_dir(
         return -ENOMEM;
     }
     memset(mntpoint, 0, sizeof(struct fs_path));
+
+#ifdef CONFIG_DEBUG_CHECKSUM_FS_PATH
+    mntpoint->__checksum = FS_PATH_CHECKSUM;
+#endif
 
     size_t root_index;
     res = fs_mount_root_index(mnt, &root_index);

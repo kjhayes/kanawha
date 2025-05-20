@@ -124,6 +124,13 @@ process_write_usermem(
         size_t length);
 
 int
+process_memset_usermem(
+        struct process *process,
+        void __user *dst,
+        uint8_t val,
+        size_t length);
+
+int
 process_read_usermem(
         struct process *process,
         void *dst,

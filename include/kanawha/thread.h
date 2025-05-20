@@ -131,7 +131,14 @@ int thread_schedule(struct thread_state *to_schedule);
 // Returns 0 on success, else, Returns negative errno
 int thread_tire(struct thread_state *thread);
 
-// Does the opposite of threada_tire, going from "TIRED" to "RUNNING"
+// Same as thread_tire but provide a format string and arguments which
+// can be used to generate a "reason" message for debugging
+int thread_tire_with_reason(
+        struct thread_state *state,
+        const char *fmt,
+        ...);
+
+// Does the opposite of thread_tire, going from "TIRED" to "RUNNING"
 // or "SLEEPING" to "READY"
 //
 // Returns 0 on success, else, Returns negative errno
