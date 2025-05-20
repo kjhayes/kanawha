@@ -281,7 +281,13 @@ process_alloc(
     if(parent != NULL) {
         spin_lock(&parent->hierarchy_lock);
         ilist_push_tail(&parent->children, &process->child_node);
+        process->user_id = parent->user_id;
+        process->group_id = parent->group_id;
         spin_unlock(&parent->hierarchy_lock);
+    } else {
+        DEBUG_ASSERT(flags & PROCESS_FLAG_INIT);
+        process->user_id = INIT_UID;
+        process->group_id = INIT_GID;
     }
 
     res = process_assign_pid(process);

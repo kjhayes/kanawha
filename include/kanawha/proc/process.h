@@ -21,10 +21,17 @@
 #define PROCESS_STATUS_SUSPEND   1
 #define PROCESS_STATUS_ZOMBIE    2
 
+#define INIT_UID (ROOT_UID)
+#define INIT_GID ((gid_t)0)
+
 struct process
 {
     pid_t id;
     struct ptree_node pid_node;
+
+    // User ID
+    uid_t user_id;
+    gid_t group_id;
 
     // Threading
     struct thread_state thread;
