@@ -328,3 +328,83 @@ environment_put_var(
     return 0;
 }
 
+int
+environment_user_dump(
+        struct process *process,
+        struct environment *environ,
+        char __user *userbuf,
+        size_t buflen)
+{
+    int res;
+
+    struct stree_node *snode;
+
+    spin_lock(&environ->lock);
+    snode = stree_get_first(&environ->env_table);
+    while(snode) {
+        struct envvar *var = container_of(snode, struct envvar, node);
+        const char *key = var->node.key;
+        const char *value = var->value;
+
+        size_t keylen = strlen(key);
+        size_t valuelen = strlen(value);
+        size_t len_needed = keylen + 1 + valuelen + 1;
+        if(buflen < len_needed) {
+            break;
+        }
+
+        dprintk("environ ENV_DUMP: %s=%s\n", key, value);
+
+        res = process_write_usermem(
+                process,
+                userbuf,
+                (char*)key,
+                keylen);
+        if(res) {
+            break;
+        }
+        userbuf += keylen;
+        buflen -= keylen;
+
+        const char equals = '=';
+        res = process_write_usermem(
+                process,
+                userbuf,
+                (char*)&equals,
+                1);
+        if(res) {
+            break;
+        }
+        userbuf++;
+        buflen--;
+
+        res = process_write_usermem(
+                process,
+                userbuf,
+                (char*)value,
+                valuelen);
+        if(res) {
+            break;
+        }
+        userbuf += valuelen;
+        buflen -= valuelen;
+
+        const char nullterm = '\0';
+        res = process_write_usermem(
+                process,
+                userbuf,
+                (char*)&nullterm,
+                1);
+        if(res) {
+            break;
+        }
+        userbuf++;
+        buflen--;
+
+        snode = stree_get_next(snode);
+    }
+    process_memset_usermem(process, userbuf, 0, buflen);
+    spin_unlock(&environ->lock);
+    return 0;
+}
+

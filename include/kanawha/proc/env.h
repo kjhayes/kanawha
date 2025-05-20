@@ -5,6 +5,7 @@
 #include <kanawha/types.h>
 #include <kanawha/spinlock.h>
 #include <kanawha/list.h>
+#include <kanawha/usermode.h>
 
 /*
  * For now, processes aren't going to be limited
@@ -106,5 +107,15 @@ environment_get_var(
 int
 environment_put_var(
         struct environment *environ);
+
+/*
+ * Dump the environment as KEY=VALUE strings delimited with \0, into a userspace buffer.
+ */
+int
+environment_user_dump(
+        struct process *process,
+        struct environment *environ,
+        char __user *userbuf,
+        size_t buflen);
 
 #endif

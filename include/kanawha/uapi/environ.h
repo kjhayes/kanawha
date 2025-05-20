@@ -21,4 +21,9 @@
 // len -> ignored
 #define ENV_EXIST 3
 
+// key -> ignored
+// value -> pointer to buffer to strncpy "KEY=VALUE" pairs into
+// len -> length of the buffer
+#define ENV_DUMP 4
+
 #endif
