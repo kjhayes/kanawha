@@ -109,7 +109,7 @@ ext2_mount_load_node(
     spinlock_init(&node->lock);
 
     int is_inode_alloced;
-    res = ext2_group_inode_allocated(group, index_in_group, &is_inode_alloced);
+    res = ext2_group_inode_allocated(group, node_index, &is_inode_alloced);
     if(res) {
         eprintk("ext2_mount_load_node: Failed to read from block group inode bitmap! (err=%s)\n",
                 errnostr(res));

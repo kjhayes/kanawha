@@ -665,19 +665,19 @@ ext2_group_free_block(
 int
 ext2_group_inode_allocated(
         struct ext2_group *group,
-        size_t block_index,
+        size_t abs_block_index,
         int *value)
 {
     int res;
 
-    size_t rel_index = block_index - (group->index * group->mnt->blks_per_group);
-    if(rel_index > group->mnt->blks_per_group) {
+    size_t rel_index = abs_block_index - (group->index * group->mnt->inodes_per_group);
+    if(rel_index > group->mnt->inodes_per_group) {
         return -EINVAL;
     }
 
     res = ext2_group_inode_bitmap_check(
             group,
-            rel_index,
+            rel_index-1, // inodes are 1 indexed
             value);
     if(res) {
         return res;

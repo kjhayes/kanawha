@@ -222,7 +222,7 @@ ext2_fs_node_getattr(
 
     switch(attr) {
         case FS_NODE_ATTR_DATA_SIZE:
-            *value = ((size_t)node->inode.size) | (((size_t)node->inode.dir_acl)<<32);
+            *value = ext2_fs_node_inode_size(node);
             break;
         case FS_NODE_ATTR_PAGE_ORDER:
             *value = node->mount->block_order;
@@ -245,10 +245,7 @@ ext2_fs_node_setattr(
 
     switch(attr) {
         case FS_NODE_ATTR_DATA_SIZE:
-            node->inode.size = value & 0xFFFFFFFF;
-            node->inode.dir_acl = (uint64_t)value >> 32;
-            node->inode_dirty = 1;
-            return 0;
+            return ext2_fs_node_resize(node, value);
     }
 
     return -EINVAL;
@@ -278,16 +275,48 @@ ext2_fs_node_flush(
     return 0;
 }
 
+static size_t
+__ext2_fs_node_inode_size_lockless(
+        struct ext2_fs_node *node)
+{
+    size_t size;
+    size = letoh32(node->inode.size);
+    size |= ((uint64_t)letoh32(node->inode.dir_acl)) << 32;
+    return size;
+}
+
 size_t
 ext2_fs_node_inode_size(
         struct ext2_fs_node *node)
 {
     size_t size;
     spin_lock(&node->lock);
-    size = letoh32(node->inode.size);
-    size |= ((uint64_t)letoh32(node->inode.dir_acl)) << 32;
+    size = __ext2_fs_node_inode_size_lockless(node);
     spin_unlock(&node->lock);
     return size;
+}
+
+static int
+__ext2_fs_node_set_inode_size_lockless(
+        struct ext2_fs_node *node,
+        size_t size)
+{
+    node->inode.size = htole32(size & 0xFFFFFFFFULL);
+    node->inode.dir_acl = htole32(size >> 32);
+    node->inode_dirty = 1;
+    return 0;
+}
+
+int
+ext2_fs_node_set_inode_size(
+        struct ext2_fs_node *node,
+        size_t size)
+{
+    int res;
+    spin_lock(&node->lock);
+    res = __ext2_fs_node_set_inode_size_lockless(node, size);
+    spin_unlock(&node->lock);
+    return 0;
 }
 
 int
@@ -298,7 +327,11 @@ ext2_fs_node_resize(
     int res;
     spin_lock(&node->lock);
 
-    size_t inode_size = ext2_fs_node_inode_size(node);
+    size_t inode_size = __ext2_fs_node_inode_size_lockless(node);
+
+    dprintk("ext2_fs_node_resize(%p -> %p)\n",
+            inode_size ,size);
+
     if(inode_size == size) {
         spin_unlock(&node->lock);
         return 0;
@@ -311,10 +344,11 @@ ext2_fs_node_resize(
         (size / node->mount->block_size)
         + ((size % node->mount->block_size) > 0);
 
-    // Set the size in the inode
-    node->inode.size = htole32(size & 0xFFFFFFFFULL);
-    node->inode.dir_acl = htole32(size >> 32);
-    node->inode_dirty = 1;
+    res = __ext2_fs_node_set_inode_size_lockless(node, size);
+    if(res) {
+        spin_unlock(&node->lock);
+        return res;
+    }
 
     // Because we allocate blocks lazily this is actually
     // all we need to do to increase the size
