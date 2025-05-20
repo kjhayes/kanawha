@@ -20,6 +20,7 @@ obj-y += \
 	dirattr.o \
 	dirname.o \
 	fmove.o \
+	fattr.o \
 	mkfile.o \
 	mkdir.o \
 	pipe.o \

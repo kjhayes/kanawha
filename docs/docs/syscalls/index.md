@@ -24,8 +24,9 @@ List of Syscalls
 | [`dirnext`](./dirnext.md)   | 18 |
 | [`dirattr`](./dirattr.md)   | 19 |
 | [`dirname`](./dirname.md)   | 20 |
-| [`fmove`](./fmove.md)       | 21 |
-| [`mkfile`](./mkfile.md)     | 22 |
+| [`fattr`](./fattr.md)       | 21 |
+| [`fmove`](./fmove.md)       | 22 |
+| [`mkfile`](./mkfile.md)     | 23 |
 | [`mkdir`](./mkdir.md)       | 24 |
 | [`link`](./link.md)         | 25 |
 | [`symlink`](./symlink.md)   | 26 |

@@ -216,6 +216,15 @@ handle_syscall(
                         (fd_t __user *)args->args[3] // out
                         );
             break;
+        case SYSCALL_ID_FATTR:
+            ret_val = (uint64_t)(int)
+                syscall_fattr(
+                        process,
+                        (fd_t)args->args[0],
+                        (int)args->args[1],
+                        (size_t __user *)args->args[2]
+                        );
+            break;
         case SYSCALL_ID_MKFILE:
             ret_val = (uint64_t)(int)
                 syscall_mkfile(

@@ -124,6 +124,12 @@ ARG(fd_t, src)\
 ARG(unsigned long, flags)\
 ARG(fd_t __user *, out)\
 
+#define SYSCALL_SIG_FATTR(RET,ARG)\
+RET(int)\
+ARG(fd_t, file)\
+ARG(int, attr)\
+ARG(size_t __user *, value)\
+
 #define SYSCALL_SIG_MKFILE(RET,ARG)\
 RET(int)\
 ARG(fd_t, dir)\
@@ -223,7 +229,8 @@ X(dirnext,   18, DIRNEXT,    SYSCALL_SIG_DIRNEXT)\
 X(dirattr,   19, DIRATTR,    SYSCALL_SIG_DIRATTR)\
 X(dirname,   20, DIRNAME,    SYSCALL_SIG_DIRNAME)\
 X(fmove,     21, FMOVE,      SYSCALL_SIG_FMOVE)\
-X(mkfile,    22, MKFILE,     SYSCALL_SIG_MKFILE)\
+X(fattr,     22, FATTR,      SYSCALL_SIG_FATTR)\
+X(mkfile,    23, MKFILE,     SYSCALL_SIG_MKFILE)\
 X(mkdir,     24, MKDIR,      SYSCALL_SIG_MKDIR)\
 X(link,      25, LINK,       SYSCALL_SIG_LINK)\
 X(symlink,   26, SYMLINK,    SYSCALL_SIG_SYMLINK)\
