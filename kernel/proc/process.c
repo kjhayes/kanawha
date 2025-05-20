@@ -30,7 +30,13 @@ dump_process(
         struct process *proc)
 {
     (*printer)(
-            "\tPROCESS(%ld) (sched=%s) %s%s\n",
+            "\tPROCESS(%ld) (sched=%s) %s%s"
+#ifdef CONFIG_DEBUG_TRACK_PROCESS_EXEC
+            "(exec=%s)"
+#endif 
+            "%s\n"
+            ,
+
             proc->id,
 
             proc->scheduler == NULL ? "NONE" :
@@ -47,10 +53,14 @@ dump_process(
             proc->thread.status == THREAD_STATUS_SLEEPING ? "[SLEEPING]" :
             proc->thread.status == THREAD_STATUS_ABANDONED ? "[ABANDONED]" :
             proc->thread.status == THREAD_STATUS_PREPARING ? "[PREPARING]" :
-            proc->thread.status == THREAD_STATUS_SCHEDULED ? "[SCHEDULED]" : "[INVALID-THREAD-STATUS]"
+            proc->thread.status == THREAD_STATUS_SCHEDULED ? "[SCHEDULED]" : "[INVALID-THREAD-STATUS]",
 
+#ifdef CONFIG_DEBUG_TRACK_PROCESS_EXEC
+            proc->tracked_exec != NULL ? proc->tracked_exec : "NULL",
+#endif
+            ""
             );
-    dump_mmap(printer, proc->mmap);
+//    dump_mmap(printer, proc->mmap);
 }
 
 void
@@ -673,6 +683,25 @@ process_write_usermem(
             process,
             (uintptr_t)dst - (uintptr_t)process->mmap_ref->virt_addr,
             src,
+            length);
+    if(res) {
+        return res;
+    }
+    return 0;
+}
+
+int
+process_memset_usermem(
+        struct process *process,
+        void __user *dst,
+        uint8_t val,
+        size_t length)
+{
+    int res;
+    res = mmap_memset(
+            process,
+            (uintptr_t)dst - (uintptr_t)process->mmap_ref->virt_addr,
+            val,
             length);
     if(res) {
         return res;

@@ -1177,6 +1177,32 @@ mmap_write(
 }
 
 int
+mmap_memset(
+        struct process *process,
+        uintptr_t offset,
+        uint8_t value,
+        size_t length)
+{
+    int res;
+
+    // TODO: This is incredibly inefficient...
+
+    while(length > 0) {
+        res = mmap_write(
+                process,
+                offset,
+                &value,
+                1);
+        if(res) {
+            return res;
+        }
+        length--;
+        offset++;
+    }
+
+    return 0;
+}
+int
 mmap_user_strlen(
         struct process * process,
         uintptr_t offset,

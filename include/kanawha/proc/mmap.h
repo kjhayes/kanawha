@@ -114,6 +114,13 @@ mmap_write(
         size_t length);
 
 int
+mmap_memset(
+        struct process *process,
+        uintptr_t offset,
+        uint8_t value,
+        size_t length);
+
+int
 mmap_user_strlen(
         struct process *process,
         uintptr_t offset,
