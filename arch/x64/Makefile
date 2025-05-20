@@ -21,7 +21,7 @@ obj-y += \
 	acpi.o \
 	xcall.o \
 	vendor.o \
-	gp_fault.o \
+	fault.o \
 	mem_flags.o \
 	lapic/ \
 	cpuid.o \
