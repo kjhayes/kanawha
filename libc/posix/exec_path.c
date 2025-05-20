@@ -65,5 +65,3 @@ __elk_libc__exec_path_lookup(
     return -ENXIO;
 }
 
-
-

@@ -4,16 +4,22 @@
 #include <kanawha/file.h>
 
 #include <stdio.h>
-#include <string.h>
 #include <assert.h>
 
-#undef fgetc
-int fgetc(FILE *stream)
+#undef fgetc_unlocked
+int fgetc_unlocked(FILE *stream)
 {
     struct __sFILE *file = (struct __sFILE *)stream;
 
     assert(file != NULL);
 
     return __elk_libc_internal__file_getc(file);
+}
+
+#undef fgetc
+int fgetc(FILE *stream)
+{
+    // TODO: Locking
+    return fgetc_unlocked(stream);
 }
 

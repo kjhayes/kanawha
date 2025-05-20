@@ -6,8 +6,8 @@
 #include <stdio.h>
 #include <string.h>
 
-#undef fputs
-int fputs(const char * restrict s, FILE * restrict stream)
+#undef fputs_unlocked
+int fputs_unlocked(const char * restrict s, FILE * restrict stream)
 {
     struct __sFILE *file = (struct __sFILE *)stream;
 
@@ -30,3 +30,9 @@ int fputs(const char * restrict s, FILE * restrict stream)
     return 0;
 }
 
+#undef fputs
+int fputs(const char * restrict s, FILE * restrict stream)
+{
+    // TODO: Locking
+    return fputs_unlocked(s, stream);
+}

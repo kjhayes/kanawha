@@ -60,6 +60,11 @@ void *memchr(
         int c,
         size_t n);
 
+void *memrchr(
+        const void *s,
+        int c,
+        size_t n);
+
 char *strchr(
         const char *s,
         int c);
@@ -72,6 +77,11 @@ char *strpbrk(
         const char *s1,
         const char *s2);
 
+/*
+ * Returns a pointer to the last occurrence of a character in the string.
+ *
+ * Returns NULL if the character is not found.
+ */
 char *strrchr(
         const char *s,
         int c);
@@ -87,6 +97,8 @@ char *strstr(
 char *strtok(
         char * restrict s1,
         const char * restrict s2);
+
+char *strtok_r(char *str, const char *delim, char **saveptr);
 
 void *memset(
         void *s,
@@ -111,5 +123,28 @@ int strncasecmp(
         const char *,
         const char *,
         size_t);
+
+int strverscmp(const char *s1, const char *s2);
+
+char *stpcpy(char *dest, const char *src);
+char *stpncpy(
+        char * restrict s1,
+        const char * restrict s2,
+        size_t n);
+
+
+char *strchrnul(
+        const char *s,
+        int c);
+
+void *mempcpy(
+        void *dest,
+        const void *src,
+        size_t n);
+
+
+char *strsignal(int sig);
+const char *sigdescr_np(int sig);
+const char *sigabbrev_np(int sig);
 
 #endif

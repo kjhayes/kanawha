@@ -23,7 +23,8 @@
 #define KANAWHA_SYSCALL_ID_DIRATTR   19
 #define KANAWHA_SYSCALL_ID_DIRNAME   20
 #define KANAWHA_SYSCALL_ID_FMOVE     21
-#define KANAWHA_SYSCALL_ID_MKFILE    22
+#define KANAWHA_SYSCALL_ID_FATTR     22
+#define KANAWHA_SYSCALL_ID_MKFILE    23
 #define KANAWHA_SYSCALL_ID_MKDIR     24
 #define KANAWHA_SYSCALL_ID_LINK      25
 #define KANAWHA_SYSCALL_ID_SYMLINK   26
@@ -249,6 +250,16 @@ kanawha_sys_fmove:
     // a1 -> fd_t f1
     // a2 -> unsigned long flags
     // a3 -> fd_t *out
+    ecall
+    ret
+
+.global kanawha_sys_fattr
+.type kanawha_sys_fattr,@function
+kanawha_sys_fattr:
+    li a7, KANAWHA_SYSCALL_ID_FATTR
+    // a0 -> fd_t file
+    // a1 -> int attr 
+    // a2 -> size_t *out
     ecall
     ret
 

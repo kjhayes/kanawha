@@ -13,6 +13,7 @@ obj-y += \
 	strxfrm.o \
 	memchr.o \
 	strchr.o \
+	strchrnul.o \
 	strcspn.o \
 	strpbrk.o \
 	strrchr.o \
@@ -26,5 +27,7 @@ obj-y += \
 	strndup.o \
 	strncasecmp.o \
 	strcasecmp.o \
-
+	stpcpy.o \
+	mempcpy.o \
+	memrchr.o \
 

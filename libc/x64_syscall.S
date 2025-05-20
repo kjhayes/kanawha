@@ -13,7 +13,7 @@
 #define KANAWHA_SYSCALL_ID_MUNMAP    8
 #define KANAWHA_SYSCALL_ID_EXEC      9
 #define KANAWHA_SYSCALL_ID_ENVIRON   10
-#define KANAWHA_SYSCALL_ID_CHILDNAME 11
+#define KANAWHA_SYSCALL_ID_GETCWD    11
 #define KANAWHA_SYSCALL_ID_SPAWN     12
 #define KANAWHA_SYSCALL_ID_REAP      13
 #define KANAWHA_SYSCALL_ID_GETPID    14
@@ -24,7 +24,8 @@
 #define KANAWHA_SYSCALL_ID_DIRATTR   19
 #define KANAWHA_SYSCALL_ID_DIRNAME   20
 #define KANAWHA_SYSCALL_ID_FMOVE     21
-#define KANAWHA_SYSCALL_ID_MKFILE    22
+#define KANAWHA_SYSCALL_ID_FATTR     22
+#define KANAWHA_SYSCALL_ID_MKFILE    23
 #define KANAWHA_SYSCALL_ID_MKDIR     24
 #define KANAWHA_SYSCALL_ID_LINK      25
 #define KANAWHA_SYSCALL_ID_SYMLINK   26
@@ -148,14 +149,12 @@ kanawha_sys_environ:
     syscall
     retq
 
-.global kanawha_sys_childname
-.type kanawha_sys_childname,@function
-kanawha_sys_childname:
-    movq $KANAWHA_SYSCALL_ID_CHILDNAME, %rax
-    // rdi -> fd_t parent
-    // rsi -> size_t child_index
-    // rdx -> char *name_buf
-    movq %rcx, %r8 // %r8 -> size_t buf_len
+.global kanawha_sys_getcwd
+.type kanawha_sys_getcwd,@function
+kanawha_sys_getcwd:
+    movq $KANAWHA_SYSCALL_ID_GETCWD, %rax
+    // rdi -> char * buffer
+    // rsi -> size_t buflen
     syscall
     retq
 
@@ -252,6 +251,16 @@ kanawha_sys_fmove:
     // rsi -> fd_t f1
     // rdx -> unsigned long flags
     movq %rcx, %r8 // r8 -> fd_t *out
+    syscall
+    retq
+
+.global kanawha_sys_fattr
+.type kanawha_sys_fattr,@function
+kanawha_sys_fattr:
+    movq $KANAWHA_SYSCALL_ID_FATTR, %rax
+    // rdi -> fd_t file
+    // rsi -> int attr
+    // rdx -> size_t *value
     syscall
     retq
 

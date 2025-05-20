@@ -1,9 +1,14 @@
 
 obj-y += stdstreams.o
 
+obj-y += fileno.o
+
 obj-y += \
 	fopen.o \
-	fclose.o
+	fclose.o \
+	freopen.o \
+	fdopen.o \
+	dofopen.o \
 
 obj-y += \
 	fputc.o \
@@ -14,11 +19,14 @@ obj-y += \
 
 obj-y += \
 	fseek.o \
-	ftell.o
+	ftell.o \
+	fseeko.o \
+	ftello.o \
 
 obj-y += \
 	fgetc.o \
 	getc.o \
+	ungetc.o \
 	getchar.o \
 	fgets.o
 
@@ -34,16 +42,30 @@ obj-y += \
 	printf.o \
 	vsnprintf.o \
 	snprintf.o \
+	sprintf.o \
+	asprintf.o \
+	vasprintf.o \
 
 obj-y += \
 	doscan.o \
 	vfscanf.o \
 	fscanf.o \
+	vsscanf.o \
+	sscanf.o \
 	scanf.o \
 
 obj-y += \
 	remove.o \
 	rename.o \
 
+obj-y += \
+	ferror.o \
+	feof.o \
+	clearerr.o \
+
 obj-y += perror.o
+
+obj-y += rewind.o
+
+obj-y += tmpnam.o
 

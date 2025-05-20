@@ -175,7 +175,7 @@ int          getgroups(int, gid_t []);
 long         gethostid(void);
 char        *getlogin(void);
 int          getlogin_r(char *, size_t);
-int          getopt(int, char * const [], const char *);
+int          getopt(int, char **, const char *);
 int          getpagesize(void);
 char        *getpass(const char *);
 pid_t        getpgid(pid_t);
@@ -199,9 +199,11 @@ int          pthread_atfork(void (*)(void), void (*)(void),
                  void(*)(void));
 ssize_t      pwrite(int, const void *, size_t, off_t);
 ssize_t      read(int, void *, size_t);
-int          readlink(const char *, char *, size_t);
+ssize_t      readlink(const char * restrict, char * restrict, size_t);
 int          rmdir(const char *);
 void        *sbrk(intptr_t);
+int          setegid(gid_t);
+int          seteuid(uid_t);
 int          setgid(gid_t);
 int          setpgid(pid_t, pid_t);
 pid_t        setpgrp(void);
@@ -224,5 +226,7 @@ int          unlink(const char *);
 int          usleep(useconds_t);
 pid_t        vfork(void);
 ssize_t      write(int, const void *, size_t);
+
+extern char **environ;
 
 #endif

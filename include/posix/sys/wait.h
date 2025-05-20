@@ -15,6 +15,7 @@
 #define WIFSTOPPED(stat)   (0)
 #define WSTOPSIG(stat)     (0)
 #define WTERMSIG(stat)     (0)
+#define WCOREDUMP(stat)    (0)
 
 #define WEXITED    (1)
 #define WSTOPPED   (2)

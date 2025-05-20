@@ -6,12 +6,16 @@
 #include <stddef.h>
 #include <string.h>
 #include <stdlib.h>
+#include <errno.h>
 #include <kanawha/file.h>
 #include <kanawha/sys-wrappers.h>
 
 struct __sFILE
 {
     fd_t __fd;
+
+    int error;
+    unsigned int eof : 1;
 
     size_t peek_datalen;
     size_t peek_buflen;
@@ -25,6 +29,23 @@ __elk_libc_internal__init_sFILE(
     file->peek_datalen = 0;
     file->peek_buflen = 0;
     file->peek_buffer = NULL;
+
+    file->eof = 0;
+    file->error = 0;
+}
+
+static inline void
+__elk_libc_internal__deinit_sFILE(
+        struct __sFILE *file)
+{
+    file->peek_datalen = 0;
+    file->peek_buflen = 0;
+    if(file->peek_buffer != NULL) {
+        free(file->peek_buffer);
+    }
+
+    file->eof = 0;
+    file->error = 0;
 }
 
 // Read a single character from the file (non-buffered)
@@ -64,6 +85,30 @@ __elk_libc_internal__file_getc(
     } else {
         return __elk_libc_internal__file_getc_direct(file);
     }
+}
+
+// Push a single character to the read buffer
+static inline int
+__elk_libc_internal__file_ungetc(
+        char c,
+        struct __sFILE *file)
+{
+    // Ensure the buffer is long enough
+    if(file->peek_buflen < file->peek_datalen+1) {
+        file->peek_buffer = realloc(file->peek_buffer, file->peek_datalen+1);
+        if(file->peek_buffer == NULL) {
+            return -ENOMEM;
+        }
+    }
+
+    // Allocate a spot at the front of the buffer
+    if(file->peek_datalen > 0) {
+        memmove(file->peek_buffer+1, file->peek_buffer, file->peek_datalen);
+    }
+
+    file->peek_datalen += 1;
+    file->peek_buffer[0] = c;
+    return 0;
 }
 
 static inline ssize_t
@@ -170,6 +215,17 @@ __elk_libc_internal__file_consume(
         count--;
     }
 
+    return 0;
+}
+
+static inline int
+__elk_libc_internal__file_purge(
+        struct __sFILE *file)
+{
+    free(file->peek_buffer);
+    file->peek_buffer = NULL;
+    file->peek_buflen = 0;
+    file->peek_datalen = 0;
     return 0;
 }
 

@@ -325,11 +325,20 @@ doprnt_handle_escaped(struct doprnt_state *state) {
             case '7':
             case '8':
             case '9':
-                // TODO handle two-digit values properly
                 if(state->dot) {
-                    state->precision = (c - '0');
+                    if(state->precision == -1) {
+                        state->precision = (c - '0');
+                    } else {
+                        state->precision *= 10;
+                        state->precision += (c - '0');
+                    }
                 } else {
-                    state->width = (c - '0');
+                    if(state->width == -1) {
+                        state->width = (c - '0');
+                    } else {
+                        state->width *= 10;
+                        state->width += (c - '0');
+                    }
                 }
                 break;
 
@@ -358,7 +367,18 @@ doprnt_handle_escaped(struct doprnt_state *state) {
 
             case 's':
                 ptr = (void*)va_arg(state->args, const char*);
-                doprnt_puts(state, ptr);
+                if(state->precision == -1) {
+                    doprnt_puts(state, ptr);
+                } else {
+                    for(int i = 0; i < state->precision; i++) {
+                        if(*(char*)ptr) {
+                            doprnt_putc(state, *(char*)ptr);
+                            ptr++;
+                        } else {
+                            doprnt_putc(state, ' ');
+                        }
+                    }
+                }
                 state->escaped = 0;
                 return;
             default:

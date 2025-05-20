@@ -76,13 +76,14 @@ open(
     if(flags & O_CREAT) {
         char *directory = strdup(pathname);
         char *slash = strrchr(directory, '/');
+        const char *new_file_name;
         if(slash < directory) {
-            free(directory);
-            // TODO set errno
-            return -1;
+            directory = "";
+            new_file_name = directory;
+        } else {
+            *slash = '\0';
+            new_file_name = slash++;
         }
-        *slash = '\0';
-        const char *new_file_name = slash++;
 
         fd_t dir_fd;
         res = kanawha_sys_open(
@@ -101,6 +102,18 @@ open(
                 new_file_name,
                 mkfile_flags);
         free(directory);
+        if(res) {
+            // TODO set errno
+            return -1;
+        }
+
+        res = kanawha_sys_flush(dir_fd, 0);
+        if(res) {
+            // TODO set errno
+            return -1;
+        }
+
+        res = kanawha_sys_close(dir_fd);
         if(res) {
             // TODO set errno
             return -1;

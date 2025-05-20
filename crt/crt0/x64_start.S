@@ -17,6 +17,9 @@
 .extern __elk_crt__init_signal
 .type __elk_crt__init_signal,@function
 
+.extern __elk_crt__populate_environ
+.type __elk_crt__populate_environ,@function
+
 .global _start
 _start: 
 
@@ -48,6 +51,12 @@ _start:
     testq %rax, %rax
     jnz __do_fail_exit
 
+    // Map the zero page so no one else will
+    callq __elk_crt__map_zero_page
+
+    testq %rax, %rax
+    jnz __do_fail_exit
+
     // Setup stdout, stdin and stderr
     callq __elk_crt__init_stdstreams
 
@@ -56,6 +65,12 @@ _start:
 
     // Setup the default signal handler
     callq __elk_crt__init_signal
+
+    testq %rax, %rax
+    jnz __do_fail_exit
+
+    // Setup the environ variable
+    callq __elk_crt__populate_environ
 
     testq %rax, %rax
     jnz __do_fail_exit
@@ -80,8 +95,9 @@ _start:
 
     // Exit using the value returned from main
     movq %rax, %rdi
-    movq $0, %rax
-    syscall
+    callq exit
+    
+    // We somehow didn't exit?
 
 __do_fail_exit:
     movq %rax, %rdi // exitcode of mmap

@@ -17,6 +17,7 @@ int fclose(FILE *stream)
         return EOF;
     }
 
+    __elk_libc_internal__deinit_sFILE(file);
     free(file);
 
     return 0;

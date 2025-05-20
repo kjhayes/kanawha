@@ -5,18 +5,16 @@
 
 // cmd Values
 
-enum {
-  F_DUPFD = 1,
-  F_GETFD,
-  F_SETFD,
-  F_GETFL,
-  F_SETFL,
-  F_GETLK,
-  F_SETLK,
-  F_SETLKW,
-  F_GETOWN,
-  F_SETOWN,
-};
+#define F_DUPFD  (1)
+#define F_GETFD  (2)
+#define F_SETFD  (3)
+#define F_GETFL  (4)
+#define F_SETFL  (5)
+#define F_GETLK  (6)
+#define F_SETLK  (7)
+#define F_SETLKW (8)
+#define F_GETOWN (9)
+#define F_SETOWN (10)
 
 #define FD_CLOEXEC (0)
 
@@ -26,30 +24,29 @@ enum {
 
 #include <stdio.h>
 
-// open oflags
-#define O_CLOEXEC   (1ULL<<0)
-#define O_CREAT     (1ULL<<1)
-#define O_DIRECTORY (1ULL<<2)
-#define O_EXCL      (1ULL<<3)
-#define O_NOCTTY    (1ULL<<4)
-#define O_NOFOLLOW  (1ULL<<5)
-#define O_TRUNC     (1ULL<<6)
-#define O_TTY_INIT  (1ULL<<7)
+#define O_ACCMODE ((1ULL<<5)-1)
+#define O_EXEC    (1ULL<<0)
+#define O_RDONLY  (1ULL<<1)
+#define O_RDWR    (1ULL<<2)
+#define O_SEARCH  (1ULL<<3)
+#define O_WRONLY  (1ULL<<4)
 
-// open status flags
-#define O_APPEND    (1ULL<<0)
-#define O_DSYNC     (1ULL<<1)
-#define O_NONBLOCK  (1ULL<<2)
-#define O_RSYNC     (1ULL<<3)
-#define O_SYNC      (1ULL<<4)
+#define O_CLOEXEC   (1ULL<<5)
+#define O_CREAT     (1ULL<<6)
+#define O_DIRECTORY (1ULL<<7)
+#define O_EXCL      (1ULL<<8)
+#define O_NOCTTY    (1ULL<<9)
+#define O_NOFOLLOW  (1ULL<<10)
+#define O_TRUNC     (1ULL<<11)
+#define O_TTY_INIT  (1ULL<<12)
+
+#define O_APPEND    (1ULL<<13)
+#define O_DSYNC     (1ULL<<14)
+#define O_NONBLOCK  (1ULL<<15)
+#define O_RSYNC     (1ULL<<16)
+#define O_SYNC      (1ULL<<17)
 
 // open access modes
-#define O_ACCMODE (~((1ULL<<5)-1))
-#define O_EXEC    (1ULL<<5)
-#define O_RDONLY  (1ULL<<6)
-#define O_RDWR    (1ULL<<7)
-#define O_SEARCH  (1ULL<<8)
-#define O_WRONLY  (1ULL<<9)
 
 #include <sys/stat.h>
 

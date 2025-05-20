@@ -18,6 +18,11 @@ struct timeval {
     suseconds_t    tv_usec;     //microseconds
 };
 
+struct timezone {
+    int tz_minuteswest;     /* minutes west of Greenwich */
+    int tz_dsttime;         /* type of DST correction */
+};
+
 struct itimerval {
     struct timeval it_interval; //timer interval
     struct timeval it_value;    //current value
@@ -30,7 +35,8 @@ void FD_ZERO(fd_set *fdset);
 
 int   getitimer(int, struct itimerval *);
 int   setitimer(int, const struct itimerval *, struct itimerval *);
-int   gettimeofday(struct timeval *, void *);
+int   gettimeofday(struct timeval *tv, struct timezone *tz);
+int   settimeofday(const struct timeval *tv, const struct timezone *tz);
 int   select(int, fd_set *, fd_set *, fd_set *, struct timeval *);
 int   utimes(const char *, const struct timeval [2]);
 

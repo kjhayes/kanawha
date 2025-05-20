@@ -24,11 +24,11 @@ fwrite(
                 ptr + total_written,
                 total_size);
         if(written < 0) {
-            // TODO: Setup ferror()
+            stream->error = (int)written;
             return 0;
         }
         if(written == 0) {
-            // TODO: Setup feof()
+            stream->eof = 1;
             return 0;
         }
         total_written += written;

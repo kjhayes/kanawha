@@ -33,10 +33,11 @@ fread(
                 total_size);
         if(read < 0) {
             // TODO: Setup ferror()
+            stream->error = (int)read;
             return 0;
         }
         if(read == 0) {
-            // TODO: Setup feof()
+            stream->eof = 1;
             break;
         }
         total_read += read;

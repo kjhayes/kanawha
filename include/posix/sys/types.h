@@ -4,38 +4,45 @@
 // PID
 #include <kanawha/process.h>
 
-typedef unsigned long size_t;
-typedef __INTPTR_TYPE__ ssize_t;
+#include <elk-libc-internal/size_t.h>
+#include <elk-libc-internal/ssize_t.h>
+#include <elk-libc-internal/off_t.h>
 
-typedef int blkcnt_t;
-typedef int blksize_t;
-typedef int clock_t;
-typedef int clockid_t;
-typedef int dev_t;
-typedef int fsblkcnt_t;
-typedef int fsfilcnt_t;
-typedef int gid_t;
-typedef int id_t;
-typedef int ino_t;
-typedef int key_t;
-typedef int mode_t;
-typedef int nlink_t;
-typedef int off_t;
-typedef int pthread_attr_t;
-typedef int pthread_cond_t;
-typedef int pthread_condattr_t;
-typedef int pthread_key_t;
-typedef int pthread_mutex_t;
-typedef int pthread_mutexattr_t;
-typedef int pthread_once_t;
-typedef int pthread_rwlock_t;
-typedef int pthread_rwlockattr_t;
-typedef int pthread_t;
-typedef int reclen_t;
-typedef int suseconds_t;
-typedef int time_t;
-typedef int timer_t;
-typedef int uid_t;
-typedef int useconds_t;
+typedef unsigned long blkcnt_t;
+typedef unsigned long blksize_t;
+typedef unsigned long clock_t;
+typedef unsigned long clockid_t;
+typedef unsigned long dev_t;
+typedef unsigned long fsblkcnt_t;
+typedef unsigned long fsfilcnt_t;
+typedef unsigned long gid_t;
+typedef unsigned long id_t;
+typedef unsigned long ino_t;
+typedef unsigned long key_t;
+typedef unsigned long mode_t;
+typedef unsigned long nlink_t;
+typedef unsigned long pthread_attr_t;
+typedef unsigned long pthread_cond_t;
+typedef unsigned long pthread_condattr_t;
+typedef unsigned long pthread_key_t;
+typedef unsigned long pthread_mutex_t;
+typedef unsigned long pthread_mutexattr_t;
+typedef unsigned long pthread_once_t;
+typedef unsigned long pthread_rwlock_t;
+typedef unsigned long pthread_rwlockattr_t;
+typedef unsigned long pthread_t;
+typedef unsigned long reclen_t;
+typedef unsigned long suseconds_t;
+typedef unsigned long time_t;
+typedef unsigned long timer_t;
+typedef unsigned long uid_t;
+typedef unsigned long useconds_t;
+
+//dev_t makedev(int maj, int min);
+#define makedev(maj, min) (0)
+//unsigned int major(dev_t dev);
+#define major(dev) (0)
+//unsigned int minor(dev_t dev);
+#define minor(dev) (0)
 
 #endif

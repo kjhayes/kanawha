@@ -1,9 +1,16 @@
 #ifndef __ELK_LIBC__SIGNAL_H__
 #define __ELK_LIBC__SIGNAL_H__
 
+#include <elk-libc-internal/timespec.h>
+#include <elk-libc-internal/sigevent.h>
 #include <sys/types.h>
 #include <stdint.h>
 
+// The spec requires that these do not
+// evaluate to any declarable function,
+// but there is not a clear way to make that
+// promise other than by providing stub functions
+// (Which breaks the promise...)
 extern void __elk_signal__default(int);
 extern void __elk_signal__error(int);
 extern void __elk_signal__hold(int);
@@ -17,39 +24,36 @@ extern void __elk_signal__ignore(int);
 typedef volatile uint64_t sig_atomic_t;
 typedef uint64_t sigset_t;
 
-#define SIGABRT   (1)
-#define SIGALRM   (2)
-#define SIGBUS    (3)
-#define SIGCHLD   (4)
-#define SIGCONT   (5)
-#define SIGFPE    (6)
-#define SIGHUP    (7)
-#define SIGILL    (8)   
-#define SIGINT    (9)
-#define SIGKILL   (10)
-#define SIGPIPE   (11)
-#define SIGQUIT   (12)
-#define SIGSEGV   (13)
-#define SIGSTOP   (14)
-#define SIGTERM   (15)
-#define SIGTSTP   (16)
-#define SIGTTIN   (17)
-#define SIGTTOU   (18)
-#define SIGUSR1   (19)
-#define SIGUSR2   (20)
-#define SIGPOLL   (21)
-#define SIGPROF   (22)
-#define SIGSYS    (23)
-#define SIGTRAP   (24)
-#define SIGURG    (25)
-#define SIGVTALRM (26)
-#define SIGXCPU   (27)
-#define SIGXFSZ   (28)
-
-union sigval {
-    int    sival_int;    //Integer signal value. 
-    void  *sival_ptr;    //Pointer signal value.
-};
+#define SIGABRT    (1)
+#define SIGALRM    (2)
+#define SIGBUS     (3)
+#define SIGCHLD    (4)
+#define SIGCONT    (5)
+#define SIGFPE     (6)
+#define SIGHUP     (7)
+#define SIGILL     (8)   
+#define SIGINT     (9)
+#define SIGKILL    (10)
+#define SIGPIPE    (11)
+#define SIGQUIT    (12)
+#define SIGSEGV    (13)
+#define SIGSTOP    (14)
+#define SIGTERM    (15)
+#define SIGTSTP    (16)
+#define SIGTTIN    (17)
+#define SIGTTOU    (18)
+#define SIGUSR1    (19)
+#define SIGUSR2    (20)
+#define SIGPOLL    (21)
+#define SIGPROF    (22)
+#define SIGSYS     (23)
+#define SIGTRAP    (24)
+#define SIGURG     (25)
+#define SIGVTALRM  (26)
+#define SIGXCPU    (27)
+#define SIGXFSZ    (28)
+// Must be one greater than the maximum defined signal
+#define NSIG       (29)
 
 typedef struct
 {
@@ -73,14 +77,6 @@ struct sigaction
     void (*sa_sigaction)(int, siginfo_t *, void *);
 };
 
-struct sigevent {
-    int                    sigev_notify;            //Notification type. 
-    int                    sigev_signo;             //Signal number. 
-    union sigval           sigev_value;             //Signal value. 
-    void(*sigev_notify_function)(union sigval);     //Notification function. 
-    //pthread_attr_t *     sigev_notify_attributes;   //Notification attributes.
-};
-
 typedef struct {
     void     *ss_sp;       //Stack base or pointer. 
     size_t    ss_size;     //Stack size. 
@@ -91,6 +87,24 @@ struct sigstack {
     int       ss_onstack;  //Non-zero when signal stack is in use. 
     void     *ss_sp;       //Signal stack pointer. 
 };
+
+#define SIG_BLOCK   (0)
+#define SIG_UNBLOCK (1)
+#define SIG_SETMASK (2)
+
+#define SA_NOCLDSTOP (1ULL<<0)
+#define SA_ONSTACK   (1ULL<<1)
+#define SA_RESETHAND (1ULL<<2)
+#define SA_RESTART   (1ULL<<3)
+#define SA_SIGINFO   (1ULL<<4)
+#define SA_NOCLDWAIT (1ULL<<5)
+#define SA_NODEFER   (1ULL<<6)
+
+#define SS_ONSTACK   (1ULL<<0)
+#define SS_DISABLE   (1ULL<<1)
+
+#define MINSIGSTKSZ  (0x1000)
+#define SIGSTKSZ     (1ULL<<21)
 
 void (*bsd_signal(int, void (*)(int)))(int);
 int    kill(pid_t, int);

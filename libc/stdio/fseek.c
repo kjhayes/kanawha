@@ -10,14 +10,15 @@ fseek(
         long int offset,
         int whence)
 {
-    int res;
+    ssize_t res;
 
     res = kanawha_sys_seek(
             stream->__fd,
             offset,
             whence);
-    if(res) {
-        return res;
+    if(res < 0) {
+        // TODO set errno
+        return -1;
     }
 
     return 0;

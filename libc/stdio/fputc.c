@@ -6,8 +6,8 @@
 #include <stdio.h>
 #include <string.h>
 
-#undef fputc
-int fputc(int i, FILE * restrict stream)
+#undef fputc_unlocked
+int fputc_unlocked(int i, FILE * restrict stream)
 {
     ssize_t res;
     struct __sFILE *file = (struct __sFILE *)stream;
@@ -24,5 +24,12 @@ int fputc(int i, FILE * restrict stream)
     }
 
     return c;
+}
+
+#undef fputc
+int fputc(int i, FILE * restrict stream)
+{
+    // TODO: Locking
+    return fputc_unlocked(i, stream);
 }
 

@@ -14,10 +14,10 @@ int optopt;
 static void
 move_arg_to_end(
         int argc,
-        const char **argv,
+        char **argv,
         int index)
 {
-    const char *value = argv[index];
+    char *value = argv[index];
     for(int i = index+1; i < argc; i++) {
         argv[i-1] = argv[i];
     }
@@ -27,7 +27,7 @@ move_arg_to_end(
 static int
 handle_long_arg(
         int argc,
-        const char **argv,
+        char **argv,
         const char *optstring,
         struct option *longopts,
         int *longind)
@@ -38,7 +38,7 @@ handle_long_arg(
 static int
 handle_short_arg(
         int argc,
-        const char **argv,
+        char **argv,
         const char *optstring)
 {
     int silent = 0;
@@ -47,7 +47,7 @@ handle_short_arg(
         silent = 1;
     }
 
-    const char *arg = argv[optind];
+    char *arg = argv[optind];
 
     if(optpos == 0) {
         optpos = 1;
@@ -112,7 +112,7 @@ handle_short_arg(
             }
         } else {
             // The argument is the rest of the text in this option
-            optarg = (char*)(arg + optind + 1);
+            optarg = (char*)(arg + optpos + 1);
             optind++;
             optpos = 0;
         }
@@ -130,7 +130,7 @@ handle_short_arg(
 static int
 do_getopt(
         int argc,
-        const char **argv,
+        char **argv,
         const char *optstring,
         struct option *longopts,
         int *longind)
@@ -140,7 +140,7 @@ do_getopt(
     }
 
     while(1) {
-      const char *arg = argv[optind];
+      char *arg = argv[optind];
       if(arg[0] == '-') {
           if(arg[1] == '-') {
               // Long Arg
@@ -184,7 +184,7 @@ do_getopt(
 int
 getopt(
         int argc,
-        const char **argv,
+        char **argv,
         const char *optstring)
 {
     return getopt_long(
@@ -198,7 +198,7 @@ getopt(
 int
 getopt_long(
         int argc,
-        const char **argv,
+        char **argv,
         const char *optstring,
         struct option *longopts,
         int *longind)

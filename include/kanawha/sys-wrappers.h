@@ -79,6 +79,12 @@ kanawha_sys_exec(
 
 __attribute__((weak))
 int
+kanawha_sys_getcwd(
+        char *buffer,
+        size_t buflen);
+
+__attribute__((weak))
+int
 kanawha_sys_environ(
         const char *key,
         char *value,
@@ -149,6 +155,13 @@ kanawha_sys_fmove(
         fd_t f1,
         unsigned long flags,
         fd_t *out);
+
+__attribute__((weak))
+int
+kanawha_sys_fattr(
+        fd_t file,
+        int attr,
+        size_t *value);
 
 __attribute__((weak))
 int

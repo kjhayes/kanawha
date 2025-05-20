@@ -2,6 +2,7 @@
 obj-y += \
 	abort.o \
 	exit.o \
+	atexit.o \
 	abs.o \
 	labs.o \
 	llabs.o \
@@ -15,5 +16,6 @@ obj-y += \
 	system.o \
 	getenv.o \
 	setenv.o \
+	qsort.o \
 	mmap_alloc/
 

@@ -73,6 +73,9 @@ _start:
     call __elk_crt__clear_bss
     bne a0, zero, __do_fail_exit
 
+    call __elk_crt__map_zero_page
+    bne a0, zero, __do_fail_exit
+    
     call __elk_crt__init_stdstreams
     bne a0, zero, __do_fail_exit
     

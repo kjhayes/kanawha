@@ -36,10 +36,7 @@ __ELK_current_locale = __ELK_c_locale;
 char *setlocale(int category, const char *locale)
 {
     // We only support the "C" locale
-    if(strcmp(locale, "") == 0) {
-        return "C";
-    }
-    if(strcmp(locale, "C") == 0) {
+    if(locale == NULL) {
         return "C";
     }
     return NULL;

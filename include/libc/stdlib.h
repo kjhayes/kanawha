@@ -4,6 +4,8 @@
 #include "elk-libc-internal/size_t.h"
 #include "elk-libc-internal/wchar_t.h"
 
+#include <alloca.h>
+
 double atof(const char *nptr);
 int atoi(const char *nptr);
 long int atol(const char *nptr);
@@ -58,6 +60,10 @@ _Noreturn void exit(int status);
 _Noreturn void _Exit(int status);
 char *getenv(const char *name);
 int setenv(const char *envname, const char *envval, int overwrite);
+int putenv(char *string);
+int unsetenv(const char *name);
+int clearenv(void);
+
 _Noreturn void quick_exit(int status);
 int system(const char *string);
 
@@ -117,5 +123,12 @@ size_t wcstombs(
         char * restrict s,
         const wchar_t * restrict pwcs,
         size_t n);
+
+char *mkdtemp(char *template);
+int mkstemp(char *template);
+
+char *realpath(
+        const char *restrict file_name,
+        char *restrict resolved_name);
 
 #endif

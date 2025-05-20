@@ -2,12 +2,13 @@
 #define __ELK_POSIX__DIRENT_H__
 
 #include <sys/types.h>
+#include <sys/limits.h>
 
 typedef struct DIR DIR;
 
 struct dirent {
     ino_t  d_ino;       //File serial number.
-    char   d_name[];    //Filename string of entry.
+    char   d_name[NAME_MAX];    //Filename string of entry.
 };
 
 struct posix_dent {
@@ -15,7 +16,7 @@ struct posix_dent {
     reclen_t       d_reclen;   //Length of this entry, including trailing
                                //padding if necessary. See posix_getdents().
     unsigned char  d_type;     //File type or unknown-file-type indication.
-    char           d_name[];   //Filename string of this entry.
+    char           d_name[NAME_MAX];   //Filename string of this entry.
 };
 
 #define DT_BLK     (1)

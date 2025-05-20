@@ -20,13 +20,13 @@ struct option {
 extern int
 getopt(
         int argc,
-        const char **argv,
+        char **argv,
         const char *optstring);
 
 extern int
 getopt_long(
         int argc,
-        const char **argv,
+        char **argv,
         const char *optstring,
         struct option *longopts,
         int *longind);

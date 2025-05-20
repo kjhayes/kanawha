@@ -90,6 +90,13 @@ __elk_crt__get_argv(
         iter += cur_len + 1;
     }
 
+    if(argc < argc_max) {
+        argv_ptr[argc] = NULL;
+    } else {
+        // Too many or too long arguments(s)
+        kanawha_sys_exit(1);
+    }
+
     *argc_out = argc;
     *argv_out = argv_ptr;
 
