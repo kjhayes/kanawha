@@ -208,6 +208,27 @@ env_clear(
     return 0;
 }
 
+static inline int
+env_dump(struct process *process, char __user *buffer, size_t buflen)
+{
+    int res;
+
+    if(process->environ == NULL) {
+        return -ENXIO;
+    }
+
+    res = environment_user_dump(
+            process,
+            process->environ,
+            buffer,
+            buflen);
+    if(res) {
+        return res;
+    }
+
+    return 0;
+}
+
 int
 syscall_environ(
         struct process *process,
@@ -225,6 +246,9 @@ syscall_environ(
             break;
         case ENV_CLEAR:
             return env_clear(process, key);
+            break;
+        case ENV_DUMP:
+            return env_dump(process, value, len);
             break;
         default:
             return -EINVAL;
