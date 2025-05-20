@@ -206,6 +206,18 @@ RET(int)\
 ARG(char __user *, buffer)\
 ARG(size_t, buflen)
 
+#define SYSCALL_SIG_RID(RET,ARG)\
+RET(int)\
+ARG(pid_t, target)\
+ARG(unsigned long, flags)\
+ARG(id_t __user *, id_out)\
+
+#define SYSCALL_SIG_WID(RET,ARG)\
+RET(int)\
+ARG(pid_t, target)\
+ARG(unsigned long, flags)\
+ARG(id_t, id)\
+
 #define SYSCALL_XLIST(X)\
 X(exit,      0,  EXIT,       SYSCALL_SIG_EXIT)\
 X(open,      1,  OPEN,       SYSCALL_SIG_OPEN)\
@@ -244,6 +256,8 @@ X(sleep,     33, SLEEP,      SYSCALL_SIG_SLEEP)\
 X(time,      34, TIME,       SYSCALL_SIG_TIME)\
 X(sigret,    35, SIGRET,     SYSCALL_SIG_SIGRET)\
 X(sigroute,  36, SIGROUTE,   SYSCALL_SIG_SIGROUTE)\
+X(rid,       37, RID,        SYSCALL_SIG_RID)\
+X(wid,       38, WID,        SYSCALL_SIG_WID)\
 
 #define DECLARE_SYSCALL_ID_CONSTANTS(__name, __id, __NAME, ...)\
 const static syscall_id_t SYSCALL_ID_ ## __NAME = __id;
@@ -271,6 +285,7 @@ SYSCALL_XLIST(DECLARE_SYSCALL_ID_CONSTANTS)
 #undef SYSCALL_SIG_DIRATTR
 #undef SYSCALL_SIG_DIRNAME
 #undef SYSCALL_SIG_FMOVE
+#undef SYSCALL_SIG_FATTR
 #undef SYSCALL_SIG_MKFILE
 #undef SYSCALL_SIG_MKDIR
 #undef SYSCALL_SIG_LINK
@@ -284,6 +299,8 @@ SYSCALL_XLIST(DECLARE_SYSCALL_ID_CONSTANTS)
 #undef SYSCALL_SIG_TIME
 #undef SYSCALL_SIG_SIGRET
 #undef SYSCALL_SIG_SIGROUTE
+#undef SYSCALL_SIG_RID
+#undef SYSCALL_SIG_WID
 #undef SYSCALL_XLIST
 #endif
 

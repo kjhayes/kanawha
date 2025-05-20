@@ -34,4 +34,6 @@ obj-y += \
 	time.o \
 	sigret.o \
 	sigroute.o \
+	rid.o \
+	wid.o \
 

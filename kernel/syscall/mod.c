@@ -16,6 +16,10 @@ syscall_insmod(
 {
     int res;
 
+    if(!process_is_root(process)) {
+        return -EPERM;
+    }
+
     size_t namelen;
     res = process_strlen_usermem(
             process,
@@ -88,6 +92,10 @@ syscall_rmmod(
         unsigned long flags)
 {
     int res;
+
+    if(!process_is_root(process)) {
+        return -EPERM;
+    }
 
     size_t namelen;
     res = process_strlen_usermem(

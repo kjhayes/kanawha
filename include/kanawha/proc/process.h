@@ -188,6 +188,13 @@ int
 process_clear_forced_ip(
         struct process *process);
 
+static inline int
+process_is_root(
+        struct process *proc)
+{
+    return proc->user_id == ROOT_UID;
+}
+
 // Debugging "Dump" Processes
 void
 dump_processes(printk_f *printer);
