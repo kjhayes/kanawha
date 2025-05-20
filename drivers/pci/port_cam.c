@@ -189,11 +189,11 @@ register_default_port_pci_cam(void)
     if(res) {
         return res;
     }
-    res = probe_pci_segment(0);
+    res = pci_probe_segment(0);
     if(res) {
         return res;
     }
     return 0;
 }
-declare_init_desc(bus, register_default_port_pci_cam, "Registering Port PCI CAM");
+declare_init_desc(early_device, register_default_port_pci_cam, "Registering Port PCI CAM");
 

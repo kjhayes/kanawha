@@ -21,4 +21,12 @@ register_mmio_pci_ecam(
         void __phys *base_addr,
         size_t size);
 
+static inline size_t
+pci_mmio_ecam_size_for_n_buses(
+        size_t num_buses)
+{
+    // Each function has 0x1000 bytes of space in ECAM
+    return 0x1000ULL * num_buses * PCI_MAX_DEVICES_PER_BUS * PCI_MAX_FUNC_PER_DEVICE;
+}
+
 #endif

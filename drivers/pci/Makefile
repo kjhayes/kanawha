@@ -20,3 +20,5 @@ pci-$(CONFIG_PCI_DEVTREE) += devtree.o
 
 pci-$(CONFIG_SYSFS_PCI) += sysfs.o
 
+pci-$(CONFIG_PCIE_ACPI_MCFG) += mcfg.o
+

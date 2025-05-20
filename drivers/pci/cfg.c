@@ -24,21 +24,6 @@ pci_segment_enumerate(
     for(size_t bus_index = 0; bus_index < assumed_bus_count; bus_index++) {
         size_t bus = assumed_bus_start + bus_index;
 
-        ilist_node_t *list_node;
-        ilist_for_each(list_node, &segment->bus_list) {
-            struct pci_bus *bus = container_of(list_node, struct pci_bus, segment_node);
-            if(bus->bus_index == bus_index) {
-                // We already probed this Bus,
-                // we cannot re-probe it without duplicating the struct
-                // NOTE: We could refactor this later to allow reprobing safely,
-                //       it just doesn't seem worthwhile right now.
-                wprintk("Trying to re-probe PCI Segment %lu, Bus %lu. Currently this is unsupported.\n",
-                        (ul_t)segment->segment_id,
-                        (ul_t)bus_index);
-                continue;
-            }
-        }
-
         res = pci_probe_bus(segment, bus);
         if(res) {
             wprintk("Failed to probe PCI bus %lu! (err=%s)\n",
@@ -64,17 +49,17 @@ register_pci_cam(
 }
 
 int
-probe_pci_segment(
+pci_probe_segment(
         uint16_t segment_id)
 {
-    return probe_pci_segment_with_assumed_buses(
+    return pci_probe_segment_with_assumed_buses(
             segment_id,
             0,
             PCI_MAX_BUSES_PER_SEGMENT);
 }
 
 int
-probe_pci_segment_with_assumed_buses(
+pci_probe_segment_with_assumed_buses(
         uint16_t segment_id,
         size_t assumed_bus_start,
         size_t assumed_bus_count)
@@ -97,6 +82,7 @@ probe_pci_segment_with_assumed_buses(
     // The segment does not already exist, create it
     if(segment == NULL) {
         printk("Registering PCI Segment %lu\n", segment_id);
+
         segment = kmalloc(sizeof(struct pci_segment));
         if(segment == NULL) {
             eprintk("Ran out of memory when allocating PCI segment struct!\n");
@@ -106,6 +92,8 @@ probe_pci_segment_with_assumed_buses(
         ilist_init(&segment->bus_list);
 
         segment->segment_id = segment_id;
+
+        ilist_push_tail(&pci_segment_list, &segment->global_node);
     }
     spin_unlock(&pci_segment_list_lock);    
 

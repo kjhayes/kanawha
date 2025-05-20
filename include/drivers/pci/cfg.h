@@ -127,10 +127,10 @@ DEFINE_OP_LIST_WRAPPERS(
 // Segment Registration
 
 int
-probe_pci_segment(
+pci_probe_segment(
         uint16_t segment_id);
 int
-probe_pci_segment_with_assumed_buses(
+pci_probe_segment_with_assumed_buses(
         uint16_t segment_id,
         size_t assumed_bus_start,
         size_t assumed_bus_count);

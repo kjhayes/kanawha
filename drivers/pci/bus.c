@@ -17,6 +17,28 @@ pci_probe_bus(
     dprintk("Enumerating PCI Segment %lu Bus %u\n",
             segment->segment_id, bus_index);
 
+
+    int reprobing = 0;
+    ilist_node_t *list_node;
+    ilist_for_each(list_node, &segment->bus_list) {
+        struct pci_bus *bus = container_of(list_node, struct pci_bus, segment_node);
+        if(bus->bus_index == bus_index) {
+            reprobing = 1;
+            break;
+        }
+    }
+
+    if(reprobing) {
+        // We already probed this Bus,
+        // we cannot re-probe it without duplicating the struct
+        // NOTE: We could refactor this later to allow reprobing safely,
+        //       it just doesn't seem worthwhile right now.
+        dprintk("Trying to re-probe PCI Segment %lu, Bus %lu. Currently this is unsupported.\n",
+                (ul_t)segment->segment_id,
+                (ul_t)bus_index);
+        return 0;
+    }
+
     struct pci_bus *bus = kmalloc(sizeof(struct pci_bus));
     if(bus == NULL) {
         return -ENOMEM;

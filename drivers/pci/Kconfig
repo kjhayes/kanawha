@@ -38,9 +38,18 @@ config PCI_MMIO_ECAM
 config PCI_DEVTREE
     bool "Device Tree PCI Node"
     depends on DEVICETREE && PCI
+    select PCI_MMIO_ECAM
     default y
     help
       Look for PCI domain nodes in the device tree
+
+config PCIE_ACPI_MCFG
+    bool "ACPI PCIe Discovery"
+    depends on ACPI && PCI
+    select PCI_MMIO_ECAM
+    default y
+    help
+      Look for a MCFG ACPI table to discover PCIe Extended Configuration Access Mechanisms
 
 endmenu
 

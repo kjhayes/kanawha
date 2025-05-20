@@ -42,7 +42,9 @@ struct acpi_table_hdr {
 struct acpi_table_data {
     struct acpi_table_hdr hdr;
     uint8_t data[];
-};
+} __attribute__((packed));
+
+ASSERT_TYPE_SIZE(struct acpi_table_data, sizeof(struct acpi_table_hdr));
 
 struct acpi_table {
     struct stree_node tree_node;
