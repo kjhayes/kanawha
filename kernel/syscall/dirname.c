@@ -5,7 +5,7 @@
 #include <kanawha/kmalloc.h>
 
 #ifdef CONFIG_DEBUG_SYSCALL_DIRNAME
-define LOG(...) printk(__VA_ARGS__)
+#define LOG(...) printk(__VA_ARGS__)
 #else
 #define LOG(...)
 #endif
@@ -56,8 +56,9 @@ syscall_dirname(
 
     name_buf[buf_len-1] = '\0';
 
-    LOG("PID(%ld) syscall_dirname: returned \"%s\"\n",
+    LOG("PID(%ld) dirname(%s): returned \"%s\"\n",
             (sl_t)process->id,
+            file->path->name,
             name_buf);
 
     res = file_table_put_file(

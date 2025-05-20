@@ -3,7 +3,7 @@
 #include <kanawha/kmalloc.h>
 
 #ifdef CONFIG_DEBUG_SYSCALL_DIRNEXT
-define LOG(...) printk(__VA_ARGS__)
+#define LOG(...) printk(__VA_ARGS__)
 #else
 #define LOG(...)
 #endif
@@ -22,6 +22,10 @@ syscall_dirnext(
     if(file == NULL) {
         return -EINVAL;
     }
+
+    LOG("PID(%ld) dirnext: (%s)\n",
+            process->id,
+            file->path->name);
 
     res = direct_file_dir_next(file);
     if(res) {

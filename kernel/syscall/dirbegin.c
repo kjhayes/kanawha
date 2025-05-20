@@ -5,7 +5,7 @@
 #include <kanawha/kmalloc.h>
 
 #ifdef CONFIG_DEBUG_SYSCALL_DIRBEGIN
-define LOG(...) printk(__VA_ARGS__)
+#define LOG(...) printk(__VA_ARGS__)
 #else
 #define LOG(...)
 #endif
@@ -24,6 +24,10 @@ syscall_dirbegin(
     if(file == NULL) {
         return -EINVAL;
     }
+
+    LOG("PID(%ld): dirbegin (%s)\n",
+            process->id,
+            file->path->name);
 
     res = direct_file_dir_begin(file);
     if(res) {

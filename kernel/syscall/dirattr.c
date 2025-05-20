@@ -1,11 +1,12 @@
 
 #include <kanawha/uapi/dir.h>
+#include <kanawha/uapi/attr.h>
 #include <kanawha/syscall.h>
 #include <kanawha/fs/file.h>
 #include <kanawha/kmalloc.h>
 
 #ifdef CONFIG_DEBUG_SYSCALL_DIRATTR
-define LOG(...) printk(__VA_ARGS__)
+#define LOG(...) printk(__VA_ARGS__)
 #else
 #define LOG(...)
 #endif
