@@ -2,6 +2,7 @@
 #include <kanawha/string.h>
 #include <kanawha/kmalloc.h>
 #include <kanawha/printk.h>
+#include <kanawha/vmem.h>
 
 void *
 memset(void *str, int c, size_t n) {
@@ -73,8 +74,18 @@ void *memmove(void *dest_ptr, const void *src_ptr, size_t count)
 size_t strlen(const char *str)
 {
     const char *term = str;
+    DEBUG_ASSERT(KERNEL_ADDR(str));
     while(*term != '\0') {
         term++;
+        /*
+        DEBUG_ASSERT(
+                (((uintptr_t)term & ((1ULL<<VMEM_MIN_PAGE_ORDER)-1)) != 0)
+                || (vmem_verify_access(
+                    (void*)term,
+                    1ULL,
+                    VMEM_VERIFY_ACCESS_KERNEL|VMEM_VERIFY_ACCESS_READ
+                    )));
+        */
     }
     return (size_t)(term - str);
 }

@@ -734,3 +734,25 @@ vmem_percpu_init(void)
 }
 declare_init_desc(enable_vmem, vmem_percpu_init, "Activating default kernel vmem_map on BSP");
 
+int
+vmem_verify_access(
+        void *loc,
+        size_t size,
+        unsigned long flags)
+{
+    struct vmem_map *map = vmem_map_get_current();
+    if(map == NULL) {
+        return 0; // No current vmem map?
+    }
+    struct vmem_region_ref *ref =
+        vmem_map_get_region(map, loc);
+    
+    if(ref == NULL) {
+        return -ENXIO;
+    }
+
+    // TODO check the flags
+
+    return 0;
+}
+

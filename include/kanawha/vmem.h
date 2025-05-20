@@ -211,4 +211,14 @@ int arch_vmem_paged_region_unmap(
 void
 arch_dump_vmem_map(printk_f *printer, struct vmem_map *map);
 
+#define VMEM_VERIFY_ACCESS_KERNEL (1ULL<<0)
+#define VMEM_VERIFY_ACCESS_READ   (1ULL<<1)
+#define VMEM_VERIFY_ACCESS_WRITE  (1ULL<<2)
+#define VMEM_VERIFY_ACCESS_EXEC   (1ULL<<3)
+int
+vmem_verify_access(
+        void *loc,
+        size_t size,
+        unsigned long flags);
+
 #endif
