@@ -19,7 +19,6 @@ EXPORT_SYMBOL(page_alloc);
 EXPORT_SYMBOL(page_free);
 
 EXPORT_SYMBOL(page_alloc_amount_free);
-EXPORT_SYMBOL(page_alloc_amount_cached);
 EXPORT_SYMBOL(page_alloc_amount_matching);
 
 // Define the page_allocator Wrapper Functions
@@ -104,9 +103,6 @@ register_page_allocator(
     allocator->base = region_base;
     allocator->size = region_size;
     allocator->flags = flags;
-    ilist_init(&allocator->cache_list);
-    allocator->amount_cached = 0;
-    allocator->num_cached = 0;
 
     spinlock_init(&allocator->lock);
 
@@ -300,20 +296,6 @@ page_alloc_amount_matching(unsigned long flags)
         spin_lock(&alloc->lock);
         amount += page_allocator_amount_free(alloc);
         spin_unlock(&alloc->lock);
-    }
-
-    return amount;
-}
-
-size_t
-page_alloc_amount_cached(void) {
-    size_t amount = 0;
-    ilist_node_t *node;
-    struct page_allocator *alloc;
-
-    ilist_for_each(node, &page_allocator_list) {
-        alloc = container_of(node, struct page_allocator, list_node);
-        amount += alloc->amount_cached;
     }
 
     return amount;

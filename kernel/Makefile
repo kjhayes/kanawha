@@ -58,7 +58,7 @@ obj-y += proc/
 obj-y += net/
 obj-y += linux/
 
-obj-m += memdump.o
+obj-y += memdump.o
 
 obj-$(CONFIG_ACPI) += acpi/
 obj-$(CONFIG_DEVICETREE) += devtree/

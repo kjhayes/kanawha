@@ -54,11 +54,6 @@ struct page_allocator
     struct ptree_node ptree_node;
 
     ilist_node_t list_node;
-
-    // List of reclaimable pages
-    size_t amount_cached;
-    size_t num_cached;
-    ilist_t cache_list;
 };
 
 int register_page_allocator(
@@ -72,7 +67,6 @@ int page_alloc(order_t order, void __phys * *addr, unsigned long flags);
 int page_free(order_t order, void __phys * addr);
 
 size_t page_alloc_amount_free(void);
-size_t page_alloc_amount_cached(void);
 size_t page_alloc_amount_matching(unsigned long flags);
 
 // Same as page_alloc but return which allocator provided the page
