@@ -61,6 +61,11 @@ ARG(unsigned long, flags)
 
 #define FS_NODE_ATTR_PAGE_ORDER 0
 #define FS_NODE_ATTR_DATA_SIZE  1
+#define FS_NODE_ATTR_TYPES      2
+
+#define FS_NODE_TYPE_REGULAR   (1ULL<<0)
+#define FS_NODE_TYPE_DIRECTORY (1ULL<<1)
+#define FS_NODE_TYPE_FIFO      (1ULL<<2)
 
 #define FS_NODE_GETATTR_SIG(RET,ARG)\
 RET(int)\

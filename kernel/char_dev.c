@@ -196,6 +196,11 @@ char_dev_fs_file_ops = {
     .write = char_dev_fs_node_write,
     .flush = char_dev_fs_node_flush,
     .seek = fs_file_seek_pinned_zero,
+    .poll = fs_file_cannot_poll,
+    .dir_next = fs_file_cannot_dir_next,
+    .dir_begin = fs_file_cannot_dir_begin,
+    .dir_readattr = fs_file_cannot_dir_readattr,
+    .dir_readname = fs_file_cannot_dir_readname,
 };
 
 static int

@@ -218,6 +218,18 @@ ARG(pid_t, target)\
 ARG(unsigned long, flags)\
 ARG(id_t, id)\
 
+#define SYSCALL_SIG_RESIZE(RET,ARG)\
+RET(int)\
+ARG(fd_t, file)\
+ARG(size_t, size)\
+ARG(unsigned long, flags)\
+
+#define SYSCALL_SIG_POLL(RET,ARG)\
+RET(int)\
+ARG(fd_t, file)\
+ARG(unsigned long, watch)\
+ARG(unsigned long __user *, triggered)\
+
 #define SYSCALL_XLIST(X)\
 X(exit,      0,  EXIT,       SYSCALL_SIG_EXIT)\
 X(open,      1,  OPEN,       SYSCALL_SIG_OPEN)\
@@ -258,6 +270,8 @@ X(sigret,    35, SIGRET,     SYSCALL_SIG_SIGRET)\
 X(sigroute,  36, SIGROUTE,   SYSCALL_SIG_SIGROUTE)\
 X(rid,       37, RID,        SYSCALL_SIG_RID)\
 X(wid,       38, WID,        SYSCALL_SIG_WID)\
+X(resize,    39, RESIZE,     SYSCALL_SIG_RESIZE)\
+X(poll,      40, POLL,       SYSCALL_SIG_POLL)\
 
 #define DECLARE_SYSCALL_ID_CONSTANTS(__name, __id, __NAME, ...)\
 const static syscall_id_t SYSCALL_ID_ ## __NAME = __id;
@@ -301,6 +315,8 @@ SYSCALL_XLIST(DECLARE_SYSCALL_ID_CONSTANTS)
 #undef SYSCALL_SIG_SIGROUTE
 #undef SYSCALL_SIG_RID
 #undef SYSCALL_SIG_WID
+#undef SYSCALL_SIG_RESIZE
+#undef SYSCALL_SIG_POLL
 #undef SYSCALL_XLIST
 #endif
 

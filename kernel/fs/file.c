@@ -67,6 +67,14 @@ fs_file_cannot_dir_readname(
 {
     return -EINVAL;
 }
+int
+fs_file_cannot_poll(
+        struct file *file,
+        unsigned long watching,
+        unsigned long *triggered)
+{
+    return -EINVAL;
+}
 
 /*
  * Default No-Op (always "succeed") Implementations

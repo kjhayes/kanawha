@@ -227,6 +227,9 @@ ext2_fs_node_getattr(
         case FS_NODE_ATTR_PAGE_ORDER:
             *value = node->mount->block_order;
             break;
+        case FS_NODE_ATTR_TYPES:
+            *value = FS_NODE_TYPE_REGULAR;
+            break;
         default:
             return -EINVAL;
     }

@@ -282,10 +282,11 @@ static struct fs_file_ops blk_dev_fs_file_ops =
     .seek = fs_file_paged_seek,
 
     .flush = fs_file_paged_flush,
+    .poll = fs_file_cannot_poll,
 
     .dir_next = fs_file_cannot_dir_next,
     .dir_begin = fs_file_cannot_dir_begin,
     .dir_readattr = fs_file_cannot_dir_readattr,
-    .dir_readname = fs_file_cannot_dir_readname,
+    .dir_readname = fs_file_cannot_dir_readname, 
 };
 

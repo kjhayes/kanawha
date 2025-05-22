@@ -36,4 +36,6 @@ obj-y += \
 	sigroute.o \
 	rid.o \
 	wid.o \
+	resize.o \
+	poll.o \
 

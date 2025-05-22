@@ -308,6 +308,7 @@ kbd_fs_file_ops = {
     .write = fs_file_eof_write,
     .flush = fs_file_nop_flush,
     .seek = fs_file_seek_pinned_zero,
+    .poll = fs_file_cannot_poll,
     .dir_begin = fs_file_cannot_dir_begin,
     .dir_next = fs_file_cannot_dir_next,
     .dir_readattr = fs_file_cannot_dir_readattr,

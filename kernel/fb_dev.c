@@ -283,6 +283,7 @@ static struct fs_file_ops fb_dev_buffer_fs_file_ops =
     .write = fs_file_paged_write,
     .flush = fb_dev_buffer_fs_file_flush,
     .seek = fs_file_paged_seek,
+    .poll = fs_file_cannot_poll,
 };
 
 static ssize_t
@@ -403,6 +404,7 @@ static struct fs_file_ops fb_dev_mode_set_fs_file_ops =
     .dir_readattr = fs_file_cannot_dir_readattr,
     .dir_readname = fs_file_cannot_dir_readname,
     .flush = fs_file_cannot_flush,
+    .poll = fs_file_cannot_poll,
 };
 
 static int
@@ -549,6 +551,7 @@ static struct fs_file_ops fb_dev_mode_info_fs_file_ops =
     .write = fb_dev_mode_info_fs_file_write,
     .seek = fs_file_paged_seek,
     .flush = fs_file_cannot_flush,
+    .poll = fs_file_cannot_poll,
 
     .dir_begin = fs_file_cannot_dir_begin,
     .dir_next = fs_file_cannot_dir_next,

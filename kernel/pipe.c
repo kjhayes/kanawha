@@ -6,6 +6,7 @@
 #include <kanawha/types.h>
 #include <kanawha/spinlock.h>
 #include <kanawha/proc/process.h>
+#include <kanawha/uapi/poll.h>
 #include <kanawha/usermode.h>
 #include <kanawha/kmalloc.h>
 #include <kanawha/fs/flat.h>
@@ -47,6 +48,18 @@ pipe_fs_node_ops =
     .unlink = fs_node_cannot_unlink,
 };
 
+static inline int
+pipe_read_empty(struct pipe *pipe)
+{
+    return pipe->head == pipe->tail;
+}
+
+static inline int
+pipe_write_full(struct pipe *pipe)
+{
+    return (((pipe->head+1)%pipe->buflen) == pipe->tail);
+}
+
 static ssize_t 
 pipe_fs_file_read(
         struct file *file,
@@ -76,7 +89,7 @@ pipe_fs_file_read(
     spin_lock(&pipe->lock);
 
     while(read <= 0) {
-        if(pipe->head != pipe->tail) {
+        if(!pipe_read_empty(pipe)) {
             // The buffer is non-empty
             *(uint8_t*)buffer = ((uint8_t*)pipe->buffer)[pipe->tail];
             dprintk("PID(%ld, EXEC(%s)) PIPE(%p) Reading: %c\n",
@@ -130,7 +143,7 @@ pipe_fs_file_write(
 
     // TODO: Allow writes of more than a byte at a time
     while(written <= 0) {
-        if(((pipe->head+1)%pipe->buflen) != pipe->tail) {
+        if(!pipe_write_full(pipe)) {
             // The buffer still has room
             dprintk("PID(%ld, EXEC(%s)) PIPE(%p) Writing: %c\n",
                     current_process()->id,
@@ -155,6 +168,38 @@ pipe_fs_file_write(
     return written;
 }
 
+static int
+pipe_fs_file_poll(
+        struct file *file,
+        unsigned long watching,
+        unsigned long *triggered_out)
+{
+    dprintk("pipe_fs_file_poll\n");
+    struct pipe *pipe =
+        container_of(file->path->fs_node, struct pipe, fs_node);
+
+    spin_lock(&pipe->lock);
+
+    unsigned long triggered = 0;
+
+    if(watching & POLL_WRITE_NONBLOCKING) {
+        if(!pipe_write_full(pipe)) {
+            triggered |= POLL_WRITE_NONBLOCKING;
+        }
+    }
+    if(watching & POLL_READ_NONBLOCKING) {
+        if(!pipe_read_empty(pipe)) {
+            triggered |= POLL_READ_NONBLOCKING;
+        }
+    }
+
+    spin_unlock(&pipe->lock);
+
+    *triggered_out = triggered;
+
+    return 0;
+}
+
 static struct fs_file_ops
 pipe_fs_file_ops =
 {
@@ -163,6 +208,7 @@ pipe_fs_file_ops =
 
     .flush = fs_file_nop_flush,
     .seek = fs_file_seek_pinned_zero,
+    .poll = pipe_fs_file_poll,
 
     .dir_begin = fs_file_cannot_dir_begin,
     .dir_next = fs_file_cannot_dir_next,

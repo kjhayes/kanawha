@@ -81,3 +81,8 @@ config DEBUG_SYSCALL_UNLINK
     depends on DEBUGGING
     default n
 
+config DEBUG_SYSCALL_POLL
+    bool "Debug poll"
+    depends on DEBUGGING
+    default n
+

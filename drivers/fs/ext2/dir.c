@@ -527,6 +527,49 @@ ext2_dir_unlink(
     return -EUNIMPL;
 }
 
+int
+ext2_dir_getattr(
+        struct fs_node *fs_node,
+        int attr,
+        size_t *value)
+{
+    struct ext2_fs_node *node =
+        container_of(fs_node, struct ext2_fs_node, fs_node);
+
+    switch(attr) {
+        case FS_NODE_ATTR_DATA_SIZE:
+            *value = ext2_fs_node_inode_size(node);
+            break;
+        case FS_NODE_ATTR_PAGE_ORDER:
+            *value = node->mount->block_order;
+            break;
+        case FS_NODE_ATTR_TYPES:
+            *value = FS_NODE_TYPE_DIRECTORY;
+            break;
+        default:
+            return -EINVAL;
+    }
+
+    return 0;
+}
+
+int
+ext2_dir_setattr(
+        struct fs_node *fs_node,
+        int attr,
+        size_t value)
+{
+    struct ext2_fs_node *node =
+        container_of(fs_node, struct ext2_fs_node, fs_node);
+
+    switch(attr) {
+        case FS_NODE_ATTR_DATA_SIZE:
+            return ext2_fs_node_resize(node, value);
+    }
+
+    return -EINVAL;
+}
+
 struct fs_node_ops
 ext2_dir_node_ops = {
     .read_page = ext2_fs_node_read_page,
@@ -538,8 +581,8 @@ ext2_dir_node_ops = {
 
     .flush = ext2_fs_node_flush,
 
-    .getattr = ext2_fs_node_getattr,
-    .setattr = ext2_fs_node_setattr,
+    .getattr = ext2_dir_getattr,
+    .setattr = ext2_dir_setattr,
 
     .lookup = ext2_dir_node_lookup,
 

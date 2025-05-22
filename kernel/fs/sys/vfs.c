@@ -233,7 +233,7 @@ static struct fs_file_ops vfs_root_file_ops =
     .write = fs_file_cannot_write,
     .flush = fs_file_cannot_flush,
     .seek = fs_file_cannot_seek,
-
+    .poll = fs_file_cannot_poll,
 };
 
 struct vfs_mount *

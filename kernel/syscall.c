@@ -341,6 +341,42 @@ handle_syscall(
                         (void __user *)args->args[0]
                         );
             break;
+        case SYSCALL_ID_RID:
+            ret_val = (uint64_t)(int)
+                syscall_rid(
+                        process,
+                        (pid_t)args->args[0], // target
+                        (unsigned long)args->args[1], // flags
+                        (id_t __user *)args->args[2] // id_out
+                        );
+            break;
+        case SYSCALL_ID_WID:
+            ret_val = (uint64_t)(int)
+                syscall_wid(
+                        process,
+                        (pid_t)args->args[0], // target
+                        (unsigned long)args->args[1], // flags
+                        (id_t)args->args[2] // id
+                        );
+            break;
+        case SYSCALL_ID_RESIZE:
+            ret_val = (uint64_t)(int)
+                syscall_resize(
+                        process,
+                        (fd_t)args->args[0], // file
+                        (size_t)args->args[1], // size 
+                        (unsigned long)args->args[2] // flags
+                        );
+            break;
+        case SYSCALL_ID_POLL:
+            ret_val = (uint64_t)(int)
+                syscall_poll(
+                        process,
+                        (fd_t)args->args[0], // file
+                        (unsigned long)args->args[1], // watching
+                        (unsigned long __user *)args->args[2] // triggered
+                        );
+            break;
         default:
             syscall_unknown(process, id);
             ret_val = -EINVAL;

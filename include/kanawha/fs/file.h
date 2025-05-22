@@ -52,6 +52,11 @@ RET(int)\
 ARG(char *, buffer)\
 ARG(size_t, buflen)
 
+#define FS_FILE_POLL_SIG(RET,ARG)\
+RET(int)\
+ARG(unsigned long, watch)\
+ARG(unsigned long *, triggered)
+
 #define FS_FILE_OP_LIST(OP, ...)\
 OP(read, FS_FILE_READ_SIG, ##__VA_ARGS__)\
 OP(write, FS_FILE_WRITE_SIG, ##__VA_ARGS__)\
@@ -60,7 +65,8 @@ OP(flush, FS_FILE_FLUSH_SIG, ##__VA_ARGS__)\
 OP(dir_begin, FS_FILE_DIR_BEGIN_SIG, ##__VA_ARGS__)\
 OP(dir_next, FS_FILE_DIR_NEXT_SIG, ##__VA_ARGS__)\
 OP(dir_readattr, FS_FILE_DIR_READATTR_SIG, ##__VA_ARGS__)\
-OP(dir_readname, FS_FILE_DIR_READNAME_SIG, ##__VA_ARGS__)
+OP(dir_readname, FS_FILE_DIR_READNAME_SIG, ##__VA_ARGS__)\
+OP(poll, FS_FILE_POLL_SIG, ##__VA_ARGS__)
 
 struct fs_file_ops {
 DECLARE_OP_LIST_PTRS(FS_FILE_OP_LIST, struct file*);
@@ -82,6 +88,7 @@ DEFINE_OP_LIST_WRAPPERS(
 #undef FS_FILE_DIR_NEXT_SIG
 #undef FS_FILE_DIR_READATTR_SIG
 #undef FS_FILE_DIR_READNAME_SIG
+#undef FS_FILE_POLL_SIG
 #undef FS_FILE_OP_LIST
 
 /*
@@ -124,6 +131,11 @@ fs_file_cannot_dir_readname(
         struct file *file,
         char *buf,
         size_t buflen);
+int
+fs_file_cannot_poll(
+        struct file *file,
+        unsigned long watching,
+        unsigned long *triggered);
 
 /*
  * Default No-Op (always "succeed") Implementations

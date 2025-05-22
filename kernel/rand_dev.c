@@ -64,6 +64,7 @@ static struct fs_file_ops rand_dev_fs_file_ops =
     .write = fs_file_cannot_read,
     .flush = fs_file_cannot_flush,
     .seek = fs_file_seek_pinned_zero,
+    .poll = fs_file_cannot_poll,
 };
 
 

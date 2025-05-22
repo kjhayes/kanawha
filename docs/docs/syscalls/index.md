@@ -40,4 +40,8 @@ List of Syscalls
 | [`time`](./time.md)         | 34 |
 | [`sigret`](./sigret.md)     | 35 |
 | [`sigroute`](./sigroute.md) | 36 |
+| [`wid`](./wid.md)           | 37 |
+| [`rid`](./rid.md)           | 38 |
+| [`resize`](./resize.md)     | 39 |
+| [`poll`](./poll.md)         | 40 |
 

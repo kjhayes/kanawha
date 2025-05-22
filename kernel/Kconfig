@@ -97,29 +97,6 @@ config DEBUG_CHECKSUM_FS_PATH
       Add a magic number to every fs_path structure and add checks
       to ensure path structs are not corrupted.
 
-menu "Strace Options"
-
-config STRACE_LOG_SYSCALL_BEGIN
-    bool "Debug Log syscall"
-    depends on DEBUGGING
-    default n
-    help
-      Log the beginning of each syscall (process ID and syscall ID)
-
-config STRACE_LOG_SYSCALL_END
-    bool "Debug Log syscall Completion"
-    depends on DEBUGGING
-    default n
-    help
-      Log the ending of each syscall, useful for debugging kernel bugs during the handling of a specific syscall
-
-config STRACE_LOG_SIGNALS
-    bool "Debug Log signals"
-    depends on DEBUGGING
-    default n
-
-endmenu
-
 config DISABLE_NORETURN_ATTRIBUTE
     bool "Disable __noreturn Attribute"
     depends on DEBUGGING
@@ -185,7 +162,30 @@ config DEBUG_TRACK_PROCESS_EXEC
     help
       Track the path string as a process uses the "exec" system call
 
-menu "syscall Logging"
+menu "Strace Options"
+
+config STRACE_LOG_SYSCALL_BEGIN
+    bool "Debug Log All syscall Beginnings"
+    depends on DEBUGGING
+    default n
+    help
+      Log the beginning of each syscall (process ID and syscall ID)
+
+config STRACE_LOG_SYSCALL_END
+    bool "Debug Log All syscall Completions"
+    depends on DEBUGGING
+    default n
+    help
+      Log the ending of each syscall, useful for debugging kernel bugs during the handling of a specific syscall
+
+config STRACE_LOG_SIGNALS
+    bool "Debug Log signals"
+    depends on DEBUGGING
+    default n
+
+endmenu
+
+menu "syscall Debugging"
 source "kernel/syscall/Kconfig"
 endmenu
 
