@@ -183,6 +183,11 @@ config STRACE_LOG_SIGNALS
     depends on DEBUGGING
     default n
 
+config STRACE_TIME_SYSCALLS
+    bool "Time syscall Execution"
+    depends on DEBUGGING
+    default n
+
 endmenu
 
 menu "syscall Debugging"

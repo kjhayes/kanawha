@@ -32,6 +32,11 @@ config DEBUG_SYSCALL_FLUSH
     depends on DEBUGGING
     default n
 
+config DEBUG_SYSCALL_EXEC
+    bool "Debug exec"
+    depends on DEBUGGING
+    default n
+
 config DEBUG_SYSCALL_ENVIRON
     bool "Debug environ"
     depends on DEBUGGING

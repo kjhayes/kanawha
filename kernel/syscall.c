@@ -34,6 +34,9 @@ handle_syscall(
     DEBUG_ASSERT_FS_PATH_VALID(process->root_directory);
 
     strace_begin_syscall(process, id);
+#ifdef CONFIG_STRACE_TIME_SYSCALLS
+    time_t __start_time = current_timestamp();
+#endif
 
     switch(id) {
         case SYSCALL_ID_EXIT:
@@ -384,6 +387,20 @@ handle_syscall(
 
     DEBUG_ASSERT_MSG(irqs_enabled(), "Returned from syscall (%s) with IRQ's disabled!", syscall_id_string(id));
 
+#ifdef CONFIG_STRACE_TIME_SYSCALLS
+    time_t __end_time = current_timestamp();
+    duration_t __handler_duration = __end_time - __start_time;
+
+    switch(id) {
+    case SYSCALL_ID_SLEEP:
+        break;
+    default:
+        printk("syscall [%s] took %lld ms\n",
+            syscall_id_string(id),
+            duration_to_msec(__handler_duration));
+        break;
+    }
+#endif
     strace_end_syscall(process, id);
 
     *ret_out = ret_val;
