@@ -4,6 +4,7 @@
 #include <kanawha/vmem.h>
 #include <kanawha/page_alloc.h>
 #include <kanawha/stddef.h>
+#include <kanawha/irq.h>
 
 static DECLARE_ILIST(dma_region_list);
 static DECLARE_SPINLOCK(dma_region_list_lock);
@@ -278,7 +279,7 @@ dma_alloc(
         return -EINVAL;
     }
 
-    spin_lock(&dma_region_list_lock);
+    int irq_flags = spin_lock_irq_save(&dma_region_list_lock);
 
     ilist_node_t *node;
     ilist_for_each(node, &dma_region_list) {
@@ -319,7 +320,7 @@ dma_alloc(
         __add_dma_region(region_order, flags);
 
     if(region == NULL) {
-        spin_unlock(&dma_region_list_lock);
+        spin_unlock_irq_restore(&dma_region_list_lock, irq_flags);
         return -ENOMEM;
     }
 
@@ -330,7 +331,7 @@ dma_alloc(
             align_order,
             &phys_base);
     if(res) {
-        spin_unlock(&dma_region_list_lock);
+        spin_unlock_irq_restore(&dma_region_list_lock, irq_flags);
         return res;
     }
 
@@ -343,7 +344,7 @@ exit:
             dma_phys_addr(*dma_out),
             dma_phys_addr(*dma_out) + size);
 
-    spin_unlock(&dma_region_list_lock);
+    spin_unlock_irq_restore(&dma_region_list_lock, irq_flags);
     return 0;
 }
 
@@ -362,7 +363,7 @@ dma_free(
             dma_phys_addr(addr),
             dma_phys_addr(addr) + size);
 
-    spin_lock(&dma_region_list_lock);
+    int irq_flags = spin_lock_irq_save(&dma_region_list_lock);
     ilist_for_each(iter, &dma_region_list)
     {
         struct dma_region *region =
@@ -371,14 +372,14 @@ dma_free(
         uintptr_t region_end = (uintptr_t)region_base + (1ULL<<region->order);
         if(region_base <= base && region_end >= end) {
             int res = __dma_region_free(region, phys_addr, size);
-            spin_unlock(&dma_region_list_lock);
+            spin_unlock_irq_restore(&dma_region_list_lock, irq_flags);
             if(res) {
                 return res;
             }
             return 0;
         }
     }
-    spin_unlock(&dma_region_list_lock);
+    spin_unlock_irq_restore(&dma_region_list_lock, irq_flags);
 
     return -EINVAL;
 }
