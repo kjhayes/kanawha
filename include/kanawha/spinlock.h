@@ -54,6 +54,8 @@ spin_try_lock(spinlock_t *lock) {
     return val;
 }
 
+void spinlock_failed_loop(spinlock_t *lock);
+
 static inline void
 spin_lock(spinlock_t *lock) {
     while(spin_try_lock(lock)) {
@@ -65,6 +67,8 @@ spin_lock(spinlock_t *lock) {
                     lock->held_by);
         }
 #endif
+        // "pause" and check for deadlock
+        spinlock_failed_loop(lock);
     }
 }
 
