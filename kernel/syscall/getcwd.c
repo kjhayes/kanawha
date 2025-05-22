@@ -13,25 +13,25 @@ syscall_getcwd(
 
     struct fs_path *cwd = process->working_directory;
 
-//    if(process->working_directory == process->root_directory) {
-//        // Special Case
-//        const char *root_str = "/";
-//        size_t to_copy = strlen(root_str) + 1;
-//        if(buflen < to_copy) {
-//            to_copy = buflen;
-//        }
-//
-//        res = process_write_usermem(
-//                process,
-//                buffer,
-//                (void*)root_str,
-//                to_copy);
-//        if(res) {
-//            return res;
-//        }
-//
-//        return 0;
-//    }
+    if(process->working_directory == process->root_directory) {
+        // Special Case
+        const char *root_str = "/";
+        size_t to_copy = strlen(root_str) + 1;
+        if(buflen < to_copy) {
+            to_copy = buflen;
+        }
+
+        res = process_write_usermem(
+                process,
+                buffer,
+                (void*)root_str,
+                to_copy);
+        if(res) {
+            return res;
+        }
+
+        return 0;
+    }
 
     if(!KERNEL_ADDR(cwd)) {
         eprintk("PID(%ld) syscall_getcwd: process has no working directory! (should not be possible)\n",
