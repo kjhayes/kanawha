@@ -6,15 +6,15 @@
 #include <kanawha/stddef.h>
 #include <kanawha/init.h>
 #include <kanawha/kmalloc.h>
-#include <kanawha/fs/flat.h>
 #include <kanawha/fs/node.h>
 #include <kanawha/fs/file.h>
 #include <kanawha/fs/sys/sysfs.h>
+#include <kanawha/fs/sys/vfs.h>
 
 static DECLARE_SPINLOCK(kbd_tree_lock);
 static DECLARE_STREE(kbd_tree);
 
-static struct flat_mount *kbd_fs_mount = NULL;
+static struct vfs_mount *kbd_fs_mount = NULL;
 static struct fs_node_ops kbd_fs_node_ops;
 static struct fs_file_ops kbd_fs_file_ops;
 
@@ -85,16 +85,16 @@ register_kbd(
         return res;
     }
 
-    kbd->flat_fs_node.fs_node.file_ops = &kbd_fs_file_ops;
-    kbd->flat_fs_node.fs_node.node_ops = &kbd_fs_node_ops;
-    kbd->flat_fs_node.fs_node.unload = NULL;
+    kbd->vfs_node.fs_node.file_ops = &kbd_fs_file_ops;
+    kbd->vfs_node.fs_node.node_ops = &kbd_fs_node_ops;
+    kbd->vfs_node.fs_node.unload = NULL;
 
 
     // Assign the node a fs_node index
     if(kbd_fs_mount != NULL) {
-        res = flat_mount_insert_node(
+        res = vfs_mount_insert_node_and_link_root(
                 kbd_fs_mount,
-                &kbd->flat_fs_node,
+                &kbd->vfs_node,
                 name);
         if(res) {
             stree_remove(&kbd_tree, name);
@@ -198,10 +198,10 @@ kbd_init_fs_mount(void)
 {
     int res;
 
-    struct flat_mount *mnt;
-    mnt = flat_mount_create();
+    struct vfs_mount *mnt;
+    mnt = vfs_mount_create();
     if(mnt == NULL) {
-        eprintk("Failed to create flat mount!\n");
+        eprintk("Failed to create vfs mount!\n");
         return -ENOMEM;
     }
 
@@ -213,9 +213,9 @@ kbd_init_fs_mount(void)
     for(; node != NULL; node = stree_get_next(node)) {
         struct kbd *kbd =
             container_of(node, struct kbd, global_node);
-        res = flat_mount_insert_node(
+        res = vfs_mount_insert_node_and_link_root(
                 mnt,
-                &kbd->flat_fs_node,
+                &kbd->vfs_node,
                 node->key);
         if(res) {
             spin_unlock(&kbd_tree_lock);
@@ -262,7 +262,7 @@ kbd_fs_file_read(
     struct fs_node *fs_node =
         file->path->fs_node;
     struct kbd *kbd =
-        container_of(fs_node, struct kbd, flat_fs_node.fs_node);
+        container_of(fs_node, struct kbd, vfs_node.fs_node);
 
     struct kbd_event event;
     size_t max_events = amount / sizeof(struct kbd_event);

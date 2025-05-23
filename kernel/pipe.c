@@ -9,8 +9,9 @@
 #include <kanawha/uapi/poll.h>
 #include <kanawha/usermode.h>
 #include <kanawha/kmalloc.h>
-#include <kanawha/fs/flat.h>
 #include <kanawha/fs/node.h>
+#include <kanawha/fs/mount.h>
+#include <kanawha/fs/file.h>
 #include <kanawha/fs/file.h>
 
 /*

@@ -18,7 +18,7 @@ static DECLARE_SPINLOCK(blk_dev_tree_lock);
 static size_t num_blk_dev = 0;
 static DECLARE_STREE(blk_dev_tree);
 
-static struct flat_mount *blk_dev_fs_mount = NULL;
+static struct vfs_mount *blk_dev_fs_mount = NULL;
 static struct fs_node_ops blk_dev_fs_node_ops;
 static struct fs_file_ops blk_dev_fs_file_ops;
 
@@ -49,8 +49,8 @@ register_blk_dev(struct blk_dev *blk,
             name);
 
     blk->blk_dev_node.key = name;
-    blk->flat_fs_node.fs_node.file_ops = &blk_dev_fs_file_ops;
-    blk->flat_fs_node.fs_node.node_ops = &blk_dev_fs_node_ops;
+    blk->vfs_node.fs_node.file_ops = &blk_dev_fs_file_ops;
+    blk->vfs_node.fs_node.node_ops = &blk_dev_fs_node_ops;
 
     blk->num_sectors = num_sectors;
     blk->sector_order = sector_order;
@@ -68,9 +68,9 @@ register_blk_dev(struct blk_dev *blk,
     stree_insert(&blk_dev_tree, &blk->blk_dev_node);
 
     if(blk_dev_fs_mount != NULL) {
-        res = flat_mount_insert_node(
+        res = vfs_mount_insert_node_and_link_root(
                 blk_dev_fs_mount,
-                &blk->flat_fs_node,
+                &blk->vfs_node,
                 name);
         if(res) {
             stree_remove(&blk_dev_tree, name);
@@ -109,10 +109,10 @@ blk_dev_init_fs_mount(void)
 {
     int res;
 
-    struct flat_mount *mnt;
-    mnt = flat_mount_create();
+    struct vfs_mount *mnt;
+    mnt = vfs_mount_create();
     if(mnt == NULL) {
-        eprintk("Failed to create flat mount!\n");
+        eprintk("Failed to create blk_dev VFS mount!\n");
         return -ENOMEM;
     }
 
@@ -124,9 +124,9 @@ blk_dev_init_fs_mount(void)
     for(; node != NULL; node = stree_get_next(node)) {
         struct blk_dev *dev =
             container_of(node, struct blk_dev, blk_dev_node);
-        res = flat_mount_insert_node(
+        res = vfs_mount_insert_node_and_link_root(
                 mnt,
-                &dev->flat_fs_node,
+                &dev->vfs_node,
                 node->key);
         if(res) {
             spin_unlock(&blk_dev_tree_lock);
@@ -154,7 +154,7 @@ blk_dev_read_page(
     int res;
 
     struct blk_dev *blk_dev =
-        container_of(fs_node, struct blk_dev, flat_fs_node.fs_node);
+        container_of(fs_node, struct blk_dev, vfs_node.fs_node);
 
     size_t start_sector = pfn * blk_dev->sectors_per_page;
     size_t sectors_to_read = blk_dev->sectors_per_page;
@@ -195,7 +195,7 @@ blk_dev_write_page(
     int res;
 
     struct blk_dev *blk_dev =
-        container_of(fs_node, struct blk_dev, flat_fs_node.fs_node);
+        container_of(fs_node, struct blk_dev, vfs_node.fs_node);
 
     size_t start_sector = pfn * blk_dev->sectors_per_page;
     size_t sectors_to_write = blk_dev->sectors_per_page;
@@ -228,7 +228,7 @@ blk_dev_getattr(
     int res;
 
     struct blk_dev *blk_dev =
-        container_of(fs_node, struct blk_dev, flat_fs_node.fs_node);
+        container_of(fs_node, struct blk_dev, vfs_node.fs_node);
 
     switch(attr) {
         case FS_NODE_ATTR_DATA_SIZE:

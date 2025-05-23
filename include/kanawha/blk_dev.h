@@ -7,7 +7,7 @@
 #include <kanawha/atomic.h>
 #include <kanawha/ptree.h>
 #include <kanawha/stree.h>
-#include <kanawha/fs/flat.h>
+#include <kanawha/fs/sys/vfs.h>
 
 struct blk_dev;
 struct blk_driver;
@@ -37,7 +37,7 @@ struct blk_dev
     struct blk_driver *driver;
 
     struct stree_node blk_dev_node;
-    struct flat_node flat_fs_node;
+    struct vfs_node vfs_node;
 
     // Fixed fields
     size_t num_sectors;

@@ -7,7 +7,7 @@
 #include <kanawha/ptree.h>
 #include <kanawha/fs/mount.h>
 #include <kanawha/fs/node.h>
-#include <kanawha/fs/flat.h>
+#include <kanawha/fs/sys/vfs.h>
 
 struct char_dev;
 struct char_driver;
@@ -36,9 +36,8 @@ DECLARE_OP_LIST_PTRS(CHAR_DEV_OP_LIST, struct char_dev*)
 
 struct char_dev {
     struct char_driver *driver;
-
     struct stree_node char_dev_node;
-    struct flat_node flat_fs_node;
+    struct vfs_node vfs_node;
 };
 
 DEFINE_OP_LIST_WRAPPERS(

@@ -9,6 +9,7 @@
 #include <kanawha/fs/node.h>
 #include <kanawha/fs/file.h>
 #include <kanawha/fs/sys/sysfs.h>
+#include <kanawha/fs/sys/vfs.h>
 #include <kanawha/proc/file_table.h>
 #include <kanawha/init.h>
 #include <kanawha/assert.h>
@@ -18,7 +19,7 @@ static DECLARE_SPINLOCK(char_dev_tree_lock);
 static size_t num_char_dev = 0;
 static DECLARE_STREE(char_dev_tree);
 
-static struct flat_mount *char_dev_fs_mount = NULL;
+static struct vfs_mount *char_dev_fs_mount = NULL;
 static struct fs_node_ops char_dev_fs_node_ops;
 static struct fs_file_ops char_dev_fs_file_ops;
 
@@ -42,16 +43,17 @@ register_char_dev(
     dprintk("Registering char_dev \"%s\" name=%p\n", name, name);
     chr->char_dev_node.key = name;
 
-    chr->flat_fs_node.fs_node.file_ops = &char_dev_fs_file_ops;
-    chr->flat_fs_node.fs_node.node_ops = &char_dev_fs_node_ops;
+    chr->vfs_node.fs_node.unload = NULL;
+    chr->vfs_node.fs_node.file_ops = &char_dev_fs_file_ops;
+    chr->vfs_node.fs_node.node_ops = &char_dev_fs_node_ops;
 
     stree_insert(&char_dev_tree, &chr->char_dev_node);
 
     // Assign the node a fs_node index
     if(char_dev_fs_mount != NULL) {
-        res = flat_mount_insert_node(
+        res = vfs_mount_insert_node_and_link_root(
                 char_dev_fs_mount,
-                &chr->flat_fs_node,
+                &chr->vfs_node,
                 name);
         if(res) {
             stree_remove(&char_dev_tree, name);
@@ -96,7 +98,7 @@ char_dev_fs_node_read(
     struct fs_node *fs_node =
         file->path->fs_node;
     struct char_dev *dev =
-        container_of(fs_node, struct char_dev, flat_fs_node.fs_node);
+        container_of(fs_node, struct char_dev, vfs_node.fs_node);
 
     if(flags & FS_FILE_READ_NON_BLOCKING) {
         return 0;
@@ -117,7 +119,7 @@ char_dev_fs_node_write(
     struct fs_node *fs_node =
         file->path->fs_node;
     struct char_dev *dev =
-        container_of(fs_node, struct char_dev, flat_fs_node.fs_node);
+        container_of(fs_node, struct char_dev, vfs_node.fs_node);
 
     if(flags & FS_FILE_WRITE_NON_BLOCKING) {
         return 0;
@@ -136,7 +138,7 @@ char_dev_fs_node_flush(
     struct fs_node *fs_node =
         file->path->fs_node;
     struct char_dev *dev =
-        container_of(fs_node, struct char_dev, flat_fs_node.fs_node);
+        container_of(fs_node, struct char_dev, vfs_node.fs_node);
 
     return char_dev_flush(dev);
 }
@@ -162,7 +164,7 @@ char_dev_fs_node_getattr(
         size_t *value)
 {
     struct char_dev *dev =
-        container_of(fs_node, struct char_dev, flat_fs_node.fs_node);
+        container_of(fs_node, struct char_dev, vfs_node.fs_node);
 
     switch(attr) {
         case FS_NODE_ATTR_DATA_SIZE:
@@ -208,10 +210,10 @@ char_dev_init_fs_mount(void)
 {
     int res;
 
-    struct flat_mount *mnt;
-    mnt = flat_mount_create();
+    struct vfs_mount *mnt;
+    mnt = vfs_mount_create();
     if(mnt == NULL) {
-        eprintk("Failed to create flat mount!\n");
+        eprintk("Failed to create char_dev VFS mount!\n");
         return -ENOMEM;
     }
 
@@ -223,9 +225,9 @@ char_dev_init_fs_mount(void)
     for(; node != NULL; node = stree_get_next(node)) {
         struct char_dev *dev =
             container_of(node, struct char_dev, char_dev_node);
-        res = flat_mount_insert_node(
+        res = vfs_mount_insert_node_and_link_root(
                 mnt,
-                &dev->flat_fs_node,
+                &dev->vfs_node,
                 node->key);
         if(res) {
             spin_unlock(&char_dev_tree_lock);

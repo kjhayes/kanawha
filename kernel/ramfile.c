@@ -2,9 +2,9 @@
 #include <kanawha/fs/type.h>
 #include <kanawha/fs/mount.h>
 #include <kanawha/fs/node.h>
-#include <kanawha/fs/flat.h>
 #include <kanawha/fs/file.h>
 #include <kanawha/fs/sys/sysfs.h>
+#include <kanawha/fs/sys/vfs.h>
 #include <kanawha/proc/file_table.h>
 #include <kanawha/types.h>
 #include <kanawha/stddef.h>
@@ -19,7 +19,7 @@ struct fs_node_ops;
 struct ramfile
 {
     spinlock_t lock;
-    struct flat_node flat_node;
+    struct vfs_node vfs_node;
 
     size_t page_refs;
 
@@ -28,13 +28,13 @@ struct ramfile
     order_t page_order;
 };
 
-static struct flat_mount *ramfile_flat_mount = NULL;
+static struct vfs_mount *ramfile_fs_mount = NULL;
 
 #define RAMFILE_FROM_FS_NODE(fs_node_ptr)\
     ({ (struct ramfile *)container_of(\
-            container_of(fs_node_ptr, struct flat_node, fs_node),\
+            container_of(fs_node_ptr, struct vfs_node, fs_node),\
             struct ramfile,\
-            flat_node); })
+            vfs_node); })
 
 static int
 ramfile_read_page(
@@ -161,8 +161,8 @@ ramfile_mount_init(void)
 {
     int res;
 
-    ramfile_flat_mount = flat_mount_create();
-    if(ramfile_flat_mount == NULL) {
+    ramfile_fs_mount = vfs_mount_create();
+    if(ramfile_fs_mount == NULL) {
         return -ENOMEM;
     }
 
@@ -175,12 +175,12 @@ ramfile_register_sysfs(void)
 {
     int res;
 
-    if(ramfile_flat_mount == NULL) {
+    if(ramfile_fs_mount == NULL) {
         return -EDEFER;
     }
 
     res = sysfs_register_mount(
-            &ramfile_flat_mount->fs_mount,
+            &ramfile_fs_mount->fs_mount,
             "ramfile");
     if(res) {
         return res;
@@ -193,7 +193,7 @@ declare_init(late, ramfile_register_sysfs);
 struct fs_mount *
 ramfile_mount(void)
 {
-    return &ramfile_flat_mount->fs_mount;
+    return &ramfile_fs_mount->fs_mount;
 }
 
 struct fs_node_ops
@@ -244,7 +244,7 @@ create_ramfile(
 {
     int res;
 
-    if(ramfile_flat_mount == NULL) {
+    if(ramfile_fs_mount == NULL) {
         return -EDEFER;
     }
 
@@ -265,12 +265,13 @@ create_ramfile(
 
     ramfile->page_refs = 0;
 
-    ramfile->flat_node.fs_node.file_ops = &ramfile_fs_file_ops;
-    ramfile->flat_node.fs_node.node_ops = &ramfile_fs_node_ops;
+    ramfile->vfs_node.fs_node.unload = NULL;
+    ramfile->vfs_node.fs_node.file_ops = &ramfile_fs_file_ops;
+    ramfile->vfs_node.fs_node.node_ops = &ramfile_fs_node_ops;
 
-    res = flat_mount_insert_node(
-            ramfile_flat_mount,
-            &ramfile->flat_node,
+    res = vfs_mount_insert_node_and_link_root(
+            ramfile_fs_mount,
+            &ramfile->vfs_node,
             ramfile_name);
     if(res) {
         kfree(ramfile);
@@ -292,13 +293,13 @@ ramfile_get(const char *name)
 {
     int res;
 
-    if(ramfile_flat_mount == NULL) {
+    if(ramfile_fs_mount == NULL) {
         return NULL;
     }
 
     size_t root_index;
     res = fs_mount_root_index(
-            &ramfile_flat_mount->fs_mount,
+            &ramfile_fs_mount->fs_mount,
             &root_index);
     if(res) {
         return NULL;
@@ -306,7 +307,7 @@ ramfile_get(const char *name)
 
     struct fs_node *root_node =
         fs_mount_get_node(
-                &ramfile_flat_mount->fs_mount,
+                &ramfile_fs_mount->fs_mount,
                 root_index);
     if(root_node == NULL) {
         return NULL;
@@ -324,7 +325,7 @@ ramfile_get(const char *name)
 
     struct fs_node *ramfile_node;
     ramfile_node = fs_mount_get_node(
-            &ramfile_flat_mount->fs_mount,
+            &ramfile_fs_mount->fs_mount,
             inode);
     if(ramfile_node == NULL) {
         fs_node_put(root_node);
@@ -339,7 +340,7 @@ int
 ramfile_put(
         struct fs_node *node)
 {
-    if(ramfile_flat_mount == NULL) {
+    if(ramfile_fs_mount == NULL) {
         return -EINVAL;
     }
     return fs_node_put(node);

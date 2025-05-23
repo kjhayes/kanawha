@@ -1,8 +1,8 @@
 
 #include <kanawha/fs/file.h>
 #include <kanawha/fs/node.h>
-#include <kanawha/fs/flat.h>
 #include <kanawha/fs/sys/sysfs.h>
+#include <kanawha/fs/sys/vfs.h>
 #include <drivers/pci/match.h>
 #include <drivers/pci/pci.h>
 #include <drivers/pci/cfg.h>
@@ -10,7 +10,7 @@
 #include <kanawha/init.h>
 #include <kanawha/string.h>
 
-static struct flat_mount *pci_fs_mount = NULL;
+static struct vfs_mount *pci_fs_mount = NULL;
 static struct fs_node_ops pci_fs_node_ops;
 static struct fs_file_ops pci_fs_file_ops;
 
@@ -25,10 +25,10 @@ pci_cfg_fs_node_read_page(
 {
     int res;
 
-    struct flat_node *flat_node =
-        container_of(fs_node, struct flat_node, fs_node);
+    struct vfs_node *vfs_node =
+        container_of(fs_node, struct vfs_node, fs_node);
     struct pci_func *func =
-        container_of(flat_node, struct pci_func, flat_node);
+        container_of(vfs_node, struct pci_func, vfs_node);
 
     if(pfn != 0) {
         return -ENXIO;
@@ -105,9 +105,9 @@ insert_func_with_match_lock(
 {
     int res;
 
-    func->flat_node.fs_node.file_ops = &pci_fs_file_ops;
-    func->flat_node.fs_node.node_ops = &pci_fs_node_ops;
-    func->flat_node.fs_node.unload = NULL;
+    func->vfs_node.fs_node.file_ops = &pci_fs_file_ops;
+    func->vfs_node.fs_node.node_ops = &pci_fs_node_ops;
+    func->vfs_node.fs_node.unload = NULL;
 
     char namebuf[32];
     snprintk(namebuf, 32, "%d.%d.%d.%d",
@@ -116,10 +116,20 @@ insert_func_with_match_lock(
             func->device->index,
             func->index);
     namebuf[31] = '\0';
-    res = flat_mount_insert_node(
+
+    size_t inode;
+    res = vfs_mount_insert_node(
             pci_fs_mount,
-            &func->flat_node,
-            namebuf);
+            &func->vfs_node,
+            &inode);
+    if(res) {
+        return res;
+    }
+
+    res = vfs_mount_link_root(
+            pci_fs_mount,
+            namebuf,
+            inode);
     if(res) {
         return res;
     }
@@ -132,10 +142,10 @@ pci_init_fs_mount(void)
 {
     int res;
 
-    struct flat_mount *mnt;
-    mnt = flat_mount_create();
+    struct vfs_mount *mnt;
+    mnt = vfs_mount_create();
     if(mnt == NULL) {
-        eprintk("Failed to create flat mount!\n");
+        eprintk("Failed to create PCI VFS mount!\n");
         return -ENOMEM;
     }
 

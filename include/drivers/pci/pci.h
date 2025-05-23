@@ -11,7 +11,7 @@
 #include <kanawha/irq_dev.h>
 
 #ifdef CONFIG_SYSFS_PCI
-#include <kanawha/fs/flat.h>
+#include <kanawha/fs/sys/vfs.h>
 #endif
 
 #define PCI_MAX_BUSES_PER_SEGMENT (1ULL<<8)
@@ -88,7 +88,7 @@ struct pci_func
     ilist_t cap_list;
 
 #ifdef CONFIG_SYSFS_PCI
-    struct flat_node flat_node;
+    struct vfs_node vfs_node;
 #endif
 };
 

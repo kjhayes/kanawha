@@ -119,25 +119,25 @@ klog_putc(char c)
  * klog Sysfs Bindings
  */
 
-#include <kanawha/fs/flat.h>
 #include <kanawha/fs/file.h>
 #include <kanawha/fs/sys/sysfs.h>
+#include <kanawha/fs/sys/vfs.h>
 
-static struct flat_mount *klog_fs_mount = NULL;
+static struct vfs_mount *klog_fs_mount = NULL;
 static struct fs_node_ops klog_fs_node_ops;
 static struct fs_file_ops klog_fs_file_ops;
 
-static struct flat_node klog_fs_node = { 0 };
+static struct vfs_node klog_fs_node = { 0 };
 
 static int
 klog_init_fs_mount(void)
 {
     int res;
 
-    struct flat_mount *mnt;
-    mnt = flat_mount_create();
+    struct vfs_mount *mnt;
+    mnt = vfs_mount_create();
     if(mnt == NULL) {
-        eprintk("Failed to create flat mount!\n");
+        eprintk("Failed to create klog vfs mount!\n");
         return -ENOMEM;
     }
 
@@ -147,16 +147,31 @@ klog_init_fs_mount(void)
     klog_fs_node.fs_node.file_ops = &klog_fs_file_ops;
     klog_fs_node.fs_node.node_ops = &klog_fs_node_ops;
 
-    res = flat_mount_insert_node(
+    size_t inode;
+    res = vfs_mount_insert_node(
             mnt,
             &klog_fs_node,
-            "klog");
+            &inode);
     if(res) {
+        vfs_mount_destroy(mnt);
+        return res;
+    }
+
+    res = vfs_mount_link_root(
+            mnt,
+            "klog",
+            inode);
+    if(res) {
+        vfs_mount_remove_node(mnt, &klog_fs_node);
+        vfs_mount_destroy(mnt);
         return res;
     }
 
     res = sysfs_register_mount(&klog_fs_mount->fs_mount, "log");
     if(res) {
+        vfs_mount_unlink_root(mnt, "klog");
+        vfs_mount_remove_node(mnt, &klog_fs_node);
+        vfs_mount_destroy(mnt);
         return res;
     }
 

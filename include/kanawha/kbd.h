@@ -4,7 +4,7 @@
 #include <kanawha/bitmap.h>
 #include <kanawha/stree.h>
 #include <kanawha/waitqueue.h>
-#include <kanawha/fs/flat.h>
+#include <kanawha/fs/sys/vfs.h>
 
 #include <kanawha/uapi/kbd.h>
 
@@ -12,7 +12,7 @@
 struct kbd
 {
     struct stree_node global_node;
-    struct flat_node flat_fs_node;
+    struct vfs_node vfs_node;
 
     DECLARE_BITMAP(pressed_bitmap, KBD_NUM_KEYS);
     size_t buf_head;

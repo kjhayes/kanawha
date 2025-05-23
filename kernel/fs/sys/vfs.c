@@ -5,6 +5,7 @@
 #include <kanawha/kmalloc.h>
 #include <kanawha/string.h>
 #include <kanawha/stddef.h>
+#include <kanawha/types.h>
 
 struct fs_node *
 vfs_mount_load_node(
@@ -442,6 +443,36 @@ vfs_node_unlink_all(
     node->children_count = 0;
 
     spin_unlock(&node->hierarchy_lock);
+    return 0;
+}
+
+
+int
+vfs_mount_insert_node_and_link_root(
+        struct vfs_mount *mnt,
+        struct vfs_node *node,
+        const char *name)
+{
+    int res;
+
+    size_t inode;
+    res = vfs_mount_insert_node(
+            mnt,
+            node,
+            &inode);
+    if(res) {
+        return res;
+    }
+
+    res = vfs_mount_link_root(
+            mnt,
+            name,
+            inode);
+    if(res) {
+        vfs_mount_remove_node(mnt, node);
+        return res;
+    }
+
     return 0;
 }
 

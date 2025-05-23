@@ -80,6 +80,12 @@ int
 vfs_node_unlink_all(
         struct vfs_node *node);
 
+int
+vfs_mount_insert_node_and_link_root(
+        struct vfs_mount *mnt,
+        struct vfs_node *node,
+        const char *name);
+
 // fs_file_ops
 int
 vfs_dir_lookup(
