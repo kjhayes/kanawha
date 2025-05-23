@@ -37,6 +37,19 @@
 #define DEBUG_ASSERT_MSG(...)
 #endif
 
+#define ASSERT(__COND)\
+    do {\
+    if(!(__COND)) {\
+        panic("Failed Assertion \"" #__COND "\" (%s:%ld)\n", __FILE__, (sl_t)__LINE__);\
+    }\
+    } while (0)
+
+#define WARN_ASSERT(__COND)\
+    do {\
+    if(!(__COND)) {\
+        wprintk("Failed Assertion \"" #__COND "\" (%s:%ld)\n", __FILE__, (sl_t)__LINE__);\
+    }\
+    } while (0)
 
 // The architecture can define a more strict or lax version
 // of this check if needed

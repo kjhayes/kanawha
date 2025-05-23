@@ -6,3 +6,5 @@ obj-y += \
 	env.o \
 	signal.o \
 
+obj-$(CONFIG_PROCFS) += procfs.o
+

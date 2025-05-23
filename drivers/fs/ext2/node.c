@@ -79,6 +79,7 @@ ext2_node_set_pfn_block(
             }
 
             node->inode.block[EXT2_INODE_INDIRECT_BLOCK] = indirect_block;
+            node->inode.blocks++;
             node->inode_dirty = 1;
         }
 
@@ -93,6 +94,9 @@ ext2_node_set_pfn_block(
         if(res) {
             return res;
         }
+
+        node->inode.blocks++;
+        node->inode_dirty = 1;
 
         return 0;
     }
@@ -181,6 +185,7 @@ ext2_fs_node_write_page(
                     errnostr(res));
             return res;
         }
+
         res = ext2_node_set_pfn_block(node, pfn, block_no);
         if(res) {
             eprintk("ext2_fs_node_write_page: failed to set block %ld, to pfn=0x%lx in inode (err=%s)\n",
@@ -278,7 +283,7 @@ ext2_fs_node_flush(
     return 0;
 }
 
-static size_t
+size_t
 __ext2_fs_node_inode_size_lockless(
         struct ext2_fs_node *node)
 {

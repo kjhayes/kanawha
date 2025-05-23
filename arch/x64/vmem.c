@@ -40,7 +40,7 @@ x64_vmem_page_fault_handler(
     pf_flags |= excp_state->error_code & (1ULL<<2) ? PF_FLAG_USERMODE : 0;
     pf_flags |= excp_state->error_code & (1ULL<<4) ? PF_FLAG_EXEC : 0;
 
-    res = vmem_map_handle_page_fault((void*)faulting_address, pf_flags, current);
+    res = vmem_map_handle_page_fault(gen_excp_state, (void*)faulting_address, pf_flags, current);
 
     if(res) {
         

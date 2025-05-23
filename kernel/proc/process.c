@@ -60,7 +60,7 @@ dump_process(
 #endif
             ""
             );
-//    dump_mmap(printer, proc->mmap);
+//    mmap_dump(printer, proc->mmap);
 }
 
 void
@@ -485,6 +485,15 @@ launch_init_process(void)
         return res;
     }
 
+#ifdef CONFIG_PROCFS
+    res = procfs_register_process(process);
+    if(res) {
+        eprintk("Failed to register init process with procfs! (err=%s)\n",
+                (sl_t)process->id,
+                errnostr(res));
+    }
+#endif
+
     return 0;
 }
 
@@ -873,6 +882,14 @@ process_terminate(
     process->exitcode = exitcode;
     process->status = PROCESS_STATUS_ZOMBIE;
 
+#ifdef CONFIG_PROCFS
+    res = procfs_deregister_process(process);
+    if(res) {
+        eprintk("Failed to deregister process from procfs on termination! (err=%s)\n",
+                errnostr(res));
+    }
+#endif
+
     if(process->root_directory) {
         fs_path_put(process->root_directory);
     }
@@ -1133,6 +1150,16 @@ process_spawn_child(
             (sl_t)process->id);
 
     //if(spawn_flags & SPAWN_MMAP_CLONE) {dump_process(do_printk, parent);dump_process(do_printk, process);}
+
+#ifdef CONFIG_PROCFS
+    res = procfs_register_process(process);
+    if(res) {
+        eprintk("Failed to register process(%ld) with procfs! (err=%s)\n",
+                (sl_t)process->id,
+                errnostr(res));
+    }
+#endif
+
 
     return process;
 

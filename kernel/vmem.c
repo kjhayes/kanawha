@@ -11,6 +11,7 @@
 #include <kanawha/thread.h>
 #include <kanawha/proc/process.h>
 #include <kanawha/proc/signal.h>
+#include <kanawha/proc/mmap.h>
 #include <kanawha/assert.h>
 #include <kanawha/irq.h>
 #include <arch/x64/mmu.h>
@@ -178,6 +179,7 @@ vmem_region_create_direct(
 
 static int
 default_page_fault_handler(
+        struct excp_state *state,
         struct vmem_region_ref *region_ref,
         uintptr_t offset,
         unsigned long access_flags,
@@ -436,11 +438,31 @@ int vmem_map_activate(struct vmem_map *map)
     struct vmem_map *lesser, *greater;
     lesser = (uintptr_t)*current_map < (uintptr_t)map ? *current_map : map;
     greater = (uintptr_t)*current_map < (uintptr_t)map ? map : *current_map;
-   
-    int irq_flags = disable_save_irqs();
 
-    if(lesser) {spin_lock(&lesser->lock);}
-    if(greater) {spin_lock(&greater->lock);}
+    // Acquiring both locks is tricky because this section of
+    // code can be run both from interrupt context and regular thread context.
+    int irq_flags = disable_save_irqs();
+    while(1) {
+        irq_flags = disable_save_irqs();
+        if(lesser) {
+            int acq = spin_try_lock(&lesser->lock);
+            if(!acq) {
+                enable_restore_irqs(irq_flags);
+                continue;
+            }
+        }
+        if(greater) {
+            int acq = spin_try_lock(&greater->lock);
+            if(!acq) {
+                if(lesser) {
+                    spin_unlock(&lesser->lock);
+                }
+                enable_restore_irqs(irq_flags);
+                continue;
+            }
+        }
+        break;
+    }
 
     dprintk("Activating vmem_map %p on CPU %ld\n",
             map, (sl_t)current_cpu_id());
@@ -590,6 +612,7 @@ vmem_relax_mapping(void * virtual_address)
 
 static int
 vmem_map_unhandled_user_page_fault(
+        struct excp_state *state,
         void * faulting_address,
         unsigned long access_flags,
         struct vmem_region_ref *ref,
@@ -609,7 +632,7 @@ vmem_map_unhandled_user_page_fault(
 
 #ifdef CONFIG_DEBUG_TRACK_PROCESS_EXEC
     eprintk("Terminating PID(%ld) [EXEC(%s)] for Invalid Memory Access (user_ip=%p) (addr=%p)!\n"
-            "\taccess_flags={%s%s%s%s%s}\n",
+            "\tattempted_access_flags={%s%s%s%s%s}\n",
             (sl_t)process->id,
             process->tracked_exec == NULL ? "???" : process->tracked_exec,
             process->user_ip,
@@ -620,6 +643,8 @@ vmem_map_unhandled_user_page_fault(
             access_flags & PF_FLAG_USERMODE ? "[USERMODE]" : "",
             access_flags & PF_FLAG_NOT_PRESENT ? "" : "[PRESENT]"
             );
+    arch_excp_dump_state(state, do_printk);
+    mmap_dump(do_printk, process->mmap);
 #else
     eprintk("Terminating PID(%ld) for Invalid Memory Access (user_ip=%p)!\n",
             (sl_t)process->id,
@@ -650,6 +675,7 @@ vmem_map_unhandled_user_page_fault(
 
 int
 vmem_map_handle_page_fault(
+        struct excp_state *state,
         void * faulting_address,
         unsigned long access_flags,
         struct vmem_map *map)
@@ -672,7 +698,7 @@ vmem_map_handle_page_fault(
         }
 
         uintptr_t offset = faulting_address - ref->virt_addr;
-        res = (region->paged.fault_handler)(ref, offset, access_flags, region->paged.priv_state);
+        res = (region->paged.fault_handler)(state, ref, offset, access_flags, region->paged.priv_state);
     }
 
     switch(res) {
@@ -682,6 +708,7 @@ vmem_map_handle_page_fault(
 
             if(access_flags & PF_FLAG_USERMODE) {
                 res = vmem_map_unhandled_user_page_fault(
+                        state,
                         faulting_address,
                         access_flags,
                         ref,

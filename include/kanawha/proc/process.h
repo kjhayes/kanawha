@@ -13,6 +13,10 @@
 #include <kanawha/uapi/signal.h>
 #include <kanawha/proc/signal.h>
 
+#ifdef CONFIG_PROCFS
+#include <kanawha/proc/procfs.h>
+#endif
+
 #define PROCESS_LOWMEM_SIZE (1ULL<<32)
 
 #define PROCESS_FLAG_INIT (1ULL<<0)
@@ -83,6 +87,10 @@ struct process
 
 #ifdef CONFIG_DEBUG_TRACK_PROCESS_EXEC
     const char *tracked_exec;
+#endif
+
+#ifdef CONFIG_PROCFS
+    struct procfs_process_data procfs_data;
 #endif
 };
 

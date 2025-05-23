@@ -328,6 +328,7 @@ kheap_free_specific(struct kheap *heap, void *addr, size_t size)
 
 static int
 kheap_page_fault(
+        struct excp_state *state,
         struct vmem_region_ref *region,
         uintptr_t offset,
         unsigned long flags,

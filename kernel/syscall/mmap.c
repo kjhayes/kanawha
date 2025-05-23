@@ -16,6 +16,12 @@
 #include <kanawha/vmem.h>
 #include <kanawha/fs/node.h>
 
+#ifdef CONFIG_DEBUG_SYSCALL_MMAP
+#define LOG(fmt, ...) printk("PID(%ld) syscall_mmap: " fmt, process->id, ##__VA_ARGS__)
+#else
+#define LOG(...)
+#endif
+
 int
 syscall_mmap(
         struct process *process,
@@ -39,16 +45,13 @@ syscall_mmap(
         return res;
     }
 
-#ifdef CONFIG_DEBUG_SYSCALL_MMAP
-    printk("PID(%ld) syscall_mmap(file=%ld, file_offset=0x%lx, where=%p, *where=%p, size=0x%lx, flags=0x%lx)\n",
-            (sl_t)process->id,
+    LOG("file=%ld, file_offset=0x%lx, where=%p, *where=%p, size=0x%lx, flags=0x%lx\n",
             (sl_t)file,
             (ul_t)file_offset,
             (void*)where,
             (void*)requested,
             (ul_t)size,
             (ul_t)mmap_flags);
-#endif
 
     uint8_t type = mmap_flags & 0b11;
 
@@ -115,15 +118,12 @@ syscall_mmap(
                         errnostr(res));
                 return res;
             }
-#ifdef CONFIG_DEBUG_SYSCALL_MMAP
-            if((uintptr_t)hint_offset != (uintptr_t)requested) {
-                printk("PID(%ld) syscall_mmap: re-mapped hint offset (%p) to (%p)\n",
-                    (sl_t)process->id,
-                    (void*)requested,
-                    (void*)hint_offset
-                    );
-            }
-#endif
+//            if((uintptr_t)hint_offset != (uintptr_t)requested) {
+//                LOG("re-mapped hint offset (%p) to (%p)\n",
+//                    (void*)requested,
+//                    (void*)hint_offset
+//                    );
+//            }
         }
     }
 
@@ -144,6 +144,9 @@ syscall_munmap(
 {
     int res;
     struct mmap *mmap = process->mmap;
+
+    LOG("unmapping %p\n", mapping);
+
     DEBUG_ASSERT(KERNEL_ADDR(mmap));
     DEBUG_ASSERT(KERNEL_ADDR(process));
     if((uintptr_t)mapping >= mmap->vmem_region->size) 

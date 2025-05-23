@@ -662,6 +662,12 @@ mmap_unmap_region(
             region->tree_node.key, region->tree_node.key + region->size
             );
 
+    if(!((((uintptr_t)region->tree_node.key > (uintptr_t)process->user_ip)
+      || ((uintptr_t)region->tree_node.key + region->size <= (uintptr_t)process->user_ip))))
+    {
+        return -EINVAL;
+    }
+
     struct ptree_node *removed =
         ptree_remove(&mmap->region_tree, pnode->key);
     DEBUG_ASSERT(removed == pnode);
@@ -1393,6 +1399,7 @@ unhandled:
 
 int
 mmap_page_fault_handler(
+        struct excp_state *state,
         struct vmem_region_ref *ref,
         uintptr_t offset,
         unsigned long pf_flags,
@@ -1632,7 +1639,7 @@ mmap_clone(
 {
     int res;
 
-    //dump_mmap(do_printk, from);
+    //mmap_dump(do_printk, from);
 
     res = mmap_create(from->vmem_region->size, onto);
     if(res) {
@@ -1675,8 +1682,8 @@ mmap_clone(
     spin_unlock_irq_restore(&from->lock, irq_flags);
     spin_unlock(&mmap->lock);
 
-    //dump_mmap(do_printk, from);
-    //dump_mmap(do_printk, onto->mmap);
+    //mmap_dump(do_printk, from);
+    //mmap_dump(do_printk, onto->mmap);
     //dump_threads(do_printk);
 
     return 0;
@@ -1738,7 +1745,7 @@ dump_mmap_region(
 }
 
 int
-dump_mmap(
+mmap_dump(
         printk_f *printer,
         struct mmap *mmap)
 {

@@ -2,8 +2,25 @@
 #define __KANAWHA__FS_FILE_H__
 
 #include <kanawha/ops.h>
-#include <kanawha/proc/file_table.h>
 #include <kanawha/fs/node.h>
+#include <kanawha/fs/path.h>
+
+struct file
+{
+    struct ptree_node table_node;
+
+    int refs;
+
+    size_t seek_offset;
+    size_t dir_offset;
+
+    unsigned long status_flags;
+
+    unsigned long access_flags;
+    unsigned long mode_flags;
+
+    struct fs_path *path;
+};
 
 #define FS_FILE_READ_NON_BLOCKING (1ULL<<0)
 

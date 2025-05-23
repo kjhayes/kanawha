@@ -107,6 +107,7 @@ ext2_mount_load_node(
 
     node->mount = mnt;
     spinlock_init(&node->lock);
+    spinlock_init(&node->dir_lock);
 
     int is_inode_alloced;
     res = ext2_group_inode_allocated(group, node_index, &is_inode_alloced);

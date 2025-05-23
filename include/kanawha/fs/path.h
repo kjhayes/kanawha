@@ -2,11 +2,11 @@
 #define __KANAWHA__FS_PATH_H__
 
 #include <kanawha/list.h>
-#include <kanawha/proc/process.h>
 #include <kanawha/spinlock.h>
 #include <kanawha/assert.h>
 #include <kanawha/fs/node.h>
 
+struct process;
 struct fs_mount;
 
 #ifdef CONFIG_DEBUG_CHECKSUM_FS_PATH

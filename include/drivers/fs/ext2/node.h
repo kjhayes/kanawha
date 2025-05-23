@@ -13,6 +13,7 @@ struct ext2_fs_node
     struct ext2_mount *mount;
 
     spinlock_t lock;
+    spinlock_t dir_lock;
 
     struct ext2_inode inode;
     unsigned inode_dirty : 1;

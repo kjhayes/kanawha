@@ -13,6 +13,7 @@
 
 static int
 thread_stack_page_fault_handler(
+        struct excp_state *state,
         struct vmem_region_ref *ref,
         uintptr_t offset,
         unsigned long flags,

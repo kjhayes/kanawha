@@ -30,6 +30,7 @@ syscall_fattr(
 
     res = 0;
     size_t value;
+    size_t tmp_value;
     switch(attr) {
         case FILE_ATTR_INODE:
             res = fs_path_get_inode_index(
@@ -48,6 +49,24 @@ syscall_fattr(
                     file->path,
                     FS_NODE_ATTR_DATA_SIZE,
                     &value);
+            break;
+        case FILE_ATTR_TYPES:
+            res = fs_path_get_inode_attr(
+                    file->path,
+                    FS_NODE_ATTR_TYPES,
+                    &tmp_value);
+            value = 0;
+            if(res == 0) {
+                if(tmp_value & FS_NODE_TYPE_FIFO) {
+                    value |= FILE_TYPE_FIFO;
+                }
+                if(tmp_value & FS_NODE_TYPE_REGULAR) {
+                    value |= FILE_TYPE_REGULAR;
+                }
+                if(tmp_value & FS_NODE_TYPE_DIRECTORY) {
+                    value |= FILE_TYPE_DIRECTORY;
+                }
+            }
             break;
         default:
             res = -EINVAL;

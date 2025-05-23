@@ -284,6 +284,7 @@ X64_EXCP_XLIST(UNHANDLED_EXCEPTION_CASE)
     PRINT("\n");
     PRINT("\tRFLAGS=%p\n", (uintptr_t)state->rflags);
     PRINT("\tRIP=%p\n", (uintptr_t)state->rip);
+    PRINT("\tRSP=%p\n", (uintptr_t)state->rsp);
     PRINT("\tCS=%p\n", (uintptr_t)state->cs);
 
     PRINT("RAX = %p\n", state->caller_regs[PUSHED_CALLER_REGS_INDEX_RAX]);

@@ -1,6 +1,12 @@
 
 menu "sysfs Options"
 
+config PROCFS
+    bool "procfs"
+    default y
+    help
+      Include the "proc" sysfs directory
+
 config SYSFS_PCI
     tristate "sysfs PCI"
     default n

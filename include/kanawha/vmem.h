@@ -1,6 +1,8 @@
 #ifndef __KANAWHA__VMEM_H__
 #define __KANAWHA__VMEM_H__
 
+#include <kanawha/excp.h>
+
 #if defined(CONFIG_X64 )
 #include <arch/x64/vmem.h>
 #elif defined(CONFIG_RISCV64)
@@ -70,7 +72,7 @@ vmem_region_type {
 #define PF_FLAG_WRITE       (1ULL<<2)
 #define PF_FLAG_EXEC        (1ULL<<3)
 #define PF_FLAG_USERMODE    (1ULL<<4)
-typedef int(page_fault_f)(struct vmem_region_ref *region, uintptr_t offset, unsigned long flags, void *priv_state);
+typedef int(page_fault_f)(struct excp_state *state, struct vmem_region_ref *region, uintptr_t offset, unsigned long flags, void *priv_state);
 
 struct vmem_region 
 {
@@ -176,6 +178,7 @@ int
 vmem_relax_mapping(void * virtual_address);
 
 int vmem_map_handle_page_fault(
+        struct excp_state *state,
         void * faulting_address,
         unsigned long flags,
         struct vmem_map *map);

@@ -103,4 +103,31 @@ vfs_dir_readname(
         char *name_buf,
         size_t buf_len);
 
+// "struct" nodes
+
+struct vfs_struct_node;
+
+// create a struct and link it to the
+// root of the vfs mount as directory "name"
+struct vfs_struct_node *
+vfs_create_struct_node(
+        struct vfs_mount *mnt,
+        const char *name);
+int
+vfs_destroy_struct_node(
+        struct vfs_struct_node *node);
+
+int
+vfs_struct_node_add_unsigned_long_field(
+        struct vfs_struct_node *node,
+        const char *name,
+        int(*write)(unsigned long in, void *state),
+        int(*read)(unsigned long *out, void *state)
+        );
+
+int
+vfs_struct_node_destroy_field(
+        struct vfs_struct_node *node,
+        const char *name);
+
 #endif

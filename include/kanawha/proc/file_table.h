@@ -5,25 +5,9 @@
 #include <kanawha/uapi/file.h>
 #include <kanawha/list.h>
 #include <kanawha/proc/process.h>
+#include <kanawha/fs/file.h>
 
 #define FILE_STATUS_CLOSED (1ULL<<0)
-
-struct file
-{
-    struct ptree_node table_node;
-
-    int refs;
-
-    size_t seek_offset;
-    size_t dir_offset;
-
-    unsigned long status_flags;
-
-    unsigned long access_flags;
-    unsigned long mode_flags;
-
-    struct fs_path *path;
-};
 
 struct file_table
 {

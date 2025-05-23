@@ -145,6 +145,7 @@ mmap_page_do_copy_on_write(
 
 int
 mmap_page_fault_handler(
+        struct excp_state *state,
         struct vmem_region_ref *ref,
         uintptr_t offset,
         unsigned long flags,
@@ -157,7 +158,7 @@ mmap_clone(
         struct process *onto);
 
 int
-dump_mmap(
+mmap_dump(
         printk_f *printer,
         struct mmap *mmap);
 

@@ -94,6 +94,7 @@ x64_excp_state
     uint64_t rip;
     uint64_t cs;
     uint64_t rflags;
+    uint64_t rsp;
 } __attribute__((packed));
 
 __noreturn void

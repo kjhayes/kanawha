@@ -171,6 +171,7 @@ percpu_heap_set_size(struct percpu_heap *heap, size_t size)
 
 static int
 percpu_heap_page_fault_handler(
+        struct excp_state *state,
         struct vmem_region_ref *ref,
         uintptr_t offset,
         unsigned long pf_flags,

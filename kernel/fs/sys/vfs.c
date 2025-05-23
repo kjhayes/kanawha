@@ -4,6 +4,7 @@
 #include <kanawha/fs/node.h>
 #include <kanawha/kmalloc.h>
 #include <kanawha/string.h>
+#include <kanawha/stddef.h>
 
 struct fs_node *
 vfs_mount_load_node(
@@ -75,7 +76,7 @@ struct vfs_link
     char *name;
     size_t inode;
 };
-
+ 
 int
 vfs_dir_lookup(
         struct fs_node *fs_node,
