@@ -66,7 +66,7 @@ DEFINE_OP_LIST_WRAPPERS(
         static inline,
         /* No Prefix */,
         irq_dev,
-        ->driver->,
+        DRIVER_STRUCT_PTR_ACCESSOR,
         SELF_ACCESSOR)
 
 #undef IRQ_DEV_OP_LIST

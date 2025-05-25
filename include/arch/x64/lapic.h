@@ -150,7 +150,7 @@ DEFINE_OP_LIST_WRAPPERS(
         static inline,
         /* No Prefix */,
         lapic,
-        ->ops->,
+        OPS_STRUCT_PTR_ACCESSOR,
         SELF_ACCESSOR)
 
 #undef LAPIC_READ_REG_SIG

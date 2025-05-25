@@ -40,29 +40,44 @@ syscall_getcwd(
     }
 
     size_t len = 0;
+    res = fs_path_get(cwd);
+    if(res) {
+        return res;
+    }
     do {
-        char *name;
+        DEBUG_ASSERT(KERNEL_ADDR(cwd));
+
+        const char *name = fs_path_get_name(cwd);
         if(cwd == process->root_directory) {
             name = "/";
         }
-        else if(cwd->name == NULL) {
+        else if(name == NULL) {
             name = "";
-        } else {
-            name = cwd->name;
         }
         len += strlen(name);
+
         if(*name != '/') {
             len += 1;
         }
-        cwd = cwd->parent;
+
+        if(cwd == process->root_directory) {
+            fs_path_put(cwd);
+            break;
+        }
+
+        struct fs_path *parent = fs_path_get_parent(cwd);
+        fs_path_put(cwd);
+        cwd = parent;
 
         if(cwd == process->working_directory) {
             // Something is very wrong
             eprintk("PID(%ld) syscall_getcwd: Found loop traversing from working directory to root directory!\n",
                     (sl_t)process->id);
+            fs_path_put(cwd);
             return -EINVAL;
         }
-    } while(cwd && cwd != process->root_directory);
+
+    } while(1);
 
     char *path_buffer = kmalloc(len + 1);
     if(path_buffer == NULL) {
@@ -73,16 +88,19 @@ syscall_getcwd(
     cwd = process->working_directory;
     char *iter = path_buffer + len;
     size_t room = 0;
+    res = fs_path_get(cwd);
+    if(res) {
+        kfree(path_buffer);
+        return res;
+    }
     do {
-        char *name;
+        const char *name = fs_path_get_name(cwd);
         if(cwd == process->root_directory) {
             name = "/";
         }
-        else if(cwd->name == NULL) {
+        else if(name == NULL) {
             name = "";
-        } else {
-            name = cwd->name;
-        }       
+        }
         size_t curlen = strlen(name);
         iter -= curlen;
         room += curlen;
@@ -97,15 +115,24 @@ syscall_getcwd(
             *iter = '/';
         }
 
-        cwd = cwd->parent;
+        if(cwd == process->root_directory) {
+            fs_path_put(cwd);
+            break;
+        }
+
+        struct fs_path *parent = fs_path_get_parent(cwd);
+        fs_path_put(cwd);
+        cwd = parent;
+
         if(cwd == process->working_directory) {
             // Something is very wrong
             eprintk("PID(%ld) syscall_getcwd: Found loop traversing from working directory to root directory!\n",
                     (sl_t)process->id);
             kfree(path_buffer);
+            fs_path_put(cwd);
             return -EINVAL;
         }
-    } while(cwd && cwd != process->root_directory);
+    } while(1);
 
     path_buffer[len] = '\0';
     }

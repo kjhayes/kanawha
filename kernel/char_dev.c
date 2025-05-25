@@ -95,8 +95,11 @@ char_dev_fs_node_read(
         ssize_t amount,
         unsigned long flags)
 {
-    struct fs_node *fs_node =
-        file->path->fs_node;
+    struct fs_node *fs_node = fs_path_get_fs_node(file->path);
+    if(fs_node == NULL) {
+        return -ENXIO;
+    }
+
     struct char_dev *dev =
         container_of(fs_node, struct char_dev, vfs_node.fs_node);
 
@@ -116,8 +119,10 @@ char_dev_fs_node_write(
         ssize_t amount,
         unsigned long flags)
 {
-    struct fs_node *fs_node =
-        file->path->fs_node;
+    struct fs_node *fs_node = fs_path_get_fs_node(file->path);
+    if(fs_node == NULL) {
+        return -ENXIO;
+    }
     struct char_dev *dev =
         container_of(fs_node, struct char_dev, vfs_node.fs_node);
 
@@ -135,8 +140,10 @@ char_dev_fs_node_flush(
         struct file *file,
         unsigned long flags)
 {
-    struct fs_node *fs_node =
-        file->path->fs_node;
+    struct fs_node *fs_node = fs_path_get_fs_node(file->path);
+    if(fs_node == NULL) {
+        return -ENXIO;
+    }
     struct char_dev *dev =
         container_of(fs_node, struct char_dev, vfs_node.fs_node);
 

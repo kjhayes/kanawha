@@ -18,6 +18,58 @@
 static DECLARE_SPINLOCK(fs_path_global_lock);
 static DECLARE_ILIST(root_fs_path_list);
 
+struct fs_path
+{
+    char *name;
+
+    struct fs_node *fs_node;
+
+    unsigned long refs;
+
+    enum {
+        FS_PATH_NODE,
+        FS_PATH_MOUNT,
+    } type;
+
+    unsigned long flags;
+
+    struct fs_path *parent;
+    ilist_t children;
+    ilist_node_t child_node;
+};
+
+struct fs_node *
+fs_path_get_fs_node(
+        struct fs_path *path)
+{
+    return path->fs_node;
+}
+
+const char *
+fs_path_get_name(
+        struct fs_path *path)
+{
+    return path->name;
+}
+
+struct fs_path *
+fs_path_get_parent(
+        struct fs_path *path)
+{
+    int res;
+
+    if(path->parent == NULL) {
+        return NULL;
+    }
+
+    res = fs_path_get(path->parent);
+    if(res) {
+        return NULL;
+    }
+
+    return path->parent;
+}
+
 static int
 __fs_path_put(struct fs_path *path);
 static int

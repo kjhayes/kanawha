@@ -20,8 +20,12 @@ rand_dev_fs_file_read(
 {
     int res;
 
+    struct fs_node *node = fs_path_get_fs_node(file->path);
+    if(node == NULL) {
+        return -ENXIO;
+    }
     struct rand_dev *dev =
-        container_of(file->path->fs_node, struct rand_dev, vfs_node.fs_node);
+        container_of(node, struct rand_dev, vfs_node.fs_node);
 
     if(buflen <= 0) {
         return -EINVAL;

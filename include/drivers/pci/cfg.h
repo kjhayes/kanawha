@@ -108,12 +108,14 @@ DECLARE_OP_LIST_PTRS(PCI_CAM_OP_LIST, struct pci_cam *)
     ilist_node_t global_node;
 };
 
+#define PCI_CAM_OPS_ACCESSOR(__self, __field) __self->__field
+
 DEFINE_OP_LIST_WRAPPERS(
         PCI_CAM_OP_LIST,
         static inline,
         /* No Prefix */,
         pci_cam,
-        ->,
+        PCI_CAM_OPS_ACCESSOR,
         SELF_ACCESSOR)
 
 #undef PCI_CAM_OP_LIST

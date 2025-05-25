@@ -167,12 +167,14 @@ struct fs_node
     struct ptree_node cache_node;
 };
 
+#define FS_NODE_OPS_ACCESSOR(__self, __field) __self->node_ops->__field
+
 DEFINE_OP_LIST_WRAPPERS(
         FS_NODE_OP_LIST,
         static inline,
         /* No Prefix */,
         fs_node,
-        ->node_ops->,
+        FS_NODE_OPS_ACCESSOR,
         SELF_ACCESSOR)
 
 #undef FS_NODE_READ_PAGE_SIG

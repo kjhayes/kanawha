@@ -52,7 +52,7 @@ DEFINE_OP_LIST_WRAPPERS(
         static inline,
         /* No Prefix */,
         uart_8250,
-        ->ops->,
+        OPS_STRUCT_PTR_ACCESSOR,
         SELF_ACCESSOR)
 
 #undef UART_8250_READ_REG_SIG

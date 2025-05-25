@@ -37,7 +37,7 @@ DEFINE_OP_LIST_WRAPPERS(
         static inline,
         /* No Prefix */,
         net_dev,
-        ->driver->,
+        DRIVER_STRUCT_PTR_ACCESSOR,
         SELF_ACCESSOR)
 
 int

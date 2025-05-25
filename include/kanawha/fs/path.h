@@ -8,47 +8,23 @@
 
 struct process;
 struct fs_mount;
-
-#ifdef CONFIG_DEBUG_CHECKSUM_FS_PATH
-#define FS_PATH_CHECKSUM ((uint32_t)0x8319BB15UL)
-#define DEBUG_ASSERT_FS_PATH_VALID(__path_ptr)\
-    do {\
-    DEBUG_ASSERT(KERNEL_ADDR(__path_ptr));\
-    DEBUG_ASSERT(__path_ptr->__checksum == FS_PATH_CHECKSUM);\
-    } while(0)
-#else
-#define DEBUG_ASSERT_FS_PATH_VALID(__path_ptr)
-#endif
-
-struct fs_path
-{
-    char *name;
-
-    struct fs_node *fs_node;
-
-    unsigned long refs;
-
-    enum {
-        FS_PATH_NODE,
-        FS_PATH_MOUNT,
-    } type;
-
-    unsigned long flags;
-
-    struct fs_path *parent;
-    ilist_t children;
-    ilist_node_t child_node;
-
-#ifdef CONFIG_DEBUG_CHECKSUM_FS_PATH
-    uint32_t __checksum;
-#endif
-};
+struct fs_path;
 
 int
 fs_path_get(struct fs_path *path);
 
 int
 fs_path_put(struct fs_path *path);
+
+struct fs_node *
+fs_path_get_fs_node(struct fs_path *node);
+
+const char *
+fs_path_get_name(struct fs_path *path);
+
+struct fs_path *
+fs_path_get_parent(
+        struct fs_path *path);
 
 // Returns an anonymous pipe with no references
 int
@@ -89,10 +65,11 @@ fs_path_get_inode_index(
     if(path == NULL) {
         return -EINVAL;
     }
-    if(path->fs_node == NULL) {
+    struct fs_node *node = fs_path_get_fs_node(path);
+    if(node == NULL) {
         return -ENXIO;
     }
-    *index_out = path->fs_node->cache_node.key;
+    *index_out = node->cache_node.key;
     return 0;
 }
 
@@ -105,10 +82,11 @@ fs_path_get_inode_attr(
     if(path == NULL) {
         return -EINVAL;
     }
-    if(path->fs_node == NULL) {
+    struct fs_node *node = fs_path_get_fs_node(path);
+    if(node == NULL) {
         return -ENXIO;
     }
-    return fs_node_getattr(path->fs_node, attr, value_out);
+    return fs_node_getattr(node, attr, value_out);
 }
 
 int

@@ -70,17 +70,37 @@ syscall_insmod(
         return res;
     }
 
+    struct fs_node *fs_node = fs_path_get_fs_node(file->path);
+    if(fs_node == NULL) {
+        file_table_put_file(
+                process->file_table,
+                process,
+                file);
+        return -EINVAL;
+    }
+
+    const char *name = fs_path_get_name(file->path);
     printk("insmod: %s %s\n",
-            file->path->name,
+            name != NULL ? name : "???",
             namebuf);
 
+
     struct module *mod = load_module(
-            file->path->fs_node,
+            fs_node,
             namebuf,
             0);
     if(mod == NULL) {
+        file_table_put_file(
+                process->file_table,
+                process,
+                file);
         return -EINVAL;
     }
+
+    file_table_put_file(
+            process->file_table,
+            process,
+            file);
 
     return 0;
 }

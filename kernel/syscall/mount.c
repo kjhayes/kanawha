@@ -145,9 +145,23 @@ syscall_mount(
               return -EINVAL;
           }
 
+          struct fs_node *node = fs_path_get_fs_node(src_desc->path);
+          if(node == NULL) {
+              file_table_put_file(
+                      process->file_table,
+                      process,
+                      src_desc);
+              kfree(src_buf);
+              file_table_close(
+                      process->file_table,
+                      process,
+                      src_fd);
+              return -EINVAL;
+          }
+
           res = fs_type_mount_file(
                   type,
-                  src_desc->path->fs_node,
+                  node,
                   &mnt);
 
           file_table_put_file(

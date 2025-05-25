@@ -131,7 +131,10 @@ fs_file_paged_read(
         unsigned long flags)
 {
     int res;
-    struct fs_node *fs_node = file->path->fs_node;
+    struct fs_node *fs_node = fs_path_get_fs_node(file->path);
+    if(fs_node == NULL) {
+        return -EINVAL;
+    }
 
     if(buflen == 0) {
         return -EINVAL;
@@ -196,7 +199,10 @@ fs_file_paged_write(
         unsigned long flags)
 {
     int res;
-    struct fs_node *fs_node = file->path->fs_node;
+    struct fs_node *fs_node = fs_path_get_fs_node(file->path);
+    if(fs_node == NULL) {
+        return -EINVAL;
+    }
 
     if(buflen == 0) {
         return -EINVAL;
@@ -221,8 +227,11 @@ fs_file_paged_flush(
         unsigned long flags)
 {
     int res;
-    struct fs_node *node = file->path->fs_node;
-    res = fs_node_flush_all_fs_pages(node);
+    struct fs_node *fs_node = fs_path_get_fs_node(file->path);
+    if(fs_node == NULL) {
+        return -EINVAL;
+    }
+    res = fs_node_flush_all_fs_pages(fs_node);
     if(res) {
         return res;
     }
@@ -237,7 +246,10 @@ fs_file_paged_seek(
         int whence)
 {
     int res;
-    struct fs_node *fs_node = file->path->fs_node;
+    struct fs_node *fs_node = fs_path_get_fs_node(file->path);
+    if(fs_node == NULL) {
+        return -EINVAL;
+    }
 
     size_t data_size;
     res = fs_node_getattr(
@@ -271,7 +283,12 @@ fs_file_flush_all_fs_pages(
         unsigned long flags)
 {
     int res;
-    res = fs_node_flush_all_fs_pages(file->path->fs_node);
+    struct fs_node *fs_node = fs_path_get_fs_node(file->path);
+    if(fs_node == NULL) {
+        return -EINVAL;
+    }
+
+    res = fs_node_flush_all_fs_pages(fs_node);
     if(res) {
         return res; 
     }

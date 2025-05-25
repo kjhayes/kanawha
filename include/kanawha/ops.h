@@ -93,27 +93,10 @@
 // The two new fields are OP_FIELD_ACCESSOR, which is the accessor used to go from a struct STRUCT_NAME pointer to
 // a specific OP_LIST function pointer.
 //
-// For example,
-// if we have the following struct
-//
-// struct file {
-//   struct file_ops *ops;
-//   void *state;
-// };
-//
-// Then we will set OP_FIELD_ACCESSOR to "ops->"
-//
-// If we decided to put the "DECLARE_OP_LIST_PTRS" macro inside the "struct file" itself instead of adding
-// a level of indirection through the "ops" field, then we would leave OP_FIELD_ACCESSOR empty.
-//
-// We will also leave THIS_FIELD_ACCESSOR empty, because we are passing in a pointer to "struct file" as our "this" argument.
-//
-// If we wanted to pass the "state" field instead, we could set THIS_FIELD_ACCESSOR to "->state"
-// (This would require changing the THIS_TYPE field of the corresponding DECLARE_OP_LIST_PTRS though)
-//
 // For some common patterns the following ACCESSOR(s) are defined
-#define INLINE_OPS_ACCESSOR     ->
-#define OPS_STRUCT_PTR_ACCESSOR ->ops->
+#define INLINE_OPS_ACCESSOR(__self, __field) __self->__field
+#define OPS_STRUCT_PTR_ACCESSOR(__self, __field) __self->ops->__field
+#define DRIVER_STRUCT_PTR_ACCESSOR(__self, __field) __self->driver->__field
 
 #define SELF_ACCESSOR
 #define STATE_ACCESSOR ->state
@@ -155,9 +138,9 @@
     NAMESPACE ## STRUCT_NAME ## _ ## FUNC(struct STRUCT_NAME * __ ## STRUCT_NAME SIG_ARG_DECLS(SIG)) \
     {\
         DEBUG_ASSERT(KERNEL_ADDR(__ ## STRUCT_NAME));\
-        if(__ ## STRUCT_NAME OP_FIELD_ACCESSOR FUNC) {\
-            DEBUG_ASSERT(KERNEL_ADDR(__ ## STRUCT_NAME OP_FIELD_ACCESSOR FUNC));\
-            return (*__ ## STRUCT_NAME OP_FIELD_ACCESSOR FUNC)(\
+        if(OP_FIELD_ACCESSOR(__ ## STRUCT_NAME, FUNC)) {\
+            DEBUG_ASSERT(KERNEL_ADDR(OP_FIELD_ACCESSOR(__ ## STRUCT_NAME, FUNC)));\
+            return (*(OP_FIELD_ACCESSOR(__ ## STRUCT_NAME, FUNC)))(\
                     __ ## STRUCT_NAME THIS_FIELD_ACCESSOR\
                     SIG_ARG_NAMES(SIG));\
         }\

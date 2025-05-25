@@ -259,8 +259,11 @@ kbd_fs_file_read(
         ssize_t amount,
         unsigned long flags)
 {
-    struct fs_node *fs_node =
-        file->path->fs_node;
+    struct fs_node *fs_node = fs_path_get_fs_node(file->path);
+    if(fs_node == NULL) {
+        return -ENXIO;
+    }
+
     struct kbd *kbd =
         container_of(fs_node, struct kbd, vfs_node.fs_node);
 

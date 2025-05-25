@@ -89,12 +89,20 @@ struct fs_file_ops {
 DECLARE_OP_LIST_PTRS(FS_FILE_OP_LIST, struct file*);
 };
 
+#define FILE_FILE_OPS_ACCESSOR(__self, __field) \
+    ({ \
+        struct fs_node *node = fs_path_get_fs_node(__self->path);\
+        typeof(node->file_ops->__field) ptr = NULL;\
+        if(node != NULL) { ptr = node->file_ops->__field; }\
+        ptr;\
+     })
+
 DEFINE_OP_LIST_WRAPPERS(
         FS_FILE_OP_LIST,
         static inline,
         direct_,
         file,
-        ->path->fs_node->file_ops->,
+        FILE_FILE_OPS_ACCESSOR,
         SELF_ACCESSOR);
 
 #undef FS_FILE_READ_SIG

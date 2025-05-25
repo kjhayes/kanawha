@@ -176,7 +176,7 @@ DEFINE_OP_LIST_WRAPPERS(
         static inline,
         /* No Prefix */,
         virtio_queue,
-        ->ops->,
+        OPS_STRUCT_PTR_ACCESSOR,
         SELF_ACCESSOR);
 
 #undef VIRTIO_QUEUE_NOTIFY_SIG

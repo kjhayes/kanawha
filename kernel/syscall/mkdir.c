@@ -76,8 +76,17 @@ syscall_mkdir(
 
     unsigned long flags = 0;
 
+    struct fs_node *fs_node = fs_path_get_fs_node(dir_file->path);
+    if(fs_node == NULL) {
+        file_table_put_file(
+                process->file_table,
+                process,
+                dir_file);
+        return -EINVAL;
+    }
+
     size_t existing_inode;
-    res = fs_node_lookup(dir_file->path->fs_node, namebuf, &existing_inode);
+    res = fs_node_lookup(fs_node, namebuf, &existing_inode);
     if(res == 0) {
         file_table_put_file(
                 process->file_table,
@@ -87,7 +96,7 @@ syscall_mkdir(
     }
 
     res = fs_node_mkdir(
-            dir_file->path->fs_node,
+            fs_node,
             namebuf,
             flags);
     if(res) {

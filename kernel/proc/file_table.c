@@ -19,11 +19,12 @@ file_table_dump_lockless(
     struct ptree_node *node = ptree_get_first(&table->descriptor_tree);
     while(node != NULL) {
         struct file *file = container_of(node, struct file, table_node);
+        const char *name = fs_path_get_name(file->path);
         printk("\tDescriptor(%ld) refs=%ld, path=%p, %s\n",
             file->table_node.key,
             (sl_t)file->refs,
             file->path,
-            file->path->name != NULL ? file->path->name : "(NULL)"
+            name != NULL ? name : "(NULL)"
             );
         node = ptree_get_next(node);
     }

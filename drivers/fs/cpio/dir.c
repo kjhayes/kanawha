@@ -16,7 +16,11 @@ cpio_dir_begin(
 
     file->dir_offset = 0;
 
-    struct fs_node *fs_node = file->path->fs_node;
+    struct fs_node *fs_node = fs_path_get_fs_node(file->path);
+    if(fs_node == NULL) {
+        return -EINVAL;
+    }
+
     struct cpio_dir_node *dir_node =
         container_of(fs_node, struct cpio_dir_node, fs_node);
     struct cpio_mount *mount = dir_node->mnt;
@@ -63,7 +67,11 @@ cpio_dir_next(
 {
     int res;
 
-    struct fs_node *fs_node = file->path->fs_node;
+    struct fs_node *fs_node = fs_path_get_fs_node(file->path);
+    if(fs_node == NULL) {
+        return -EINVAL;
+    }
+
     struct cpio_dir_node *dir_node =
         container_of(fs_node, struct cpio_dir_node, fs_node);
     struct cpio_mount *mount = dir_node->mnt;
@@ -142,7 +150,11 @@ cpio_dir_readname(
 {
     int res;
 
-    struct fs_node *fs_node = file->path->fs_node;
+    struct fs_node *fs_node = fs_path_get_fs_node(file->path);
+    if(fs_node == NULL) {
+        return -EINVAL;
+    }
+
     struct cpio_dir_node *dir_node =
         container_of(fs_node, struct cpio_dir_node, fs_node);
     struct cpio_mount *mount = dir_node->mnt;

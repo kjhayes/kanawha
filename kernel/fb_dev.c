@@ -235,7 +235,10 @@ fb_dev_buffer_fs_file_flush(
 {
     int res;
 
-    struct fs_node *fs_node = file->path->fs_node;
+    struct fs_node *fs_node = fs_path_get_fs_node(file->path);
+    if(fs_node == NULL) {
+        return -ENXIO;
+    }
     struct fb_dev *dev =
         container_of(fs_node, struct fb_dev, buffer_vfs_node.fs_node);
 
@@ -295,7 +298,10 @@ fb_dev_mode_set_fs_file_write(
 {
     int res;
 
-    struct fs_node *node = file->path->fs_node;
+    struct fs_node *node = fs_path_get_fs_node(file->path);
+    if(node == NULL) {
+        return -ENXIO;
+    }
     struct fb_dev *dev =
         container_of(node, struct fb_dev, mode_set_vfs_node.fs_node);
 
@@ -336,7 +342,10 @@ fb_dev_mode_set_fs_file_read(
         ssize_t buflen,
         unsigned long flags)
 {
-    struct fs_node *node = file->path->fs_node;
+    struct fs_node *node = fs_path_get_fs_node(file->path);
+    if(node == NULL) {
+        return -ENXIO;
+    }
     struct fb_dev *dev =
         container_of(node, struct fb_dev, mode_set_vfs_node.fs_node);
 
@@ -465,7 +474,10 @@ fb_dev_mode_info_fs_file_write(
 {
     int res;
 
-    struct fs_node *node = file->path->fs_node;
+    struct fs_node *node = fs_path_get_fs_node(file->path);
+    if(node == NULL) {
+        return -ENXIO;
+    }
     struct fb_dev *dev =
         container_of(node, struct fb_dev, mode_info_vfs_node.fs_node);
 
@@ -493,7 +505,10 @@ fb_dev_mode_info_fs_file_read(
     DEBUG_ASSERT(KERNEL_ADDR(file));
     DEBUG_ASSERT(KERNEL_ADDR(file->path));
 
-    struct fs_node *node = file->path->fs_node;
+    struct fs_node *node = fs_path_get_fs_node(file->path);
+    if(node == NULL) {
+        return -ENXIO;
+    }
     struct fb_dev *dev =
         container_of(node, struct fb_dev, mode_info_vfs_node.fs_node);
 

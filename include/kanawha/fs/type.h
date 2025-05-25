@@ -35,12 +35,14 @@ DECLARE_OP_LIST_PTRS(FS_TYPE_OP_LIST, struct fs_type *)
     struct stree_node fs_type_node;
 };
 
+#define FS_TYPE_OPS_ACCESSOR(__self, __field) __self->__field
+
 DEFINE_OP_LIST_WRAPPERS(
         FS_TYPE_OP_LIST,
         static inline,
         /* No Prefix */,
         fs_type,
-        ->,
+        FS_TYPE_OPS_ACCESSOR,
         SELF_ACCESSOR)
 
 // Keeps a reference to name

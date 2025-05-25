@@ -47,7 +47,7 @@ DEFINE_OP_LIST_WRAPPERS(
         static inline,
         /* No Prefix */,
         ps2_port,
-        ->ops->,
+        OPS_STRUCT_PTR_ACCESSOR,
         SELF_ACCESSOR);
 
 #undef PS2_PORT_SEND_BYTE_SIG

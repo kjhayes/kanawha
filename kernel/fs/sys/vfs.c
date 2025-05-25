@@ -137,8 +137,13 @@ vfs_dir_next(
 {
     dprintk("vfs_dir_next\n");
 
+    struct fs_node *fs_node = fs_path_get_fs_node(dir->path);
+    if(fs_node == NULL) {
+        return -EINVAL;
+    }
+
     struct vfs_node *node =
-        container_of(dir->path->fs_node, struct vfs_node, fs_node);
+        container_of(fs_node, struct vfs_node, fs_node);
 
     dir->dir_offset++;
     if(dir->dir_offset == node->children_count) {
@@ -170,7 +175,11 @@ vfs_dir_readname(
 {
     dprintk("vfs_dir_readname\n");
 
-    struct fs_node *fs_node = dir->path->fs_node;
+    struct fs_node *fs_node = fs_path_get_fs_node(dir->path);
+    if(fs_node == NULL) {
+        return -EINVAL;
+    }
+
     struct vfs_node *node =
         container_of(fs_node, struct vfs_node, fs_node);
 

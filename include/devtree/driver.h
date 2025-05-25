@@ -57,7 +57,7 @@ DEFINE_OP_LIST_WRAPPERS(
         static inline,
         /* No Prefix */,
         dt_driver,
-        ->ops->,
+        OPS_STRUCT_PTR_ACCESSOR
         SELF_ACCESSOR)
 
 #undef DT_DRIVER_PROBE_SIG

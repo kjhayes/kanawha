@@ -78,7 +78,7 @@ DEFINE_OP_LIST_WRAPPERS(
         static inline,
         /* No Prefix */,
         fb_dev,
-        ->driver->,
+        DRIVER_STRUCT_PTR_ACCESSOR,
         SELF_ACCESSOR);
 
 #undef FB_DEV_OP_LIST

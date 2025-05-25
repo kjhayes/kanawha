@@ -114,7 +114,7 @@ DEFINE_OP_LIST_WRAPPERS(
         static inline,
         /* No Prefix */,
         virtio_device,
-        ->ops->,
+        OPS_STRUCT_PTR_ACCESSOR,
         SELF_ACCESSOR);
 
 #undef VIRTIO_DEVICE_READ_STATUS_SIG

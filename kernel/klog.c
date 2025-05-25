@@ -206,11 +206,19 @@ klog_fs_file_read(
         ssize_t amount,
         unsigned long flags)
 {
-    struct fs_node *fs_node =
-        file->path->fs_node;
+    int res;
+
+    struct fs_path *path = file->path;
+    res = fs_path_get(path);
+    if(res) {
+        return res;
+    }
+
+    struct fs_node *fs_node = fs_path_get_fs_node(path);
 
     if(flags & FS_FILE_READ_NON_BLOCKING) {
         // TODO: Handle non-blocking reads
+        fs_path_put(path);
         return 0;
     }
 
@@ -221,6 +229,7 @@ klog_fs_file_read(
     struct ptree_node *node = ptree_get_max_less_or_eq(&klog_tree, offset);
     if(node == NULL) {
         spin_unlock_irq_restore(&klog_tree_lock, irq_flags);
+        fs_path_put(path);
         return 0;
     }
 
@@ -238,6 +247,7 @@ klog_fs_file_read(
 
     spin_unlock_irq_restore(&klog_tree_lock, irq_flags);
 
+    fs_path_put(path);
     return amount;
 }
 static struct fs_file_ops

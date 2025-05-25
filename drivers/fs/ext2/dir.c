@@ -274,8 +274,12 @@ ext2_dir_read_cur(
         struct file *file,
         struct ext2_linked_dir_entry *out)
 {
+    struct fs_node *fs_node = fs_path_get_fs_node(file->path);
+    if(fs_node == NULL) {
+        return -EINVAL;
+    }
     return ext2_dir_read_at(
-            file->path->fs_node,
+            fs_node,
             file->dir_offset,
             out);
 }
@@ -357,7 +361,10 @@ ext2_dir_readname(
         return -ENXIO;
     }
 
-    struct fs_node *fs_node = file->path->fs_node;
+    struct fs_node *fs_node = fs_path_get_fs_node(file->path);
+    if(fs_node == NULL) {
+        return -EINVAL;
+    }
 
     size_t minlen = buflen < entry.name_len ? buflen : entry.name_len;
 

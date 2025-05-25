@@ -23,7 +23,9 @@ syscall_resize(
     if(desc->path == NULL) {
         return -EINVAL;
     }
-    if(desc->path->fs_node == NULL) {
+
+    struct fs_node *fs_node = fs_path_get_fs_node(desc->path);
+    if(fs_node == NULL) {
         return -EINVAL;
     }
 
@@ -33,7 +35,7 @@ syscall_resize(
     }
 
     res = fs_node_setattr(
-            desc->path->fs_node,
+            fs_node,
             FS_NODE_ATTR_DATA_SIZE,
             size);
     if(res) {

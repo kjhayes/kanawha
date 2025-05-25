@@ -30,9 +30,6 @@ handle_syscall(
 
     DEBUG_ASSERT_MSG(irqs_enabled(), "Handling syscall with IRQ(s) disabled!");
 
-    DEBUG_ASSERT_FS_PATH_VALID(process->working_directory);
-    DEBUG_ASSERT_FS_PATH_VALID(process->root_directory);
-
     strace_begin_syscall(process, id);
 #ifdef CONFIG_STRACE_TIME_SYSCALLS
     time_t __start_time = current_timestamp();

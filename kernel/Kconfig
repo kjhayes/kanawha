@@ -89,14 +89,6 @@ config PERCPU_DEBUG_ASSERTIONS
       Enable the DEBUG_ASSERT_PERCPU_VALID assertion, which includes a percpu checksum variable
       used to make sure that the percpu variable subsystem is working correctly.
 
-config DEBUG_CHECKSUM_FS_PATH
-    bool "Enable fs_path Checksumming"
-    depends on DEBUGGING && DEBUG_ASSERTIONS
-    default n
-    help
-      Add a magic number to every fs_path structure and add checks
-      to ensure path structs are not corrupted.
-
 config DISABLE_NORETURN_ATTRIBUTE
     bool "Disable __noreturn Attribute"
     depends on DEBUGGING

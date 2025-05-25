@@ -51,7 +51,7 @@ DEFINE_OP_LIST_WRAPPERS(
         static inline,
         /* No Prefix */,
         virtio_driver,
-        ->ops->,
+        OPS_STRUCT_PTR_ACCESSOR,
         SELF_ACCESSOR);
 
 #undef VIRTIO_DRIVER_PROBE_SIG

@@ -45,7 +45,7 @@ DEFINE_OP_LIST_WRAPPERS(
         static inline,
         /* No Prefix */,
         char_dev,
-        ->driver->,
+        DRIVER_STRUCT_PTR_ACCESSOR,
         SELF_ACCESSOR);
 
 #undef CHAR_DEV_OP_LIST

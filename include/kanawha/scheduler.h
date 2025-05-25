@@ -61,12 +61,14 @@ DECLARE_OP_LIST_PTRS(SCHED_TYPE_OP_LIST, struct scheduler_type *);
     } type_ops;
 };
 
+#define SCHED_TYPE_OPS_ACCESSOR(__self, __field) __self->type_ops.__field
+
 DEFINE_OP_LIST_WRAPPERS(
         SCHED_TYPE_OP_LIST,
         static inline,
         /* No Prefix */,
         scheduler_type,
-        ->type_ops.,
+        SCHED_TYPE_OPS_ACCESSOR,
         SELF_ACCESSOR);
 
 struct scheduler
@@ -80,12 +82,14 @@ struct scheduler
     ilist_node_t instance_list_node;
 };
 
+#define SCHED_INSTANCE_OPS_ACCESSOR(__self, __field) __self->type->instance_ops.__field
+
 DEFINE_OP_LIST_WRAPPERS(
     SCHED_OP_LIST,
     static inline,
     /* No Prefix */,
     scheduler,
-    ->type->instance_ops.,
+    SCHED_INSTANCE_OPS_ACCESSOR,
     SELF_ACCESSOR);
 
 #undef SCHED_NEXT_SIG

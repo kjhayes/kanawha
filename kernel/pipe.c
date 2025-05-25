@@ -77,8 +77,12 @@ pipe_fs_file_read(
         return 0;
     }
 
+    struct fs_node *node = fs_path_get_fs_node(file->path);
+    if(node == NULL) {
+        return -ENXIO;
+    }
     struct pipe *pipe =
-        container_of(file->path->fs_node, struct pipe, fs_node);
+        container_of(node, struct pipe, fs_node);
 
     DEBUG_ASSERT(KERNEL_ADDR(pipe));
     DEBUG_ASSERT(KERNEL_ADDR(pipe->buffer));
@@ -130,8 +134,12 @@ pipe_fs_file_write(
         return 0;
     }
 
+    struct fs_node *node = fs_path_get_fs_node(file->path);
+    if(node == NULL) {
+        return -ENXIO;
+    }
     struct pipe *pipe =
-        container_of(file->path->fs_node, struct pipe, fs_node);
+        container_of(node, struct pipe, fs_node);
 
     DEBUG_ASSERT(KERNEL_ADDR(pipe));
     DEBUG_ASSERT(KERNEL_ADDR(pipe->buffer));
@@ -176,8 +184,13 @@ pipe_fs_file_poll(
         unsigned long *triggered_out)
 {
     dprintk("pipe_fs_file_poll\n");
+    struct fs_node *node = fs_path_get_fs_node(file->path);
+    if(node == NULL) {
+        return -ENXIO;
+    }
     struct pipe *pipe =
-        container_of(file->path->fs_node, struct pipe, fs_node);
+        container_of(node, struct pipe, fs_node);
+
 
     spin_lock(&pipe->lock);
 

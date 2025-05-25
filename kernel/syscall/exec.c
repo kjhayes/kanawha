@@ -191,7 +191,10 @@ process_exec_elf64(
         return -EPERM;
     }
 
-    struct fs_node *elf_node = desc->path->fs_node;
+    struct fs_node *elf_node = fs_path_get_fs_node(desc->path);
+    if(elf_node == NULL) {
+        return -EINVAL;
+    }
 
     Elf64_Ehdr elf_hdr;
     size_t amount = sizeof(Elf64_Ehdr);
@@ -244,9 +247,10 @@ syscall_exec(
     struct file *desc =
         file_table_get_file(process->file_table, process, file);
 
+    const char *name = fs_path_get_name(desc->path);
     dprintk("PID(%ld) exec(%ld) %s\n",
             process->id, file,
-            desc == NULL ? "NULL" : desc->path->name == NULL ? "UNNAMED" : desc->path->name);
+            desc == NULL ? "NULL" : name == NULL ? "UNNAMED" : name);
 
     if(desc == NULL) {
         file_table_put_file(process->file_table, process, desc);
@@ -256,7 +260,7 @@ syscall_exec(
     if((desc->access_flags & FILE_PERM_EXEC) == 0) {
         file_table_put_file(process->file_table, process, desc);
         eprintk("syscall_exec: file does not have EXEC permissions! (path->name=\"%s\")\n",
-                desc->path->name);
+                name);
         return -EPERM;
     }
 
@@ -282,6 +286,15 @@ syscall_exec(
         return res;
     }
 
+#ifdef CONFIG_DEBUG_TRACK_PROCESS_EXEC
+    if(process->tracked_exec) {
+        kfree((void*)process->tracked_exec);
+    }
+    if(name) {
+        process->tracked_exec = kstrdup(name);
+    }
+#endif
+
     dprintk("syscall_exec: desc->path->fs_node->index = %lld\n", (sll_t)desc->path->fs_node->cache_node.key);
     file_table_put_file(process->file_table, process, desc);
 
@@ -290,15 +303,6 @@ syscall_exec(
         eprintk("syscall_exec: Failed to flush mmap region!\n");
         return res;
     }
-
-#ifdef CONFIG_DEBUG_TRACK_PROCESS_EXEC
-    if(process->tracked_exec) {
-        kfree((void*)process->tracked_exec);
-    }
-    if(desc->path->name) {
-        process->tracked_exec = kstrdup(desc->path->name);
-    }
-#endif
 
     return 0;
 }

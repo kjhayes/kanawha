@@ -84,7 +84,7 @@ DEFINE_OP_LIST_WRAPPERS(
         static inline,
         /* No Prefix */,
         fs_mount,
-        ->ops->,
+        OPS_STRUCT_PTR_ACCESSOR,
         SELF_ACCESSOR)
 
 #undef FS_MOUNT_ROOT_INDEX_SIG

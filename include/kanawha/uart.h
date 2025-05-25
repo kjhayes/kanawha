@@ -77,7 +77,7 @@ DEFINE_OP_LIST_WRAPPERS(
         static inline,
         /* No Prefix */,
         uart,
-        ->driver->,
+        DRIVER_STRUCT_PTR_ACCESSOR,
         SELF_ACCESSOR)
 
 #undef UART_SET_BAUDRATE_SIG

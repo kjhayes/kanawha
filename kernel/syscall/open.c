@@ -94,8 +94,15 @@ syscall_open(
             return res;
         }
 
+        struct fs_node *fs_node = fs_path_get_fs_node(file->path);
+        if(fs_node == NULL) {
+            file_table_put_file(process->file_table, process, file);
+            file_table_close(process->file_table, process, kernel_fd);
+            return -EINVAL;
+        }
+
         res = fs_node_setattr(
-                file->path->fs_node,
+                fs_node,
                 FS_NODE_ATTR_DATA_SIZE,
                 0);
         if(res) {

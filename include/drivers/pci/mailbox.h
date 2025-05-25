@@ -68,7 +68,7 @@ DEFINE_OP_LIST_WRAPPERS(
         static inline,
         /* No Prefix */,
         pci_mailbox,
-        ->ops->,
+        OPS_STRUCT_PTR_ACCESSOR,
         SELF_ACCESSOR);
 
 #undef PCI_MAILBOX_MSIX_REQ_SIG

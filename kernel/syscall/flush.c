@@ -46,7 +46,13 @@ syscall_flush(
         return res;
     }
 
-    res = fs_node_flush(desc->path->fs_node, 0);
+    struct fs_node *fs_node = fs_path_get_fs_node(desc->path);
+    if(fs_node == NULL) {
+        file_table_put_file(process->file_table, process, desc);
+        return -EINVAL;
+    }
+
+    res = fs_node_flush(fs_node, 0);
     if(res) {
         LOG("syscall_flush: failed to flush fs_node!\n");
         file_table_put_file(process->file_table, process, desc);
@@ -57,8 +63,8 @@ syscall_flush(
     // This is just here until I add a better method to
     // sync mounts with the disk (this syncs the entire mount
     // every time that any file is flushed: THIS IS BAD)
-    if(desc->path && desc->path->fs_node && desc->path->fs_node->mount) {
-        res = fs_mount_sync(desc->path->fs_node->mount);
+    if(fs_node && fs_node->mount) {
+        res = fs_mount_sync(fs_node->mount);
         if(res) {
             LOG("syscall_flush: failed to sync file mount!\n");
             file_table_put_file(process->file_table, process, desc);
