@@ -92,8 +92,8 @@ DECLARE_OP_LIST_PTRS(FS_FILE_OP_LIST, struct file*);
 #define FILE_FILE_OPS_ACCESSOR(__self, __field) \
     ({ \
         struct fs_node *node = fs_path_get_fs_node(__self->path);\
-        typeof(node->file_ops->__field) ptr = NULL;\
-        if(node != NULL) { ptr = node->file_ops->__field; }\
+        typeof(((struct fs_file_ops*)NULL)->__field) ptr = NULL;\
+        if(node != NULL) { ptr = fs_node_get_file_ops(node)->__field; }\
         ptr;\
      })
 

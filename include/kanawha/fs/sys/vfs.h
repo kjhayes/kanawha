@@ -1,9 +1,11 @@
 #ifndef __KANAWHA__FS_SYS_VFS_H__
 #define __KANAWHA__FS_SYS_VFS_H__
 
+#define KEEP_FS_NODE_STRUCT_DEF
+#include <kanawha/fs/node.h>
+
 #include <kanawha/stree.h>
 #include <kanawha/ptree.h>
-#include <kanawha/fs/node.h>
 #include <kanawha/fs/mount.h>
 #include <kanawha/fs/file.h>
 

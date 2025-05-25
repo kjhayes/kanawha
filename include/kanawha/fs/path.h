@@ -69,7 +69,7 @@ fs_path_get_inode_index(
     if(node == NULL) {
         return -ENXIO;
     }
-    *index_out = node->cache_node.key;
+    *index_out = fs_node_get_inode(node);
     return 0;
 }
 

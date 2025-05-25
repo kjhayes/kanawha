@@ -1,8 +1,10 @@
 
+#define KEEP_FS_NODE_STRUCT_DEF
+#include <kanawha/fs/node.h>
+
 #include <drivers/fs/cpio/cpio.h>
 #include <drivers/fs/cpio/file.h>
 #include <drivers/fs/cpio/mount.h>
-#include <kanawha/fs/node.h>
 #include <kanawha/fs/file.h>
 #include <kanawha/stddef.h>
 #include <kanawha/string.h>

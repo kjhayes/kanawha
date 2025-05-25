@@ -1,5 +1,8 @@
 
+#define KEEP_FS_NODE_OP_LIST
+#define KEEP_FS_NODE_STRUCT_DEF
 #include <kanawha/fs/node.h>
+
 #include <kanawha/fs/mount.h>
 #include <kanawha/assert.h>
 #include <kanawha/stddef.h>
@@ -10,6 +13,16 @@
 #include <kanawha/assert.h>
 #include <kanawha/vmem.h>
 #include <kanawha/irq.h>
+
+#define FS_NODE_OPS_ACCESSOR(__self, __field) __self->node_ops->__field
+
+DEFINE_OP_LIST_WRAPPERS(
+        FS_NODE_OP_LIST,
+        ,
+        /* No Prefix */,
+        fs_node,
+        FS_NODE_OPS_ACCESSOR,
+        SELF_ACCESSOR)
 
 int
 fs_node_get(struct fs_node *node)
@@ -30,6 +43,26 @@ int
 fs_node_put(struct fs_node *node)
 {
     return fs_mount_put_node(node->mount, node);
+}
+
+struct fs_node_ops *
+fs_node_get_node_ops(
+        struct fs_node *node)
+{
+    return node->node_ops;
+}
+struct fs_file_ops *
+fs_node_get_file_ops(
+        struct fs_node *node)
+{
+    return node->file_ops;
+}
+
+size_t
+fs_node_get_inode(
+        struct fs_node *node)
+{
+    return node->cache_node.key;
 }
 
 // FS-Node Caching

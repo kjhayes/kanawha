@@ -1,4 +1,7 @@
 
+#define KEEP_FS_NODE_STRUCT_DEF
+#include <kanawha/fs/node.h>
+
 #include <kanawha/ptree.h>
 #include <kanawha/spinlock.h>
 #include <kanawha/irq.h>

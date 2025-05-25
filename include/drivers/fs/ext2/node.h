@@ -1,6 +1,7 @@
 #ifndef __KANAWHA__FS_EXT2_NODE_H__
 #define __KANAWHA__FS_EXT2_NODE_H__
 
+#define KEEP_FS_NODE_STRUCT_DEF
 #include <kanawha/fs/node.h>
 #include <kanawha/fs/file.h>
 #include <drivers/fs/ext2/ext2.h>
