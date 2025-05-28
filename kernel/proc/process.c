@@ -77,9 +77,39 @@ dump_processes(printk_f *printer) {
     spin_unlock(&process_pid_lock);
 }
 
-struct process *
-process_from_pid(
-        pid_t id)
+static inline struct process *
+__process_from_pid_lockless(pid_t id)
+{
+    struct process *proc;
+
+    struct ptree_node *node =
+        ptree_get(&process_pid_tree, id);
+    if(node == NULL) {
+        return NULL;
+    }
+
+    proc = container_of(node, struct process, pid_node);
+    return proc;
+}
+
+int
+process_exists(pid_t id)
+{
+    int irq_flags = spin_lock_irq_save(&process_pid_lock);
+    struct ptree_node *node =
+        ptree_get(&process_pid_tree, id);
+    if(node == NULL) {
+        spin_unlock_irq_restore(&process_pid_lock, irq_flags);
+        return 0;
+    }
+    spin_unlock_irq_restore(&process_pid_lock, irq_flags);
+    return 1;
+}
+
+int
+process_id_to_user_id(
+        pid_t id,
+        uid_t *uid)
 {
     int irq_flags = spin_lock_irq_save(&process_pid_lock);
 
@@ -87,7 +117,7 @@ process_from_pid(
         ptree_get(&process_pid_tree, id);
     if(node == NULL) {
         spin_unlock_irq_restore(&process_pid_lock, irq_flags);
-        return NULL;
+        return -ENXIO;
     }
 
     struct process *proc =
@@ -95,8 +125,59 @@ process_from_pid(
 
     DEBUG_ASSERT(KERNEL_ADDR(proc));
 
+    *uid = proc->user_id;
+
     spin_unlock_irq_restore(&process_pid_lock, irq_flags);
-    return proc;
+
+    return 0;
+}
+
+int
+process_id_to_group_id(
+        pid_t id,
+        uid_t *gid)
+{
+    int irq_flags = spin_lock_irq_save(&process_pid_lock);
+
+    struct ptree_node *node =
+        ptree_get(&process_pid_tree, id);
+    if(node == NULL) {
+        spin_unlock_irq_restore(&process_pid_lock, irq_flags);
+        return -ENXIO;
+    }
+
+    struct process *proc =
+        container_of(node, struct process, pid_node);
+
+    DEBUG_ASSERT(KERNEL_ADDR(proc));
+
+    *gid = proc->group_id;
+
+    spin_unlock_irq_restore(&process_pid_lock, irq_flags);
+
+    return 0;
+}
+
+int
+process_get_parent_id(
+        struct process *proc,
+        pid_t *pid_out)
+{
+    int res;
+
+    pid_t parent_id = proc->id;
+
+    int irq_flags = spin_lock_irq_save(&proc->hierarchy_lock);
+
+    if(proc->parent != NULL) {
+        parent_id = proc->parent->id;
+    }
+
+    spin_unlock_irq_restore(&proc->hierarchy_lock, irq_flags);
+
+    *pid_out = parent_id;
+
+    return 0;
 }
 
 static int
@@ -119,18 +200,24 @@ process_assign_pid(
 }
 
 static int
-process_remove_pid(
+__process_remove_pid_lockless(
         struct process *process)
 {
-    int irq_flags = spin_lock_irq_save(&process_pid_lock);
-
     struct ptree_node *removed;
     removed = ptree_remove(&process_pid_tree, process->id);
 
     DEBUG_ASSERT(removed == &process->pid_node);
-
-    spin_unlock_irq_restore(&process_pid_lock, irq_flags);
     return 0;
+}
+static int
+__process_remove_pid(
+        struct process *process)
+{
+    int res;
+    int irq_flags = spin_lock_irq_save(&process_pid_lock);
+    res = __process_remove_pid_lockless(process);
+    spin_unlock_irq_restore(&process_pid_lock, irq_flags);
+    return res;
 
 }
 
@@ -245,6 +332,9 @@ process_alloc(
     }
     memset(process, 0, sizeof(struct process));
 
+    spinlock_init(&process->ref_lock);
+    process->refs = 0;
+
     spinlock_init(&process->status_lock);
     spinlock_init(&process->hierarchy_lock);
     ilist_init(&process->children);
@@ -305,7 +395,7 @@ process_alloc(
     return process;
 
 err3:
-    process_remove_pid(process);
+    __process_remove_pid(process);
 err2:
     thread_deinit(&process->thread);
 err1:
@@ -764,23 +854,23 @@ process_strlen_usermem(
 
 int
 process_get_reapable_child(
-        struct process *process,
+        struct process *parent,
         int nowait,
-        struct process **out_child)
+        pid_t *out_child_id)
 {
     int res;
-    int irq_flags = spin_lock_irq_save(&process->hierarchy_lock);
+    int irq_flags = spin_lock_irq_save(&parent->hierarchy_lock);
 
     while(1) {
         size_t child_count = 0;
         ilist_node_t *list_node;
-        ilist_for_each(list_node, &process->children) {
+        ilist_for_each(list_node, &parent->children) {
             child_count++;
             struct process *child =
                 container_of(list_node, struct process, child_node);
             if(child->status == PROCESS_STATUS_ZOMBIE) {
-                spin_unlock_irq_restore(&process->hierarchy_lock, irq_flags);
-                *out_child = child;
+                spin_unlock_irq_restore(&parent->hierarchy_lock, irq_flags);
+                *out_child_id = child->id;
                 return 0;
             }
         }
@@ -790,19 +880,19 @@ process_get_reapable_child(
         }
 
         if(nowait) {
-            spin_unlock_irq_restore(&process->hierarchy_lock, irq_flags);
+            spin_unlock_irq_restore(&parent->hierarchy_lock, irq_flags);
             return -EWOULDBLOCK;
         } else {
-            spin_unlock_irq_restore(&process->hierarchy_lock, irq_flags);
+            spin_unlock_irq_restore(&parent->hierarchy_lock, irq_flags);
             dprintk("PID(%ld) Sleeping on own child wait queue!\n", process->id);
-            wait_on(&process->child_wait_queue);
-            irq_flags = spin_lock_irq_save(&process->hierarchy_lock);
+            wait_on(&parent->child_wait_queue);
+            irq_flags = spin_lock_irq_save(&parent->hierarchy_lock);
         }
     }
 }
 
 // Remove a process from the process hierarchy with 
-// process->parent->hierarchy_lock held
+// process->parent->hierarchy_lock and the global process_pid_lock held
 static int
 __process_reap_parent_lock(
         struct process *process)
@@ -812,12 +902,14 @@ __process_reap_parent_lock(
     DEBUG_ASSERT(KERNEL_ADDR(process));
     DEBUG_ASSERT(KERNEL_ADDR(process->parent));
 
+    
+
     // Remove the process from the hierarchy
     ilist_remove(&process->parent->children, &process->child_node);
     process->parent = NULL;
 
     // Free up the PID
-    res = process_remove_pid(process);
+    res = __process_remove_pid_lockless(process);
     if(res) {
         panic("__process_reap: process_remove_pid returned (%s)!\n",
                 errnostr(res));
@@ -850,7 +942,9 @@ process_terminate(
                 exitcode);
     }
 
-    int irq_flags = spin_lock_irq_save(&process->status_lock);
+    int irq_flags;
+
+    irq_flags = spin_lock_irq_save(&process->status_lock);
 
     if(process->status == PROCESS_STATUS_ZOMBIE) {
         // process_terminate is idempotent
@@ -869,6 +963,7 @@ process_terminate(
         spin_unlock_irq_restore(&process->status_lock, irq_flags);
         eprintk("process_terminate: __process_suspend_caller_lock returned: %s\n",
                 errnostr(res));
+        process->refs = 1;
         return res;
     }
 
@@ -887,6 +982,7 @@ process_terminate(
     if(res) {
         eprintk("Failed to deregister process from procfs on termination! (err=%s)\n",
                 errnostr(res));
+        process->refs = 1;
     }
 #endif
 
@@ -925,8 +1021,10 @@ process_terminate(
             eprintk("Failed to terminate child process during process_terminate! (err=%s)\n",
                     errnostr(res));
         }
-        // This will remove the process from our list of children
+        // This will remove the process from our list of children and deallocate the PID
+        int irq_flags = spin_lock_irq_save(&process_pid_lock);
         res = __process_reap_parent_lock(child);
+        spin_unlock_irq_restore(&process_pid_lock, irq_flags);
         if(res) {
             eprintk("Failed to reap child process_during process_terminate! (err=%s)\n",
                     errnostr(res));
@@ -968,26 +1066,36 @@ process_terminate(
 }
 
 int
-process_reap(
-        struct process *process,
+process_reap_child(
+        struct process *parent,
+        pid_t child_id,
         int *exitcode,
         int nowait)
 {
     int res;
 
-    DEBUG_ASSERT(KERNEL_ADDR(process));
-    DEBUG_ASSERT(KERNEL_ADDR(process->parent));
+    DEBUG_ASSERT(KERNEL_ADDR(parent));
 
-    int irq_flags = spin_lock_irq_save(&process->parent->hierarchy_lock);
+    int irq_flags = spin_lock_irq_save(&process_pid_lock);
+
+    struct process *process = __process_from_pid_lockless(child_id);
+    if(process == NULL) {
+        spin_unlock_irq_restore(&process_pid_lock, irq_flags);
+    }
+
+    spin_lock(&parent->hierarchy_lock);
 
     while(process->status != PROCESS_STATUS_ZOMBIE) {
         if(nowait) {
-            spin_unlock_irq_restore(&process->parent->hierarchy_lock, irq_flags);
+            spin_unlock(&parent->hierarchy_lock);
+            spin_unlock_irq_restore(&process_pid_lock, irq_flags);
             return -EWOULDBLOCK;
         } else {
-            spin_unlock_irq_restore(&process->parent->hierarchy_lock, irq_flags);
+            spin_unlock(&process->parent->hierarchy_lock);
+            spin_unlock_irq_restore(&process_pid_lock, irq_flags);
             wait_on(&process->wait_queue);
-            irq_flags = spin_lock_irq_save(&process->parent->hierarchy_lock);
+            irq_flags = spin_lock_irq_save(&process_pid_lock);
+            spin_lock(&process->parent->hierarchy_lock);
         }
     }
 
@@ -995,12 +1103,16 @@ process_reap(
         *exitcode = process->exitcode;
     }
 
-    struct process *parent = process->parent;
+    res = __process_reap_parent_lock(process);
+    if(res) {
+        spin_unlock(&parent->hierarchy_lock);
+        spin_unlock_irq_restore(&process_pid_lock, irq_flags);
+        wprintk("Leaving process in invalid state after attempted reap failed!\n");
+        return res;
+    }
 
-    // This will invalidate "process"
-    __process_reap_parent_lock(process);
-
-    spin_unlock_irq_restore(&parent->hierarchy_lock, irq_flags);
+    spin_unlock(&parent->hierarchy_lock);
+    spin_unlock_irq_restore(&process_pid_lock, irq_flags);
 
     return 0;
 
@@ -1165,9 +1277,42 @@ process_spawn_child(
 
 err1:
     process_terminate(process, 1);
-    process_reap(process, &exitcode, 0);
+    process_reap_child(parent, process->id, &exitcode, 0);
     DEBUG_ASSERT(exitcode == 1);
 err0:
     return NULL;
+}
+
+int
+process_send_signal(
+        pid_t proc_id,
+        signal_id_t id,
+        unsigned long flags)
+{
+    int res;
+
+    int irq_flags = spin_lock_irq_save(&process_pid_lock);
+
+    struct ptree_node *node =
+        ptree_get(&process_pid_tree, id);
+    if(node == NULL) {
+        spin_unlock_irq_restore(&process_pid_lock, irq_flags);
+        return -ENXIO;
+    }
+
+    struct process *proc =
+        container_of(node, struct process, pid_node);
+
+    DEBUG_ASSERT(KERNEL_ADDR(proc));
+
+    res = signal_deliver(proc, id, flags);
+    if(res) {
+        spin_unlock_irq_restore(&process_pid_lock, irq_flags);
+        return res;
+    }
+
+    spin_unlock_irq_restore(&process_pid_lock, irq_flags);
+
+    return 0;
 }
 

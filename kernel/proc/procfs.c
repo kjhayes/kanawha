@@ -33,10 +33,35 @@ init_procfs_mount(void)
 }
 declare_init_desc(fs, init_procfs_mount, "Registering procfs Sysfs Mount");
 
+static int
+__procfs_read_user_id(
+        unsigned long *out,
+        void *state)
+{
+    struct process *proc = state;
+    dprintk("__procfs_read_user_id(pid=%d, uid=%d)\n",
+            proc->id,
+            proc->user_id);
+    *out = proc->user_id;
+    return 0;
+}
+
+static int
+__procfs_read_group_id(
+        unsigned long *out,
+        void *state)
+{
+    struct process *proc = state;
+    *out = proc->group_id;
+    return 0;
+}
+
 int
 procfs_register_process(
         struct process *process)
 {
+    int res;
+
     struct procfs_process_data *data = &process->procfs_data;
 
     char namebuf[64];
@@ -47,6 +72,28 @@ procfs_register_process(
     if(data->vfs_struct_node == NULL) {
         return -ENOMEM;
     }
+
+    res = vfs_struct_node_add_unsigned_long_field(
+            data->vfs_struct_node,
+            "uid",
+            (void*)process,
+            __procfs_read_user_id,
+            NULL);
+    if(res) {
+        wprintk("Failed to register procfs \"uid\" node (err=%s)!\n",
+                errnostr(res));
+    }
+    res = vfs_struct_node_add_unsigned_long_field(
+            data->vfs_struct_node,
+            "gid",
+            (void*)process,
+            __procfs_read_group_id,
+            NULL);
+    if(res) {
+        wprintk("Failed to register procfs \"gid\" node (err=%s)!\n",
+                errnostr(res));
+    }
+
 
     return 0;
 }

@@ -2,6 +2,7 @@
 #define __KANAWHA__PROC_SIGNAL_H__
 
 #include <kanawha/uapi/signal.h>
+#include <kanawha/uapi/process.h>
 #include <kanawha/usermode.h>
 #include <kanawha/spinlock.h>
 

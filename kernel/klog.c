@@ -182,26 +182,6 @@ klog_init_fs_mount(void)
 }
 declare_init_desc(fs, klog_init_fs_mount, "Registering klog Sysfs Mount");
 
-
-static struct fs_node_ops
-klog_fs_node_ops =
-{
-    .read_page = fs_node_cannot_read_page,
-    .write_page = fs_node_cannot_read_page,
-    .load_page = fs_node_cannot_load_page,
-    .unload_page = fs_node_cannot_unload_page,
-    .flush_page = fs_node_cannot_flush_page,
-    .flush = fs_node_flush_nop,
-    .getattr = fs_node_cannot_getattr,
-    .setattr = fs_node_cannot_setattr,
-    .lookup = fs_node_cannot_lookup,
-    .mkfile = fs_node_cannot_mkfile,
-    .mkdir = fs_node_cannot_mkdir,
-    .link = fs_node_cannot_link,
-    .symlink = fs_node_cannot_symlink,
-    .unlink = fs_node_cannot_unlink,
-};
-
 static ssize_t 
 klog_fs_file_read(
         struct file *file,
@@ -253,6 +233,26 @@ klog_fs_file_read(
     fs_path_put(path);
     return amount;
 }
+
+static struct fs_node_ops
+klog_fs_node_ops =
+{
+    .read_page = fs_node_cannot_read_page,
+    .write_page = fs_node_cannot_read_page,
+    .load_page = fs_node_cannot_load_page,
+    .unload_page = fs_node_cannot_unload_page,
+    .flush_page = fs_node_cannot_flush_page,
+    .flush = fs_node_flush_nop,
+    .getattr = fs_node_cannot_getattr,
+    .setattr = fs_node_cannot_setattr,
+    .lookup = fs_node_cannot_lookup,
+    .mkfile = fs_node_cannot_mkfile,
+    .mkdir = fs_node_cannot_mkdir,
+    .link = fs_node_cannot_link,
+    .symlink = fs_node_cannot_symlink,
+    .unlink = fs_node_cannot_unlink,
+};
+
 static struct fs_file_ops
 klog_fs_file_ops = {
     .read = klog_fs_file_read,

@@ -81,6 +81,11 @@ config DEBUG_SYSCALL_DIRNEXT
     depends on DEBUGGING
     default n
 
+config DEBUG_SYSCALL_MKFILE
+    bool "Debug mkfile"
+    depends on DEBUGGING
+    default n
+
 config DEBUG_SYSCALL_UNLINK
     bool "Debug unlink"
     depends on DEBUGGING
@@ -88,6 +93,11 @@ config DEBUG_SYSCALL_UNLINK
 
 config DEBUG_SYSCALL_POLL
     bool "Debug poll"
+    depends on DEBUGGING
+    default n
+
+config DEBUG_SYSCALL_SIGSEND
+    bool "Debug sigsend"
     depends on DEBUGGING
     default n
 

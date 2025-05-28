@@ -1,0 +1,33 @@
+
+#include <kanawha/syscall.h>
+#include <kanawha/proc/process.h>
+#include <kanawha/proc/signal.h>
+
+#ifdef CONFIG_DEBUG_SYSCALL_SIGSEND
+#define LOG(fmt, ...)\
+    printk("PID(%ld) syscall_sigsend: " fmt, process->id, ##__VA_ARGS__)
+#else
+#define LOG(...)
+#endif
+
+int
+syscall_sigsend(
+        struct process *process,
+        pid_t procid,
+        int signal,
+        unsigned long flags)
+{
+    int res;
+
+    LOG("trying to send signal %d to process %ld\n",
+            (s_t)signal,
+            (sl_t)procid);
+
+    res = process_send_signal(procid, signal, 0);
+    if(res) {
+        return res;
+    }
+    
+    return 0;
+}
+

@@ -6,6 +6,13 @@
 
 #define SYSCALL_MKFILE_MAX_NAMELEN 128
 
+#ifdef CONFIG_DEBUG_SYSCALL_MKFILE
+#define LOG(fmt, ...) \
+    printk("PID(%ld) syscall_mkfile: " fmt, process->id, ##__VA_ARGS__)
+#else
+#define LOG(...)
+#endif
+
 int
 syscall_mkfile(
         struct process *process,
@@ -14,7 +21,7 @@ syscall_mkfile(
         unsigned long user_flags)
 {
     int res;
-    dprintk("syscall_mkfile: dir_fd=%ld, name=%p, userflags=%p\n",
+    LOG("dir_fd=%ld, name=%p, userflags=%p\n",
             dir_fd, name, user_flags);
 
     struct file *dir_file
@@ -73,6 +80,8 @@ syscall_mkfile(
     }
 
     namebuf[namelen] = '\0';
+
+    LOG("name=\"%s\"\n", namebuf);
 
     unsigned long flags = 0;
 

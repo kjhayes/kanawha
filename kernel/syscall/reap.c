@@ -15,19 +15,17 @@ syscall_reap(
 
     int nowait = (flags & REAP_NON_BLOCKING);
 
-    struct process *to_reap = NULL;
+    pid_t to_reap_id;
 
     if(flags & REAP_ANY) {
-        // TODO
         res = process_get_reapable_child(
                 process,
                 nowait,
-                &to_reap);
+                &to_reap_id);
         if(res) {
             return res;
         }
     } else {
-        pid_t to_reap_id;
         res = process_read_usermem(
                 process,
                 &to_reap_id,
@@ -36,27 +34,10 @@ syscall_reap(
         if(res) {
             return res;
         }
-
-        to_reap = process_from_pid(to_reap_id);
-
-        if(to_reap == NULL) {
-            return -ENXIO;
-        }
-
-        if(to_reap->parent != process) {
-            // Return -ENXIO to avoid leaking which PID's exist,
-            // which PID's exist shouldn't need to be private but this adds
-            // and additional level of difficulty for an attacker
-            return -ENXIO;
-        }
-    }
-
-    if(to_reap == NULL) {
-        return -EINVAL;
     }
 
     int exitcode;
-    res = process_reap(to_reap, &exitcode, nowait);
+    res = process_reap_child(process, to_reap_id, &exitcode, nowait);
     if(res) {
         return res;
     }

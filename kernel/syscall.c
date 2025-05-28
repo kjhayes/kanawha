@@ -153,12 +153,6 @@ handle_syscall(
                         (int __user *)args->args[2] // exitcode
                         );
             break;
-        case SYSCALL_ID_GETPID:
-            ret_val = (uint64_t)(pid_t)
-                syscall_getpid(
-                        process
-                        );
-            break;
         case SYSCALL_ID_MOUNT:
             ret_val = (uint64_t)(int)
                 syscall_mount(
@@ -375,6 +369,15 @@ handle_syscall(
                         (fd_t)args->args[0], // file
                         (unsigned long)args->args[1], // watching
                         (unsigned long __user *)args->args[2] // triggered
+                        );
+            break;
+        case SYSCALL_ID_SIGSEND:
+            ret_val = (uint64_t)(int)
+                syscall_sigsend(
+                        process,
+                        (pid_t)args->args[0], // target
+                        (int)args->args[1], // signal
+                        (unsigned long)args->args[2] // flags
                         );
             break;
         default:

@@ -11,31 +11,66 @@ syscall_rid(
 {
     int res;
 
-    struct process *target;
-    if(flags & RID_SELF) {
-        target = process;
-    } else {
-        // We do not support reading the ID of other processes for now...
-        return -EUNIMPL;
-    }
-
-    if(target == NULL) {
-        return -ENXIO;
-    }
+    // Only consider certain flags for selecting a value
+    unsigned long select = flags & (RID_UID | RID_GID | RID_PID);
 
     id_t id;
 
-    if((flags & RID_UID) && (flags & RID_GID)) {
-        if(target->user_id != target->group_id) {
+    uid_t target_uid;
+    gid_t target_gid;
+
+    if(flags & RID_SELF)
+    {
+        target_pid = process_get_id(process);
+        target_uid = process_get_uid(process);
+        target_gid = process_get_gid(process);
+    }
+    else if(flags & RID_PARENT)
+    {
+        res = process_get_parent_id(process, &target_pid);
+        if(res) {
+            return res;
+        }
+        res = process_id_to_user_id(target_pid, &target_uid);
+        if(res) {
+            return res;
+        }
+        res = process_id_to_group_id(target_pid, &target_gid);
+        if(res) {
+            return res;
+        }
+    }
+    else
+    {
+        if(!process_exists(target_pid)) {
+            return -ENXIO;
+        }
+        res = process_id_to_user_id(target_pid, &target_uid);
+        if(res) {
+            return res;
+        }
+        res = process_id_to_group_id(target_pid, &target_gid);
+        if(res) {
+            return res;
+        }
+    }
+
+    if(flags == (RID_UID | RID_GID)) {
+        if(target_uid != target_gid) {
             return -EINVAL;
         }
-        id = target->user_id;
+        id = target_uid;
     }
-    else if(flags & RID_UID) {
-        id = target->user_id;
+    else if(flags == RID_UID) {
+        id = target_uid;
     }
-    else if(flags & RID_GID) {
-        id = target->group_id;
+    else if(flags == RID_GID) {
+        id = target_gid;
+    }
+    else if(flags == RID_PID) {
+        id = target_pid;
+    } else {
+        return -EINVAL;
     }
 
     res = process_write_usermem(process, id_out, &id, sizeof(id));

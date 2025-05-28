@@ -90,6 +90,15 @@ size_t strlen(const char *str)
     return (size_t)(term - str);
 }
 
+size_t strnlen(const char *str, size_t maxlen)
+{
+    size_t len = 0;
+    while(len < maxlen && str[len] != '\0') {
+        len++;
+    }
+    return len;
+}
+
 char *strcpy(char *dst, const char *src)
 {
     size_t len = strlen(src);

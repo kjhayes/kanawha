@@ -41,6 +41,10 @@ struct process
     struct thread_state thread;
     struct scheduler *scheduler;
 
+    // Reference Counting
+    spinlock_t ref_lock;
+    unsigned long refs;
+
     // Status
     spinlock_t status_lock;
     unsigned long flags;
@@ -97,9 +101,44 @@ struct process
 struct process *
 current_process(void);
 
-struct process *
-process_from_pid(
-        pid_t id);
+int
+process_exists(pid_t id);
+
+int
+process_id_to_user_id(
+        pid_t id,
+        uid_t *user_id_out);
+
+int
+process_id_to_group_id(
+        pid_t id,
+        gid_t *group_id_out);
+
+static inline pid_t
+process_get_id(
+        struct process *process)
+{
+    return process->id;
+}
+
+static inline uid_t
+process_get_uid(
+        struct process *process)
+{
+    return process->user_id;
+}
+
+static inline gid_t
+process_get_gid(
+        struct process *process)
+{
+    return process->group_id;
+}
+
+int
+process_get_parent_id(
+        struct process *proc,
+        pid_t *parent_id_out);
 
 struct process *
 process_spawn_child(
@@ -176,8 +215,9 @@ process_terminate(
 //
 // If process is not a ZOMBIE, and nowait is non-zero then process_reap returns -EWOULDBLOCK
 int
-process_reap(
+process_reap_child(
         struct process *process,
+        pid_t child_id,
         int *exitcode,
         int nowait);
 
@@ -190,7 +230,7 @@ int
 process_get_reapable_child(
         struct process *process,
         int nowait,
-        struct process **child_out);
+        pid_t *child_id_out);
 
 int
 process_clear_forced_ip(
@@ -202,6 +242,12 @@ process_is_root(
 {
     return proc->user_id == ROOT_UID;
 }
+
+int
+process_send_signal(
+        pid_t proc_id,
+        signal_id_t id,
+        unsigned long flags);
 
 // Debugging "Dump" Processes
 void

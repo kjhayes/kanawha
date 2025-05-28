@@ -13,10 +13,11 @@ syscall_exit(
         int exitcode)
 {
     int res;
+
     res = process_terminate(process, exitcode);
     if(res) {
-        eprintk("syscall_exit: process_terminate(%p, %d) -> %s\n",
-                process, exitcode, errnostr(res));
+        panic("PID(%ld) syscall_exit: process_terminate(%p, %d) -> %s\n",
+              process->id, process, exitcode, errnostr(res));
     }
 
 #ifdef CONFIG_DEBUG_SYSCALL_EXIT

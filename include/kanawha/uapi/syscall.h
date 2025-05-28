@@ -82,9 +82,6 @@ ARG(unsigned long, flags)\
 ARG(pid_t __user *, pid_inout)\
 ARG(int __user *, exitcode)
 
-#define SYSCALL_SIG_GETPID(RET,ARG)\
-RET(pid_t)
-
 #define SYSCALL_SIG_MOUNT(RET,ARG)\
 RET(int)\
 ARG(const char __user *, source)\
@@ -230,6 +227,12 @@ ARG(fd_t, file)\
 ARG(unsigned long, watch)\
 ARG(unsigned long __user *, triggered)\
 
+#define SYSCALL_SIG_SIGSEND(RET,ARG)\
+RET(int)\
+ARG(pid_t, target)\
+ARG(int, signal)\
+ARG(unsigned long, flags)\
+
 #define SYSCALL_XLIST(X)\
 X(exit,      0,  EXIT,       SYSCALL_SIG_EXIT)\
 X(open,      1,  OPEN,       SYSCALL_SIG_OPEN)\
@@ -245,7 +248,6 @@ X(environ,   10, ENVIRON,    SYSCALL_SIG_ENVIRON)\
 X(getcwd,    11, GETCWD,     SYSCALL_SIG_GETCWD)\
 X(spawn,     12, SPAWN,      SYSCALL_SIG_SPAWN)\
 X(reap,      13, REAP,       SYSCALL_SIG_REAP)\
-X(getpid,    14, GETPID,     SYSCALL_SIG_GETPID)\
 X(mount,     15, MOUNT,      SYSCALL_SIG_MOUNT)\
 X(unmount,   16, UNMOUNT,    SYSCALL_SIG_UNMOUNT)\
 X(dirbegin,  17, DIRBEGIN,   SYSCALL_SIG_DIRBEGIN)\
@@ -272,6 +274,7 @@ X(rid,       37, RID,        SYSCALL_SIG_RID)\
 X(wid,       38, WID,        SYSCALL_SIG_WID)\
 X(resize,    39, RESIZE,     SYSCALL_SIG_RESIZE)\
 X(poll,      40, POLL,       SYSCALL_SIG_POLL)\
+X(sigsend,   41, SIGSEND,    SYSCALL_SIG_SIGSEND)\
 
 #define DECLARE_SYSCALL_ID_CONSTANTS(__name, __id, __NAME, ...)\
 const static syscall_id_t SYSCALL_ID_ ## __NAME = __id;
@@ -291,7 +294,6 @@ SYSCALL_XLIST(DECLARE_SYSCALL_ID_CONSTANTS)
 #undef SYSCALL_SIG_GETCWD
 #undef SYSCALL_SIG_SPAWN
 #undef SYSCALL_SIG_REAP
-#undef SYSCALL_SIG_GETPID
 #undef SYSCALL_SIG_MOUNT
 #undef SYSCALL_SIG_UNMOUNT
 #undef SYSCALL_SIG_DIRBEGIN
@@ -317,6 +319,7 @@ SYSCALL_XLIST(DECLARE_SYSCALL_ID_CONSTANTS)
 #undef SYSCALL_SIG_WID
 #undef SYSCALL_SIG_RESIZE
 #undef SYSCALL_SIG_POLL
+#undef SYSCALL_SIG_SIGSEND
 #undef SYSCALL_XLIST
 #endif
 

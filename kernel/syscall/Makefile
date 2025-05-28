@@ -13,7 +13,6 @@ obj-y += \
 	getcwd.o \
 	spawn.o \
 	reap.o \
-	getpid.o \
 	mount.o \
 	dirbegin.o \
 	dirnext.o \
@@ -38,4 +37,5 @@ obj-y += \
 	wid.o \
 	resize.o \
 	poll.o \
+	sigsend.o \
 

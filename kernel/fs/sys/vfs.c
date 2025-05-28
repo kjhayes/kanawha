@@ -22,14 +22,14 @@ vfs_mount_load_node(
 
     spin_lock(&mnt->lock);
     pnode = ptree_get(&mnt->inode_tree, inode);
-    spin_unlock(&mnt->lock);
-
     if(pnode == NULL) {
+        spin_unlock(&mnt->lock);
         return NULL;
     }
-
     struct vfs_node *node =
         container_of(pnode, struct vfs_node, inode_node);
+
+    spin_unlock(&mnt->lock);
 
     return &node->fs_node;
 }
@@ -44,6 +44,7 @@ vfs_mount_unload_node(
 
     struct vfs_node *node =
         container_of(fs_node, struct vfs_node, fs_node);
+
     return 0;
 }
 
@@ -307,6 +308,7 @@ vfs_mount_insert_node(
     stree_init(&node->children_tree);
     node->children_count = 0;
     node->fs_node.mount = &mnt->fs_mount;
+    node->fs_node.refcount = 0;
     mnt->num_nodes++;
 
     DEBUG_ASSERT(mnt->num_nodes > 0);

@@ -17,7 +17,6 @@ List of Syscalls
 | [`environ`](./environ.md)   | 10 |
 | [`spawn`](./spawn.md)       | 12 |
 | [`reap`](./reap.md)         | 13 |
-| [`getpid`](./getpid.md)     | 14 |
 | [`mount`](./mount.md)       | 15 |
 | [`unmount`](./unmount.md)   | 16 |
 | [`dirbegin`](./dirbegin.md) | 17 |

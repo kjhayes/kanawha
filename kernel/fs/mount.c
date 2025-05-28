@@ -114,6 +114,9 @@ fs_mount_put_node(
                 goto err;
             }
         }
+
+        node->refcount = 0;
+
         res = fs_unload_node(node);
         if(res) {
             eprintk("Filesystem failed to unload fs_node!\n");

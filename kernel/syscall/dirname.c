@@ -56,10 +56,13 @@ syscall_dirname(
 
     name_buf[buf_len-1] = '\0';
 
+#ifdef CONFIG_DEBUG_SYSCALL_DIRNAME
+    const char *__pathname = fs_path_get_name(file->path);
     LOG("PID(%ld) dirname(%s): returned \"%s\"\n",
             (sl_t)process->id,
-            file->path->name,
+            __pathname ? __pathname : "NULL",
             name_buf);
+#endif
 
     res = file_table_put_file(
                 process->file_table,

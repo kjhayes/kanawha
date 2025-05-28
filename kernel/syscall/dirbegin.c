@@ -25,9 +25,12 @@ syscall_dirbegin(
         return -EINVAL;
     }
 
+#ifdef CONFIG_DEBUG_SYSCALL_DIRBEGIN
+    const char *__pathname = fs_path_get_name(file->path);
     LOG("PID(%ld): dirbegin (%s)\n",
             process->id,
-            file->path->name);
+            __pathname ? __pathname : "NULL");
+#endif
 
     res = direct_file_dir_begin(file);
     if(res) {
