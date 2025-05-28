@@ -3,7 +3,6 @@
 #include <kanawha/fs/node.h>
 
 #include <kanawha/ptree.h>
-#include <kanawha/lock.h>
 #include <kanawha/irq.h>
 #include <kanawha/kmalloc.h>
 #include <kanawha/slab.h>
@@ -11,17 +10,18 @@
 #include <kanawha/stddef.h>
 #include <kanawha/string.h>
 #include <kanawha/init.h>
+#include <kanawha/lock.h>
 
 static int __klog_boot_frames_used = 0;
 static uint8_t __klog_boot_frames[CONFIG_KLOG_BOOT_FRAMES * CONFIG_KLOG_FRAMESIZE];
 
 static DECLARE_PTREE(klog_tree);
-static DECLARE_SPINLOCK(klog_tree_lock);
+DEFINE_LOCAL_IRQ_LOCK(klog_tree_lock);
 
-static DECLARE_SPINLOCK(klog_frame_slab_lock);
 #define KLOG_FRAME_SLAB_BUFFER_SIZE 0x1000
 static uint8_t klog_frame_slab_buffer[KLOG_FRAME_SLAB_BUFFER_SIZE];
 static struct slab_allocator *klog_frame_slab_allocator = NULL;
+DEFINE_LOCAL_IRQ_LOCK(klog_frame_slab_lock);
 
 struct klog_frame
 {
@@ -51,7 +51,7 @@ klog_init(void)
 static struct klog_frame *
 klog_frame_alloc(void)
 {
-    int irq_flags = spin_lock_irq_save(&klog_frame_slab_lock);
+    klog_frame_slab_lock_acquire();
     struct klog_frame *frame = slab_alloc(klog_frame_slab_allocator);
 
     memset(frame, 0, sizeof(struct klog_frame));
@@ -65,14 +65,14 @@ klog_frame_alloc(void)
 
     if(frame->data == NULL) {
         slab_free(klog_frame_slab_allocator, frame);
-        spin_unlock_irq_restore(&klog_frame_slab_lock, irq_flags);
+        klog_frame_slab_lock_release();
         return NULL;
     }
 
     frame->total_len = CONFIG_KLOG_FRAMESIZE;
     frame->filled_len = 0;
 
-    spin_unlock_irq_restore(&klog_frame_slab_lock, irq_flags);
+    klog_frame_slab_lock_release();
 
     return frame;
 }
@@ -80,14 +80,14 @@ klog_frame_alloc(void)
 int
 klog_putc(char c)
 {
-    int irq_flags = spin_lock_irq_save(&klog_tree_lock);
+    klog_tree_lock_acquire();
 
     struct ptree_node *node = ptree_get_last(&klog_tree);
     struct klog_frame *frame;
     if(node == NULL) {
         struct klog_frame *first_frame = klog_frame_alloc();
         if(first_frame == NULL) {
-            spin_unlock_irq_restore(&klog_tree_lock, irq_flags);
+            klog_tree_lock_release();
             return -ENOMEM;
         }
         ptree_insert(&klog_tree, &first_frame->tree_node, 0);
@@ -101,7 +101,7 @@ klog_putc(char c)
         size_t offset = frame->tree_node.key + frame->total_len;
         struct klog_frame *new_frame = klog_frame_alloc();
         if(new_frame == NULL) {
-            spin_unlock_irq_restore(&klog_tree_lock, irq_flags);
+            klog_tree_lock_release();
             return -ENOMEM;
         }
         ptree_insert(&klog_tree, &new_frame->tree_node, offset);
@@ -111,7 +111,7 @@ klog_putc(char c)
     frame->data[frame->filled_len] = c;
     frame->filled_len++;
 
-    spin_unlock_irq_restore(&klog_tree_lock, irq_flags);
+    klog_tree_lock_release();
     return 0;
 }
 
@@ -204,11 +204,11 @@ klog_fs_file_read(
 
     size_t offset = file->seek_offset;
 
-    int irq_flags = spin_lock_irq_save(&klog_tree_lock);
+    klog_tree_lock_acquire();
 
     struct ptree_node *node = ptree_get_max_less_or_eq(&klog_tree, offset);
     if(node == NULL) {
-        spin_unlock_irq_restore(&klog_tree_lock, irq_flags);
+        klog_tree_lock_release();
         fs_path_put(path);
         return 0;
     }
@@ -225,7 +225,7 @@ klog_fs_file_read(
 
     memcpy(buffer, frame->data + rel_offset, amount);
 
-    spin_unlock_irq_restore(&klog_tree_lock, irq_flags);
+    klog_tree_lock_release();
 
     fs_path_put(path);
     return amount;

@@ -50,6 +50,33 @@ thread_lock_release(thread_lock_t *lock)
     atomic_bool_clear(&lock->locked);
 }
 
+#define DECLARE_QUALIFIED_THREAD_LOCK(__name, __qual)\
+    __qual thread_lock_t __lock_##__name;\
+    __qual void __name##_acquire(void);\
+    __qual void __name##_release(void);\
+
+
+#define DEFINE_QUALIFIED_THREAD_LOCK(__name, __qual)\
+    __qual thread_lock_t __lock_##__name = {\
+        .locked = 0,\
+    };\
+    __qual void __name##_try_acquire(void) {\
+        thread_lock_try_acquire(&__lock_##__name);\
+    }\
+    __qual void __name##_acquire(void) {\
+        thread_lock_acquire(&__lock_##__name);\
+    }\
+    __qual void __name##_release(void) {\
+        thread_lock_release(&__lock_##__name);\
+    }\
+
+#define DECLARE_GLOBAL_THREAD_LOCK(__name) DECLARE_QUALIFIED_THREAD_LOCK(__name,extern)
+#define DEFINE_GLOBAL_THREAD_LOCK(__name) DEFINE_QUALIFIED_THREAD_LOCK(__name,)
+
+#define DECLARE_LOCAL_THREAD_LOCK(__name) DECLARE_QUALIFIED_THREAD_LOCK(__name,static)
+#define DEFINE_LOCAL_THREAD_LOCK(__name) DEFINE_QUALIFIED_THREAD_LOCK(__name,static)
+
+
 // "irq" lock
 //
 // This lock should be safe from interrupt contextes,
@@ -104,5 +131,33 @@ irq_lock_release(irq_lock_t *lock)
     atomic_bool_clear(&lock->locked);
     enable_restore_irqs(irq_flags);
 }
+
+#define DECLARE_QUALIFIED_IRQ_LOCK(__name, __qual)\
+    __qual irq_lock_t __irq_lock_##__name;\
+    __qual void __name##_try_acquire(void);\
+    __qual void __name##_acquire(void);\
+    __qual void __name##_release(void);\
+
+
+#define DEFINE_QUALIFIED_IRQ_LOCK(__name, __qual)\
+    __qual irq_lock_t __lock_##__name = {\
+        .locked = 0,\
+        .irq_flags = 0,\
+    };\
+    __qual void __name##_try_acquire(void) {\
+        irq_lock_try_acquire(&__lock_##__name);\
+    }\
+    __qual void __name##_acquire(void) {\
+        irq_lock_acquire(&__lock_##__name);\
+    }\
+    __qual void __name##_release(void) {\
+        irq_lock_release(&__lock_##__name);\
+    }\
+
+#define DECLARE_GLOBAL_IRQ_LOCK(__name) DECLARE_QUALIFIED_IRQ_LOCK(__name,extern)
+#define DEFINE_GLOBAL_IRQ_LOCK(__name) DEFINE_QUALIFIED_IRQ_LOCK(__name,)
+
+#define DECLARE_LOCAL_IRQ_LOCK(__name) DECLARE_QUALIFIED_IRQ_LOCK(__name,static)
+#define DEFINE_LOCAL_IRQ_LOCK(__name) DEFINE_QUALIFIED_IRQ_LOCK(__name,static)
 
 #endif
