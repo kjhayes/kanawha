@@ -3,7 +3,7 @@
 #include <kanawha/fs/node.h>
 
 #include <kanawha/ptree.h>
-#include <kanawha/spinlock.h>
+#include <kanawha/lock.h>
 #include <kanawha/irq.h>
 #include <kanawha/kmalloc.h>
 #include <kanawha/slab.h>
@@ -26,8 +26,6 @@ static struct slab_allocator *klog_frame_slab_allocator = NULL;
 struct klog_frame
 {
     struct ptree_node tree_node;
-
-    spinlock_t lock;
 
     size_t total_len;
     size_t filled_len;
@@ -57,7 +55,6 @@ klog_frame_alloc(void)
     struct klog_frame *frame = slab_alloc(klog_frame_slab_allocator);
 
     memset(frame, 0, sizeof(struct klog_frame));
-    spinlock_init(&frame->lock);
 
     if(__klog_boot_frames_used < CONFIG_KLOG_BOOT_FRAMES) {
         frame->data = ((void*)__klog_boot_frames) + (CONFIG_KLOG_FRAMESIZE * __klog_boot_frames_used);

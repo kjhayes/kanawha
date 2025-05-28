@@ -139,14 +139,6 @@ config DEBUG_INIT_STAGES
     help
       Debug the init Stages Framework
 
-config DEBUG_SPINLOCK_TRACK_THREADS
-    bool "Spinlock Track Threads"
-    depends on DEBUGGING
-    default n
-    help
-      Have each spinlock track which thread is currently holding the lock
-      so trivial cases of deadlocks can be detected.
-
 config DEBUG_TRACK_PROCESS_EXEC
     bool "Track Process Exec Path"
     depends on DEBUGGING
