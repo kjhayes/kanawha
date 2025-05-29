@@ -51,6 +51,13 @@ config DEBUG_SYSCALL_MMAP
     help
       Log info about each mmap syscall
 
+config DEBUG_SYSCALL_REAP
+    bool "Debug reap"
+    depends on DEBUGGING
+    default n
+    help
+      Log info about each reap syscall
+
 config DEBUG_SYSCALL_CHWDIR
     bool "Debug chwdir"
     depends on DEBUGGING

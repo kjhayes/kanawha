@@ -5,15 +5,17 @@
 #include <kanawha/printk.h>
 #include <kanawha/stddef.h>
 #include <kanawha/percpu.h>
+#include <kanawha/lock.h>
 
-static DECLARE_SPINLOCK(system_cpus_lock);
 static struct cpu * system_cpus[CONFIG_MAX_CPUS] = { 0 };
 static size_t __num_cpus = 0;
+
+DEFINE_LOCAL_THREAD_LOCK(system_cpus_lock);
 
 int
 bsp_register_smp_cpu(struct cpu *cpu, int is_bsp)
 {
-    spin_lock(&system_cpus_lock);
+    system_cpus_lock_acquire();
     int found = 0;
 
     if(is_bsp) {
@@ -39,11 +41,11 @@ bsp_register_smp_cpu(struct cpu *cpu, int is_bsp)
 
     if(!found) {
         eprintk("Tried to register too many CPU(s)! (Try increasing the value of CONFIG_MAX_CPUS)\n");
-        spin_unlock(&system_cpus_lock);
+        system_cpus_lock_release();
         return -ENOMEM;
     }
     __num_cpus++;
-    spin_unlock(&system_cpus_lock);
+    system_cpus_lock_release();
 
 
     int res = init_cpu_percpu_data(cpu);
@@ -58,10 +60,10 @@ bsp_register_smp_cpu(struct cpu *cpu, int is_bsp)
 int
 unregister_smp_cpu(struct cpu *cpu)
 {
-    spin_lock(&system_cpus_lock);
+    system_cpus_lock_acquire();
     system_cpus[cpu->id] = NULL;
     __num_cpus--;
-    spin_unlock(&system_cpus_lock);
+    system_cpus_lock_acquire();
     return 0;
 }
 

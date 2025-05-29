@@ -2,6 +2,13 @@
 #include <kanawha/proc/process.h>
 #include <kanawha/uapi/syscall.h>
 
+#ifdef CONFIG_DEBUG_SYSCALL_REAP
+#define LOG(fmt, ...) \
+    printk("PID(%ld) syscall_reap: " fmt, process->id, ##__VA_ARGS__)
+#else
+#define LOG(...)
+#endif
+
 int
 syscall_reap(
         struct process *process,
@@ -11,9 +18,10 @@ syscall_reap(
 {
     int res;
 
-    dprintk("syscall_reap: PID(%lld)\n", to_reap_id);
 
     int nowait = (flags & REAP_NON_BLOCKING);
+
+    LOG("flags=0x%lx, nowait=%d\n", flags, nowait);
 
     pid_t to_reap_id;
 
@@ -36,11 +44,18 @@ syscall_reap(
         }
     }
 
+    LOG("reaping child pid=%ld\n", to_reap_id);
+
     int exitcode;
     res = process_reap_child(process, to_reap_id, &exitcode, nowait);
     if(res) {
+        LOG("failed to reap child! (err=%s)\n",
+                errnostr(res));
         return res;
     }
+
+    LOG("reaped child with exitcode=%d\n",
+            exitcode);
 
     res = process_write_usermem(
             process,
@@ -48,7 +63,8 @@ syscall_reap(
             &exitcode,
             sizeof(int));
     if(res) {
-        wprintk("sys_reap: Failed to copy process exitcode to userspace!\n");
+        LOG("failed to copy process exitcode to userspace! (err=%s)\n",
+                errnostr(res));
         // We did reap the process,
         // but the user passed us an invalid location to write,
         // so for now we'll consider that a success and still return zero

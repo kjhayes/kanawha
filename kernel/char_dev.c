@@ -2,8 +2,8 @@
 #include <kanawha/char_dev.h>
 #include <kanawha/string.h>
 #include <kanawha/kmalloc.h>
-#include <kanawha/spinlock.h>
 #include <kanawha/stddef.h>
+#include <kanawha/lock.h>
 #include <kanawha/fs/type.h>
 #include <kanawha/fs/mount.h>
 #include <kanawha/fs/node.h>
@@ -15,9 +15,9 @@
 #include <kanawha/assert.h>
 #include <kanawha/string.h>
 
-static DECLARE_SPINLOCK(char_dev_tree_lock);
 static size_t num_char_dev = 0;
 static DECLARE_STREE(char_dev_tree);
+DEFINE_LOCAL_THREAD_LOCK(char_dev_tree_lock);
 
 static struct vfs_mount *char_dev_fs_mount = NULL;
 static struct fs_node_ops char_dev_fs_node_ops;
@@ -31,11 +31,11 @@ register_char_dev(
 {
     int res;
 
-    spin_lock(&char_dev_tree_lock);
+    char_dev_tree_lock_acquire();
 
     struct stree_node *existing = stree_get(&char_dev_tree, name);
     if(existing != NULL) {
-        spin_unlock(&char_dev_tree_lock);
+        char_dev_tree_lock_release();
         return -EEXIST;
     }
 
@@ -57,14 +57,14 @@ register_char_dev(
                 name);
         if(res) {
             stree_remove(&char_dev_tree, name);
-            spin_unlock(&char_dev_tree_lock);
+            char_dev_tree_lock_release();
             return res;
         }
     }
 
     num_char_dev++;
 
-    spin_unlock(&char_dev_tree_lock);
+    char_dev_tree_lock_release();
     return 0;
 }
 
@@ -77,9 +77,9 @@ unregister_char_dev(struct char_dev *dev)
 struct char_dev *
 find_char_dev(const char *name)
 {
-    spin_lock(&char_dev_tree_lock);
+    char_dev_tree_lock_acquire();
     struct stree_node *node = stree_get(&char_dev_tree, name);
-    spin_unlock(&char_dev_tree_lock);
+    char_dev_tree_lock_release();
     if(node == NULL) {
         return NULL;
     }
@@ -224,7 +224,7 @@ char_dev_init_fs_mount(void)
         return -ENOMEM;
     }
 
-    spin_lock(&char_dev_tree_lock);
+    char_dev_tree_lock_acquire();
 
     char_dev_fs_mount = mnt;
 
@@ -237,11 +237,11 @@ char_dev_init_fs_mount(void)
                 &dev->vfs_node,
                 node->key);
         if(res) {
-            spin_unlock(&char_dev_tree_lock);
+            char_dev_tree_lock_release();
             return res;
         }
     }
-    spin_unlock(&char_dev_tree_lock);
+    char_dev_tree_lock_release();
 
     res = sysfs_register_mount(&char_dev_fs_mount->fs_mount, "chardev");
     if(res) {
@@ -255,7 +255,7 @@ declare_init_desc(fs, char_dev_init_fs_mount, "Registering chardev Sysfs Mount")
 static int
 char_dev_dump_list(void) {
     int res;
-    spin_lock(&char_dev_tree_lock);
+    char_dev_tree_lock_acquire();
     struct stree_node *snode;
     printk("chardev {\n");
     for(snode = stree_get_first(&char_dev_tree);
@@ -264,7 +264,7 @@ char_dev_dump_list(void) {
         printk("\t%s\n", snode->key);
     }
     printk("}\n");
-    spin_unlock(&char_dev_tree_lock);
+    char_dev_tree_lock_release();
     return 0;
 }
 declare_init(late, char_dev_dump_list);

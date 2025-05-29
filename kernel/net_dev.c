@@ -1,11 +1,11 @@
 
 #include <kanawha/net_dev.h>
 #include <kanawha/stree.h>
-#include <kanawha/spinlock.h>
+#include <kanawha/lock.h>
 #include <kanawha/stddef.h>
 
-static DECLARE_SPINLOCK(net_dev_lock);
 static DECLARE_STREE(net_dev_tree);
+DEFINE_LOCAL_THREAD_LOCK(net_dev_lock);
 
 int
 register_net_dev(
@@ -15,24 +15,24 @@ register_net_dev(
 {
     int res;
 
-    spin_lock(&net_dev_lock);
+    net_dev_lock_acquire();
 
     dev->driver = driver;
     dev->net_dev_node.key = name;
 
     struct stree_node *existing = stree_get(&net_dev_tree, name);
     if(existing != NULL) {
-        spin_unlock(&net_dev_lock);
+        net_dev_lock_release();
         return -ENXIO;
     }
 
     res = stree_insert(&net_dev_tree, &dev->net_dev_node);
     if(res) {
-        spin_unlock(&net_dev_lock);
+        net_dev_lock_release();
         return res;
     }
 
-    spin_unlock(&net_dev_lock);
+    net_dev_lock_release();
 
     struct eth_mac_addr addr;
     res = net_dev_eth_read_mac(dev, &addr);
@@ -50,9 +50,9 @@ register_net_dev(
 struct net_dev *
 net_dev_find(const char *name)
 {
-    spin_lock(&net_dev_lock);
+    net_dev_lock_acquire();
     struct stree_node *node = stree_get(&net_dev_tree, name);
-    spin_unlock(&net_dev_lock);
+    net_dev_lock_release();
     if(node == NULL) {
         return NULL;
     }

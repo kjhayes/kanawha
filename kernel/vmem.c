@@ -14,22 +14,23 @@
 #include <kanawha/proc/mmap.h>
 #include <kanawha/assert.h>
 #include <kanawha/irq.h>
+#include <kanawha/lock.h>
 #include <arch/x64/mmu.h>
 
-static DECLARE_SPINLOCK(vmem_map_slab_lock);
 #define VMEM_MAP_SLAB_BUFFER_SIZE 0x1000
 static uint8_t vmem_map_slab_buffer[VMEM_MAP_SLAB_BUFFER_SIZE];
 static struct slab_allocator *vmem_map_slab_allocator = NULL;
+DEFINE_LOCAL_THREAD_LOCK(vmem_map_slab_lock);
 
-static DECLARE_SPINLOCK(vmem_region_slab_lock);
 #define VMEM_REGION_SLAB_BUFFER_SIZE 0x1000
 static uint8_t vmem_region_slab_buffer[VMEM_REGION_SLAB_BUFFER_SIZE];
 static struct slab_allocator *vmem_region_slab_allocator = NULL;
+DEFINE_LOCAL_THREAD_LOCK(vmem_region_slab_lock);
 
-static DECLARE_SPINLOCK(vmem_region_ref_slab_lock);
 #define VMEM_REGION_REF_SLAB_BUFFER_SIZE 0x1000
 static uint8_t vmem_region_ref_slab_buffer[VMEM_REGION_REF_SLAB_BUFFER_SIZE];
 static struct slab_allocator *vmem_region_ref_slab_allocator = NULL;
+DEFINE_LOCAL_THREAD_LOCK(vmem_region_ref_slab_lock);
 
 static int
 init_vmem_mapping_allocators(void) 
@@ -71,7 +72,7 @@ declare_init_desc(static, init_vmem_mapping_allocators, "Initializing Virtual Me
 static struct vmem_region_ref *
 alloc_vmem_region_ref(void) 
 {
-    spin_lock(&vmem_region_ref_slab_lock);
+    vmem_region_ref_slab_lock_acquire();
     if(vmem_region_ref_slab_allocator == NULL) {
         return NULL;
     }
@@ -79,27 +80,29 @@ alloc_vmem_region_ref(void)
     dprintk("alloc_vmem_region_ref: num slab objs = 0x%llx\n", (ull_t)slab_objs_free(vmem_region_ref_slab_allocator));
     struct vmem_region_ref *ref = (struct vmem_region_ref*)slab_alloc(vmem_region_ref_slab_allocator);
     dprintk("alloc_vmem_region_ref = %p\n", ref);
-    spin_unlock(&vmem_region_ref_slab_lock);
+    vmem_region_ref_slab_lock_release();
     return ref;
 }
 
 static void
 free_vmem_region_ref(struct vmem_region_ref *ref) 
 {
+    vmem_region_ref_slab_lock_acquire();
     slab_free(vmem_region_ref_slab_allocator, ref);
+    vmem_region_ref_slab_lock_release();
 }
 
 struct vmem_map *
 vmem_map_create(void)
 {
     int res;
-    spin_lock(&vmem_map_slab_lock);
+    vmem_map_slab_lock_acquire();
     if(vmem_map_slab_allocator == NULL) {
         eprintk("Called vmem_map_create before vmem_map_slab_allocator has been initialized!\n");
         return NULL;
     }
     struct vmem_map *map = slab_alloc(vmem_map_slab_allocator);
-    spin_unlock(&vmem_map_slab_lock);
+    vmem_map_slab_lock_release();
     if(map == NULL) {
         eprintk("vmem_map_create: slab_alloc failed!\n");
         return map;
@@ -110,7 +113,9 @@ vmem_map_create(void)
 
     res = arch_vmem_map_init(map);
     if(res) {
+        vmem_map_slab_lock_acquire();
         slab_free(vmem_map_slab_allocator, map);
+        vmem_map_slab_lock_release();
         eprintk("arch_vmem_map_init failed! (err=%s)\n", errnostr(res));
         return NULL;
     }
@@ -152,9 +157,9 @@ vmem_region_create_direct(
         unsigned long flags)
 {
     int res;
-    spin_lock(&vmem_region_slab_lock);
+    vmem_region_slab_lock_acquire();
     struct vmem_region *region = slab_alloc(vmem_region_slab_allocator);
-    spin_unlock(&vmem_region_slab_lock);
+    vmem_region_slab_lock_release();
     if(region == NULL) {
         return NULL;
     }

@@ -7,8 +7,9 @@
 #include <kanawha/string.h>
 #include <kanawha/stddef.h>
 #include <kanawha/irq.h>
+#include <kanawha/lock.h>
 
-static DECLARE_SPINLOCK(timers_lock);
+DEFINE_LOCAL_IRQ_LOCK(timers_lock);
 static DECLARE_ILIST(available_timers);
 static DECLARE_ILIST(reserved_timers);
 
@@ -32,9 +33,9 @@ provide_timer(struct timer_dev *dev, size_t alarm)
     timer->dev = dev;
     timer->alarm = alarm;
 
-    int flags = spin_lock_irq_save(&timers_lock);
+    timers_lock_acquire();
     ilist_push_tail(&available_timers, &timer->list_node);
-    spin_unlock_irq_restore(&timers_lock, flags);
+    timers_lock_release();
     return 0;
 }
 
@@ -49,27 +50,27 @@ retract_timer(struct timer_dev *dev, size_t alarm)
 struct timer *
 reserve_timer(void)
 {
-    int flags = spin_lock_irq_save(&timers_lock);
+    timers_lock_acquire();
     ilist_node_t *node =
         ilist_pop_head(&available_timers);
     if(node == NULL) {
-        spin_unlock_irq_restore(&timers_lock, flags);
+        timers_lock_release();
         return NULL;
     }
     struct timer *timer =
         container_of(node, struct timer, list_node);
     ilist_push_tail(&reserved_timers, node);
-    spin_unlock_irq_restore(&timers_lock, flags);
+    timers_lock_release();
     return timer;
 }
 
 int
 return_timer(struct timer *timer)
 {
-    int flags = spin_lock_irq_save(&timers_lock);
+    timers_lock_release();
     ilist_remove(&reserved_timers, &timer->list_node);
     ilist_push_tail(&available_timers, &timer->list_node);
-    spin_unlock_irq_restore(&timers_lock, flags);
+    timers_lock_release();
     return 0;
 }
 

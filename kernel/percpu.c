@@ -11,12 +11,12 @@
 #include <kanawha/stddef.h>
 #include <kanawha/assert.h>
 #include <kanawha/thread.h>
-
-static DECLARE_SPINLOCK(percpu_heap_lock);
+#include <kanawha/lock.h>
 
 static size_t percpu_data_size = 0;
 static DECLARE_ILIST(percpu_heap_list);
 static DECLARE_ILIST(percpu_heap_free_list);
+DEFINE_LOCAL_THREAD_LOCK(percpu_heap_lock);
 
 #ifdef CONFIG_PERCPU_DEBUG_ASSERTIONS
 DECLARE_PERCPU_VAR(uint64_t, __percpu_assert_checksum);
@@ -238,16 +238,16 @@ init_cpu_percpu_data(struct cpu *cpu)
         return res;
     }
 
-    spin_lock(&percpu_heap_lock);
+    percpu_heap_lock_acquire();
 
     ilist_push_tail(&percpu_heap_list, &heap->list_node);
     res = percpu_heap_set_size(heap, percpu_data_size);
     if(res) {
-        spin_unlock(&percpu_heap_lock);
+        percpu_heap_lock_release();
         return res;
     }
 
-    spin_unlock(&percpu_heap_lock);
+    percpu_heap_lock_release();
 
 
     printk("Initialized CPU %d percpu Heap [%p - %p)\n",
@@ -317,7 +317,7 @@ int __percpu_grow_heaps(size_t size)
 void __percpu *
 percpu_alloc(size_t size)
 {
-    spin_lock(&percpu_heap_lock);
+    percpu_heap_lock_acquire();
 
     if(size < (1UL<<KMALLOC_ALIGN_ORDER)) {
         // Otherwise our heap free-list becomes way too fragmented
@@ -361,7 +361,7 @@ percpu_alloc(size_t size)
         // Grow the heap and try again
         int res = __percpu_grow_heaps(size < PERCPU_HEAP_MAX_GROW_STEP ? size : PERCPU_HEAP_MAX_GROW_STEP);
         if(res) {
-            spin_unlock(&percpu_heap_lock);
+            percpu_heap_lock_release();
             return PERCPU_NULL;
         }
         continue;
@@ -397,7 +397,7 @@ percpu_alloc(size_t size)
 
     }
 
-    spin_unlock(&percpu_heap_lock);
+    percpu_heap_lock_release();
 
     return ptr;
 }
@@ -487,13 +487,13 @@ __percpu_free(void __percpu *ptr, size_t size)
 void
 percpu_free(void __percpu *ptr, size_t size)
 {
-    spin_lock(&percpu_heap_lock);
+    percpu_heap_lock_acquire();
     int res = __percpu_free(ptr, size);
     if(res) {
         panic("__percpu_free failed! (err=%s)\n",
                 errnostr(res));
     }
-    spin_unlock(&percpu_heap_lock);
+    percpu_heap_lock_acquire();
 }
 
 void __percpu *
@@ -505,7 +505,7 @@ percpu_calloc(size_t size)
         return ptr;
     }
 
-    spin_lock(&percpu_heap_lock);
+    percpu_heap_lock_acquire();
     ilist_node_t *node;
     ilist_for_each(node, &percpu_heap_list) {
         struct percpu_heap *heap =
@@ -513,7 +513,7 @@ percpu_calloc(size_t size)
         void *ptr_spec = heap->vbase + (ptr - PERCPU_BASE);
         memset(ptr_spec, 0, size);
     }
-    spin_unlock(&percpu_heap_lock);
+    percpu_heap_lock_release();
 
     return ptr;
 }

@@ -4,14 +4,15 @@
 #include <kanawha/errno.h>
 #include <kanawha/string.h>
 #include <kanawha/init.h>
+#include <kanawha/lock.h>
 #include <kanawha/fs/mount.h>
 #include <kanawha/fs/node.h>
 #include <kanawha/fs/file.h>
 #include <kanawha/fs/sys/sysfs.h>
 #include <kanawha/fs/sys/vfs.h>
 
-static DECLARE_SPINLOCK(sysfs_lock);
 static DECLARE_ILIST(sysfs_temp_list);
+DEFINE_LOCAL_THREAD_LOCK(sysfs_lock);
 
 static struct vfs_mount *acpi_fs_mount = NULL;
 static struct fs_node_ops acpi_fs_node_ops;
@@ -150,14 +151,14 @@ acpi_sysfs_init_mount(void)
         return -ENOMEM;
     }
 
-    spin_lock(&sysfs_lock);
+    sysfs_lock_acquire();
     acpi_fs_mount = mnt;
     ilist_node_t *node;
     ilist_for_each(node, &sysfs_temp_list) {
         struct acpi_table *ptr = container_of(node, struct acpi_table, sysfs_temp_list_node);
         res = do_register_table(ptr);
         if(res) {
-            spin_unlock(&sysfs_lock);
+            sysfs_lock_release();
             return res;
         }
     }
@@ -169,7 +170,7 @@ acpi_sysfs_init_mount(void)
         return res;
     }
 
-    spin_unlock(&sysfs_lock);
+    sysfs_lock_release();
 
     return 0;
 }
@@ -181,15 +182,16 @@ acpi_sysfs_on_register_table(
 {
     int res;
 
-    spin_lock(&sysfs_lock);
+    sysfs_lock_acquire();
+
     if(acpi_fs_mount == NULL) {
         ilist_push_tail(&sysfs_temp_list, &table->sysfs_temp_list_node);
-        spin_unlock(&sysfs_lock);
+        sysfs_lock_release();
         return 0;
     }
 
     res = do_register_table(table);
-    spin_unlock(&sysfs_lock);
+    sysfs_lock_release();
     return res;
 }
 

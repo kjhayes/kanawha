@@ -5,18 +5,18 @@
 #include <kanawha/stddef.h>
 #include <kanawha/stree.h>
 #include <kanawha/ptree.h>
-#include <kanawha/spinlock.h>
 #include <kanawha/page_alloc.h>
 #include <kanawha/string.h>
+#include <kanawha/lock.h>
 #include <kanawha/fs/type.h>
 #include <kanawha/fs/mount.h>
 #include <kanawha/fs/node.h>
 #include <kanawha/fs/file.h>
 #include <kanawha/fs/sys/sysfs.h>
 
-static DECLARE_SPINLOCK(blk_dev_tree_lock);
 static size_t num_blk_dev = 0;
 static DECLARE_STREE(blk_dev_tree);
+DEFINE_LOCAL_THREAD_LOCK(blk_dev_tree_lock);
 
 static struct vfs_mount *blk_dev_fs_mount = NULL;
 static struct fs_node_ops blk_dev_fs_node_ops;
@@ -36,11 +36,11 @@ register_blk_dev(struct blk_dev *blk,
 {
     int res;
 
-    spin_lock(&blk_dev_tree_lock);
+    blk_dev_tree_lock_acquire();
 
     struct stree_node *existing = stree_get(&blk_dev_tree, name);
     if(existing != NULL) {
-        spin_unlock(&blk_dev_tree_lock);
+        blk_dev_tree_lock_release();
         return -EEXIST;
     }
 
@@ -74,14 +74,14 @@ register_blk_dev(struct blk_dev *blk,
                 name);
         if(res) {
             stree_remove(&blk_dev_tree, name);
-            spin_unlock(&blk_dev_tree_lock);
+            blk_dev_tree_lock_release();
             return res;
         }
     }
 
     num_blk_dev++;
 
-    spin_unlock(&blk_dev_tree_lock);
+    blk_dev_tree_lock_release();
 
     return 0;
 }
@@ -95,9 +95,9 @@ unregister_blk_dev(struct blk_dev *blk)
 struct blk_dev *
 blk_dev_find(const char *name)
 {
-    spin_lock(&blk_dev_tree_lock);
+    blk_dev_tree_lock_acquire();
     struct stree_node *node = stree_get(&blk_dev_tree, name);
-    spin_unlock(&blk_dev_tree_lock);
+    blk_dev_tree_lock_release();
     if(node == NULL) {
         return NULL;
     }
@@ -116,7 +116,7 @@ blk_dev_init_fs_mount(void)
         return -ENOMEM;
     }
 
-    spin_lock(&blk_dev_tree_lock);
+    blk_dev_tree_lock_acquire();
 
     blk_dev_fs_mount = mnt;
 
@@ -129,11 +129,11 @@ blk_dev_init_fs_mount(void)
                 &dev->vfs_node,
                 node->key);
         if(res) {
-            spin_unlock(&blk_dev_tree_lock);
+            blk_dev_tree_lock_release();
             return res;
         }
     }
-    spin_unlock(&blk_dev_tree_lock);
+    blk_dev_tree_lock_release();
 
     res = sysfs_register_mount(&blk_dev_fs_mount->fs_mount, "blkdev");
     if(res) {

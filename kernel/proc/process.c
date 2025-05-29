@@ -1081,6 +1081,12 @@ process_reap_child(
     struct process *process = __process_from_pid_lockless(child_id);
     if(process == NULL) {
         spin_unlock_irq_restore(&process_pid_lock, irq_flags);
+        return -ENXIO;
+    }
+
+    if(process->parent != parent) {
+        spin_unlock_irq_restore(&process_pid_lock, irq_flags);
+        return -ENXIO;
     }
 
     spin_lock(&parent->hierarchy_lock);
@@ -1115,10 +1121,6 @@ process_reap_child(
     spin_unlock_irq_restore(&process_pid_lock, irq_flags);
 
     return 0;
-
-err:
-    spin_unlock_irq_restore(&process->parent->hierarchy_lock, irq_flags);
-    return res;
 }
 
 struct process *

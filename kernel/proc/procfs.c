@@ -39,10 +39,7 @@ __procfs_read_user_id(
         void *state)
 {
     struct process *proc = state;
-    dprintk("__procfs_read_user_id(pid=%d, uid=%d)\n",
-            proc->id,
-            proc->user_id);
-    *out = proc->user_id;
+    *out = process_get_uid(proc);
     return 0;
 }
 
@@ -52,7 +49,19 @@ __procfs_read_group_id(
         void *state)
 {
     struct process *proc = state;
-    *out = proc->group_id;
+    *out = process_get_gid(proc);
+    return 0;
+}
+
+static int
+__procfs_read_parent_pid(
+        unsigned long *out,
+        void *state)
+{
+    struct process *proc = state;
+    pid_t parent_id;
+    process_get_parent_id(proc, &parent_id);
+    *out = parent_id;
     return 0;
 }
 
@@ -93,7 +102,16 @@ procfs_register_process(
         wprintk("Failed to register procfs \"gid\" node (err=%s)!\n",
                 errnostr(res));
     }
-
+    res = vfs_struct_node_add_unsigned_long_field(
+            data->vfs_struct_node,
+            "parent",
+            (void*)process,
+            __procfs_read_parent_pid,
+            NULL);
+    if(res) {
+        wprintk("Failed to register procfs \"parent\" node (err=%s)!\n",
+                errnostr(res));
+    }
 
     return 0;
 }

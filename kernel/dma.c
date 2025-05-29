@@ -5,9 +5,10 @@
 #include <kanawha/page_alloc.h>
 #include <kanawha/stddef.h>
 #include <kanawha/irq.h>
+#include <kanawha/lock.h>
 
 static DECLARE_ILIST(dma_region_list);
-static DECLARE_SPINLOCK(dma_region_list_lock);
+DEFINE_LOCAL_IRQ_LOCK(dma_region_list_lock);
 
 #define DMA_MIN_REGION_ORDER \
     (VMEM_MIN_PAGE_ORDER < PAGE_ALLOC_MIN_ORDER \
@@ -279,7 +280,7 @@ dma_alloc(
         return -EINVAL;
     }
 
-    int irq_flags = spin_lock_irq_save(&dma_region_list_lock);
+    dma_region_list_lock_acquire();
 
     ilist_node_t *node;
     ilist_for_each(node, &dma_region_list) {
@@ -320,7 +321,7 @@ dma_alloc(
         __add_dma_region(region_order, flags);
 
     if(region == NULL) {
-        spin_unlock_irq_restore(&dma_region_list_lock, irq_flags);
+        dma_region_list_lock_release();
         return -ENOMEM;
     }
 
@@ -331,7 +332,7 @@ dma_alloc(
             align_order,
             &phys_base);
     if(res) {
-        spin_unlock_irq_restore(&dma_region_list_lock, irq_flags);
+        dma_region_list_lock_release();
         return res;
     }
 
@@ -344,7 +345,7 @@ exit:
             dma_phys_addr(*dma_out),
             dma_phys_addr(*dma_out) + size);
 
-    spin_unlock_irq_restore(&dma_region_list_lock, irq_flags);
+    dma_region_list_lock_release();
     return 0;
 }
 
@@ -363,7 +364,7 @@ dma_free(
             dma_phys_addr(addr),
             dma_phys_addr(addr) + size);
 
-    int irq_flags = spin_lock_irq_save(&dma_region_list_lock);
+    dma_region_list_lock_acquire();
     ilist_for_each(iter, &dma_region_list)
     {
         struct dma_region *region =
@@ -372,14 +373,14 @@ dma_free(
         uintptr_t region_end = (uintptr_t)region_base + (1ULL<<region->order);
         if(region_base <= base && region_end >= end) {
             int res = __dma_region_free(region, phys_addr, size);
-            spin_unlock_irq_restore(&dma_region_list_lock, irq_flags);
+            dma_region_list_lock_release();
             if(res) {
                 return res;
             }
             return 0;
         }
     }
-    spin_unlock_irq_restore(&dma_region_list_lock, irq_flags);
+    dma_region_list_lock_release();;
 
     return -EINVAL;
 }
