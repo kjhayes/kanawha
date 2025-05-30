@@ -136,6 +136,17 @@ vfs_struct_node_add_unsigned_long_field(
         int(*write)(unsigned long in, void *state)
         );
 
+// If NULL is passed for read and/or write
+// trying to read or write will fail with "-EINVAL"
+int
+vfs_struct_node_add_buffer_field(
+        struct vfs_struct_node *node,
+        const char *name,
+        void *state,
+        ssize_t(*read)(size_t offset, char *buf_out, size_t len, void *state),
+        ssize_t(*write)(size_t offset, char *buf_in, size_t len, void *state)
+        );
+
 int
 vfs_struct_node_destroy_field(
         struct vfs_struct_node *node,

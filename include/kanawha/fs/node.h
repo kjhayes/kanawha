@@ -29,6 +29,9 @@ struct fs_node
     spinlock_t page_lock;
     struct ptree page_cache;
 
+    spinlock_t path_lock;
+    ilist_t path_list;
+
     // not a refcount_t because the mount cache_lock protects us
     int refcount;
     struct ptree_node cache_node;

@@ -65,6 +65,36 @@ __procfs_read_parent_pid(
     return 0;
 }
 
+#ifdef CONFIG_DEBUG_TRACK_PROCESS_EXEC
+static ssize_t
+__procfs_read_tracked_exec(
+        size_t offset,
+        char *buf,
+        size_t buflen,
+        void *state)
+{
+    struct process *proc = state;
+
+    const char *exec = proc->tracked_exec;
+    if(exec == NULL) {
+        exec = "";
+    }
+
+    size_t len = strlen(exec);
+    if(offset >= len) {
+        return 0;
+    }
+
+    strncpy(buf, exec+offset, buflen);
+
+    if((len-offset) < buflen) {
+        return len-offset;
+    } else {
+        return buflen;
+    }
+}
+#endif
+
 int
 procfs_register_process(
         struct process *process)
@@ -112,6 +142,19 @@ procfs_register_process(
         wprintk("Failed to register procfs \"parent\" node (err=%s)!\n",
                 errnostr(res));
     }
+
+#ifdef CONFIG_DEBUG_TRACK_PROCESS_EXEC
+    res = vfs_struct_node_add_buffer_field(
+            data->vfs_struct_node,
+            "exec",
+            (void*)process,
+            __procfs_read_tracked_exec,
+            NULL);
+    if(res) {
+        wprintk("Failed to register procfs \"exec\" node (err=%s)!\n",
+                errnostr(res));
+    }
+#endif
 
     return 0;
 }
