@@ -4,15 +4,15 @@
 #include <kanawha/string.h>
 #include <kanawha/list.h>
 #include <kanawha/irq.h>
-#include <kanawha/spinlock.h>
+#include <kanawha/lock.h>
 #include <kanawha/types.h>
 #include <kanawha/timer.h>
 #include <kanawha/timer_dev.h>
 #include <kanawha/stddef.h>
 
-static DECLARE_SPINLOCK(periodic_event_list_lock);
-static DECLARE_ILIST(periodic_event_list);
 static size_t num_enabled_periodic_events = 0;
+static DECLARE_ILIST(periodic_event_list);
+DEFINE_LOCAL_IRQ_LOCK(periodic_event_list_lock);
 
 static struct timer *periodic_timer = NULL;
 
@@ -32,7 +32,7 @@ struct periodic_event
 static void
 periodic_callback(void)
 {
-    spin_lock(&periodic_event_list_lock);
+    periodic_event_list_lock_acquire();
     ilist_node_t *node;
     ilist_for_each(node, &periodic_event_list) {
         struct periodic_event *event =
@@ -47,7 +47,7 @@ periodic_callback(void)
             event->current_period -= tick_length;
         }
     }
-    spin_unlock(&periodic_event_list_lock);
+    periodic_event_list_lock_release();
 }
 
 static int
@@ -87,18 +87,18 @@ enable_periodic_event(
         struct periodic_event *event)
 {
     int res;
-    int irq_flags = spin_lock_irq_save(&periodic_event_list_lock);
+    periodic_event_list_lock_acquire();
     ilist_push_tail(&periodic_event_list, &event->list_node);
     num_enabled_periodic_events++;
     if(num_enabled_periodic_events == 1) {
         // We need to kickstart the periodic timer
         res = periodic_kickstart_lockless();
         if(res) {
-            spin_unlock_irq_restore(&periodic_event_list_lock, irq_flags);
+            periodic_event_list_lock_release();
             return res;
         }
     }
-    spin_unlock_irq_restore(&periodic_event_list_lock, irq_flags);
+    periodic_event_list_lock_release();
     return 0;
 }
 
@@ -108,7 +108,7 @@ disable_periodic_event(
 {
     int res;
 
-    int irq_flags = spin_lock_irq_save(&periodic_event_list_lock);
+    periodic_event_list_lock_acquire();
     DEBUG_ASSERT(num_enabled_periodic_events > 0);
     num_enabled_periodic_events--;
 
@@ -118,11 +118,11 @@ disable_periodic_event(
         // Stop the periodic timer
         res = periodic_stop_lockless(); 
         if(res) {
-            spin_unlock_irq_restore(&periodic_event_list_lock, irq_flags);
+            periodic_event_list_lock_release();
             return res;
         }
     }
-    spin_unlock_irq_restore(&periodic_event_list_lock, irq_flags);
+    periodic_event_list_lock_release();
     return 0;
 }
 

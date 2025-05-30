@@ -6,13 +6,14 @@
 #include <kanawha/page_alloc.h>
 #include <kanawha/vmem.h>
 #include <kanawha/uapi/file.h>
+#include <kanawha/lock.h>
 #include <kanawha/spinlock.h>
 #include <kanawha/stree.h>
 #include <kanawha/init.h>
 #include <kanawha/string.h>
 #include <kanawha/parse.h>
 
-static DECLARE_SPINLOCK(fb_dev_tree_lock);
+DEFINE_LOCAL_THREAD_LOCK(fb_dev_tree_lock);
 static size_t num_fb_dev = 0;
 static DECLARE_STREE(fb_dev_tree);
 static struct vfs_mount *fb_dev_fs_mount = NULL;
@@ -679,11 +680,11 @@ register_fb_dev(
     int res;
     dprintk("Registering FB Dev %s\n",
             name);
-    spin_lock(&fb_dev_tree_lock);
+    fb_dev_tree_lock_acquire();
 
     struct stree_node *existing = stree_get(&fb_dev_tree, name);
     if(existing != NULL) {
-        spin_unlock(&fb_dev_tree_lock);
+        fb_dev_tree_lock_release();
         return -EEXIST;
     }
 
@@ -702,14 +703,14 @@ register_fb_dev(
         res = fb_dev_insert_vfs_nodes(dev);
         if(res) {
             stree_remove(&fb_dev_tree, dev->fb_dev_node.key);
-            spin_unlock(&fb_dev_tree_lock);
+            fb_dev_tree_lock_release();
             return res;
         }
     }
 
     num_fb_dev++;
 
-    spin_unlock(&fb_dev_tree_lock);
+    fb_dev_tree_lock_release();
     return 0;
 }
 
@@ -724,7 +725,7 @@ fb_dev_init_fs_mount(void)
         return -ENOMEM;
     }
 
-    spin_lock(&fb_dev_tree_lock);
+    fb_dev_tree_lock_acquire();
 
     fb_dev_fs_mount = mnt;
 
@@ -735,11 +736,11 @@ fb_dev_init_fs_mount(void)
             container_of(node, struct fb_dev, fb_dev_node);
         res = fb_dev_insert_vfs_nodes(dev);
         if(res) {
-            spin_unlock(&fb_dev_tree_lock);
+            fb_dev_tree_lock_release();
             return res;
         }
     }
-    spin_unlock(&fb_dev_tree_lock);
+    fb_dev_tree_lock_release();
 
     res = sysfs_register_mount(
             &fb_dev_fs_mount->fs_mount,

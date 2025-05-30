@@ -2,28 +2,28 @@
 #include <kanawha/symbol.h>
 #include <kanawha/module.h>
 #include <kanawha/init.h>
-#include <kanawha/spinlock.h>
+#include <kanawha/lock.h>
 #include <kanawha/stddef.h>
 
-static DECLARE_SPINLOCK(symbol_tree_lock);
 static DECLARE_STREE(symbol_tree);
+DEFINE_LOCAL_THREAD_LOCK(symbol_tree_lock);
 
 struct ksymbol*
 ksymbol_get(const char *symbol)
 {
     struct stree_node *node;
 
-    spin_lock(&symbol_tree_lock);
+    symbol_tree_lock_acquire();
     node = stree_get(&symbol_tree, symbol);
     if(node == NULL) {
-        spin_unlock(&symbol_tree_lock);
+        symbol_tree_lock_release();
         return NULL;
     }
     struct ksymbol *sym;
     sym = container_of(node, struct ksymbol, symbol_node);
 
     int refs = refcount_inc(&sym->mod->refcount);
-    spin_unlock(&symbol_tree_lock);
+    symbol_tree_lock_release();
 
     if(refs == 0) {
         // We couldn't get a reference to the symbol's
@@ -48,11 +48,11 @@ register_kernel_symbol(
 {
     dprintk("Trying to Register Kernel Symbol: \"%s\"\n",
             symbol->symbol);
-    spin_lock(&symbol_tree_lock);
+    symbol_tree_lock_acquire();
     symbol->mod = mod;
     symbol->symbol_node.key = symbol->symbol;
     int res = stree_insert(&symbol_tree, &symbol->symbol_node);
-    spin_unlock(&symbol_tree_lock);
+    symbol_tree_lock_release();
     return res;
 }
 
@@ -69,14 +69,14 @@ unregister_kernel_symbol(
     }
 
     int res = 0;
-    spin_lock(&symbol_tree_lock);
+    symbol_tree_lock_acquire();
     struct stree_node *removed
         = stree_remove(&symbol_tree, symbol->symbol_node.key);
     if(removed != &symbol->symbol_node) {
         stree_insert(&symbol_tree, removed);
         res = -EINVAL;
     }
-    spin_unlock(&symbol_tree_lock);
+    symbol_tree_lock_release();
     return res;
 }
 

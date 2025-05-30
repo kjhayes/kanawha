@@ -1,7 +1,7 @@
 
 #include <kanawha/printk.h>
 #include <kanawha/vmem.h>
-#include <kanawha/spinlock.h>
+#include <kanawha/lock.h>
 #include <kanawha/stree.h>
 #include <kanawha/string.h>
 #include <kanawha/slab.h>
@@ -24,7 +24,8 @@ struct acpi_xsdt {
     uint64_t table_ptrs[];
 } __attribute__((packed));
 
-static DECLARE_SPINLOCK(acpi_table_lock);
+DEFINE_LOCAL_THREAD_LOCK(acpi_table_lock);
+
 int found_global_xsdp = 0;
 int found_global_rsdp = 0;
 static struct acpi_xsdp global_xsdp = { 0 };
@@ -156,9 +157,9 @@ declare_init_desc(post_vmem, acpi_load_tables, "Loading ACPI Tables");
 int
 acpi_provide_rsdp(struct acpi_rsdp *rsdp)
 {
-    spin_lock(&acpi_table_lock);
+    acpi_table_lock_acquire();
     if(found_global_rsdp) {
-        spin_unlock(&acpi_table_lock);
+        acpi_table_lock_release();
         eprintk("ACPI provided with multiple RSDP!\n");
         return -EINVAL;
     }
@@ -168,16 +169,16 @@ acpi_provide_rsdp(struct acpi_rsdp *rsdp)
     global_rsdt = (void*)__va((void __phys *)(uintptr_t)rsdp->rsdt_ptr);
     printk("ACPI RSDT: %p\n", global_rsdt);
 
-    spin_unlock(&acpi_table_lock);
+    acpi_table_lock_release();
     return 0;
 }
 
 int
 acpi_provide_xsdp(struct acpi_xsdp *xsdp)
 {
-    spin_lock(&acpi_table_lock);
+    acpi_table_lock_acquire();
     if(found_global_xsdp) {
-        spin_unlock(&acpi_table_lock);
+        acpi_table_lock_release();
         eprintk("ACPI provided with multiple XSDP!\n");
         return -EINVAL;
     }
@@ -187,14 +188,14 @@ acpi_provide_xsdp(struct acpi_xsdp *xsdp)
     global_xsdt = (void*)__va((void __phys *)xsdp->xsdt_ptr);
     printk("ACPI XSDT: %p\n", global_xsdt);
 
-    spin_unlock(&acpi_table_lock);
+    acpi_table_lock_release();
     return 0;
 }
 
 struct acpi_table *
 acpi_find_table(const char *signature) {
     struct acpi_table *table;
-    spin_lock(&acpi_table_lock);
+    acpi_table_lock_acquire();
     struct stree_node *node;
     node = stree_get(&acpi_table_tree, signature);
     if(node == NULL) {
@@ -202,7 +203,7 @@ acpi_find_table(const char *signature) {
     } else {
         table = container_of(node, struct acpi_table, tree_node);
     }
-    spin_unlock(&acpi_table_lock);
+    acpi_table_lock_release();
     return table;
 }
 

@@ -14,8 +14,9 @@
 #include <kanawha/bitmap.h>
 #include <kanawha/spinlock.h>
 #include <kanawha/irq.h>
+#include <kanawha/lock.h>
 
-static DECLARE_SPINLOCK(kmalloc_lock);
+DEFINE_LOCAL_IRQ_LOCK(kmalloc_lock);
 
 #ifdef CONFIG_DEBUG_KMALLOC_BITMAP
 // One bit per byte in the kmalloc heap (Insanely wasteful)
@@ -77,13 +78,13 @@ void * kmalloc(size_t size)
 
     size_t req_size = size + bookkeeping_size;
 
-    int irq_flags = spin_lock_irq_save(&kmalloc_lock);
+    kmalloc_lock_acquire();
 
     DEBUG_ASSERT_MSG(kheap_validate(&kmalloc_heap) == 0, "Failed to validate kmalloc heap on entry to kmalloc!");
 
     void *alloc = kheap_alloc_specific(&kmalloc_heap, KMALLOC_ALIGN_ORDER, &req_size);
     if(alloc == NULL) {
-        spin_unlock_irq_restore(&kmalloc_lock, irq_flags);
+        kmalloc_lock_release();
         dprintk("kmalloc call to kmalloc_specific(%d, size=0x%lx) returned NULL\n",
                 KMALLOC_ALIGN_ORDER, size + bookkeeping_size);
         return alloc;
@@ -109,7 +110,7 @@ void * kmalloc(size_t size)
 #endif
 
     DEBUG_ASSERT_MSG(kheap_validate(&kmalloc_heap) == 0, "Failed to validate kmalloc heap on entry to kmalloc!");
-    spin_unlock_irq_restore(&kmalloc_lock, irq_flags);
+    kmalloc_lock_release();
 
     size_t *size_ptr = (size_t*)alloc;
     *size_ptr = req_size;
@@ -128,7 +129,7 @@ void kfree(void *addr)
         return;
     }
 
-    int irq_flags = spin_lock_irq_save(&kmalloc_lock);
+    kmalloc_lock_acquire();
 
     DEBUG_ASSERT_MSG(
             (uintptr_t)addr >= (uintptr_t)kmalloc_heap.vbase
@@ -159,7 +160,7 @@ void kfree(void *addr)
 #endif
 
     DEBUG_ASSERT_MSG(kheap_validate(&kmalloc_heap) == 0, "Failed to validate kmalloc heap on exit from kfree!");
-    spin_unlock_irq_restore(&kmalloc_lock, irq_flags);
+    kmalloc_lock_release();
 
     dprintk("kfree(%p)\n", addr);
 }

@@ -5,14 +5,15 @@
 #include <kanawha/stree.h>
 #include <kanawha/stddef.h>
 #include <kanawha/init.h>
+#include <kanawha/lock.h>
 #include <kanawha/kmalloc.h>
 #include <kanawha/fs/node.h>
 #include <kanawha/fs/file.h>
 #include <kanawha/fs/sys/sysfs.h>
 #include <kanawha/fs/sys/vfs.h>
 
-static DECLARE_SPINLOCK(kbd_tree_lock);
 static DECLARE_STREE(kbd_tree);
+DEFINE_LOCAL_THREAD_LOCK(kbd_tree_lock);
 
 static struct vfs_mount *kbd_fs_mount = NULL;
 static struct fs_node_ops kbd_fs_node_ops;
@@ -77,11 +78,11 @@ register_kbd(
 
     kbd->global_node.key = name;
 
-    spin_lock(&kbd_tree_lock);
+    kbd_tree_lock_acquire();
 
     res = stree_insert(&kbd_tree, &kbd->global_node);
     if(res) {
-        spin_unlock(&kbd_tree_lock);
+        kbd_tree_lock_release();
         return res;
     }
 
@@ -98,12 +99,12 @@ register_kbd(
                 name);
         if(res) {
             stree_remove(&kbd_tree, name);
-            spin_unlock(&kbd_tree_lock);
+            kbd_tree_lock_release();
             return res;
         }
     }
 
-    spin_unlock(&kbd_tree_lock);
+    kbd_tree_lock_release();
 
     return 0;
 }
@@ -205,7 +206,7 @@ kbd_init_fs_mount(void)
         return -ENOMEM;
     }
 
-    spin_lock(&kbd_tree_lock);
+    kbd_tree_lock_acquire();
 
     kbd_fs_mount = mnt;
 
@@ -218,11 +219,11 @@ kbd_init_fs_mount(void)
                 &kbd->vfs_node,
                 node->key);
         if(res) {
-            spin_unlock(&kbd_tree_lock);
+            kbd_tree_lock_release();
             return res;
         }
     }
-    spin_unlock(&kbd_tree_lock);
+    kbd_tree_lock_release();
 
     res = sysfs_register_mount(&kbd_fs_mount->fs_mount, "kbd");
     if(res) {

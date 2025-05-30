@@ -19,10 +19,11 @@
 #include <kanawha/bitmap.h>
 #include <kanawha/spinlock.h>
 #include <kanawha/irq.h>
+#include <kanawha/lock.h>
 
-static DECLARE_SPINLOCK(kmalloc_paged_lock);
 static struct vmem_region *kmalloc_paged_vmem_region = NULL;
 static void *kmalloc_paged_region_base = NULL;
+DEFINE_LOCAL_IRQ_LOCK(kmalloc_paged_lock);
 
 _Static_assert(VMEM_MIN_PAGE_ORDER < CONFIG_HEAP_SIZE_ORDER, "VMEM_MIN_PAGE_ORDER must be less than CONFIG_HEAP_SIZE_ORDER");
 
@@ -93,7 +94,7 @@ declare_init_desc(kmalloc, kmalloc_paged_init, "Initializing Kernel Heap");
 void * kmalloc(size_t size)
 {
     int res;
-    int irq_flags = spin_lock_irq_save(&kmalloc_paged_lock);
+    kmalloc_paged_lock_acquire();
 
     // Round up to nearest multiple of 16 bytes
     size += (1ULL<<4)-1;
@@ -111,7 +112,7 @@ void * kmalloc(size_t size)
             pages_needed);
     if(pageno >= KMALLOC_PAGED_NUM_PAGES) {
         // Out of Memory
-        spin_unlock_irq_restore(&kmalloc_paged_lock, irq_flags);
+        kmalloc_paged_lock_release();
         eprintk("Failed to find free region in kmalloc bitmap!\n");
         return NULL;
     }
@@ -132,7 +133,7 @@ void * kmalloc(size_t size)
                 &page,
                 0);
         if(res) {
-            spin_unlock_irq_restore(&kmalloc_paged_lock, irq_flags);
+            kmalloc_paged_lock_release();
             eprintk("Failed to allocate backing memory for kmalloc!\n");
             return NULL;
         }
@@ -144,7 +145,7 @@ void * kmalloc(size_t size)
                 1ULL<<VMEM_MIN_PAGE_ORDER,
                 VMEM_REGION_READ|VMEM_REGION_WRITE|VMEM_REGION_EXEC);
         if(res) {
-            spin_unlock_irq_restore(&kmalloc_paged_lock, irq_flags);
+            kmalloc_paged_lock_release();
             eprintk("Failed to map kmalloc backing page!\n");
             return NULL;
         }
@@ -153,7 +154,7 @@ void * kmalloc(size_t size)
     void *page_base = kmalloc_paged_region_base + offset;
     void *page_end = page_base + ((pages_needed-1) * (1ULL<<VMEM_MIN_PAGE_ORDER));
 
-    spin_unlock_irq_restore(&kmalloc_paged_lock, irq_flags);
+    kmalloc_paged_lock_release();
     return page_end - size;
 }
 

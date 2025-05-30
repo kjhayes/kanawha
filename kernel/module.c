@@ -4,6 +4,7 @@
 #include <kanawha/stddef.h>
 #include <kanawha/stree.h>
 #include <kanawha/spinlock.h>
+#include <kanawha/lock.h>
 #include <kanawha/init.h>
 #include <kanawha/printk.h>
 #include <kanawha/symbol.h>
@@ -19,7 +20,7 @@
 #include <elf/reloc.h>
 #include <elf/elf_string.h>
 
-static DECLARE_SPINLOCK(module_tree_lock);
+DEFINE_LOCAL_THREAD_LOCK(module_tree_lock);
 static DECLARE_STREE(module_tree);
 static struct module __core_kernel_module;
 
@@ -54,7 +55,7 @@ __init_module(struct module *module,
     refcount_init(&module->refcount);
     spinlock_init(&module->lock);
 
-    spin_lock(&module_tree_lock);
+    module_tree_lock_acquire();
     {
         struct stree_node *node;
         for(node = stree_get_first(&module_tree); node != NULL; node = stree_get_next(node))
@@ -69,7 +70,7 @@ __init_module(struct module *module,
     } else {
         res = -EEXIST;
     }
-    spin_unlock(&module_tree_lock);
+    module_tree_lock_release();
 
     ptree_init(&module->dependency_tree);
 
@@ -183,9 +184,9 @@ module_get(const char *name)
     struct module *mod;
     struct stree_node *node;
 
-    spin_lock(&module_tree_lock);
+    module_tree_lock_acquire();
     node = stree_get(&module_tree, name);
-    spin_unlock(&module_tree_lock);
+    module_tree_lock_release();
 
     if(node == NULL) {
         wprintk("Tried to get module which does not exist: \"%s\"\n",
@@ -836,9 +837,9 @@ unload_module(struct module *mod)
         return -EBUSY;
     }
 
-    spin_lock(&module_tree_lock);
+    module_tree_lock_acquire();
     stree_remove(&module_tree, mod->name);
-    spin_unlock(&module_tree_lock);
+    module_tree_lock_release();
 
     // Decrement dependencies to other modules
     struct ptree_node *pnode;

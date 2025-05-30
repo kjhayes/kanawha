@@ -1,18 +1,18 @@
 
 #include <kanawha/scheduler.h>
-#include <kanawha/spinlock.h>
 #include <kanawha/stree.h>
 #include <kanawha/irq.h>
 #include <kanawha/stddef.h>
 #include <kanawha/percpu.h>
 #include <kanawha/string.h>
 #include <kanawha/init.h>
+#include <kanawha/lock.h>
 
-static DECLARE_SPINLOCK(sched_type_tree_lock);
 static DECLARE_STREE(sched_type_tree);
+DEFINE_LOCAL_THREAD_LOCK(sched_type_tree_lock);
 
-static DECLARE_SPINLOCK(sched_instance_list_lock);
 static DECLARE_ILIST(sched_instance_list);
+DEFINE_LOCAL_THREAD_LOCK(sched_instance_list_lock);
 
 DECLARE_STATIC_PERCPU_VAR(struct scheduler *, current_scheduler);
 
@@ -22,10 +22,10 @@ register_scheduler_type(
 {
     printk("Registering Scheduler Type: \"%s\"\n", type->name);
 
-    spin_lock(&sched_type_tree_lock);
+    sched_type_tree_lock_acquire();
     struct stree_node *node = stree_get(&sched_type_tree, type->name);
     if(node != NULL) {
-        spin_unlock(&sched_type_tree_lock);
+        sched_type_tree_lock_release();
         eprintk("Scheduler with name \"%s\" has already been registered!\n");
         return -EEXIST;
     }
@@ -35,7 +35,7 @@ register_scheduler_type(
 
     ilist_init(&type->instance_list);
 
-    spin_unlock(&sched_type_tree_lock);
+    sched_type_tree_lock_release();
 
     return 0;
 }
@@ -44,15 +44,15 @@ struct scheduler *
 create_scheduler(const char *type_name, const char *sched_name)
 {
     struct scheduler_type *type;
-    spin_lock(&sched_type_tree_lock);
+    sched_type_tree_lock_acquire();
     struct stree_node *type_node = stree_get(&sched_type_tree, type_name);
     if(type_node == NULL) {
-        spin_unlock(&sched_type_tree_lock);
+        sched_type_tree_lock_release();
         return NULL;
     }
     type = container_of(
             type_node, struct scheduler_type, tree_node);
-    spin_unlock(&sched_type_tree_lock);
+    sched_type_tree_lock_release();
 
     struct scheduler *sched = scheduler_type_alloc_instance(type);
     if(sched == NULL) {
@@ -67,9 +67,9 @@ create_scheduler(const char *type_name, const char *sched_name)
     }
     spinlock_init(&sched->lock);
 
-    spin_lock(&sched_instance_list_lock);
+    sched_instance_list_lock_acquire();
     ilist_push_tail(&sched_instance_list, &sched->instance_list_node);
-    spin_unlock(&sched_instance_list_lock);
+    sched_instance_list_lock_release();
 
     return sched;
 }
@@ -173,7 +173,7 @@ int sched_debug_dump_no_info(
 
 void
 dump_schedulers(printk_f *printer) {
-    spin_lock(&sched_instance_list_lock);
+    sched_instance_list_lock_acquire();
     ilist_node_t *node;
     (*printer)("--- Scheduler Instances ---\n");
     ilist_for_each(node, &sched_instance_list) {
@@ -185,6 +185,6 @@ dump_schedulers(printk_f *printer) {
                 );
         scheduler_debug_dump(sched, printer);
     }
-    spin_unlock(&sched_instance_list_lock);
+    sched_instance_list_lock_release();
 }
 

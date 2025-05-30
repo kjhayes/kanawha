@@ -5,6 +5,7 @@
 #include <kanawha/ptree.h>
 #include <kanawha/types.h>
 #include <kanawha/spinlock.h>
+#include <kanawha/lock.h>
 #include <kanawha/proc/process.h>
 #include <kanawha/uapi/poll.h>
 #include <kanawha/usermode.h>
@@ -26,9 +27,6 @@
  */
 
 #define DEFAULT_PIPE_BUFSIZE PAGE_SIZE_4KB
-
-static DECLARE_SPINLOCK(pipe_tree_lock);
-static DECLARE_PTREE(pipe_tree);
 
 static struct fs_node_ops
 pipe_fs_node_ops =
@@ -331,16 +329,16 @@ declare_init_desc(fs, pipefs_init, "Creating PipeFS");
 
 // This is awful and I hate it but assume we will never overflow
 // 2^64 pipes between reboots.
-static DECLARE_SPINLOCK(next_pipe_index_lock);
 static uint64_t next_pipe_index = 0;
+DEFINE_LOCAL_THREAD_LOCK(next_pipe_index_lock);
 
 struct fs_node *
 pipe_fs_get_anon_pipe(void)
 {
-    spin_lock(&next_pipe_index_lock);
+    next_pipe_index_lock_acquire();
     uint64_t index = next_pipe_index;
     next_pipe_index++;
-    spin_unlock(&next_pipe_index_lock);
+    next_pipe_index_lock_release();
 
     return fs_mount_get_node(
             &pipe_fs_mount,

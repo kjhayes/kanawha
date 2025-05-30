@@ -5,7 +5,7 @@
 #include <kanawha/types.h>
 #include <kanawha/export.h>
 #include <kanawha/errno.h>
-#include <kanawha/spinlock.h>
+#include <kanawha/lock.h>
 #include <kanawha/string.h>
 #include <kanawha/thread.h>
 #include <kanawha/attribute.h>
@@ -13,7 +13,7 @@
 #include <kanawha/klog.h>
 #include <kanawha/irq.h>
 
-static DECLARE_SPINLOCK(printk_lock);
+DEFINE_LOCAL_IRQ_LOCK(printk_lock);
 
 struct vprintk_state {
     // Inputs
@@ -50,9 +50,9 @@ int do_printk(const char *fmt, ...)
     va_list args;
     va_start(args, fmt);
 
-    int irq_state = spin_lock_irq_save(&printk_lock);
+    printk_lock_acquire();
     res = vprintk(&printk_state, fmt, &args);
-    spin_unlock_irq_restore(&printk_lock, irq_state);
+    printk_lock_release();
 
     va_end(args);
     return res;
@@ -62,9 +62,9 @@ int do_vprintk(const char *fmt, va_list args)
 {
     int res;
 
-    int irq_state = spin_lock_irq_save(&printk_lock);
+    printk_lock_acquire();
     res = vprintk(&printk_state, fmt, (va_list*)&args);
-    spin_unlock_irq_restore(&printk_lock, irq_state);
+    printk_lock_release();
 
     return res;
 }

@@ -4,10 +4,11 @@
 #include <kanawha/fs/sys/vfs.h>
 #include <kanawha/fs/sys/sysfs.h>
 #include <kanawha/init.h>
+#include <kanawha/lock.h>
 
-static DECLARE_SPINLOCK(rand_dev_tree_lock);
 static size_t num_rand_dev = 0;
 static DECLARE_STREE(rand_dev_tree);
+DEFINE_LOCAL_THREAD_LOCK(rand_dev_tree_lock);
 static struct vfs_mount *rand_dev_fs_mount = NULL;
 
 static ssize_t 
@@ -114,11 +115,11 @@ register_rand_dev(
     int res;
     dprintk("Registering FB Dev %s\n",
             name);
-    spin_lock(&rand_dev_tree_lock);
+    rand_dev_tree_lock_acquire();
 
     struct stree_node *existing = stree_get(&rand_dev_tree, name);
     if(existing != NULL) {
-        spin_unlock(&rand_dev_tree_lock);
+        rand_dev_tree_lock_release();
         return -EEXIST;
     }
 
@@ -132,14 +133,14 @@ register_rand_dev(
         res = rand_dev_insert_vfs_nodes(dev);
         if(res) {
             stree_remove(&rand_dev_tree, dev->rand_dev_node.key);
-            spin_unlock(&rand_dev_tree_lock);
+            rand_dev_tree_lock_release();
             return res;
         }
     }
 
     num_rand_dev++;
 
-    spin_unlock(&rand_dev_tree_lock);
+    rand_dev_tree_lock_release();
     return 0;
 }
 
@@ -161,7 +162,7 @@ rand_dev_init_fs_mount(void)
         return -ENOMEM;
     }
 
-    spin_lock(&rand_dev_tree_lock);
+    rand_dev_tree_lock_acquire();
 
     rand_dev_fs_mount = mnt;
 
@@ -172,11 +173,11 @@ rand_dev_init_fs_mount(void)
             container_of(node, struct rand_dev, rand_dev_node);
         res = rand_dev_insert_vfs_nodes(dev);
         if(res) {
-            spin_unlock(&rand_dev_tree_lock);
+            rand_dev_tree_lock_release();
             return res;
         }
     }
-    spin_unlock(&rand_dev_tree_lock);
+    rand_dev_tree_lock_release();
 
     res = sysfs_register_mount(
             &rand_dev_fs_mount->fs_mount,
