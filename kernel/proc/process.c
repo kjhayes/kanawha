@@ -14,13 +14,14 @@
 #include <kanawha/fs/mount.h>
 #include <kanawha/stddef.h>
 #include <kanawha/timer.h>
+#include <kanawha/lock.h>
 #include <kanawha/fs/sys/sysfs.h>
 #include <kanawha/assert.h>
 #include <kanawha/proc/mmap.h>
 #include <kanawha/uapi/spawn.h>
 
-static DECLARE_SPINLOCK(process_pid_lock);
 static DECLARE_PTREE(process_pid_tree);
+DEFINE_LOCAL_IRQ_LOCK(process_pid_lock);
 
 static struct process *init_process = NULL;
 
@@ -65,7 +66,7 @@ dump_process(
 
 void
 dump_processes(printk_f *printer) {
-    spin_lock(&process_pid_lock);
+    process_pid_lock_acquire();
     struct ptree_node *node;
     node = ptree_get_first(&process_pid_tree);
     (*printer)("--- Process Table ---\n");
@@ -74,7 +75,7 @@ dump_processes(printk_f *printer) {
         dump_process(printer, proc);
         node = ptree_get_next(node);
     }
-    spin_unlock(&process_pid_lock);
+    process_pid_lock_acquire();
 }
 
 static inline struct process *
@@ -95,14 +96,14 @@ __process_from_pid_lockless(pid_t id)
 int
 process_exists(pid_t id)
 {
-    int irq_flags = spin_lock_irq_save(&process_pid_lock);
+    process_pid_lock_acquire();
     struct ptree_node *node =
         ptree_get(&process_pid_tree, id);
     if(node == NULL) {
-        spin_unlock_irq_restore(&process_pid_lock, irq_flags);
+        process_pid_lock_release();
         return 0;
     }
-    spin_unlock_irq_restore(&process_pid_lock, irq_flags);
+    process_pid_lock_release();
     return 1;
 }
 
@@ -111,12 +112,12 @@ process_id_to_user_id(
         pid_t id,
         uid_t *uid)
 {
-    int irq_flags = spin_lock_irq_save(&process_pid_lock);
+    process_pid_lock_acquire();
 
     struct ptree_node *node =
         ptree_get(&process_pid_tree, id);
     if(node == NULL) {
-        spin_unlock_irq_restore(&process_pid_lock, irq_flags);
+        process_pid_lock_release();
         return -ENXIO;
     }
 
@@ -127,7 +128,7 @@ process_id_to_user_id(
 
     *uid = proc->user_id;
 
-    spin_unlock_irq_restore(&process_pid_lock, irq_flags);
+    process_pid_lock_release();
 
     return 0;
 }
@@ -137,12 +138,12 @@ process_id_to_group_id(
         pid_t id,
         uid_t *gid)
 {
-    int irq_flags = spin_lock_irq_save(&process_pid_lock);
+    process_pid_lock_acquire();
 
     struct ptree_node *node =
         ptree_get(&process_pid_tree, id);
     if(node == NULL) {
-        spin_unlock_irq_restore(&process_pid_lock, irq_flags);
+        process_pid_lock_release();
         return -ENXIO;
     }
 
@@ -153,7 +154,7 @@ process_id_to_group_id(
 
     *gid = proc->group_id;
 
-    spin_unlock_irq_restore(&process_pid_lock, irq_flags);
+    process_pid_lock_release();
 
     return 0;
 }
@@ -184,18 +185,18 @@ static int
 process_assign_pid(
         struct process *process)
 {
-    int irq_flags = spin_lock_irq_save(&process_pid_lock);
+    process_pid_lock_acquire();
 
     int res;
     res = ptree_insert_any(&process_pid_tree, &process->pid_node);
     if(res) {
-        spin_unlock_irq_restore(&process_pid_lock, irq_flags);
+        process_pid_lock_release();
         return res;
     }
 
     process->id = process->pid_node.key;
 
-    spin_unlock_irq_restore(&process_pid_lock, irq_flags);
+    process_pid_lock_release();
     return 0;
 }
 
@@ -214,9 +215,9 @@ __process_remove_pid(
         struct process *process)
 {
     int res;
-    int irq_flags = spin_lock_irq_save(&process_pid_lock);
+    process_pid_lock_acquire();
     res = __process_remove_pid_lockless(process);
-    spin_unlock_irq_restore(&process_pid_lock, irq_flags);
+    process_pid_lock_release();
     return res;
 
 }
@@ -1022,9 +1023,9 @@ process_terminate(
                     errnostr(res));
         }
         // This will remove the process from our list of children and deallocate the PID
-        int irq_flags = spin_lock_irq_save(&process_pid_lock);
+        process_pid_lock_acquire();
         res = __process_reap_parent_lock(child);
-        spin_unlock_irq_restore(&process_pid_lock, irq_flags);
+        process_pid_lock_release();
         if(res) {
             eprintk("Failed to reap child process_during process_terminate! (err=%s)\n",
                     errnostr(res));
@@ -1076,16 +1077,16 @@ process_reap_child(
 
     DEBUG_ASSERT(KERNEL_ADDR(parent));
 
-    int irq_flags = spin_lock_irq_save(&process_pid_lock);
+    process_pid_lock_acquire();
 
     struct process *process = __process_from_pid_lockless(child_id);
     if(process == NULL) {
-        spin_unlock_irq_restore(&process_pid_lock, irq_flags);
+        process_pid_lock_release();
         return -ENXIO;
     }
 
     if(process->parent != parent) {
-        spin_unlock_irq_restore(&process_pid_lock, irq_flags);
+        process_pid_lock_release();
         return -ENXIO;
     }
 
@@ -1094,13 +1095,13 @@ process_reap_child(
     while(process->status != PROCESS_STATUS_ZOMBIE) {
         if(nowait) {
             spin_unlock(&parent->hierarchy_lock);
-            spin_unlock_irq_restore(&process_pid_lock, irq_flags);
+            process_pid_lock_release();
             return -EWOULDBLOCK;
         } else {
             spin_unlock(&process->parent->hierarchy_lock);
-            spin_unlock_irq_restore(&process_pid_lock, irq_flags);
+            process_pid_lock_release();
             wait_on(&process->wait_queue);
-            irq_flags = spin_lock_irq_save(&process_pid_lock);
+            process_pid_lock_acquire();
             spin_lock(&process->parent->hierarchy_lock);
         }
     }
@@ -1112,13 +1113,13 @@ process_reap_child(
     res = __process_reap_parent_lock(process);
     if(res) {
         spin_unlock(&parent->hierarchy_lock);
-        spin_unlock_irq_restore(&process_pid_lock, irq_flags);
+        process_pid_lock_release();
         wprintk("Leaving process in invalid state after attempted reap failed!\n");
         return res;
     }
 
     spin_unlock(&parent->hierarchy_lock);
-    spin_unlock_irq_restore(&process_pid_lock, irq_flags);
+    process_pid_lock_release();
 
     return 0;
 }
@@ -1293,12 +1294,12 @@ process_send_signal(
 {
     int res;
 
-    int irq_flags = spin_lock_irq_save(&process_pid_lock);
+    process_pid_lock_acquire();
 
     struct ptree_node *node =
         ptree_get(&process_pid_tree, id);
     if(node == NULL) {
-        spin_unlock_irq_restore(&process_pid_lock, irq_flags);
+        process_pid_lock_release();
         return -ENXIO;
     }
 
@@ -1309,11 +1310,11 @@ process_send_signal(
 
     res = signal_deliver(proc, id, flags);
     if(res) {
-        spin_unlock_irq_restore(&process_pid_lock, irq_flags);
+        process_pid_lock_release();
         return res;
     }
 
-    spin_unlock_irq_restore(&process_pid_lock, irq_flags);
+    process_pid_lock_release();
 
     return 0;
 }

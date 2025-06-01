@@ -7,6 +7,7 @@
 
 #include <kanawha/percpu.h>
 #include <kanawha/init.h>
+#include <kanawha/lock.h>
 #include <kanawha/kmalloc.h>
 #include <kanawha/string.h>
 #include <kanawha/irq.h>
@@ -21,7 +22,7 @@
 
 DECLARE_PERCPU_VAR(struct irq_domain *, riscv64_hlic_irq_domain);
 
-static DECLARE_SPINLOCK(riscv64_percpu_hlic_actions_lock);
+DEFINE_LOCAL_THREAD_LOCK(riscv64_percpu_hlic_actions_lock);
 static struct irq_action *
 riscv64_percpu_hlic_actions[RISCV64_INTERRUPT_IRQ_DOMAIN_SIZE] = { 0 };
 
@@ -205,7 +206,7 @@ riscv64_setup_cpu_hlic(
     *(struct irq_domain**)percpu_ptr_specific(percpu_addr(riscv64_hlic_irq_domain), cpu->cpu.id) = hlic_domain;
 
 
-    spin_lock(&riscv64_percpu_hlic_actions_lock);
+    riscv64_percpu_hlic_actions_lock_acquire();
     for(size_t i = 0; i < RISCV64_INTERRUPT_IRQ_DOMAIN_SIZE; i++)
     {    
         irq_t hlic_irq = irq_domain_revmap(hlic_domain, i);
@@ -244,11 +245,11 @@ riscv64_setup_cpu_hlic(
         if(res) {
             eprintk("Failed to create percpu link from RISCV IRQ to HLIC IRQ on CPU %lu\n",
                     (ul_t)cpu->cpu.id);
-            spin_unlock(&riscv64_percpu_hlic_actions_lock);
+            riscv64_percpu_hlic_actions_lock_release();
             return res;
         }
     }
-    spin_unlock(&riscv64_percpu_hlic_actions_lock);
+    riscv64_percpu_hlic_actions_lock_release();
 
     res = dt_driver_claim_node(&riscv64_dt_hlic_driver, hlic_node);
     if(res) {

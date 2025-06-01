@@ -3,11 +3,11 @@
 #include <arch/x64/lapic.h>
 #include <arch/x64/apic_timer.h>
 #include <kanawha/stddef.h>
-#include <kanawha/spinlock.h>
+#include <kanawha/lock.h>
 #include <kanawha/ptree.h>
 
 static DECLARE_PTREE(apic_tree);
-static DECLARE_SPINLOCK(apic_tree_lock);
+DEFINE_LOCAL_THREAD_LOCK(apic_tree_lock);
 
 int
 x64_bsp_register_smp_cpu(
@@ -17,12 +17,12 @@ x64_bsp_register_smp_cpu(
 {
     int res;
 
-    spin_lock(&apic_tree_lock);
+    apic_tree_lock_acquire();
 
     struct ptree_node *node;
     node = ptree_get(&apic_tree, (uintptr_t)apic_id);
     if(node) {
-        spin_unlock(&apic_tree_lock);
+        apic_tree_lock_release();
         eprintk("Tried to register CPU with APICID=0x%lx multiple times!\n",
                 (unsigned long)apic_id);
         return -EEXIST;
@@ -39,13 +39,13 @@ x64_bsp_register_smp_cpu(
 
     res = bsp_register_smp_cpu(&cpu->cpu, is_bsp);
     if(res) {
-        spin_unlock(&apic_tree_lock);
+        apic_tree_lock_release();
         return res;
     }
 
     res = bsp_register_cpu_lapic(cpu);
     if(res) {
-        spin_unlock(&apic_tree_lock);
+        apic_tree_lock_release();
         return res;
     }
 
@@ -53,7 +53,7 @@ x64_bsp_register_smp_cpu(
 
     ptree_insert(&apic_tree, &cpu->apic_tree_node, (uintptr_t)apic_id);
 
-    spin_unlock(&apic_tree_lock);
+    apic_tree_lock_release();
 
     printk("Registered CPU %ld with APIC ID 0x%lx\n",
             (long)cpu->cpu.id, (unsigned long)cpu->apic.id);
@@ -78,9 +78,9 @@ cpu_from_apic_id(apic_id_t id)
 {
     struct ptree_node *node;
 
-    spin_lock(&apic_tree_lock);
+    apic_tree_lock_acquire();
     node = ptree_get(&apic_tree, (uintptr_t)id);
-    spin_unlock(&apic_tree_lock);
+    apic_tree_lock_release();
 
     if(node == NULL) {
         return NULL;

@@ -4,8 +4,7 @@
 #include <kanawha/init.h>
 #include <kanawha/proc/process.h>
 #include <kanawha/string.h>
-
-static DECLARE_SPINLOCK(procfs_lock);
+#include <kanawha/lock.h>
 
 static struct vfs_mount *procfs_mount = NULL;
 

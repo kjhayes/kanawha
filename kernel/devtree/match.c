@@ -5,19 +5,16 @@
 #include <devtree/flat.h>
 #include <kanawha/list.h>
 #include <kanawha/spinlock.h>
+#include <kanawha/lock.h>
 #include <kanawha/string.h>
 
 // Driver/Node Matching
-static DECLARE_SPINLOCK(devtree_match_lock);
+DEFINE_LOCAL_THREAD_LOCK(devtree_match_lock);
 static DECLARE_ILIST(dt_driver_list);
 static DECLARE_ILIST(devtree_node_list);
-#define MATCH_LOCK()\
+#define devtree_match_lock_release()\
     do {\
-        spin_lock(&devtree_match_lock);\
-    } while(0)
-#define MATCH_UNLOCK()\
-    do {\
-        spin_unlock(&devtree_match_lock);\
+        devtree_match_lock_release();\
     } while(0)
 
 // Returns 0 if the id matches the node
@@ -138,7 +135,7 @@ register_dt_driver(
         return res;
     }
 
-    MATCH_LOCK();
+    devtree_match_lock_acquire();
 
     ilist_push_tail(&dt_driver_list, &driver->global_node);
 
@@ -159,7 +156,7 @@ register_dt_driver(
         node->flags |= DT_NODE_FLAG_MATCHED;
     }
 
-    MATCH_UNLOCK();
+    devtree_match_lock_release();
 
     return 0;
 }
@@ -182,7 +179,7 @@ register_dt_node(
 {
     int res;
 
-    MATCH_LOCK();
+    devtree_match_lock_acquire();
     ilist_push_tail(&devtree_node_list, &node->global_node);
 
     ilist_node_t *list_node;
@@ -198,7 +195,7 @@ register_dt_node(
         }
     }
 
-    MATCH_UNLOCK();
+    devtree_match_lock_release();
     return 0;
 }
 
@@ -239,7 +236,6 @@ dt_driver_claim_node(
     int res;
 
     if((node->flags & DT_NODE_FLAG_MATCHED) || node->driver) {
-        MATCH_UNLOCK();
         return -EALREADY;
     }
     node->driver = driver;

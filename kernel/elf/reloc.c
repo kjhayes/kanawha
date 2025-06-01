@@ -5,18 +5,19 @@
 #include <elf/elf_string.h>
 #include <kanawha/init.h>
 #include <kanawha/stddef.h>
+#include <kanawha/lock.h>
 
-static DECLARE_SPINLOCK(reloc_tree_lock);
 static DECLARE_PTREE(reloc_tree);
+DEFINE_LOCAL_THREAD_LOCK(reloc_tree_lock);
 
 int
 elf64_register_machine_reloc(
         struct elf64_machine_reloc *reloc)
 {
     uintptr_t machine_ptr = reloc->machine;
-    spin_lock(&reloc_tree_lock);
+    reloc_tree_lock_acquire();
     int res = ptree_insert(&reloc_tree, &reloc->tree_node, machine_ptr);
-    spin_unlock(&reloc_tree_lock);
+    reloc_tree_lock_release();
     return res;
 }
 
@@ -33,9 +34,9 @@ elf64_apply_reloc(
         int64_t addend)
 {
     uintptr_t machine_ptr = state->hdr.e_machine;
-    spin_lock(&reloc_tree_lock);
+    reloc_tree_lock_acquire();
     struct ptree_node *node = ptree_get(&reloc_tree, machine_ptr);
-    spin_unlock(&reloc_tree_lock);
+    reloc_tree_lock_release();
 
     if(node == NULL) {
         eprintk("Cannot find relocation information for ELF64 machine type \"%s\"\n",

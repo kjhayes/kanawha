@@ -9,8 +9,9 @@
 #include <kanawha/assert.h>
 #include <kanawha/vmem.h>
 #include <kanawha/init.h>
+#include <kanawha/lock.h>
 
-static DECLARE_SPINLOCK(sysfs_mount_lock);
+DEFINE_LOCAL_THREAD_LOCK(sysfs_mount_lock);
 static DECLARE_STREE(sysfs_mount_tree);
 
 struct sysfs_mount {
@@ -24,17 +25,17 @@ sysfs_register_mount(
         const char *id)
 {
     int res;
-    spin_lock(&sysfs_mount_lock);
+    sysfs_mount_lock_acquire();
 
     struct stree_node *node = stree_get(&sysfs_mount_tree, id);
     if(node != NULL) {
-        spin_unlock(&sysfs_mount_lock);
+        sysfs_mount_lock_release();
         return -EEXIST;
     }
 
     struct sysfs_mount *sysmnt = kmalloc(sizeof(struct sysfs_mount));
     if(sysmnt == NULL) {
-        spin_unlock(&sysfs_mount_lock);
+        sysfs_mount_lock_release();
         return -ENOMEM;
     }
     memset(sysmnt, 0, sizeof(struct sysfs_mount));
@@ -44,7 +45,7 @@ sysfs_register_mount(
     sysmnt->tree_node.key = kstrdup(id);
     if(sysmnt->tree_node.key == NULL) {
         kfree(sysmnt);
-        spin_unlock(&sysfs_mount_lock);
+        sysfs_mount_lock_release();
         return -ENOMEM;
     }
 
@@ -52,11 +53,11 @@ sysfs_register_mount(
     if(res) {
         kfree((void*)sysmnt->tree_node.key);
         kfree(sysmnt);
-        spin_unlock(&sysfs_mount_lock);
+        sysfs_mount_lock_release();
         return res;
     }
 
-    spin_unlock(&sysfs_mount_lock);
+    sysfs_mount_lock_release();
     return 0;
 }
 
@@ -65,7 +66,7 @@ sysfs_unregister_mount(
         const char *id)
 {
     int res;
-    spin_lock(&sysfs_mount_lock);
+    sysfs_mount_lock_acquire();
 
     struct stree_node *rem =
         stree_remove(&sysfs_mount_tree, id);
@@ -78,7 +79,7 @@ sysfs_unregister_mount(
     kfree((void*)mnt->tree_node.key);
     kfree(mnt);
 
-    spin_unlock(&sysfs_mount_lock);
+    sysfs_mount_lock_release();
     return 0;
 }
 
@@ -89,12 +90,12 @@ sysfs_mount_special(
         struct fs_mount **out)
 {
     int res;
-    spin_lock(&sysfs_mount_lock);
+    sysfs_mount_lock_acquire();
 
     struct stree_node *snode =
         stree_get(&sysfs_mount_tree, id);
     if(snode == NULL) {
-        spin_unlock(&sysfs_mount_lock);
+        sysfs_mount_lock_release();
         return -ENXIO;
     }
 
@@ -104,7 +105,7 @@ sysfs_mount_special(
     DEBUG_ASSERT(KERNEL_ADDR(mnt->mount));
     *out = mnt->mount;
 
-    spin_unlock(&sysfs_mount_lock);
+    sysfs_mount_lock_release();
     return 0;
 }
 
@@ -121,7 +122,7 @@ sysfs_mount_find(
         const char *id)
 {
     struct fs_mount *mnt;
-    spin_lock(&sysfs_mount_lock);
+    sysfs_mount_lock_acquire();
     struct stree_node *snode = stree_get(&sysfs_mount_tree, id);
     if(snode == NULL) {
         mnt = NULL;
@@ -129,7 +130,7 @@ sysfs_mount_find(
         struct sysfs_mount *sysfs_mount = container_of(snode, struct sysfs_mount, tree_node);
         mnt = sysfs_mount->mount;
     }
-    spin_unlock(&sysfs_mount_lock);
+    sysfs_mount_lock_release();
     return mnt;
 }
 

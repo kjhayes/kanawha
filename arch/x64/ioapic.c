@@ -8,12 +8,12 @@
 #include <kanawha/list.h>
 #include <kanawha/kmalloc.h>
 #include <kanawha/string.h>
-#include <kanawha/spinlock.h>
+#include <kanawha/lock.h>
 #include <kanawha/mmio.h>
 #include <kanawha/irq_dev.h>
 #include <kanawha/assert.h>
 
-static DECLARE_SPINLOCK(ioapic_list_lock);
+DEFINE_LOCAL_THREAD_LOCK(ioapic_list_lock);
 static DECLARE_ILIST(ioapic_list);
 
 #define IOAPIC_MMIO_SIZE 0x20
@@ -310,9 +310,9 @@ x64_register_ioapic(
         }
     }
 
-    spin_lock(&ioapic_list_lock);
+    ioapic_list_lock_acquire();
     ilist_push_tail(&ioapic_list, &ioapic->list_node);
-    spin_unlock(&ioapic_list_lock);
+    ioapic_list_lock_release();
 
     return 0;
 }
@@ -323,7 +323,7 @@ x64_get_ioapic(hwirq_t hwirq)
     struct ioapic *ret_ioapic = NULL;
 
     ilist_node_t *node;
-    int irq_state = spin_lock_irq_save(&ioapic_list_lock);
+    ioapic_list_lock_acquire();
     ilist_for_each(node, &ioapic_list)
     {
         struct ioapic *ioapic =
@@ -335,7 +335,7 @@ x64_get_ioapic(hwirq_t hwirq)
             break;
         }
     }
-    spin_unlock_irq_restore(&ioapic_list_lock, irq_state);
+    ioapic_list_lock_release();
     return ret_ioapic;
 }
 

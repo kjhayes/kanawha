@@ -7,11 +7,12 @@
 #include <kanawha/string.h>
 #include <kanawha/printk.h>
 #include <kanawha/mem_flags.h>
+#include <kanawha/lock.h>
 
 // Statically allocate the first device tree struct
 static struct devtree boot_device_tree;
 
-static DECLARE_SPINLOCK(device_tree_list_lock);
+DEFINE_LOCAL_THREAD_LOCK(device_tree_list_lock);
 static DECLARE_ILIST(device_tree_list);
 static size_t device_tree_list_len = 0;
 static int unflatten_device_trees_on_insertion = 0;
@@ -35,19 +36,19 @@ devtree_provide_fdt(
 
     uint32_t fdt_size = fdttoh32(fdt->hdr.totalsize);
 
-    spin_lock(&device_tree_list_lock);
+    device_tree_list_lock_acquire();
 
     struct devtree *tree = NULL;
     if(device_tree_list_len == 0) {
         tree = &boot_device_tree;
     } else {
-        spin_unlock(&device_tree_list_lock);
+        device_tree_list_lock_release();
         tree = kmalloc(sizeof(struct devtree));
-        spin_lock(&device_tree_list_lock);
+        device_tree_list_lock_acquire();
     }
 
     if(tree == NULL) {
-        spin_unlock(&device_tree_list_lock);
+        device_tree_list_lock_release();
         return -ENOMEM;
     }
 
@@ -64,7 +65,7 @@ devtree_provide_fdt(
             if(tree != &boot_device_tree) {
                 kfree(tree);
             }
-            spin_unlock(&device_tree_list_lock);
+            device_tree_list_lock_release();
             return res;
         }
     }
@@ -72,7 +73,7 @@ devtree_provide_fdt(
     ilist_push_tail(&device_tree_list, &tree->list_node);
     device_tree_list_len++;
 
-    spin_unlock(&device_tree_list_lock);
+    device_tree_list_lock_release();
     return 0;
 }
 
@@ -219,18 +220,18 @@ static int
 init_dump_device_trees(void)
 {
     int res;
-    spin_lock(&device_tree_list_lock);
+    device_tree_list_lock_acquire();
     ilist_node_t *node;
     ilist_for_each(node, &device_tree_list) {
         struct devtree *dt = container_of(node, struct devtree, list_node);
         struct fdt *fdt = devtree_get_fdt(dt);
         res = dump_fdt(do_printk, fdt);
         if(res) {
-            spin_unlock(&device_tree_list_lock);
+            device_tree_list_lock_release();
             return res;
         }
     }
-    spin_unlock(&device_tree_list_lock);
+    device_tree_list_lock_release();
     return 0;
 }
 declare_init(static, init_dump_device_trees);
@@ -238,20 +239,20 @@ declare_init(static, init_dump_device_trees);
 static int
 unflatten_device_trees(void) {
     int res;
-    spin_lock(&device_tree_list_lock);
+    device_tree_list_lock_acquire();
 
     ilist_node_t *node;
     ilist_for_each(node, &device_tree_list) {
         struct devtree *dt = container_of(node, struct devtree, list_node);
         res = unflatten_device_tree(dt);
         if(res) {
-            spin_unlock(&device_tree_list_lock);
+            device_tree_list_lock_release();
             return res;
         }
     }
     unflatten_device_trees_on_insertion = 1;
 
-    spin_unlock(&device_tree_list_lock);
+    device_tree_list_lock_release();
     return 0;
 }
 declare_init_desc(dynamic, unflatten_device_trees, "Unflattening Device Tree(s)");

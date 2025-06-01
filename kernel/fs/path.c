@@ -11,12 +11,13 @@
 #include <kanawha/vmem.h>
 #include <kanawha/pipe.h>
 #include <kanawha/irq.h>
+#include <kanawha/lock.h>
 
 #define FS_PATH_MAX_NAMELEN 256
 
 // Global Lock (Not ideal but removing this will probably require RCU)
-static DECLARE_SPINLOCK(fs_path_global_lock);
 static DECLARE_ILIST(root_fs_path_list);
+DEFINE_LOCAL_IRQ_LOCK(fs_path_global_lock);
 
 struct fs_path
 {
@@ -84,7 +85,7 @@ __fs_path_traverse(
 {
     int res;
 
-    int irq_flags = spin_lock_irq_save(&fs_path_global_lock);
+    fs_path_global_lock_acquire();
 
     dprintk("fs_path_traverse(%s -> %s)\n",
             dir->name != NULL ? dir->name : "NULL",
@@ -101,7 +102,7 @@ __fs_path_traverse(
         if(strcmp(child->name, child_name) == 0) {
             // This is the right node
             child->refs++;
-            spin_unlock_irq_restore(&fs_path_global_lock, irq_flags);
+            fs_path_global_lock_release();
             *out = child;
             return 0;
         }
@@ -111,7 +112,7 @@ __fs_path_traverse(
     if(strcmp(child_name, ".") == 0) {
         dir->refs++;
         *out = dir;
-        spin_unlock_irq_restore(&fs_path_global_lock, irq_flags);
+        fs_path_global_lock_release();
         return 0;
     } else if(strcmp(child_name, "..") == 0
           && dir != process->root_directory
@@ -119,7 +120,7 @@ __fs_path_traverse(
     {
         dir->parent->refs++;
         *out = dir->parent;
-        spin_unlock_irq_restore(&fs_path_global_lock, irq_flags);
+        fs_path_global_lock_release();
         return 0;
     }
 
@@ -135,7 +136,7 @@ __fs_path_traverse(
         // Not a special case, the file just doesn't exist or an error occurred
         dprintk("fs_node_lookup: %s returned (%s)\n",
                 child_name, errnostr(res));
-        spin_unlock_irq_restore(&fs_path_global_lock, irq_flags);
+        fs_path_global_lock_release();
         return res;
     }
 
@@ -147,7 +148,7 @@ __fs_path_traverse(
                 dir_fs_node->mount,
                 mount_index);
     if(child_fs_node == NULL) {
-        spin_unlock_irq_restore(&fs_path_global_lock, irq_flags);
+        fs_path_global_lock_release();
         eprintk("fs_mount_get_node(0x%llx) returned NULL!\n",
                 (ull_t)mount_index);
         return -EINVAL;
@@ -155,7 +156,7 @@ __fs_path_traverse(
 
     struct fs_path *child = kmalloc(sizeof(struct fs_path));
     if(child == NULL) {
-        spin_unlock_irq_restore(&fs_path_global_lock, irq_flags);
+        fs_path_global_lock_release();
         return -ENOMEM;
     }
     memset(child, 0, sizeof(struct fs_path));
@@ -168,7 +169,7 @@ __fs_path_traverse(
     child->name = kstrdup(child_name);
     if(child->name == NULL) {
         kfree(child);
-        spin_unlock_irq_restore(&fs_path_global_lock, irq_flags);
+        fs_path_global_lock_release();
         return -ENOMEM;
     }
     child->fs_node = child_fs_node;
@@ -180,7 +181,7 @@ __fs_path_traverse(
     ilist_init(&child->children);
 
     *out = child;
-    spin_unlock_irq_restore(&fs_path_global_lock, irq_flags);
+    fs_path_global_lock_release();
     return 0;
 }
 
@@ -203,9 +204,9 @@ __fs_path_get(struct fs_path *path)
 int
 fs_path_get(struct fs_path *path) {
     int res;
-    int irq_flags = spin_lock_irq_save(&fs_path_global_lock);
+    fs_path_global_lock_acquire();
     res = __fs_path_get(path);
-    spin_unlock_irq_restore(&fs_path_global_lock, irq_flags);
+    fs_path_global_lock_release();
     return res;
 }
 
@@ -250,9 +251,9 @@ int
 fs_path_put(struct fs_path *path)
 {
     int res;
-    int irq_flags = spin_lock_irq_save(&fs_path_global_lock);
+    fs_path_global_lock_acquire();
     res = __fs_path_put(path);
-    spin_unlock_irq_restore(&fs_path_global_lock, irq_flags);
+    fs_path_global_lock_release();
     return res;
 }
 
@@ -288,9 +289,9 @@ fs_path_create_anon_pipe(
     ilist_init(&pipe->children);
 
     // Add the pipe to the root fs_path list
-    int irq_flags = spin_lock_irq_save(&fs_path_global_lock);
+    fs_path_global_lock_acquire();
     ilist_push_tail(&root_fs_path_list, &pipe->child_node);
-    spin_unlock_irq_restore(&fs_path_global_lock, irq_flags);
+    fs_path_global_lock_release();
 
     *out = pipe;
     return 0;
@@ -338,9 +339,9 @@ fs_path_mount_root(
     mntpoint->refs = 1; 
     ilist_init(&mntpoint->children);
 
-    int irq_flags = spin_lock_irq_save(&fs_path_global_lock);
+    fs_path_global_lock_acquire();
     ilist_push_tail(&root_fs_path_list, &mntpoint->child_node);
-    spin_unlock_irq_restore(&fs_path_global_lock, irq_flags);
+    fs_path_global_lock_release();
 
     *out = mntpoint;
 
@@ -396,9 +397,9 @@ fs_path_mount_dir(
     fs_path_get(parent);
     mntpoint->parent = parent;
 
-    int irq_flags = spin_lock_irq_save(&fs_path_global_lock);
+    fs_path_global_lock_acquire();
     ilist_push_tail(&parent->children, &mntpoint->child_node);
-    spin_unlock_irq_restore(&fs_path_global_lock, irq_flags);
+    fs_path_global_lock_release();
 
     *out = mntpoint;
 
@@ -409,19 +410,19 @@ int
 fs_path_unmount(
         struct fs_path *mnt_point)
 {
-    int irq_flags = spin_lock_irq_save(&fs_path_global_lock);
+    fs_path_global_lock_acquire();
 
     // Can't unmount if there are any open "fs_path"
     // to children of this node
     if(mnt_point->refs > 1) {
-        spin_unlock_irq_restore(&fs_path_global_lock, irq_flags);
+        fs_path_global_lock_release();
         return -EBUSY;
     }
 
     mnt_point->refs--;
     __fs_path_put(mnt_point);
 
-    spin_unlock_irq_restore(&fs_path_global_lock, irq_flags);
+    fs_path_global_lock_release();
     return -EUNIMPL;
 }
 
@@ -555,7 +556,7 @@ dump_fs_paths(
     } while(0)
 
     int res;
-    int irq_flags = spin_lock_irq_save(&fs_path_global_lock);
+    fs_path_global_lock_acquire();
 
     ilist_node_t *list_node;
     ilist_for_each(list_node, &root_fs_path_list) {
@@ -563,7 +564,7 @@ dump_fs_paths(
         PRINT("%s\n", path->name);
     }
 
-    spin_unlock_irq_restore(&fs_path_global_lock, irq_flags);
+    fs_path_global_lock_release();
     return 0;
 
 #undef PRINT

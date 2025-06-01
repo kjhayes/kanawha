@@ -9,6 +9,7 @@
 #include <kanawha/init.h>
 #include <kanawha/ptree.h>
 #include <kanawha/spinlock.h>
+#include <kanawha/lock.h>
 #include <kanawha/atomic.h>
 #include <kanawha/scheduler.h>
 #include <kanawha/vmem.h>
@@ -17,8 +18,8 @@
 #include <kanawha/assert.h>
 #include <kanawha/attribute.h>
 
-static DECLARE_SPINLOCK(thread_tree_lock);
 static DECLARE_PTREE(thread_tree);
+DEFINE_LOCAL_IRQ_LOCK(thread_tree_lock);
 
 static thread_id_t __next_thread_id = 0;
 
@@ -189,14 +190,14 @@ thread_init(
 
     spinlock_init(&state->lock);
 
-    int irq_flags = spin_lock_irq_save(&thread_tree_lock);
+    thread_tree_lock_acquire();
 
     get_thread_id(state);
     if(state->id == NULL_THREAD_ID) {
         // We somehow ran out of thread_id_t
         eprintk("thread_init: Ran out of unique thread_id_t!\n");
         vmem_map_destroy(state->mem_map);
-        spin_unlock_irq_restore(&thread_tree_lock, irq_flags);
+        thread_tree_lock_release();
         return -ENOMEM;
     }
 
@@ -219,7 +220,7 @@ thread_init(
 
     }
 
-    spin_unlock_irq_restore(&thread_tree_lock, irq_flags);
+    thread_tree_lock_release();
 
     res = arch_init_thread_state(state);
     if(res) {
@@ -240,10 +241,10 @@ thread_deinit(
 {
     int res;
 
-    int irq_flags = spin_lock_irq_save(&thread_tree_lock);
+    thread_tree_lock_acquire();
     struct ptree_node *rem = ptree_remove(&thread_tree, state->tree_node.key);
     DEBUG_ASSERT(rem == &state->tree_node);
-    spin_unlock_irq_restore(&thread_tree_lock, irq_flags);
+    thread_tree_lock_release();
 
     res = arch_deinit_thread_state(state);
     if(res) {
@@ -660,7 +661,7 @@ dump_thread_flags(struct thread_state *thread, unsigned long flags, printk_f *pr
 int
 dump_threads(printk_f *printer)
 {
-    int irq_flags = spin_lock_irq_save(&thread_tree_lock);
+    thread_tree_lock_acquire();
 
     (*printer)("--- Threads ---\n");
     struct ptree_node *node = ptree_get_first(&thread_tree);
@@ -691,7 +692,7 @@ dump_threads(printk_f *printer)
     }
     (*printer)("---------------\n");
 
-    spin_unlock_irq_restore(&thread_tree_lock, irq_flags);
+    thread_tree_lock_release();
     return 0;
 }
 
@@ -751,12 +752,12 @@ thread_force_mapping(
     dprintk("Thread Force Mapping [%p-%p) -> %p\n",
             virtual_addr, virtual_addr + region->size, region);
 
-    int irq_flags = spin_lock_irq_save(&thread_tree_lock);
+    thread_tree_lock_acquire();
 
     struct thread_global_vmem_region *global_region =
         alloc_thread_global_vmem_region();
     if(region == NULL) {
-        spin_unlock_irq_restore(&thread_tree_lock, irq_flags);
+        thread_tree_lock_release();
         return -ENOMEM;
     }
     memset(global_region, 0, sizeof(struct thread_global_vmem_region));
@@ -768,7 +769,7 @@ thread_force_mapping(
 
     ilist_push_tail(&global_vmem_regions, &global_region->list_node);
 
-    spin_unlock_irq_restore(&thread_tree_lock, irq_flags);
+    thread_tree_lock_release();
 
     return 0;
 }
