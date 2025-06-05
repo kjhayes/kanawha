@@ -354,6 +354,14 @@ virtio_queue_find_launched_req_by_desc(
         }
     }
 
+    printk("Failed to find launched request from descriptor ID (0x%x)\n", desc_id);
+    ilist_for_each(node, &queue->launched_reqs) {
+        struct virtio_request *req =
+            container_of(node, struct virtio_request, queue_node);
+        printk("Launched Request: 0x%x\n",
+                req->root_descriptor);
+    }
+
     return NULL;
 }
 
