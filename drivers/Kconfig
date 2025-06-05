@@ -7,6 +7,10 @@ menu "Network Devices"
 source "drivers/net/Kconfig"
 endmenu
 
+menu "Filesystems"
+source "drivers/fs/Kconfig"
+endmenu
+
 menu "Clock Devices"
 source "drivers/clk/Kconfig"
 endmenu

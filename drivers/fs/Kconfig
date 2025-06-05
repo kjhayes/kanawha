@@ -1,0 +1,12 @@
+
+config CPIO_FS
+    tristate "CPIO"
+    default y
+    help
+      Support for mounting CPIO archives as a simple filesystem
+
+config EXT2_FS
+    tristate "Ext2"
+    default n
+
+
