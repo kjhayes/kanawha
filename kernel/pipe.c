@@ -247,14 +247,18 @@ pipe_fs_mount_load_node(
     // which already exists, so we can just let them give us a
     // unique index (TODO: This might not be a safe assumption long term)
 
+    dprintk("pipe_fs_mount_load_node(%ld)\n", index);
+
     struct pipe *pipe = kmalloc(sizeof(struct pipe));
     if(pipe == NULL) {
+        wprintk("Failed to allocate pipefs node: Out of Memory\n");
         return NULL;
     }
 
     pipe->buflen = DEFAULT_PIPE_BUFSIZE;
     pipe->buffer = kmalloc(pipe->buflen);
     if(pipe->buffer == NULL) {
+        wprintk("Failed to allocate pipefs node buffer: Out of Memory\n");
         kfree(pipe);
         return NULL;
     }
@@ -267,12 +271,16 @@ pipe_fs_mount_load_node(
 
     res = waitqueue_init(&pipe->read_queue);
     if(res) {
+        wprintk("Failed to init pipefs node read queue: %s\n",
+                errnostr(res));
         kfree(pipe);
         return NULL;
     }
 
     res = waitqueue_init(&pipe->write_queue);
     if(res) {
+        wprintk("Failed to init pipefs node write queue: %s\n",
+                errnostr(res));
         waitqueue_disable(&pipe->read_queue);
         wake_all(&pipe->read_queue);
         waitqueue_deinit(&pipe->read_queue);
@@ -340,8 +348,14 @@ pipe_fs_get_anon_pipe(void)
     next_pipe_index++;
     next_pipe_index_lock_release();
 
-    return fs_mount_get_node(
+    struct fs_node *node = fs_mount_get_node(
             &pipe_fs_mount,
             index);
+    if(node == NULL) {
+        wprintk("pipe_fs_get_anon_pipe: fs_mount_get_node returned NULL!\n");
+        return NULL;
+    }
+
+    return node;
 }
 
