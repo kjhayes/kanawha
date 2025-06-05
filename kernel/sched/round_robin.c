@@ -10,7 +10,7 @@
 #include <kanawha/xcall.h>
 #include <kanawha/vmem.h>
 #include <kanawha/assert.h>
-#include <kanawha/periodic.h>
+#include <kanawha/event.h>
 
 struct rr_thread {
     struct thread_state *state;

@@ -1,5 +1,5 @@
-#ifndef __KANAWHA__PERIODIC_H__
-#define __KANAWHA__PERIODIC_H__
+#ifndef __KANAWHA__EVENT_H__
+#define __KANAWHA__EVENT_H__
 
 #include <kanawha/time.h>
 

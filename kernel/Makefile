@@ -40,7 +40,7 @@ obj-y += \
 	xcall.o \
 	timer.o \
 	time.o \
-	periodic.o \
+	event.o \
 	sleep.o \
 	spinlock.o \
 	clk.o \

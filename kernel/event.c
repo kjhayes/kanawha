@@ -1,5 +1,5 @@
 
-#include <kanawha/periodic.h>
+#include <kanawha/event.h>
 #include <kanawha/kmalloc.h>
 #include <kanawha/string.h>
 #include <kanawha/list.h>

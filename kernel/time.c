@@ -1,6 +1,6 @@
 
 #include <kanawha/time.h>
-#include <kanawha/periodic.h>
+#include <kanawha/event.h>
 #include <kanawha/init.h>
 #include <kanawha/errno.h>
 
