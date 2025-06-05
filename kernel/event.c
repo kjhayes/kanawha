@@ -158,6 +158,15 @@ int
 destroy_periodic_event(
         struct periodic_event *event)
 {
-    return -EUNIMPL;
+    int res;
+
+    res = disable_periodic_event(event);
+    if(res) {
+        return res;
+    }
+
+    kfree(event);
+
+    return 0;
 }
 
