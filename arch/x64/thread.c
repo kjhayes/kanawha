@@ -13,19 +13,29 @@
 extern void __x64_thread_entry(void);
 
 extern void *
-__x64_thread_run_threadless(void *in, threadless_f *func, uint64_t *rsp_ptr);
+__x64_thread_run_threadless(
+        void *in,
+        threadless_f *func,
+        uint64_t *rsp_ptr,
+        uint8_t *xsave_buffer);
 
 extern __noreturn void
-__x64_thread_run_thread(void *rsp);
+__x64_thread_run_thread(
+        void *rsp,
+        uint8_t *xsave_buffer);
 
 void 
 arch_thread_run_threadless(
         threadless_f *func,
         void *in)
 {
+    struct thread_state *cur = current_thread();
+
     __x64_thread_run_threadless(
             in, func,
-            &current_thread()->arch_state.stack.stack_pointer);
+            &cur->arch_state.stack.stack_pointer,
+            cur->arch_state.xsave_buffer
+            );
 }
 
 __noreturn void
@@ -33,7 +43,10 @@ arch_thread_run_thread(struct thread_state *to_run)
 {
     dprintk("running thread %p with rsp=%p\n",
             to_run, to_run->arch_state.stack.stack_pointer);
-    __x64_thread_run_thread((void*)to_run->arch_state.stack.stack_pointer);
+    __x64_thread_run_thread(
+            (void*)to_run->arch_state.stack.stack_pointer,
+            to_run->arch_state.xsave_buffer
+            );
 }
 
 // 64kb Stacks
@@ -68,6 +81,8 @@ arch_init_thread_state(struct thread_state *state)
     uint64_t *caller_regs = regs + CALLEE_PUSH_SIZE;
 
     caller_regs[1] = (uint64_t)state->in; //rdi
+
+    memset(arch->xsave_buffer, 0, X64_XSAVE_BUFLEN);
 
     //arch_dump_thread(do_printk, state);
 

@@ -42,6 +42,9 @@ __x64_thread_run_threadless:
     PUSH_CALLER_REGS()
     PUSH_CALLEE_REGS()
 
+    // Save Extended State to the xsave_buffer
+    fxsave (%rcx)
+
     // Save our stack
 __x64_thread_stack_save:
     movq %rsp, 0(%rdx)
@@ -67,6 +70,9 @@ __x64_thread_run_thread:
     // Restore our stack
 __x64_thread_stack_restore:
     movq %rdi, %rsp
+
+    // Restore Extended State from the xsave_buffer
+    fxrstor (%rsi)
 
     // Restore our registers
     POP_CALLEE_REGS()
