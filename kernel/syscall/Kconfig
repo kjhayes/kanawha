@@ -98,6 +98,11 @@ config DEBUG_SYSCALL_UNLINK
     depends on DEBUGGING
     default n
 
+config DEBUG_SYSCALL_PIPE
+    bool "Debug pipe"
+    depends on DEBUGGING
+    default n
+
 config DEBUG_SYSCALL_POLL
     bool "Debug poll"
     depends on DEBUGGING
