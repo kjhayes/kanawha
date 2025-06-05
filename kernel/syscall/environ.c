@@ -229,6 +229,23 @@ env_dump(struct process *process, char __user *buffer, size_t buflen)
     return 0;
 }
 
+static inline int
+env_wipe(struct process *process)
+{
+    int res;
+
+    if(process->environ == NULL) {
+        return -ENXIO;
+    }
+
+    res = environment_clear_all(process->environ);
+    if(res) {
+        return res;
+    }
+
+    return 0;
+}
+
 int
 syscall_environ(
         struct process *process,
@@ -249,6 +266,9 @@ syscall_environ(
             break;
         case ENV_DUMP:
             return env_dump(process, value, len);
+            break;
+        case ENV_WIPE:
+            return env_wipe(process);
             break;
         default:
             return -EINVAL;

@@ -26,4 +26,10 @@
 // len -> length of the buffer
 #define ENV_DUMP 4
 
+// Clears the entire environment of the calling process
+// key -> ignored
+// value -> ignored
+// len -> ignored
+#define ENV_WIPE 5
+
 #endif
