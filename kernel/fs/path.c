@@ -24,6 +24,7 @@ struct fs_path
     char *name;
 
     struct fs_node *fs_node;
+    ilist_node_t fs_node_node;
 
     unsigned long refs;
 
@@ -38,6 +39,23 @@ struct fs_path
     ilist_t children;
     ilist_node_t child_node;
 };
+
+static int
+assign_fs_node_to_fs_path(
+        struct fs_node *node,
+        struct fs_path *path)
+{
+    int res;
+    res = fs_node_get(node);
+    if(res) {
+        return res;
+    }
+    fs_node_path_lock_acquire(node);
+    ilist_push_tail(&node->path_list, &path->fs_node_node);
+    path->fs_node = node;
+    fs_node_path_lock_release(node);
+    return 0;
+}
 
 struct fs_node *
 fs_path_get_fs_node(
@@ -156,6 +174,7 @@ __fs_path_traverse(
 
     struct fs_path *child = kmalloc(sizeof(struct fs_path));
     if(child == NULL) {
+        fs_node_put(child_fs_node);
         fs_path_global_lock_release();
         return -ENOMEM;
     }
@@ -172,7 +191,20 @@ __fs_path_traverse(
         fs_path_global_lock_release();
         return -ENOMEM;
     }
-    child->fs_node = child_fs_node;
+
+    res = assign_fs_node_to_fs_path(child_fs_node, child);
+    if(res) {
+        wprintk("assign_fs_node_to_fs_path returned %s during __fs_path_traverse!\n",
+                errnostr(res));
+        fs_node_put(child_fs_node);
+        kfree(child->name);
+        kfree(child);
+        fs_path_global_lock_release();
+        return res;
+    }
+
+    // assign_fs_node_to_fs_path should have gotten a reference to the node
+    fs_node_put(child_fs_node);
 
     res = __fs_path_get(dir);
     DEBUG_ASSERT(res == 0);
@@ -233,6 +265,10 @@ __fs_path_put(struct fs_path *path)
         ilist_remove(&root_fs_path_list, &path->child_node);
     }
 
+    fs_node_path_lock_acquire(path->fs_node);
+    ilist_remove(&path->fs_node->path_list, &path->fs_node_node);
+    fs_node_path_lock_release(path->fs_node);
+
     fs_node_put(path->fs_node);
     if(path->name) {
         kfree(path->name);
@@ -261,6 +297,8 @@ int
 fs_path_create_anon_pipe(
         struct fs_path **out)
 {
+    int res;
+
     struct fs_path *pipe =
         kmalloc(sizeof(struct fs_path));
     if(pipe == NULL) {
@@ -272,11 +310,23 @@ fs_path_create_anon_pipe(
     pipe->__checksum = FS_PATH_CHECKSUM;
 #endif
 
-    pipe->fs_node = pipe_fs_get_anon_pipe();
-    if(pipe->fs_node == NULL) {
+    struct fs_node *fs_node = pipe_fs_get_anon_pipe();
+    if(fs_node == NULL) {
+        wprintk("fs_path_create_anon_pipe: Failed to create pipefs node!\n");
         kfree(pipe);
         return -EINVAL;
     }
+
+    res = assign_fs_node_to_fs_path(fs_node, pipe);
+    if(res) {
+        wprintk("assign_fs_node_to_fs_path returned %s during fs_path_create_anon_pipe!\n",
+                errnostr(res));
+        fs_node_put(fs_node);
+        kfree(pipe);
+        return res;
+    }
+
+    fs_node_put(fs_node);
 
     pipe->type = FS_PATH_NODE;
     pipe->parent = NULL;
@@ -327,11 +377,22 @@ fs_path_mount_root(
 
     dprintk("fs_path_mount_root: root_index=%p\n",root_index);
 
-    mntpoint->fs_node = fs_mount_get_node(mnt, root_index);
-    if(mntpoint->fs_node == NULL) {
+    struct fs_node *fs_node = fs_mount_get_node(mnt, root_index);
+    if(fs_node == NULL) {
         kfree(mntpoint);
         return res;
     }
+
+    res = assign_fs_node_to_fs_path(fs_node, mntpoint);
+    if(res) {
+        wprintk("assign_fs_node_to_fs_path returned %s during fs_path_mount_root!\n",
+                errnostr(res));
+        fs_node_put(fs_node);
+        kfree(mntpoint);
+        return res;
+    }
+
+    fs_node_put(fs_node);
 
     mntpoint->type = FS_PATH_MOUNT;
     mntpoint->parent = NULL;
@@ -377,12 +438,23 @@ fs_path_mount_dir(
 
     dprintk("fs_path_mount_dir: root_index=%p\n",root_index);
 
-    mntpoint->fs_node = fs_mount_get_node(mnt, root_index);
-    if(mntpoint->fs_node == NULL) {
+    struct fs_node *fs_node = fs_mount_get_node(mnt, root_index);
+    if(fs_node == NULL) {
         eprintk("fs_path_mount_dir: failed to get root node!\n");
         kfree(mntpoint);
         return res;
     }
+
+    res = assign_fs_node_to_fs_path(fs_node, mntpoint);
+    if(res) {
+        wprintk("assign_fs_node_to_fs_path returned %s during fs_path_mount_dir!\n",
+                errnostr(res));
+        fs_node_put(fs_node);
+        kfree(mntpoint);
+        return res;
+    }
+
+    fs_node_put(fs_node);
 
     mntpoint->type = FS_PATH_MOUNT;
     mntpoint->parent = NULL;

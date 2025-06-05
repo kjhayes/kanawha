@@ -7,6 +7,7 @@
 #include <kanawha/stree.h>
 #include <kanawha/ptree.h>
 #include <kanawha/spinlock.h>
+#include <kanawha/lock.h>
 
 struct fs_type;
 struct fs_mount;
@@ -29,13 +30,27 @@ struct fs_node
     spinlock_t page_lock;
     struct ptree page_cache;
 
-    spinlock_t path_lock;
+    irq_lock_t path_lock;
     ilist_t path_list;
 
     // not a refcount_t because the mount cache_lock protects us
     int refcount;
     struct ptree_node cache_node;
 };
+
+static inline void
+fs_node_path_lock_acquire(
+        struct fs_node *node)
+{
+    irq_lock_acquire(&node->path_lock);
+}
+static inline void
+fs_node_path_lock_release(
+        struct fs_node *node)
+{
+    irq_lock_release(&node->path_lock);
+}
+
 #endif
 #endif
 
@@ -47,6 +62,7 @@ struct fs_node
 #include <kanawha/stree.h>
 #include <kanawha/ptree.h>
 #include <kanawha/spinlock.h>
+#include <kanawha/lock.h>
 
 struct fs_type;
 struct fs_mount;
