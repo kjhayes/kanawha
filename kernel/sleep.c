@@ -4,16 +4,26 @@
 #include <kanawha/timer.h>
 #include <kanawha/clk.h>
 #include <kanawha/event.h>
+#include <kanawha/mbarrier.h>
 
 static void
 thread_sleep_callback(void *state)
 {
+    int res;
+
     struct waitqueue *queue = state;
     DEBUG_ASSERT(KERNEL_ADDR(state));
 
-    printk("Sleep One-Shot Callback: Waking Thread\n");
-    waitqueue_disable(queue);
-    wake_all(queue);
+    dprintk("thread_sleep_callback: Waking Thread state=%p\n", state);
+
+    res = waitqueue_disable(queue);
+    if(res) {
+        panic("Failed to disable waitqueue in sleep callback!\n");
+    }
+    res = wake_all(queue);
+    if(res) {
+        panic("Failed to wake all threads sleeping on waitqueue!\n");
+    }
 }
 
 int
@@ -48,13 +58,16 @@ thread_sleep(
     //    return res;
     //}
 
-    printk("Sleep Waiting on Queue\n");
+    dprintk("thread_sleep: waiting on queue...\n");
     res = wait_on(&queue);
     if(res) {
         return res;
     }
 
+    dprintk("thread_sleep: woke up!\n");
+
     destroy_periodic_event(evt);
+    mbarrier();
 
     return 0;
 }
