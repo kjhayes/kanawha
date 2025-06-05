@@ -146,6 +146,15 @@ config DEBUG_TRACK_PROCESS_EXEC
     help
       Track the path string as a process uses the "exec" system call
 
+config DEBUG_X64_PEDANTIC_VERIFY_PAGE_TABLES
+    bool "Verify x64 Page Tables Pedantically"
+    depends on X64 && DEBUGGING
+    default n
+    help
+      Add checks to verify x64 page tables any time that one is manipulated.
+      This helps find issues with the page table handling code on x64 effectively,
+      but can drastically slow down the kernel.
+
 menu "Strace Options"
 
 config STRACE_LOG_SYSCALL_BEGIN
@@ -184,7 +193,7 @@ menu "kmalloc Options"
 source "kernel/kmalloc/Kconfig"
 endmenu
 
-menu "Filesystems"
+menu "Filesystem Options"
 source "kernel/fs/Kconfig"
 endmenu
 

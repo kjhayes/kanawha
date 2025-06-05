@@ -281,10 +281,14 @@ __x64_verify_page_table(
     uint64_t present_mask = pt_level_present_mask(level);
 
     uint64_t *entries = vaddr;
+
+    size_t num_not_present;
+
     for(size_t i = 0; i < num_entries; i++) {
         uint64_t entry = entries[i];
 
         if((entry & present_mask) == 0) {
+            num_not_present++;
             continue;
         }
 
@@ -305,6 +309,9 @@ __x64_verify_page_table(
             }
         }
     }
+    if(num_not_present == num_entries) {
+        wprintk("__x64_verify_page_table: Found empty page table at level %d\n", level);
+    }
     return 0;
 }
 
@@ -313,7 +320,7 @@ x64_verify_page_table(
         void __phys * table,
         int level)
 {
-#ifndef CONFIG_DEBUG_ASSERTIONS
+#ifndef CONFIG_X64_PEDANTIC_VERIFY_PAGE_TABLES
     return;
 #else
     int res;
