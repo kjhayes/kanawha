@@ -145,6 +145,8 @@ X64_EXCP_XLIST(UNHANDLED_EXCEPTION_CASE)
     printk("\tCS=%p\n", (uintptr_t)state->cs);
     printk("\tCR2 = %p\n", (void *)read_cr2());
 
+    arch_excp_dump_state((struct excp_state*)state, do_printk);
+
     panic("Unhandled %s Exception! (vector=0x%x)\n", desc_str, (unsigned)state->vector);
 }
 
