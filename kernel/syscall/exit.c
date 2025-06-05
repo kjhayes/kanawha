@@ -16,8 +16,8 @@ syscall_exit(
 
     res = process_terminate(process, exitcode);
     if(res) {
-        panic("PID(%ld) syscall_exit: process_terminate(%p, %d) -> %s\n",
-              process->id, process, exitcode, errnostr(res));
+        panic("PID(%ld) syscall_exit: process_terminate(%d) -> %s, user_ip=%p\n",
+              process->id, exitcode, errnostr(res), process->user_ip);
     }
 
 #ifdef CONFIG_DEBUG_SYSCALL_EXIT
