@@ -85,7 +85,13 @@ ext2_mount_load_node(
 
     dprintk("ext2_mount_load_node (inode=0x%lx)\n", node_index);
 
+    if(node_index == 0) {
+        panic("ext2_mount_load_node: Cannot load reserved inode 0!\n");
+        return NULL;
+    }
+
     if(node_index >= mnt->num_inodes) {
+        wprintk("ext2_mount_load_node index=0x%lx >= num_inodes=0x%lx\n", node_index, mnt->num_inodes);
         return NULL;
     }
 
@@ -94,12 +100,14 @@ ext2_mount_load_node(
 
     struct ext2_group *group = ext2_get_group(mnt, group_index);
     if(group == NULL) {
+        wprintk("ext2_mount_load_node: Failed to get group (group_index=0x%lx)\n", group_index);
         return NULL;
     }
     DEBUG_ASSERT(group->mnt == mnt);
 
     struct ext2_fs_node *node = kmalloc(sizeof(struct ext2_fs_node));
     if(node == NULL) {
+        wprintk("ext2_mount_load_node: Failed to allocate node!\n");
         ext2_put_group(mnt, group);
         return NULL;
     }
@@ -112,14 +120,14 @@ ext2_mount_load_node(
     int is_inode_alloced;
     res = ext2_group_inode_allocated(group, node_index, &is_inode_alloced);
     if(res) {
-        eprintk("ext2_mount_load_node: Failed to read from block group inode bitmap! (err=%s)\n",
+        wprintk("ext2_mount_load_node: Failed to read from block group inode bitmap! (err=%s)\n",
                 errnostr(res));
         ext2_put_group(mnt, group);
         kfree(node);
         return NULL;
     }
     else if(!is_inode_alloced) {
-        eprintk("ext2_mount_load_node: Tried to load unallocated node 0x%llx!\n",
+        wprintk("ext2_mount_load_node: Tried to load unallocated node 0x%llx!\n",
                 (ull_t)node_index);
         ext2_put_group(mnt, group);
         kfree(node);
@@ -131,6 +139,8 @@ ext2_mount_load_node(
             index_in_group,
             &node->inode);
     if(res) {
+        wprintk("ext2_mount_load_node: Failed to read inode (index=0x%lx,index_in_group=0x%lx,group_index=0x%lx)!\n",
+                node_index, index_in_group, group_index);
         ext2_put_group(mnt, group);
         kfree(node);
         return NULL;
@@ -152,6 +162,9 @@ ext2_mount_load_node(
         node->fs_node.node_ops = &ext2_dir_node_ops;
         break;
       default:
+        wprintk("ext2_mount_load_node: node (0x%lx) is not a directory or regular file (mode=0x%x)\n",
+                node_index,
+                node->inode.mode);
         ext2_put_group(mnt, group);
         kfree(node);
         return NULL;

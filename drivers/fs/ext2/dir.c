@@ -82,6 +82,12 @@ ext2_dir_add_linked_entry(
 
     struct fs_node *backing_node = &parent_node->fs_node;
 
+    if(inode == 0) {
+        wprintk("ext2_dir_add_linked_entry: request to add link to reserved inode=0! (name=%s)\n",
+                name);
+        return -EINVAL;
+    }
+
     spin_lock(&parent_node->dir_lock);
 
     size_t namelen = strlen(name);
@@ -171,100 +177,6 @@ ext2_dir_add_linked_entry(
         return res;
     }
 
-
-
-//    int offset = 0;
-//
-//    size_t room_needed = namelen + 8;
-//    size_t room_avail  = 0;
-//
-//    struct fs_node *parent_fs_node = &parent_node->fs_node;
-//
-//    size_t cur_offset = 0;
-//    while(1) {
-//        res = ext2_dir_read_at(parent_fs_node, cur_offset, &entry);
-//        if(res) {
-//            // End of the list
-//            offset = cur_offset;
-//            room_avail = room_needed;
-//            break;
-//        }
-//
-//        if(entry.rec_len <= 0) {
-//            // End of the list
-//            offset = cur_offset;
-//            room_avail = room_needed;
-//            break;
-//        }
-//        else if(entry.rec_len < entry.name_len + 8) {
-//            // Invalid entry
-//            spin_unlock(&parent_node->dir_lock);
-//            return -EINVAL;
-//        }
-//
-//        size_t extra_room_offset = cur_offset + entry.name_len + 8;
-//        size_t extra_room = entry.rec_len - (entry.name_len + 8);
-//
-//        if(extra_room > 8) {
-//            // Round up to the nearest 4-byte alignment if necessary
-//            if(extra_room_offset & 0b11) {
-//                extra_room -= (0b100 - (extra_room_offset & 0b11));
-//                extra_room_offset = (extra_room_offset + 0b11) & ~0b11;
-//            }
-//
-//            if(extra_room >= room_needed) {
-//                entry.rec_len = (entry.name_len + 8 + 0b11) & ~0b11;
-//                res = fs_node_paged_write(
-//                        parent_fs_node,
-//                        cur_offset,
-//                        &entry,
-//                        sizeof(struct ext2_linked_dir_entry),
-//                        0);
-//                if(res) {
-//                    spin_unlock(&parent_node->dir_lock);
-//                    return res;
-//                }
-//                offset = extra_room_offset;
-//                room_avail = extra_room;
-//                break;
-//            }
-//        }
-// 
-//        dprintk("Could not use: offset=%p, reclen=%p, namelen=%p extra_room=%p to fit entry of size=%p\n",
-//                cur_offset,
-//                entry.rec_len,
-//                entry.name_len,
-//                extra_room,
-//                room_needed);
-//        cur_offset += entry.rec_len;
-//    }
-//
-//    entry.name_len = namelen;
-//    entry.file_type = file_type;
-//    entry.rec_len = room_avail;
-//    entry.inode = inode;
-//
-//    dprintk("Writing directory entry to offset: %p\n",
-//            offset);
-//    res = fs_node_paged_write(parent_fs_node, offset, &entry, sizeof(struct ext2_linked_dir_entry), FS_NODE_PAGED_WRITE_MAY_EXTEND);
-//    if(res) {
-//        eprintk("Failed to write directory entry to EXT2 directory! (err=%s)\n");
-//        spin_unlock(&parent_node->dir_lock);
-//        return res;
-//    }
-//
-//    size_t name_offset = offset + 8;
-//    dprintk("Writing name \"%s\" to offset: %p\n",
-//            name, name_offset);
-//
-//    res = fs_node_paged_write(parent_fs_node, name_offset, (void*)name, namelen, FS_NODE_PAGED_WRITE_MAY_EXTEND);
-//    if(res) {
-//        eprintk("Failed to write file-name to EXT2 directory! (err=%s)\n",
-//                errnostr(res));
-//        spin_unlock(&parent_node->dir_lock);
-//        return res;
-//    }
-
     spin_unlock(&parent_node->dir_lock);
     return 0;
 }
@@ -282,15 +194,6 @@ ext2_dir_read_cur(
             fs_node,
             file->dir_offset,
             out);
-}
-
-static int
-ext2_dir_begin(
-        struct file *file)
-{
-    int res;
-    file->dir_offset = 0;
-    return 0;
 }
 
 static int
@@ -324,12 +227,34 @@ ext2_dir_next(
           return -ENXIO;
       }
 
-      if(entry.name_len == 0) {
+      if(entry.name_len == 0 || entry.inode == 0) {
           // Skip over an invalid entry
           continue;
       }
 
       break;
+    }
+
+    return 0;
+}
+
+static int
+ext2_dir_begin(
+        struct file *file)
+{
+    int res;
+    file->dir_offset = 0;
+
+    struct fs_node *fs_node = fs_path_get_fs_node(file->path);
+
+    struct ext2_linked_dir_entry entry;
+    res = ext2_dir_read_at(fs_node, 0, &entry);
+    if(res) {
+        return res;
+    }
+
+    if(entry.inode == 0) {
+        ext2_dir_next(file);
     }
 
     return 0;
@@ -411,7 +336,7 @@ ext2_dir_node_lookup(
             return -ENXIO;
         }
 
-        if(entry.name_len == len) {
+        if(entry.inode != 0 && entry.name_len == len) {
             char buffer[len+1];
             res = fs_node_paged_read(
                     fs_node,
@@ -460,6 +385,11 @@ ext2_dir_mkfile(
         eprintk("EXT2: Failed to allocate inode! (err=%s)\n",
                 errnostr(res));
         return res;
+    }
+
+    if(inode == 0) {
+        wprintk("ext2_dir_mkfile: ext2_mount_alloc_inode returned reserved inode=0!\n");
+        return -EINVAL;
     }
 
     dprintk("Allocated inode: 0x%lx\n", inode);
@@ -525,6 +455,11 @@ ext2_dir_mkdir(
         eprintk("EXT2: Failed to allocate inode! (err=%s)\n",
                 errnostr(res));
         return res;
+    }
+
+    if(inode == 0) {
+        wprintk("ext2_dir_mkdir: ext2_mount_alloc_inode returned reserved inode=0!\n");
+        return -EINVAL;
     }
 
     dprintk("Allocated inode: 0x%lx\n", inode);
@@ -637,16 +572,6 @@ ext2_dir_unlink(
     if(res) {
         return res;
     }
-
-    struct fs_node *child_fs_node =
-        fs_mount_get_node(parent_fs_node->mount, child_inode);
-    if(child_fs_node == NULL) {
-        return -ENXIO;
-    }
-
-    struct ext2_fs_node *child_node =
-        container_of(child_fs_node, struct ext2_fs_node, fs_node);
-
 
     return -EUNIMPL;
 }
