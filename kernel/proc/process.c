@@ -939,8 +939,16 @@ process_terminate(
     dprintk("process_terminate(%ld)\n", process->id);
 
     if(process == init_process) {
-        panic("Trying to terminate the init process with exitcode=%d!\n",
+        wprintk("Trying to terminate the init process "
+#ifdef CONFIG_DEBUG_TRACK_PROCESS_EXEC
+              "\"%s\" "
+#endif
+              "with exitcode=%d!\n",
+#ifdef CONFIG_DEBUG_TRACK_PROCESS_EXEC
+              process->tracked_exec ? process->tracked_exec : "UNKNOWN",
+#endif
                 exitcode);
+        return -EINVAL;
     }
 
     int irq_flags;
