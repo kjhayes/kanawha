@@ -71,10 +71,6 @@ pipe_fs_file_read(
         return 0;
     }
 
-    if(flags & FS_FILE_READ_NON_BLOCKING) {
-        return 0;
-    }
-
     struct fs_node *node = fs_path_get_fs_node(file->path);
     if(node == NULL) {
         return -ENXIO;
@@ -103,10 +99,18 @@ pipe_fs_file_read(
             read += 1;
             break;
         } else {
-            spin_unlock(&pipe->lock);
-            dprintk("pipe_fs_read (SLEEPING)\n");
-            wait_on(&pipe->read_queue);
-            spin_lock(&pipe->lock);
+            int can_block = !(flags & FS_FILE_READ_NON_BLOCKING);
+            if(can_block) {
+                spin_unlock(&pipe->lock);
+                dprintk("pipe_fs_read (SLEEPING)\n");
+                wait_on(&pipe->read_queue);
+                spin_lock(&pipe->lock);
+            } else {
+                if(read == 0) {
+                    read = -EWOULDBLOCK;
+                }
+                break;
+            }
         }
     }
 
@@ -125,10 +129,6 @@ pipe_fs_file_write(
         unsigned long flags)
 {
     if(amount == 0) {
-        return 0;
-    }
-
-    if(flags & FS_FILE_WRITE_NON_BLOCKING) {
         return 0;
     }
 
@@ -161,10 +161,19 @@ pipe_fs_file_write(
             written += 1;
             break;
         } else {
-            spin_unlock(&pipe->lock);
-            dprintk("pipe_fs_write (SLEEPING)\n");
-            wait_on(&pipe->write_queue);
-            spin_lock(&pipe->lock);
+            int can_block = !(flags & FS_FILE_WRITE_NON_BLOCKING);
+            if(can_block) {
+                spin_unlock(&pipe->lock);
+                dprintk("pipe_fs_write (SLEEPING)\n");
+                wait_on(&pipe->write_queue);
+                spin_lock(&pipe->lock);
+            } else {
+                if(written == 0) {
+                    written = -EWOULDBLOCK;
+                }
+                break;
+
+            }
         }
     }
 
