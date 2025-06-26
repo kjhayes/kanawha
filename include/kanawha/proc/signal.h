@@ -14,6 +14,7 @@ struct signal_state {
     void __user *signal_return_ip;
     signal_id_t current_signal;
     unsigned int in_signal : 1;
+    unsigned int signal_delivered : 1;
 
     void __user *signal_entry;
     unsigned int signal_entry_set : 1;

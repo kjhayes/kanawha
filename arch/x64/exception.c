@@ -182,9 +182,12 @@ void x64_handle_exception(struct x64_excp_state *state)
             cur_thread == NULL ||
             cur_thread->status == THREAD_STATUS_RUNNING ||
             cur_thread->status == THREAD_STATUS_TIRED,
-            "x64_handle_exception non-NULL thread %p has invalid status! (status=%ld)\n",
+            "x64_handle_exception non-NULL thread %p has invalid status! (status=%ld) (exception 0x%lx rip=0x%lx)\n",
             (uintptr_t)cur_thread,
-            (sl_t)cur_thread->status);
+            (sl_t)cur_thread->status,
+            state->vector,
+            state->rip
+            );
 
     if(x64_vector_irq_domain == NULL) {
         eprintk("Exception or Interrupt (0x%lx) Occurred before x64_vector_irq_domain has been initialized on CPU (%ld)\n",
@@ -257,6 +260,10 @@ exit:
         struct process *process = current_process();
         if(process != NULL) {
             state->rip = (uint64_t)process->user_ip;
+            if(process->signal_state.in_signal && !process->signal_state.signal_delivered)
+            {
+                state->caller_regs[PUSHED_CALLER_REGS_INDEX_RAX] = process->signal_state.current_signal;
+            }
         }
     }
     return;

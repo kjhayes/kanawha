@@ -29,6 +29,7 @@ signal_deliver(
         signal_id_t id,
         unsigned long flags)
 {
+    int res;
     int irq_flags = spin_lock_irq_save(&process->signal_state.lock);
 
     strace_deliver_signal(process, id);
@@ -46,6 +47,7 @@ signal_deliver(
     }
 
     process->signal_state.in_signal = 1;
+    process->signal_state.signal_delivered = 0;
     process->signal_state.current_signal = id;
 
     // Set the new return address
@@ -69,6 +71,7 @@ signal_complete(
     }
 
     process->signal_state.in_signal = 0;
+    process->signal_state.signal_delivered = 0;
     process->user_ip = process->signal_state.signal_return_ip;
 
     spin_unlock_irq_restore(&process->signal_state.lock, irq_flags);
