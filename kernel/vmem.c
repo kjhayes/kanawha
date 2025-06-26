@@ -648,6 +648,26 @@ vmem_map_unhandled_user_page_fault(
             access_flags & PF_FLAG_USERMODE ? "[USERMODE]" : "",
             access_flags & PF_FLAG_NOT_PRESENT ? "" : "[PRESENT]"
             );
+    uint8_t inst_bytes[16];
+    void __user * line_start = (void __user *)((uintptr_t)process->user_ip & ~0xF);
+    size_t line_offset = (size_t)((uintptr_t)process->user_ip & 0xF);
+    res = process_read_usermem(
+            process,
+            inst_bytes,
+            line_start,
+            16);
+    if(res) {
+        eprintk("Failed to read instruction bytes: %s!\n", errnostr(res));
+    } else {
+        eprintk("Instruction Bytes: \n");
+        for(size_t i = 0; i < 16; i++) {
+            uint8_t b = inst_bytes[i];
+            eprintk("%s 0x%x\n",
+                    i == line_offset ? ">" : " ",
+                    b
+                    );
+        }
+    }
     arch_excp_dump_state(state, do_printk);
     mmap_dump(do_printk, process->mmap);
 #else
