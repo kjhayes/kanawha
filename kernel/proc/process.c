@@ -932,11 +932,20 @@ process_terminate(
         struct process *process,
         int exitcode) 
 {
-    DEBUG_ASSERT(process != NULL);
+#ifdef CONFIG_DEBUG_PROCESS_TERMINATION
+#define LOG(fmt, ...) printk(fmt, ##__VA_ARGS__)
+#else
+#define LOG(...)
+#endif
+
+    DEBUG_ASSERT(KERNEL_ADDR(process));
 
     int res;
 
-    dprintk("process_terminate(%ld)\n", process->id);
+    LOG("process_terminate(pid=%ld, exitcode=%d (%s))\n",
+            process->id,
+            exitcode,
+            errnostr(exitcode));
 
     if(process == init_process) {
         wprintk("Trying to terminate the init process "
@@ -954,6 +963,8 @@ process_terminate(
     int irq_flags;
 
     irq_flags = spin_lock_irq_save(&process->status_lock);
+
+    DEBUG_ASSERT(KERNEL_ADDR(process->parent) || process->parent == NULL);
 
     if(process->status == PROCESS_STATUS_ZOMBIE) {
         // process_terminate is idempotent
@@ -1025,18 +1036,23 @@ process_terminate(
         DEBUG_ASSERT(child->parent == process);
 
         int child_exitcode;
-        res = process_terminate(child, -EINTR);
+        res = process_reap_child(process, child->id, &child_exitcode, 1);
         if(res) {
-            eprintk("Failed to terminate child process during process_terminate! (err=%s)\n",
-                    errnostr(res));
-        }
-        // This will remove the process from our list of children and deallocate the PID
-        process_pid_lock_acquire();
-        res = __process_reap_parent_lock(child);
-        process_pid_lock_release();
-        if(res) {
-            eprintk("Failed to reap child process_during process_terminate! (err=%s)\n",
-                    errnostr(res));
+            res = process_terminate(child, -EINTR);
+            if(res) {
+                eprintk("Failed to terminate child process during process_terminate! (err=%s)\n",
+                        errnostr(res));
+            }
+            // This will remove the process from our list of children and deallocate the PID
+            process_pid_lock_acquire();
+            res = __process_reap_parent_lock(child);
+            process_pid_lock_release();
+            if(res) {
+                eprintk("Failed to reap child process after forced termination during process_terminate! (err=%s)\n",
+                        errnostr(res));
+            }
+        } else {
+            // We reaped the child as normal...
         }
     }
 
@@ -1072,6 +1088,8 @@ process_terminate(
     } 
    
     return 0;
+
+#undef LOG
 }
 
 int

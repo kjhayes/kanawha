@@ -155,6 +155,11 @@ config DEBUG_X64_PEDANTIC_VERIFY_PAGE_TABLES
       This helps find issues with the page table handling code on x64 effectively,
       but can drastically slow down the kernel.
 
+config DEBUG_PROCESS_TERMINATION
+    bool "Log Process Termination"
+    depends on DEBUGGING
+    default n
+
 menu "Strace Options"
 
 config STRACE_LOG_SYSCALL_BEGIN
