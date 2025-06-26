@@ -14,6 +14,12 @@
 #include <elf/elf.h>
 #include <elf/elf_string.h>
 
+#ifdef CONFIG_DEBUG_SYSCALL_EXEC
+#define LOG(fmt, ...) printk("PID(%ld) syscall_exec: " fmt, process->id, ##__VA_ARGS__)
+#else
+#define LOG(...)
+#endif
+
 static int
 exec_elf64_check_header(
         Elf64_Ehdr *hdr)
@@ -248,8 +254,8 @@ syscall_exec(
         file_table_get_file(process->file_table, process, file);
 
     const char *name = fs_path_get_name(desc->path);
-    dprintk("PID(%ld) exec(%ld) %s\n",
-            process->id, file,
+    LOG("exec(%ld) %s\n",
+            file,
             desc == NULL ? "NULL" : name == NULL ? "UNNAMED" : name);
 
     if(desc == NULL) {
