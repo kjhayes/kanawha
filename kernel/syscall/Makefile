@@ -13,6 +13,7 @@ obj-y += \
 	getcwd.o \
 	spawn.o \
 	reap.o \
+	faccess.o \
 	mount.o \
 	dirbegin.o \
 	dirnext.o \

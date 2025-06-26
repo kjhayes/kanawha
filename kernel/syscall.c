@@ -153,6 +153,15 @@ handle_syscall(
                         (int __user *)args->args[2] // exitcode
                         );
             break;
+        case SYSCALL_ID_FACCESS:
+            ret_val = (uint64_t)(int)
+                syscall_faccess(
+                        process,
+                        (fd_t)args->args[0], // file
+                        (unsigned long)args->args[1], // fields
+                        (unsigned long)args->args[2] // mode
+                        );
+            break;
         case SYSCALL_ID_MOUNT:
             ret_val = (uint64_t)(int)
                 syscall_mount(

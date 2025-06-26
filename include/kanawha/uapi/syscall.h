@@ -127,6 +127,12 @@ ARG(fd_t, file)\
 ARG(int, attr)\
 ARG(size_t __user *, value)\
 
+#define SYSCALL_SIG_FACCESS(RET,ARG)\
+RET(int)\
+ARG(fd_t, file)\
+ARG(unsigned long, fields)\
+ARG(unsigned long, mode)\
+
 #define SYSCALL_SIG_MKFILE(RET,ARG)\
 RET(int)\
 ARG(fd_t, dir)\
@@ -248,6 +254,7 @@ X(environ,   10, ENVIRON,    SYSCALL_SIG_ENVIRON)\
 X(getcwd,    11, GETCWD,     SYSCALL_SIG_GETCWD)\
 X(spawn,     12, SPAWN,      SYSCALL_SIG_SPAWN)\
 X(reap,      13, REAP,       SYSCALL_SIG_REAP)\
+X(faccess,   14, FACCESS,    SYSCALL_SIG_FACCESS)\
 X(mount,     15, MOUNT,      SYSCALL_SIG_MOUNT)\
 X(unmount,   16, UNMOUNT,    SYSCALL_SIG_UNMOUNT)\
 X(dirbegin,  17, DIRBEGIN,   SYSCALL_SIG_DIRBEGIN)\

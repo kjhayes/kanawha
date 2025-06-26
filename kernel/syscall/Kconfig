@@ -58,6 +58,11 @@ config DEBUG_SYSCALL_REAP
     help
       Log info about each reap syscall
 
+config DEBUG_SYSCALL_FACCESS
+    bool "Debug faccess"
+    depends on DEBUGGING
+    default n
+
 config DEBUG_SYSCALL_CHWDIR
     bool "Debug chwdir"
     depends on DEBUGGING

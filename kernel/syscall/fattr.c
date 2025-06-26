@@ -68,6 +68,12 @@ syscall_fattr(
                 }
             }
             break;
+        case FILE_ATTR_ACCESS:
+            value = 0;
+            if(file->mode_flags & FILE_MODE_NON_BLOCK) {
+                value |= FACCESS_NON_BLOCKING;
+            }
+            break;
         default:
             res = -EINVAL;
             break;
