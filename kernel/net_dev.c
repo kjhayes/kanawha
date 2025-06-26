@@ -43,7 +43,7 @@ register_net_dev(
     printk("Registered Network Device \"%s\" MAC=[",
             name);
     dump_eth_mac_addr(do_printk, &addr);
-    printk("]\n");
+    do_printk("]\n");
     return 0;
 }
 
