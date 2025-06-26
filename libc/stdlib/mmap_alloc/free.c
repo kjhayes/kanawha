@@ -15,6 +15,7 @@ void free(void *ptr)
     void *base_ptr = (void*)((uintptr_t)ptr & ~0xFFF);
 
     res = kanawha_sys_munmap(ptr);
+    while(res != 0) {}
     //assert(res == 0);
 }
 

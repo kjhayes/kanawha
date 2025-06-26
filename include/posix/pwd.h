@@ -10,6 +10,8 @@ struct passwd
     gid_t    pw_gid;    // numerical group ID
     char    *pw_dir;    // initial working directory
     char    *pw_shell;  // program to use as shell
+    char    *pw_passwd; // hashed password
+    char    *pw_gecos;  // real name
 };
 
 struct passwd *getpwnam(const char *);

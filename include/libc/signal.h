@@ -22,7 +22,12 @@ extern void __elk_signal__ignore(int);
 #define SIG_IGN  __elk_signal__ignore
 
 typedef volatile uint64_t sig_atomic_t;
-typedef uint64_t sigset_t;
+
+#define __ELK_LIBC_SIGSET_DATA_LONGS (1)
+#define __ELK_LIBC_SIGSET_SIGNAL_COUNT (__ELK_LIBC_SIGSET_DATA_LONGS * sizeof(unsigned long) * 8)
+typedef struct {
+    unsigned long data[__ELK_LIBC_SIGSET_DATA_LONGS];
+} sigset_t;
 
 #define SIGABRT    (1)
 #define SIGALRM    (2)
@@ -106,7 +111,9 @@ struct sigstack {
 #define MINSIGSTKSZ  (0x1000)
 #define SIGSTKSZ     (1ULL<<21)
 
-void (*bsd_signal(int, void (*)(int)))(int);
+typedef void(*sighandler_t)(int);
+
+void (*bsd_signal(int, sighandler_t))(int);
 int    kill(pid_t, int);
 int    killpg(pid_t, int);
 int    raise(int);
@@ -121,7 +128,7 @@ int    sighold(int);
 int    sigignore(int);
 int    siginterrupt(int, int);
 int    sigismember(const sigset_t *, int);
-void (*signal(int, void (*)(int)))(int);
+sighandler_t signal(int, sighandler_t);
 int    sigpause(int);
 int    sigpending(sigset_t *);
 int    sigprocmask(int, const sigset_t *restrict, sigset_t *restrict);
@@ -133,5 +140,10 @@ int    sigtimedwait(const sigset_t *restrict, siginfo_t *restrict,
            const struct timespec *restrict);
 int    sigwait(const sigset_t *restrict, int *restrict);
 int    sigwaitinfo(const sigset_t *restrict, siginfo_t *restrict);
+
+// Extensions
+int sigisemptyset(sigset_t *);
+int sigorset(sigset_t *dest, sigset_t *left, sigset_t *right);
+int sigandset(sigset_t *dest, sigset_t *left, sigset_t *right);
 
 #endif

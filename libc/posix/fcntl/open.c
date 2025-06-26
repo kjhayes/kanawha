@@ -4,6 +4,7 @@
 #include <kanawha/errno.h>
 #include <fcntl.h>
 #include <stdarg.h>
+#include <errno.h>
 #include <string.h>
 #include <stdlib.h>
 
@@ -42,7 +43,7 @@ open(
             access_flags |= FILE_PERM_WRITE;
             break;
         default:
-            // TODO set errno
+            errno = -EINVAL;
             return -1;
     }
 
@@ -68,18 +69,19 @@ open(
     if(res == 0) {
         return file_fd;
     } else if(res != -ENXIO) {
-        // TODO set errno
+        errno = res;
         return -1;
     }
 
     // We need to make the file
     if(flags & O_CREAT) {
-        char *directory = strdup(pathname);
+        char *pathname_dup = strdup(pathname);
+        char *directory = pathname_dup;
         char *slash = strrchr(directory, '/');
         const char *new_file_name;
-        if(slash < directory) {
-            directory = "";
+        if(slash == NULL) {
             new_file_name = directory;
+            directory = "";
         } else {
             *slash = '\0';
             new_file_name = slash++;
@@ -92,8 +94,8 @@ open(
                 0,
                 &dir_fd);
         if(res) {
-            free(directory);
-            // TODO set errno
+            free(pathname_dup);
+            errno = res;
             return -1;
         }
         unsigned long mkfile_flags = 0;
@@ -101,21 +103,21 @@ open(
                 dir_fd,
                 new_file_name,
                 mkfile_flags);
-        free(directory);
+        free(pathname_dup);
         if(res) {
-            // TODO set errno
+            errno = res;
             return -1;
         }
 
         res = kanawha_sys_flush(dir_fd, 0);
         if(res) {
-            // TODO set errno
+            errno = res;
             return -1;
         }
 
         res = kanawha_sys_close(dir_fd);
         if(res) {
-            // TODO set errno
+            errno = res;
             return -1;
         }
     }
@@ -126,7 +128,7 @@ open(
             mode_flags,
             &file_fd);
     if(res) {
-        // TODO set errno
+        errno = res;
         return -1;
     }
 

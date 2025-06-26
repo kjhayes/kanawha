@@ -6,6 +6,7 @@
 void *calloc(size_t nmemb, size_t size)
 {
     size_t total_size = nmemb * size;
+
     // mmap will zero the region for us
     void *addr = malloc(total_size);
     if(addr == NULL) {

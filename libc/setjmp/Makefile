@@ -1,6 +1,5 @@
 
 obj-y += \
-	setjmp.o \
 	longjmp.o \
 
 obj-$(CONFIG_X64) += \

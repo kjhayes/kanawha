@@ -1,4 +1,5 @@
 
+#include <stdio.h>
 #include <elk-libc-internal/size_t.h>
 
 size_t strlen(

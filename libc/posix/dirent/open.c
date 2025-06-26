@@ -11,7 +11,7 @@ fdopendir(int fd)
 
     DIR *dir = __elk_libc_internal__alloc_DIR();
     if(dir == NULL) {
-        // TODO set errno
+        errno = -ENOMEM;
         return NULL;
     }
 
@@ -24,7 +24,7 @@ fdopendir(int fd)
             dir->eod = 1;
         } else {
             __elk_libc_internal__free_DIR(dir);
-            // TODO set errno
+            errno = res;
             return NULL;
         }
     }
@@ -44,12 +44,13 @@ opendir(const char *path)
             0,
             &fd);
     if(res) {
-        // TODO set errno
+        errno = res;
         return NULL;
     }
 
     DIR *dir = fdopendir(fd);
     if(dir == NULL) {
+        // errno propogates
         return NULL;
     }
 

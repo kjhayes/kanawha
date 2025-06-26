@@ -2,6 +2,7 @@
 #include <sys/stat.h>
 #include <kanawha/sys-wrappers.h>
 #include <kanawha/file.h>
+#include <errno.h>
 
 int
 stat(
@@ -19,7 +20,7 @@ stat(
             &filedes);
 
     if(res) {
-        // TODO set errno
+        errno = res;
         return -1;
     }
 

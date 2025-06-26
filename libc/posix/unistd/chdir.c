@@ -1,5 +1,6 @@
 
 #include <unistd.h>
+#include <errno.h>
 #include <kanawha/file.h>
 #include <kanawha/sys-wrappers.h>
 
@@ -15,17 +16,17 @@ chdir(const char *path)
             0,
             &file);
     if(res) {
-        // TODO set errno
+        errno = res;
         return -1;
     }
     res = kanawha_sys_chwdir(file);
     if(res) {
-        // TODO set errno
+        errno = res;
         return -1;
     }
     res = kanawha_sys_close(file);
     if(res) {
-        // TODO set errno
+        errno = res;
         return -1;
     }
 

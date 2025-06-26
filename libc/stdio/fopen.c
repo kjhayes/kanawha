@@ -20,6 +20,7 @@ FILE *fopen(
 
     struct __sFILE *file = malloc(sizeof(struct __sFILE));
     if(file == NULL) {
+        errno = -ENOMEM;
         return NULL;
     }
     memset(file, 0, sizeof(struct __sFILE));
@@ -32,6 +33,7 @@ FILE *fopen(
     if(res) {
         __elk_libc_internal__deinit_sFILE(file);
         free(file);
+        errno = res;
         return NULL;
     }
 

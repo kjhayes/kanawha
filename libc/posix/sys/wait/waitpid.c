@@ -2,7 +2,7 @@
 #include <sys/wait.h>
 #include <kanawha/process.h>
 #include <kanawha/sys-wrappers.h>
-#include <kanawha/errno.h>
+#include <errno.h>
 
 pid_t
 waitpid(
@@ -32,7 +32,7 @@ waitpid(
         if(res == -EWOULDBLOCK) {
             return 0;
         }
-        // TODO set errno
+        errno = res;
         return -1;
     }
 

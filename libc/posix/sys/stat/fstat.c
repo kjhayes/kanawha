@@ -1,6 +1,6 @@
 
 #include <kanawha/sys-wrappers.h>
-#include <kanawha/attr.h>
+#include <kanawha/file.h>
 #include <sys/stat.h>
 #include <string.h>
 #include <unistd.h>
@@ -48,15 +48,31 @@ fstat(
     }
     }
 
-    buffer->st_mode = S_IRWXU|S_IRWXG|S_IRWXO; // No permission checking currently
+    { // st_mode
+    size_t types;
+    res = kanawha_sys_fattr(filedes, FILE_ATTR_TYPES, &types);
+    if(res) {
+        buffer->st_mode = S_IFDIR;
+    } else {
+        // kanawha allows files to be multiple types,
+        // however we need to conform to the standard
+        // layout of these bits or lots of programs are
+        // mad (so only 1 type may be set)
+        if(types & FILE_TYPE_DIRECTORY) {
+            buffer->st_mode = S_IFDIR;
+        } 
+        else {
+            buffer->st_mode = S_IFREG;
+        }
+    }
+    }
+
+    buffer->st_mode |= S_IRWXU|S_IRWXG|S_IRWXO; // No permission checking currently
+
     buffer->st_nlink = 1;
     buffer->st_uid = 0;
     buffer->st_gid = 0;
     buffer->st_rdev = 0;
-
-
-    // TODO
-    buffer->st_mode = S_IFDIR;
 
     return 0;
 }

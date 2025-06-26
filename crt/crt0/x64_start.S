@@ -150,7 +150,9 @@ __thread_start_stack_map_fail:
 .global __elk_crt__default_signal_handler_entry
 .type __elk_crt__default_signal_handler_entry,@function
 __elk_crt__default_signal_handler_entry:
-    pushq %rax
+
+    // rax -> signal number
+
     pushq %rdi
     pushq %rsi
     pushq %rdx
@@ -160,8 +162,10 @@ __elk_crt__default_signal_handler_entry:
     pushq %r10
     pushq %r11
 
-    movq %rsp, %rax
+    // Pass signal no. as first argument
+    mov %rax, %rdi
 
+    movq %rsp, %rax
     andq $(~0xF), %rsp
     pushq %rax
     callq __elk_crt__default_signal_handler
@@ -176,7 +180,6 @@ __elk_crt__default_signal_handler_entry:
     popq %rdx
     popq %rsi
     popq %rdi
-    popq %rax
     
     movq $35, %rax // SIGRET syscall
     syscall

@@ -14,7 +14,7 @@ freopen(
     if(filename == NULL) {
         // TODO support changing the mode of a file
         fclose(stream);
-        // TODO set errno
+        errno = -EUNIMPL;
         return NULL;
     } else {
         fflush(stream);
@@ -29,7 +29,7 @@ freopen(
                 stream);
         if(res) {
             free(stream);
-            // TODO set errno
+            errno = res;
             return NULL;
         }
 

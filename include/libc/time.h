@@ -32,7 +32,7 @@ struct tm *localtime(const time_t *);
 struct tm *localtime_r(const time_t *, struct tm *);
 time_t     mktime(struct tm *);
 int        nanosleep(const struct timespec *, struct timespec *);
-size_t     strftime(char *, size_t, const char *, const struct tm *);
+size_t     strftime(char *restrict, size_t, const char * restrict, const struct tm * restrict);
 char      *strptime(const char *, const char *, struct tm *);
 time_t     time(time_t *);
 int        timer_delete(timer_t);

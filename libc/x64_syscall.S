@@ -16,7 +16,7 @@
 #define KANAWHA_SYSCALL_ID_GETCWD    11
 #define KANAWHA_SYSCALL_ID_SPAWN     12
 #define KANAWHA_SYSCALL_ID_REAP      13
-#define KANAWHA_SYSCALL_ID_GETPID    14
+#define KANAWHA_SYSCALL_ID_FACCESS   14
 #define KANAWHA_SYSCALL_ID_MOUNT     15
 #define KANAWHA_SYSCALL_ID_UNMOUNT   16
 #define KANAWHA_SYSCALL_ID_DIRBEGIN  17
@@ -39,6 +39,11 @@
 #define KANAWHA_SYSCALL_ID_TIME      34
 #define KANAWHA_SYSCALL_ID_SIGRET    35
 #define KANAWHA_SYSCALL_ID_SIGROUTE  36
+#define KANAWHA_SYSCALL_ID_RID       37
+#define KANAWHA_SYSCALL_ID_WID       38
+#define KANAWHA_SYSCALL_ID_RESIZE    39
+#define KANAWHA_SYSCALL_ID_POLL      40
+#define KANAWHA_SYSCALL_ID_SIGSEND   41
 
 .global kanawha_sys_exit
 .type kanawha_sys_exit,@function
@@ -179,10 +184,13 @@ kanawha_sys_reap:
     syscall
     retq
 
-.global kanawha_sys_getpid
-.type kanawha_sys_getpid,@function
-kanawha_sys_getpid:
-    movq $KANAWHA_SYSCALL_ID_GETPID, %rax
+.global kanawha_sys_faccess
+.type kanawha_sys_faccess,@function
+kanawha_sys_faccess:
+    movq $KANAWHA_SYSCALL_ID_FACCESS, %rax
+    // rdi -> fd_t file
+    // rsi -> unsigned long fields
+    // rdx -> unsigned long mode
     syscall
     retq
 
@@ -388,6 +396,56 @@ kanawha_sys_sigret:
 kanawha_sys_sigroute:
     movq $KANAWHA_SYSCALL_ID_SIGROUTE, %rax
     // rdi -> void * entry
+    syscall
+    retq
+
+.global kanawha_sys_rid
+.type kanawha_sys_rid,@function
+kanawha_sys_rid:
+    movq $KANAWHA_SYSCALL_ID_RID, %rax
+    // rdi -> pid_t target
+    // rsi -> unsigned long flags
+    // rdx -> id_t *id_out
+    syscall
+    retq
+
+.global kanawha_sys_wid
+.type kanawha_sys_wid,@function
+kanawha_sys_wid:
+    movq $KANAWHA_SYSCALL_ID_WID, %rax
+    // rdi -> pid_t target
+    // rsi -> unsigned long flags
+    // rdx -> id_t id
+    syscall
+    retq
+
+.global kanawha_sys_resize
+.type kanawha_sys_resize,@function
+kanawha_sys_resize:
+    movq $KANAWHA_SYSCALL_ID_RESIZE, %rax
+    // rdi -> fd_t file
+    // rsi -> size_t size
+    // rdx -> unsigned long flags
+    syscall
+    retq
+
+.global kanawha_sys_poll
+.type kanawha_sys_poll,@function
+kanawha_sys_poll:
+    movq $KANAWHA_SYSCALL_ID_POLL, %rax
+    // rdi -> fd_t file
+    // rsi -> unsigned long watching
+    // rdx -> unsigned long *triggered
+    syscall
+    retq
+
+.global kanawha_sys_sigsend
+.type kanawha_sys_sigsend,@function
+kanawha_sys_sigsend:
+    movq $KANAWHA_SYSCALL_ID_SIGSEND, %rax
+    // rdi -> pid_t procid
+    // rsi -> int signal 
+    // rdx -> unsigned long flags 
     syscall
     retq
 

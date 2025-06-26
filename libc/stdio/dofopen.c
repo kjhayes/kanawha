@@ -63,6 +63,9 @@ int __elk_libc_internal__dofopen(
             dirpath = path_copy;
             filename[0] = '\0';
             filename = filename+1;
+            if(strlen(dirpath) == 0) {
+                dirpath = "/";
+            }
         }
 
         fd_t dir;

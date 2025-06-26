@@ -9,7 +9,7 @@
 #define PRIdN       "%"
 #define PRIdLEASTN  "%"
 #define PRIdFASTN   "%"
-#define PRIdMAX     "%"
+#define PRIdMAX     "ld"
 #define PRIdPTR     "%"
 #define PRIiN       "%"
 #define PRIiLEASTN  "%"

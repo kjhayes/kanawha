@@ -1,5 +1,6 @@
 
 #include <unistd.h>
+#include <errno.h>
 #include <kanawha/sys-wrappers.h>
 #include <kanawha/file.h>
 
@@ -33,7 +34,7 @@ access(
             mode_flags,
             &filedes);
     if(res) {
-        // TODO set errno
+        errno = res;
         return -1;
     }
 

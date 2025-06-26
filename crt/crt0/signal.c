@@ -6,9 +6,12 @@
 extern void __elk_crt__default_signal_handler_entry(void);
 
 void
-__elk_crt__default_signal_handler(void)
+__elk_crt__default_signal_handler(
+        unsigned long signal_no
+        )
 {
-    fprintf(stdout, "Received Signal: Exiting...\n");
+    fprintf(stdout, "Received Signal (%ld): Exiting...\n",
+            signal_no);
     fflush(stdout);
     exit(-1);
 }

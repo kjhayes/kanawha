@@ -4,4 +4,7 @@ obj-y += \
 	log.o \
 	pow.o \
 	floor.o \
+	frexp.o \
+	modf.o \
+	roundf.o \
 

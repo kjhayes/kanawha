@@ -2,6 +2,7 @@
 #include <elk-libc-internal/DIR.h>
 #include <kanawha/sys-wrappers.h>
 #include <kanawha/file.h>
+#include <errno.h>
 
 int
 closedir(DIR *dir)
@@ -10,7 +11,7 @@ closedir(DIR *dir)
 
     res = kanawha_sys_close(dir->fd);
     if(res) {
-        // TODO set errno
+        errno = res;
         return -1;
     }
 

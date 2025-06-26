@@ -12,7 +12,9 @@
 #define __need___va_list
 #include <stdarg.h>
 
-typedef unsigned long fpos_t;
+typedef struct {
+    off_t __offset;
+} fpos_t;
 
 #define _IOFBF (1)
 #define _IOLBF (2)

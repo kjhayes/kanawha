@@ -1,6 +1,7 @@
 
 #include <unistd.h>
 #include <stdio.h>
+#include <errno.h>
 #include <kanawha/sys-wrappers.h>
 
 ssize_t
@@ -13,7 +14,7 @@ read(
 
     res = kanawha_sys_read(filedes, buf, nbyte);
     if(res < 0) {
-        // TODO set errno
+        errno = res;
         return -1;
     }
 

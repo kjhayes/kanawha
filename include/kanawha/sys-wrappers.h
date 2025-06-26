@@ -115,10 +115,6 @@ kanawha_sys_reap(
         int *exitcode);
 
 __attribute__((weak))
-pid_t
-kanawha_sys_getpid(void);
-
-__attribute__((weak))
 int
 kanawha_sys_mount(
         const char *source,
@@ -162,6 +158,14 @@ kanawha_sys_fattr(
         fd_t file,
         int attr,
         size_t *value);
+
+__attribute__((weak))
+int
+kanawha_sys_faccess(
+        fd_t file,
+        unsigned long fields,
+        unsigned long mode
+        );
 
 __attribute__((weak))
 int
@@ -246,5 +250,40 @@ __attribute__((weak))
 int
 kanawha_sys_sigroute(
         void *entry);
+
+__attribute__((weak))
+int
+kanawha_sys_rid(
+        pid_t target,
+        unsigned long flags,
+        id_t *id_out);
+
+__attribute__((weak))
+int
+kanawha_sys_wid(
+        pid_t target,
+        unsigned long flags,
+        id_t id);
+
+__attribute__((weak))
+int
+kanawha_sys_resize(
+        fd_t file,
+        size_t size,
+        unsigned long flags);
+
+__attribute__((weak))
+int
+kanawha_sys_poll(
+        fd_t file,
+        unsigned long watching,
+        unsigned long *triggered);
+
+__attribute__((weak))
+int
+kanawha_sys_sigsend(
+        pid_t target,
+        int signal,
+        unsigned long flags);
 
 #endif

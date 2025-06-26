@@ -525,15 +525,18 @@ kfb_flush_framebuffer(
     return kanawha_sys_flush(buffer->buffer_file, 0);
 }
 
-int
-kfb_blit_image_onto_layer(
+
+static inline int
+kfb_blit_image_with_transform_onto_layer(
         struct kfb_framebuffer *fb,
         size_t layer,
         struct kfb_image *image,
         size_t offset_x,
         size_t offset_y,
         size_t width,
-        size_t height)
+        size_t height,
+        void *xform_state,
+        kfb_rgba_t(*xform)(kfb_rgba_t color, void *state))
 {
     if(layer >= fb->current_mode_info->layer_count) {
         fprintf(stderr, "Layer %d does not exists!\n", layer);
@@ -609,7 +612,11 @@ kfb_blit_image_onto_layer(
 
           for(size_t read_y = read_y_start; read_y < read_y_start + y_sample; read_y++) {
               for(size_t read_x = read_x_start; read_x < read_x_start + x_sample; read_x++) {
-                  uint8_t *from_data = &image->data[FROM_OFFSET(read_x, read_y)];
+                  size_t from_offset = FROM_OFFSET(read_x, read_y);
+                  if(from_offset >= image->data_size) {
+                      continue;
+                  }
+                  uint8_t *from_data = &image->data[from_offset];
                   uint32_t cur_rgba;
 
                   int res = __kfb_convert_to_rgba(
@@ -632,15 +639,36 @@ kfb_blit_image_onto_layer(
               continue;
           }
 
-          size_t cur_fill_x = x_fill;
-          size_t cur_fill_y = y_fill;
+          if(xform) {
+              kfb_rgba_t to_xform = {
+                  .r = (sampled_rgba) & 0xFF,
+                  .g = (sampled_rgba>>8) & 0xFF,
+                  .b = (sampled_rgba>>16) & 0xFF,
+                  .a = (sampled_rgba>>24) & 0xFF,
+              };
+              to_xform = (*xform)(to_xform, xform_state);
+              sampled_rgba =
+                  (uint32_t)to_xform.r |
+                  (((uint32_t)to_xform.g&0xFF)<<8) |
+                  (((uint32_t)to_xform.b&0xFF)<<16) |
+                  (((uint32_t)to_xform.a&0xFF)<<24);
+          }
+         
+          if(((sampled_rgba>>24)&0xFF) > 0) {
+              size_t cur_fill_x = x_fill;
+              size_t cur_fill_y = y_fill;
 
-          for(size_t fy = 0; fy < cur_fill_y; fy++) {
-              for(size_t fx = 0; fx < cur_fill_x; fx++) {
-                  int res = __kfb_convert_from_rgba(
-                      &sampled_rgba,
-                      layer_info->format,
-                      &fb->buffer_data[TO_OFFSET(write_x + fx, write_y + fy)]);
+              for(size_t fy = 0; fy < cur_fill_y; fy++) {
+                  for(size_t fx = 0; fx < cur_fill_x; fx++) {
+                      size_t to_offset = TO_OFFSET(write_x + fx, write_y + fy);
+                      if(to_offset >= fb->current_mode_info->buffer_size) {
+                          continue;
+                      }
+                      int res = __kfb_convert_from_rgba(
+                          &sampled_rgba,
+                          layer_info->format,
+                          &fb->buffer_data[to_offset]);
+                  }
               }
           }
       }
@@ -649,10 +677,8 @@ kfb_blit_image_onto_layer(
     return 0;
 }
 
-
-// OLD
 int
-__kfb_blit_image_onto_layer(
+kfb_blit_image_onto_layer(
         struct kfb_framebuffer *fb,
         size_t layer,
         struct kfb_image *image,
@@ -661,131 +687,113 @@ __kfb_blit_image_onto_layer(
         size_t width,
         size_t height)
 {
-    if(layer >= fb->current_mode_info->layer_count) {
-        fprintf(stderr, "Layer %d does not exists!\n", layer);
-        return -EINVAL;
+    return kfb_blit_image_with_transform_onto_layer(
+            fb,
+            layer,
+            image,
+            offset_x,
+            offset_y,
+            width,
+            height,
+            NULL,
+            NULL);
+}
+
+static inline kfb_rgba_t
+__kfb_rgba_tint(
+        kfb_rgba_t to_tint,
+        void *tint_ptr)
+{
+    kfb_rgba_t tint = *(kfb_rgba_t*)tint_ptr;
+    if(to_tint.a == 0) {
+        return to_tint;
+    }
+    if(tint.a == 0) {
+        return to_tint;
     }
 
-    struct fb_layer_info *layer_info = &fb->current_mode_info->layer_infos[layer];
-
-    if(offset_x >= layer_info->width) {
-        return 0;
-    }
-    if(offset_y >= layer_info->height) {
-        return 0;
-    }
-    if(offset_x + width > layer_info->width) {
-        width = layer_info->width - offset_x;
-    }
-    if(offset_y + height > layer_info->height) {
-        height = layer_info->height - offset_y;
-    }
-
-    size_t image_scaler_x = 1;
-    size_t image_divisor_x = 1;
-    size_t image_scaler_y = 1;
-    size_t image_divisor_y = 1;
-
-    size_t end_x = image->resx;
-    size_t end_y = image->resy;
-
-    image_scaler_x = image->resx;
-    image_divisor_x = width;
-    image_scaler_y = image->resy;
-    image_divisor_y = height;
-
-    if(layer_info->order != FB_LAYER_ORDER_ROW_MAJOR ||
-       image->order != FB_LAYER_ORDER_ROW_MAJOR) {
-        // We're going to assume both are row major for now
-        return -EUNIMPL;
-    }
-
-    for(size_t iy = 0; iy < end_y; iy++)
-    {
+    uint16_t a_sum = to_tint.a + tint.a;
+    float tint_strength = (float)tint.a / (float)a_sum;
     
-      size_t image_y = (iy * (image_scaler_y))/image_divisor_y; 
-      size_t layer_y = iy + offset_y;
+    uint16_t r = (tint_strength * tint.r) + ((1.0 - tint_strength) * to_tint.r);
+    uint16_t g = (tint_strength * tint.g) + ((1.0 - tint_strength) * to_tint.g);
+    uint16_t b = (tint_strength * tint.b) + ((1.0 - tint_strength) * to_tint.b);
 
-      if(image_y >= image->resy) {continue;}
+    if(r > 255) { r = 255; }
+    if(g > 255) { g = 255; }
+    if(b > 255) { b = 255; }
 
-      size_t next_image_y = ((iy+1) * (image_scaler_y))/image_divisor_y; 
-      if(next_image_y > end_y+1) {
-          next_image_y = end_y+1;
-      }
+    to_tint.r = r;
+    to_tint.g = g;
+    to_tint.b = b;
+    return to_tint;
+}
 
-      for(size_t ix = 0; ix < end_x; ix++) {
+int
+kfb_blit_image_with_tint_onto_layer(
+        struct kfb_framebuffer *fb,
+        size_t layer,
+        struct kfb_image *image,
+        size_t offset_x,
+        size_t offset_y,
+        size_t width,
+        size_t height,
+        kfb_rgba_t tint)
+{
+    return kfb_blit_image_with_transform_onto_layer(
+            fb,
+            layer,
+            image,
+            offset_x,
+            offset_y,
+            width,
+            height,
+            &tint,
+            __kfb_rgba_tint);
+}
+static kfb_rgba_t
+__kfb_brightness_as_color(
+        kfb_rgba_t b_color,
+        void *color_ptr)
+{
+    kfb_rgba_t color = *(kfb_rgba_t*)color_ptr;
+    float b_color_br = ((float)b_color.r + (float)b_color.g + (float)b_color.b)/(3.0f * 255.0f);
+    float mult = b_color_br;
+    int16_t r = color.r * mult;
+    int16_t g = color.g * mult;
+    int16_t b = color.b * mult;
+    if(r > 255) {r = 255;}
+    if(g > 255) {g = 255;}
+    if(b > 255) {b = 255;}
+    kfb_rgba_t ret = {
+        .r = r,
+        .g = g,
+        .b = b,
+        .a = b_color.a,
+    };
+    return ret;
+}
 
-          size_t image_x = (ix * (image_scaler_x))/image_divisor_x;
-          size_t layer_x = ix + offset_x;
-
-          size_t next_image_x = ((ix+1) * (image_scaler_x))/image_divisor_x;
-          if(next_image_x > end_x+1) {
-              next_image_x = end_x+1;
-          }
-
-          if(image_x >= image->resx) {break;}
-
-          size_t sample_x = next_image_x - image_x;
-          size_t sample_y = next_image_y - image_y;
-
-#undef FROM_OFFSET
-#define FROM_OFFSET(__x,__y) image->offset + ((image_x + __x)*image->stride) + ((image_y + __y)*image->stride*image->resx)
-#undef TO_OFFSET
-#define TO_OFFSET(__x, __y) layer_info->offset + ((layer_x + __x)*layer_info->stride) + ((layer_y + __y)*layer_info->stride*layer_info->width)
-
-          uint8_t *to_data = &fb->buffer_data[TO_OFFSET(0,0)];
-          if(sample_x <= 1 && sample_y <= 1) {
-              uint8_t *from_data = &image->data[FROM_OFFSET(0,0)];
-
-              int res = __kfb_convert_pixel(
-                      image->format,
-                      from_data,
-                      layer_info->format,
-                      to_data);
-              if(res) {
-                  return res;
-              }
-          } else {
-              int res;
-              uint32_t rgba[sample_x * sample_y];
-              for(size_t sy = 0; sy < sample_y; sy++) {
-                  for(size_t sx = 0; sx < sample_x; sx++) {
-                      res = __kfb_convert_to_rgba(
-                          image->format,
-                          &image->data[FROM_OFFSET(sx,sy)],
-                          (uint8_t*)&rgba[sx + (sample_x * sy)]);
-                      if(res) {
-                          return res;
-                      }
-                  }
-              }
-              uint32_t r = 0;
-              uint32_t g = 0;
-              uint32_t b = 0;
-              uint32_t a = 0;
-              for(size_t index = 0; index < sample_x*sample_y; index++) {
-                  uint8_t *data = (uint8_t*)&rgba[index];
-                  r += data[0];
-                  g += data[1];
-                  b += data[2];
-                  a += data[3];
-              }
-              r /= sample_x * sample_y;
-              g /= sample_x * sample_y;
-              b /= sample_x * sample_y;
-              a /= sample_x * sample_y;
-              uint32_t sampled_rgba = r | ((g&0xFF)<<8) | ((b&0xFF)<<16) | ((a&0xFF)<<24);
-              res = __kfb_convert_from_rgba(
-                      &sampled_rgba,
-                      layer_info->format,
-                      to_data);
-              if(res) {
-                  return res;
-              }
-          }
-      }
-    }
-
-    return 0;
+int
+kfb_blit_image_brightness_as_color_onto_layer(
+        struct kfb_framebuffer *fb,
+        size_t layer,
+        struct kfb_image *image,
+        size_t offset_x,
+        size_t offset_y,
+        size_t width,
+        size_t height,
+        kfb_rgba_t color)
+{
+    return kfb_blit_image_with_transform_onto_layer(
+            fb,
+            layer,
+            image,
+            offset_x,
+            offset_y,
+            width,
+            height,
+            &color,
+            __kfb_brightness_as_color);
 }
 

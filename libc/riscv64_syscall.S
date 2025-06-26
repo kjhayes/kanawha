@@ -15,7 +15,6 @@
 #define KANAWHA_SYSCALL_ID_CHILDNAME 11
 #define KANAWHA_SYSCALL_ID_SPAWN     12
 #define KANAWHA_SYSCALL_ID_REAP      13
-#define KANAWHA_SYSCALL_ID_GETPID    14
 #define KANAWHA_SYSCALL_ID_MOUNT     15
 #define KANAWHA_SYSCALL_ID_UNMOUNT   16
 #define KANAWHA_SYSCALL_ID_DIRBEGIN  17
@@ -38,6 +37,10 @@
 #define KANAWHA_SYSCALL_ID_TIME      34
 #define KANAWHA_SYSCALL_ID_SIGRET    35
 #define KANAWHA_SYSCALL_ID_SIGROUTE  36
+#define KANAWHA_SYSCALL_ID_RID       37
+#define KANAWHA_SYSCALL_ID_WID       38
+#define KANAWHA_SYSCALL_ID_RESIZE    39
+#define KANAWHA_SYSCALL_ID_POLL      40
 
 .global kanawha_sys_exit
 .type kanawha_sys_exit,@function
@@ -176,13 +179,6 @@ kanawha_sys_reap:
     // a0 -> unsigned long flags
     // a1 -> pid_t *child_inout
     // a2 -> int *exitcode 
-    ecall
-    ret
-
-.global kanawha_sys_getpid
-.type kanawha_sys_getpid,@function
-kanawha_sys_getpid:
-    li a7, KANAWHA_SYSCALL_ID_GETPID
     ecall
     ret
 
@@ -387,6 +383,46 @@ kanawha_sys_sigret:
 kanawha_sys_sigroute:
     li a7, KANAWHA_SYSCALL_ID_SIGROUTE
     // a0 -> void * entry
+    ecall
+    ret
+
+.global kanawha_sys_rid
+.type kanawha_sys_rid,@function
+kanawha_sys_rid:
+    li a7, KANAWHA_SYSCALL_ID_RID
+    // a0 -> pid_t target
+    // a1 -> unsigned long flags
+    // a2 -> id_t *id_out
+    ecall
+    ret
+
+.global kanawha_sys_wid
+.type kanawha_sys_wid,@function
+kanawha_sys_wid:
+    li a7, KANAWHA_SYSCALL_ID_WID
+    // a0 -> pid_t target
+    // a1 -> unsigned long flags
+    // a2 -> id_t id
+    ecall
+    ret
+
+.global kanawha_sys_resize
+.type kanawha_sys_resize,@function
+kanawha_sys_resize:
+    li a7, KANAWHA_SYSCALL_ID_RESIZE
+    // a0 -> fd_t file 
+    // a1 -> size_t size
+    // a2 -> unsigned long flags
+    ecall
+    ret
+
+.global kanawha_sys_poll
+.type kanawha_sys_poll,@function
+kanawha_sys_poll:
+    li a7, KANAWHA_SYSCALL_ID_POLL
+    // a0 -> fd_t file 
+    // a1 -> unsigned long watching
+    // a2 -> unsigned long *triggered
     ecall
     ret
 

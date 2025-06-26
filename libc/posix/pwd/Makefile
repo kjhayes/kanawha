@@ -1,0 +1,4 @@
+
+obj-y += \
+	getpwuid.o \
+

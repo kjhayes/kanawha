@@ -15,7 +15,7 @@ char *tmpnam(char *s)
         buffer = __tmpnam_buffer;
     }
 
-    int pid = (int)kanawha_sys_getpid();
+    int pid = getpid();
 
     unsigned int counter = 0;
     

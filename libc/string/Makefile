@@ -23,6 +23,7 @@ obj-y += \
 	memset.o \
 	strerror.o \
 	strlen.o \
+	strnlen.o \
 	strdup.o \
 	strndup.o \
 	strncasecmp.o \
@@ -30,4 +31,5 @@ obj-y += \
 	stpcpy.o \
 	mempcpy.o \
 	memrchr.o \
+	strsignal.o \
 

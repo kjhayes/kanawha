@@ -36,6 +36,10 @@ obj-y += \
 	fflush.o
 
 obj-y += \
+	fsetpos.o \
+	fgetpos.o \
+
+obj-y += \
 	doprnt.o \
 	vfprintf.o \
 	fprintf.o \

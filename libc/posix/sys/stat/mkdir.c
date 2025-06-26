@@ -5,6 +5,7 @@
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 #include <kanawha/sys-wrappers.h>
 
 int
@@ -15,7 +16,7 @@ mkdir(const char *path, mode_t mode)
     size_t pathlen = strlen(path);
     char *path_copy = malloc(pathlen+1);
     if(path_copy == NULL) {
-        // TODO set errno
+        errno = -ENOMEM;
         return -1;
     }
     strncpy(path_copy, path, pathlen);
@@ -40,7 +41,7 @@ mkdir(const char *path, mode_t mode)
             &dir);
     if(res) {
         free(path_copy);
-        // TODO set errno
+        errno = res;
         return -1;
     }
 
@@ -52,7 +53,7 @@ mkdir(const char *path, mode_t mode)
     if(res) {
         free(path_copy);
         kanawha_sys_close(dir);
-        // TODO errno
+        errno = res;
         return -1;
     }
     free(path_copy);

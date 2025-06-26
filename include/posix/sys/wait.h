@@ -32,4 +32,7 @@ pid_t  wait(int *);
 int    waitid(idtype_t, id_t, siginfo_t *, int);
 pid_t  waitpid(pid_t, int *, int);
 
+
+pid_t wait3 (int *stat_loc, int options, struct rusage *resource_usage);
+
 #endif

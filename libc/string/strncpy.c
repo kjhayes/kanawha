@@ -12,6 +12,6 @@ char *strncpy(
             s2++;
         }
     }
-    return 0;
+    return s1;
 }
 

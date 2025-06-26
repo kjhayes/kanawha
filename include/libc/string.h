@@ -111,6 +111,10 @@ char *strerror(
 size_t strlen(
         const char *s);
 
+size_t strnlen(
+        const char *s,
+        size_t maxlen);
+
 char *strdup(const char *string);
 char *strndup(const char *s, size_t n);
 

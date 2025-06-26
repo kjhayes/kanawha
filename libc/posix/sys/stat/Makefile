@@ -7,3 +7,6 @@ obj-y += \
 obj-y += \
 	mkdir.o
 
+obj-y += \
+	umask.o
+

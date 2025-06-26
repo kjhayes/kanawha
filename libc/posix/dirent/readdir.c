@@ -2,6 +2,7 @@
 #include <dirent.h>
 #include <sys/limits.h>
 #include <stdio.h>
+#include <errno.h>
 #include <elk-libc-internal/DIR.h>
 #include <kanawha/sys-wrappers.h>
 
@@ -23,7 +24,7 @@ struct dirent *readdir(DIR *dir)
     if(dir->dirent == NULL) {
         dir->dirent = malloc(sizeof(*dir->dirent));
         if(dir->dirent == NULL) {
-            // TODO set errno
+            res = -ENOMEM;
             return NULL;
         }
     }
@@ -38,12 +39,14 @@ struct dirent *readdir(DIR *dir)
 
     res = kanawha_sys_dirnext(dir->fd);
     if(res) {
-        // This is the end of the directory
-        dir->eod = 1;
-        // TODO differentiate between -ENXIO and other errors
+        if(res == -ENXIO) {
+            // This is the end of the directory
+            dir->eod = 1;
+        } else {
+            errno = res;
+            return NULL;
+        }
     }
-
-    //printf("THING\n");
 
     return dir->dirent;
 }

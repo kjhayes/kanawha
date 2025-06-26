@@ -10,7 +10,6 @@ struct pollfd
 
 typedef unsigned long nfds_t;
 
-
 #define POLLIN (POLLRDNORM | POLLRDBAND)
 #define POLLRDNORM (1ULL<<0)
 #define POLLRDBAND (1ULL<<1)

@@ -3,4 +3,5 @@ obj-y += \
 	wait/ \
 	stat/ \
 	ioctl/ \
+	statfs/ \
 

@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <kanawha/sys-wrappers.h>
 #include <kanawha/environ.h>
+#include <errno.h>
 
 int setenv(const char *envname, const char *envval, int overwrite)
 {
@@ -12,11 +13,11 @@ int setenv(const char *envname, const char *envval, int overwrite)
         int exists;
         exists = kanawha_sys_environ(envname, NULL, 0, ENV_EXIST);
         if(exists < 0) {
-            // TODO set errno
+            errno = exists;
             return -1;
         }
         if(exists != 0) {
-            // TODO set errno
+            errno = -EEXIST;
             return -1;
         }
     }
@@ -26,7 +27,7 @@ int setenv(const char *envname, const char *envval, int overwrite)
             0,
             ENV_SET);
     if(res) {
-        // TODO set errno
+        errno = res;
         return -1;
     }
     return 0;

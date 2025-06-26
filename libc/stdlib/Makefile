@@ -13,9 +13,15 @@ obj-y += \
 	atoll.o \
 	atol.o \
 	atoi.o \
+	strtod.o \
+	atof.o \
 	system.o \
 	getenv.o \
 	setenv.o \
+	putenv.o \
+	unsetenv.o \
 	qsort.o \
-	mmap_alloc/
+
+
+obj-$(CONFIG_MMAP_ALLOC) += mmap_alloc/
 

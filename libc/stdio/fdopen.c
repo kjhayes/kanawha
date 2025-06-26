@@ -12,6 +12,7 @@ fdopen(
 
     struct __sFILE *file = malloc(sizeof(struct __sFILE));
     if(file == NULL) {
+        errno = -ENOMEM;
         return NULL;
     }
     memset(file, 0, sizeof(struct __sFILE));

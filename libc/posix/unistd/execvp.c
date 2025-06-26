@@ -1,5 +1,6 @@
 
 #include <unistd.h>
+#include <errno.h>
 #include <kanawha/sys-wrappers.h>
 #include <kanawha/spawn.h>
 #include <kanawha/exec.h>
@@ -17,7 +18,7 @@ execvp(
     fd_t exec_file;
     res = __elk_libc__exec_path_lookup(file_name, &exec_file);
     if(res) {
-        // TODO set errno
+        errno = res;
         return -1;
     }
 

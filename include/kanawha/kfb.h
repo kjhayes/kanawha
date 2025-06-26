@@ -6,6 +6,13 @@
 #include <kanawha/fb.h>
 #include <kanawha/file.h>
 
+typedef struct kfb_rgba {
+    uint8_t r;
+    uint8_t g;
+    uint8_t b;
+    uint8_t a;
+} kfb_rgba_t;
+
 struct kfb_framebuffer {
     fd_t buffer_file;
     fd_t mode_set_file;
@@ -56,8 +63,6 @@ struct kfb_image {
     uint8_t *data;
 };
 
-#define KFB_BLIT_SCALE_X_TO_FIT (1ULL<<0)
-#define KFB_BLIT_SCALE_Y_TO_FIT (1ULL<<1)
 int
 kfb_blit_image_onto_layer(
         struct kfb_framebuffer *fb,
@@ -68,5 +73,27 @@ kfb_blit_image_onto_layer(
         size_t width,
         size_t height
         );
+
+int
+kfb_blit_image_with_tint_onto_layer(
+        struct kfb_framebuffer *fb,
+        size_t layer,
+        struct kfb_image *image,
+        size_t offset_x,
+        size_t offset_y,
+        size_t width,
+        size_t height,
+        kfb_rgba_t tint);
+
+int
+kfb_blit_image_brightness_as_color_onto_layer(
+        struct kfb_framebuffer *fb,
+        size_t layer,
+        struct kfb_image *image,
+        size_t offset_x,
+        size_t offset_y,
+        size_t width,
+        size_t height,
+        kfb_rgba_t color);
 
 #endif

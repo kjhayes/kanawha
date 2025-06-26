@@ -2,11 +2,13 @@
 obj-y += \
 	close.o \
 	fork.o \
+	vfork.o \
 	dup.o \
 	dup2.o \
 	pipe.o \
 	chdir.o \
 	chroot.o \
+	execve.o \
 	execvp.o \
 	sleep.o \
 	usleep.o \
@@ -21,6 +23,19 @@ obj-y += \
 	link.o \
 	symlink.o \
 	readlink.o \
+	ftruncate.o \
+	getpid.o \
+	getppid.o \
+	getuid.o \
+	geteuid.o \
+	getgid.o \
+	getegid.o \
+	getpgid.o \
+	setpgid.o \
+	getpgrp.o \
+	tcgetpgrp.o \
+	tcsetpgrp.o \
+	getgroups.o \
 
 obj-$(CONFIG_X64) += x64_fork_impl.o
 obj-$(CONFIG_RISCV64) += riscv64_fork_impl.o

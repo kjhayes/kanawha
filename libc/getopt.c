@@ -32,6 +32,73 @@ handle_long_arg(
         struct option *longopts,
         int *longind)
 {
+    int silent = 0;
+    char *arg = argv[optind];
+    size_t i = 0;
+    while(longopts[i].name != NULL) {
+        char *arg_start = arg+3;
+        int found_eq = 0;
+        while(*arg_start) {
+            if(*arg_start == '=') {
+                found_eq = 1;
+                *arg_start = '\0';
+                arg_start++;
+                break;
+            }
+            arg_start++;
+        }
+        if(strcmp(arg+2, longopts[i].name) == 0) {
+            int val = longopts[i].val;
+
+            int has_arg = longopts[i].has_arg != 0;
+            int arg_is_optional = longopts[i].has_arg == 2;
+
+            // Handle arguments and advancing optind and optpos
+            if(has_arg) {
+                if(!found_eq) {
+                    // No more text in this argument
+                    if(!arg_is_optional) {
+                        if(optind + 1 >= argc) {
+                            // Missing required argument
+                            if(silent) {
+                                return ':';
+                            }
+                            if(opterr) {
+                                fprintf(stderr, "Missing required argument to option \"--%s\"\n", longopts[i].name);
+                            }
+                            return '?';
+                        }
+                        // The argument is the next arg in argv
+                        optarg = (char *)argv[optind+1];
+                        optind += 2;
+                        optpos = 0;
+                    } else {
+                        // The argument is optional and not-present
+                        optarg = NULL;
+                        optind++;
+                        optpos = 0;
+                    }
+                } else {
+                    // The argument is the rest of the text in this option
+                    optarg = (char*)arg_start;
+                    optind++;
+                    optpos = 0;
+                }
+            } else {
+                optind++;
+                optpos = 0;
+            }
+
+
+            if(longopts[i].flag != NULL) {
+                *longopts[i].flag = val;
+                return 0;
+            } else {
+                return val;
+            }
+        }
+        i++;
+    }
     return '?';
 }
 
