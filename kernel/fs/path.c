@@ -247,6 +247,8 @@ __fs_path_put(struct fs_path *path)
 {
     int res;
 
+    DEBUG_ASSERT(KERNEL_ADDR(path));
+
     path->refs--;
     dprintk("fs_path_put(%s)\n", path->name);
     if(path->refs > 0) {
