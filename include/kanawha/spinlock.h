@@ -5,7 +5,7 @@
 #include <kanawha/types.h>
 #include <kanawha/errno.h>
 #include <kanawha/printk.h>
-
+#include <kanawha/assert.h>
 
 typedef struct {
     atomic_bool_t held;
@@ -16,13 +16,17 @@ static inline void spin_lock(spinlock_t *lock);
 static inline void spin_unlock(spinlock_t *lock);
 
 static inline void
-spinlock_init(spinlock_t *lock) {
+spinlock_init(spinlock_t *lock)
+{
+    DEBUG_ASSERT(KERNEL_ADDR(lock));
     atomic_bool_set_relaxed(&lock->held, 0);
 }
 
 // Returns 0 on success
 static inline int
-spin_try_lock(spinlock_t *lock) {
+spin_try_lock(spinlock_t *lock)
+{
+    DEBUG_ASSERT(KERNEL_ADDR(lock));
     int val = atomic_bool_test_and_set(&lock->held);
     return val;
 }
@@ -30,7 +34,8 @@ spin_try_lock(spinlock_t *lock) {
 void spinlock_failed_loop(spinlock_t *lock);
 
 static inline void
-spin_lock(spinlock_t *lock) {
+spin_lock(spinlock_t *lock)
+{
     while(spin_try_lock(lock)) {
         // "pause" and check for deadlock
         spinlock_failed_loop(lock);
@@ -38,7 +43,9 @@ spin_lock(spinlock_t *lock) {
 }
 
 static inline void
-spin_unlock(spinlock_t *lock) {
+spin_unlock(spinlock_t *lock)
+{
+    DEBUG_ASSERT(KERNEL_ADDR(lock));
     atomic_bool_clear(&lock->held);
 }
 
