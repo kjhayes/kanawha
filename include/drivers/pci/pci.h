@@ -8,7 +8,7 @@
 
 #include <drivers/pci/bar.h>
 #include <kanawha/irq_domain.h>
-#include <kanawha/irq_dev.h>
+#include <kanawha/dev/irq.h>
 
 #ifdef CONFIG_SYSFS_PCI
 #include <kanawha/fs/sys/vfs.h>

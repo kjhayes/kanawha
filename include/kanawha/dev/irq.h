@@ -1,13 +1,11 @@
 #ifndef __KANAWHA__IRQ_DEV_H__
 #define __KANAWHA__IRQ_DEV_H__
 
+#include <kanawha/dev.h>
 #include <kanawha/irq.h>
 #include <kanawha/types.h>
 #include <kanawha/cpu.h>
 #include <kanawha/ops.h>
-
-struct irq_dev;
-struct irq_dev_driver;
 
 #define IRQ_DEV_MASK_IRQ_SIG(RET,ARG)\
 RET(int)\
@@ -53,21 +51,7 @@ OP(trigger_irq, IRQ_DEV_TRIGGER_IRQ_SIG, ##__VA_ARGS__)\
 OP(irq_status, IRQ_DEV_IRQ_STATUS_SIG, ##__VA_ARGS__)\
 OP(describe_irq, IRQ_DEV_DESCRIBE_IRQ_SIG, ##__VA_ARGS__)\
 
-struct irq_dev_driver {
-DECLARE_OP_LIST_PTRS(IRQ_DEV_OP_LIST, struct irq_dev*)
-};
-
-struct irq_dev {
-    struct irq_dev_driver *driver;
-};
-
-DEFINE_OP_LIST_WRAPPERS(
-        IRQ_DEV_OP_LIST,
-        static inline,
-        /* No Prefix */,
-        irq_dev,
-        DRIVER_STRUCT_PTR_ACCESSOR,
-        SELF_ACCESSOR)
+DECLARE_DEV_TYPE(irq, IRQ_DEV_OP_LIST);
 
 #undef IRQ_DEV_OP_LIST
 #undef IRQ_DEV_MASK_IRQ_SIG

@@ -1,6 +1,8 @@
 
-#include <kanawha/irq_dev.h>
+#include <kanawha/dev/irq.h>
 #include <kanawha/string.h>
+
+DEFINE_DEV_TYPE(irq);
 
 unsigned long
 irq_dev_unknown_irq_status(

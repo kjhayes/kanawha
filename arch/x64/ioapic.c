@@ -10,7 +10,6 @@
 #include <kanawha/string.h>
 #include <kanawha/lock.h>
 #include <kanawha/mmio.h>
-#include <kanawha/irq_dev.h>
 #include <kanawha/assert.h>
 
 DEFINE_LOCAL_THREAD_LOCK(ioapic_list_lock);
@@ -149,7 +148,7 @@ ioapic_irq_status(
 }
 
 
-static struct irq_dev_driver
+static struct irq_driver
 ioapic_irq_driver = {
     .ack_irq = ioapic_ack_irq,
     .eoi_irq = ioapic_eoi_irq,

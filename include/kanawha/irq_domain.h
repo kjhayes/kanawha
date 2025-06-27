@@ -6,7 +6,7 @@
 #include <kanawha/rwlock.h>
 #include <kanawha/cpu.h>
 #include <kanawha/percpu.h>
-#include <kanawha/irq_dev.h>
+#include <kanawha/dev/irq.h>
 
 struct irq_domain;
 struct irq_desc;

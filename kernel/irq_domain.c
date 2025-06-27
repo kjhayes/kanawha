@@ -7,7 +7,7 @@
 #include <kanawha/string.h>
 #include <kanawha/stddef.h>
 #include <kanawha/export.h>
-#include <kanawha/irq_dev.h>
+#include <kanawha/dev/irq.h>
 #include <kanawha/list.h>
 #include <kanawha/stddef.h>
 #include <kanawha/percpu.h>

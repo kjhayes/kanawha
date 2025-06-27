@@ -2,7 +2,7 @@
 #define __KANAWHA__X64_LAPIC_H__
 
 #include <kanawha/types.h>
-#include <kanawha/irq_dev.h>
+#include <kanawha/dev/irq.h>
 #include <kanawha/ops.h>
 
 #ifdef CONFIG_PCI

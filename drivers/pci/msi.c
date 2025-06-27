@@ -8,9 +8,9 @@
 #include <kanawha/stddef.h>
 #include <kanawha/string.h>
 #include <kanawha/irq_domain.h>
-#include <kanawha/irq_dev.h>
+#include <kanawha/dev/irq.h>
 
-static struct irq_dev_driver msi_irq_driver;
+static struct irq_driver msi_irq_driver;
 
 struct msi_irq_dev
 {
@@ -388,7 +388,7 @@ msi_describe_irq(
     return 0;
 }
 
-static struct irq_dev_driver
+static struct irq_driver
 msi_irq_driver = {
     .mask_irq = msi_mask_irq,
     .unmask_irq = msi_unmask_irq,

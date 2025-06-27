@@ -4,7 +4,7 @@
 #include <devtree/driver.h>
 #include <devtree/match.h>
 
-#include <kanawha/irq_dev.h>
+#include <kanawha/dev/irq.h>
 #include <kanawha/irq_domain.h>
 #include <kanawha/mmio.h>
 #include <kanawha/kmalloc.h>
@@ -89,7 +89,7 @@ sifive_plic_trigger_irq(
     return -EUNIMPL;
 }
 
-static struct irq_dev_driver
+static struct irq_driver
 sifive_plic_irq_driver = {
     .ack_irq = sifive_plic_ack_irq,
     .eoi_irq = sifive_plic_eoi_irq,

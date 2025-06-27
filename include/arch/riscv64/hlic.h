@@ -3,7 +3,7 @@
 
 #include <arch/riscv64/cpu.h>
 #include <kanawha/irq.h>
-#include <kanawha/irq_dev.h>
+#include <kanawha/dev/irq.h>
 #include <devtree/node.h>
 
 struct riscv64_hlic {

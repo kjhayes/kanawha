@@ -8,7 +8,7 @@
 #include <kanawha/stddef.h>
 #include <kanawha/string.h>
 
-static struct irq_dev_driver msix_irq_driver;
+static struct irq_driver msix_irq_driver;
 
 struct msix_irq_dev
 {
@@ -526,7 +526,7 @@ msix_describe_irq(
     return 0;
 }
 
-static struct irq_dev_driver
+static struct irq_driver
 msix_irq_driver = {
     .ack_irq = NULL,
     .eoi_irq = NULL,

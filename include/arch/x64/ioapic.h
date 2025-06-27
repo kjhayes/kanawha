@@ -5,7 +5,7 @@
 #include <kanawha/vmem.h>
 #include <kanawha/list.h>
 #include <kanawha/irq_domain.h>
-#include <kanawha/irq_dev.h>
+#include <kanawha/dev/irq.h>
 
 typedef uint8_t ioapic_id_t;
 

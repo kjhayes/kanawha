@@ -12,7 +12,7 @@
 #include <kanawha/string.h>
 #include <kanawha/irq.h>
 #include <kanawha/irq_domain.h>
-#include <kanawha/irq_dev.h>
+#include <kanawha/dev/irq.h>
 #include <kanawha/xcall.h>
 
 #include <devtree/driver.h>
@@ -160,8 +160,8 @@ riscv64_hlic_irq_dev_trigger_irq(
     return sbi_send_ipi(hartid);
 }
 
-static struct irq_dev_driver
-riscv64_hlic_irq_dev_driver = {
+static struct irq_driver
+riscv64_hlic_irq_driver = {
     .ack_irq = riscv64_hlic_irq_dev_ack_irq,
     .eoi_irq = riscv64_hlic_irq_dev_eoi_irq,
     .mask_irq = riscv64_hlic_irq_dev_mask_irq,
@@ -194,7 +194,7 @@ riscv64_setup_cpu_hlic(
         return res;
     }
 
-    hlic->irq_dev.driver = &riscv64_hlic_irq_dev_driver;
+    hlic->irq_dev.driver = &riscv64_hlic_irq_driver;
     res = irq_domain_set_all_irq_dev(hlic_domain, &hlic->irq_dev);
     if(res) {
         free_irq_domain_linear(hlic_domain);

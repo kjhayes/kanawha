@@ -7,7 +7,6 @@
 #include <arch/x64/cpuid.h>
 #include <kanawha/percpu.h>
 #include <kanawha/irq_domain.h>
-#include <kanawha/irq_dev.h>
 #include <kanawha/stddef.h>
 #include <kanawha/printk.h>
 #include <kanawha/thread.h>
@@ -224,7 +223,7 @@ lapic_describe_irq(
     return 0;
 }
 
-static struct irq_dev_driver
+static struct irq_driver
 lapic_irq_driver = {
     .mask_irq = lapic_mask_irq,
     .unmask_irq = lapic_unmask_irq,
@@ -235,7 +234,7 @@ lapic_irq_driver = {
     .describe_irq = lapic_describe_irq,
 };
 
-static struct irq_dev_driver
+static struct irq_driver
 lapic_lvt_irq_driver = {
     .mask_irq = lapic_lvt_mask_irq,
     .unmask_irq = lapic_lvt_unmask_irq,
