@@ -1,8 +1,9 @@
 
+#include <kanawha/dev/rand.h>
+
 #include <kanawha/init.h>
 #include <kanawha/kmalloc.h>
 #include <kanawha/string.h>
-#include <kanawha/rand_dev.h>
 #include <drivers/virtio/driver.h>
 #include <drivers/virtio/virtio.h>
 #include <drivers/virtio/queue.h>

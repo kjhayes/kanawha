@@ -16,9 +16,7 @@ obj-y += \
 	common.o \
 	bitmap.o \
 	ramfile.o \
-	rand_dev.o \
 	irq_domain.o \
-	irq_dev.o \
 	thread.o \
 	scheduler.o \
 	usermode.o \

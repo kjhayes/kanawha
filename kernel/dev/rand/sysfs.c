@@ -1,15 +1,20 @@
 
-#include <kanawha/rand_dev.h>
+#include <kanawha/dev/rand.h>
 #include <kanawha/fs/mount.h>
 #include <kanawha/fs/sys/vfs.h>
 #include <kanawha/fs/sys/sysfs.h>
 #include <kanawha/init.h>
 #include <kanawha/lock.h>
+#include <kanawha/kmalloc.h>
+#include <kanawha/string.h>
 
-static size_t num_rand_dev = 0;
-static DECLARE_STREE(rand_dev_tree);
-DEFINE_LOCAL_THREAD_LOCK(rand_dev_tree_lock);
+struct rand_dev_fs_node {
+    struct vfs_node vfs_node;
+    struct rand_dev *dev;
+};
+
 static struct vfs_mount *rand_dev_fs_mount = NULL;
+static struct rand_dev_hook *rand_dev_fs_hook = NULL;
 
 static ssize_t 
 rand_dev_fs_file_read(
@@ -25,15 +30,15 @@ rand_dev_fs_file_read(
     if(node == NULL) {
         return -ENXIO;
     }
-    struct rand_dev *dev =
-        container_of(node, struct rand_dev, vfs_node.fs_node);
+    struct rand_dev_fs_node *rdfs =
+        container_of(node, struct rand_dev_fs_node, vfs_node.fs_node);
 
     if(buflen <= 0) {
         return -EINVAL;
     }
 
     res = rand_dev_read(
-            dev,
+            rdfs->dev,
             buf,
             buflen);
 
@@ -73,23 +78,32 @@ static struct fs_file_ops rand_dev_fs_file_ops =
 };
 
 
-static int
-rand_dev_insert_vfs_nodes(
+static void
+rand_dev_fs_on_register(
         struct rand_dev *dev)
 {
     int res;
 
-    dev->vfs_node.fs_node.node_ops = &rand_dev_fs_node_ops;
-    dev->vfs_node.fs_node.file_ops = &rand_dev_fs_file_ops;
+    struct rand_dev_fs_node *rdfs = kmalloc(sizeof(*rdfs));
+    if(rdfs == NULL) {
+        return;
+    }
+    memset(rdfs, 0, sizeof(*rdfs));
+
+    rdfs->dev = dev;
+
+    rdfs->vfs_node.fs_node.unload = NULL;
+    rdfs->vfs_node.fs_node.node_ops = &rand_dev_fs_node_ops;
+    rdfs->vfs_node.fs_node.file_ops = &rand_dev_fs_file_ops;
 
     size_t inode;
 
     res = vfs_mount_insert_node(
             rand_dev_fs_mount,
-            &dev->vfs_node,
+            &rdfs->vfs_node,
             &inode);
     if(res) {
-        return res;
+        return;
     }
 
     res = vfs_mount_link_root(
@@ -99,56 +113,16 @@ rand_dev_insert_vfs_nodes(
     if(res) {
         vfs_mount_remove_node(
                 rand_dev_fs_mount,
-                &dev->vfs_node);
-        return res;
+                &rdfs->vfs_node);
+        return;
     }
-
-    return 0;
 }
 
-int
-register_rand_dev(
-        struct rand_dev *dev,
-        const char *name,
-        struct rand_driver *driver)
-{
-    int res;
-    dprintk("Registering FB Dev %s\n",
-            name);
-    rand_dev_tree_lock_acquire();
-
-    struct stree_node *existing = stree_get(&rand_dev_tree, name);
-    if(existing != NULL) {
-        rand_dev_tree_lock_release();
-        return -EEXIST;
-    }
-
-    dev->driver = driver;
-    dev->rand_dev_node.key = name;
-
-    stree_insert(&rand_dev_tree, &dev->rand_dev_node);
-
-    if(rand_dev_fs_mount != NULL)
-    {
-        res = rand_dev_insert_vfs_nodes(dev);
-        if(res) {
-            stree_remove(&rand_dev_tree, dev->rand_dev_node.key);
-            rand_dev_tree_lock_release();
-            return res;
-        }
-    }
-
-    num_rand_dev++;
-
-    rand_dev_tree_lock_release();
-    return 0;
-}
-
-int
-unregister_rand_dev(
+static void
+rand_dev_fs_on_unregister(
         struct rand_dev *dev)
 {
-    return -EUNIMPL;
+    panic("Tried to unregister a rand_dev from sysfs! (UNIMPL)\n");
 }
 
 static int
@@ -162,28 +136,29 @@ rand_dev_init_fs_mount(void)
         return -ENOMEM;
     }
 
-    rand_dev_tree_lock_acquire();
-
     rand_dev_fs_mount = mnt;
 
-    struct stree_node *node = stree_get_first(&rand_dev_tree);
-    for(; node != NULL; node = stree_get_next(node))
-    {
-        struct rand_dev *dev =
-            container_of(node, struct rand_dev, rand_dev_node);
-        res = rand_dev_insert_vfs_nodes(dev);
-        if(res) {
-            rand_dev_tree_lock_release();
-            return res;
-        }
+    struct rand_dev_hook *hook;
+    hook = hook_rand_dev_registry(
+            rand_dev_fs_on_register,
+            rand_dev_fs_on_unregister);
+    if(hook == NULL) {
+        rand_dev_fs_mount = NULL;
+        vfs_mount_destroy(mnt);
+        return -ENOMEM;
     }
-    rand_dev_tree_lock_release();
+
+    rand_dev_fs_hook = hook;
 
     res = sysfs_register_mount(
             &rand_dev_fs_mount->fs_mount,
             "randdev");
     if(res) {
-        return res;
+        rand_dev_fs_hook = NULL;
+        unhook_rand_dev_registry(hook);
+        rand_dev_fs_mount = NULL;
+        vfs_mount_destroy(mnt);
+        return -ENOMEM;
     }
 
     return 0;
