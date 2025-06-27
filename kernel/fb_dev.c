@@ -12,11 +12,30 @@
 #include <kanawha/init.h>
 #include <kanawha/string.h>
 #include <kanawha/parse.h>
+#include <kanawha/kmalloc.h>
 
-DEFINE_LOCAL_THREAD_LOCK(fb_dev_tree_lock);
-static size_t num_fb_dev = 0;
-static DECLARE_STREE(fb_dev_tree);
+struct fb_dev_fs_node
+{
+    struct fb_dev *dev;
+
+    spinlock_t buffer_lock;
+    size_t buffer_mode;
+    struct fb_mode_info *buffer_info;
+    size_t buffer_pages_loaded;
+    void __phys *buffer_addr;
+    void __phys *buffer_tail_page;
+    ssize_t buffer_tail_pfn;
+
+    struct vfs_node buffer_vfs_node;
+    struct vfs_node mode_set_vfs_node;
+    struct vfs_node mode_info_vfs_node;
+    size_t mode_info_vfs_current_mode;
+};
+
 static struct vfs_mount *fb_dev_fs_mount = NULL;
+static struct fb_dev_hook *fb_dev_fs_hook = NULL;
+
+DEFINE_DEV_TYPE(fb);
 
 static int
 fb_dev_buffer_fs_node_load_page(
@@ -26,78 +45,81 @@ fb_dev_buffer_fs_node_load_page(
         void __phys ** addr_out)
 {
     int res;
-    struct fb_dev *dev =
-        container_of(fs_node, struct fb_dev, buffer_vfs_node.fs_node);
+    struct fb_dev_fs_node *fbfs =
+        container_of(fs_node, struct fb_dev_fs_node, buffer_vfs_node.fs_node);
 
-    spin_lock(&dev->buffer_lock);
-    if(dev->buffer_pages_loaded == 0)
+    DEBUG_ASSERT(KERNEL_ADDR(fbfs));
+    DEBUG_ASSERT(KERNEL_ADDR(fbfs->dev));
+
+    spin_lock(&fbfs->buffer_lock);
+    if(fbfs->buffer_pages_loaded == 0)
     {
-        dev->buffer_mode = fb_dev_get_mode(dev);
-        if(dev->buffer_mode < 0) {
-            spin_unlock(&dev->buffer_lock);
-            return dev->buffer_mode;
+        fbfs->buffer_mode = fb_dev_get_mode(fbfs->dev);
+        if(fbfs->buffer_mode < 0) {
+            spin_unlock(&fbfs->buffer_lock);
+            return fbfs->buffer_mode;
         }
-        dev->buffer_info = fb_dev_get_mode_info(dev, dev->buffer_mode);
-        if(dev->buffer_info == NULL) {
-            spin_unlock(&dev->buffer_lock);
+        fbfs->buffer_info = fb_dev_get_mode_info(fbfs->dev, fbfs->buffer_mode);
+        if(fbfs->buffer_info == NULL) {
+            spin_unlock(&fbfs->buffer_lock);
             return res;
         }
 
-        if(dev->buffer_info->buffer_size & ((1ULL<<VMEM_MIN_PAGE_ORDER)-1)) {
+        if(fbfs->buffer_info->buffer_size & ((1ULL<<VMEM_MIN_PAGE_ORDER)-1)) {
             res = page_alloc(
                     VMEM_MIN_PAGE_ORDER,
-                    &dev->buffer_tail_page,
+                    &fbfs->buffer_tail_page,
                     0);
             if(res) {
-                fb_dev_put_mode_info(dev, dev->buffer_mode); 
-                spin_unlock(&dev->buffer_lock);
+                fb_dev_put_mode_info(fbfs->dev, fbfs->buffer_mode); 
+                spin_unlock(&fbfs->buffer_lock);
                 return res;
             }
-            dev->buffer_tail_pfn = (dev->buffer_info->buffer_size>>VMEM_MIN_PAGE_ORDER);
+            fbfs->buffer_tail_pfn = (fbfs->buffer_info->buffer_size>>VMEM_MIN_PAGE_ORDER);
         } else {
-            dev->buffer_tail_pfn = -1; // No tail page
+            fbfs->buffer_tail_pfn = -1; // No tail page
         }
 
         res = fb_dev_load_buffer(
-                dev,
-                &dev->buffer_addr);
+                fbfs->dev,
+                &fbfs->buffer_addr);
         if(res) {
-            fb_dev_put_mode_info(dev, dev->buffer_mode); 
-            spin_unlock(&dev->buffer_lock);
+            fb_dev_put_mode_info(fbfs->dev, fbfs->buffer_mode); 
+            spin_unlock(&fbfs->buffer_lock);
             return res;
         }
 
         // Copy over the tail page in-case we have been opened for reading
-        if(dev->buffer_tail_pfn >= 0) {
-            void *tail_page = __va(dev->buffer_tail_page);
-            void *buffer = __va(dev->buffer_addr);
+        if(fbfs->buffer_tail_pfn >= 0) {
+            void *tail_page = __va(fbfs->buffer_tail_page);
+            void *buffer = __va(fbfs->buffer_addr);
 
-            size_t tail_page_offset = dev->buffer_tail_pfn<<VMEM_MIN_PAGE_ORDER;
-            DEBUG_ASSERT(tail_page_offset < dev->buffer_info->buffer_size);
-            size_t tail_page_data_size = dev->buffer_info->buffer_size - tail_page_offset;
+            size_t tail_page_offset = fbfs->buffer_tail_pfn<<VMEM_MIN_PAGE_ORDER;
+            DEBUG_ASSERT(tail_page_offset < fbfs->buffer_info->buffer_size);
+            size_t tail_page_data_size = fbfs->buffer_info->buffer_size - tail_page_offset;
 
             memcpy(tail_page, buffer + tail_page_offset, tail_page_data_size);
         }
         
         // TODO (We could support this by allowing a "head" page similar to the "tail" page to
         // catch "non-page size multiple" layer data cases
-        DEBUG_ASSERT_MSG(((uintptr_t)dev->buffer_addr & ((1ULL<<VMEM_MIN_PAGE_ORDER)-1)) == 0,
+        DEBUG_ASSERT_MSG(((uintptr_t)fbfs->buffer_addr & ((1ULL<<VMEM_MIN_PAGE_ORDER)-1)) == 0,
                 "Framebuffer Device Returned Layer Data Which is Not Page Aligned!");
     }
-    dev->buffer_pages_loaded++;
-    spin_unlock(&dev->buffer_lock);
+    fbfs->buffer_pages_loaded++;
+    spin_unlock(&fbfs->buffer_lock);
 
     size_t page_offset = (pfn<<VMEM_MIN_PAGE_ORDER);
 
-    if(page_offset >= dev->buffer_info->buffer_size) {
+    if(page_offset >= fbfs->buffer_info->buffer_size) {
         // This page is out of range of the layer data
         return -EINVAL;
     }
 
-    if(pfn == dev->buffer_tail_pfn) {
-        *addr_out = dev->buffer_tail_page;
+    if(pfn == fbfs->buffer_tail_pfn) {
+        *addr_out = fbfs->buffer_tail_page;
     } else {
-        *addr_out = dev->buffer_addr + page_offset;
+        *addr_out = fbfs->buffer_addr + page_offset;
     }
 
     return 0;
@@ -111,33 +133,36 @@ fb_dev_buffer_fs_node_unload_page(
         void __phys *addr)
 {
     int res;
-    struct fb_dev *dev =
-        container_of(fs_node, struct fb_dev, buffer_vfs_node.fs_node);
+    struct fb_dev_fs_node *fbfs =
+        container_of(fs_node, struct fb_dev_fs_node, buffer_vfs_node.fs_node);
 
-    spin_lock(&dev->buffer_lock);
-    dev->buffer_pages_loaded--;
-    if(dev->buffer_pages_loaded == 0) {
+    DEBUG_ASSERT(KERNEL_ADDR(fbfs));
+    DEBUG_ASSERT(KERNEL_ADDR(fbfs->dev));
+
+    spin_lock(&fbfs->buffer_lock);
+    fbfs->buffer_pages_loaded--;
+    if(fbfs->buffer_pages_loaded == 0) {
         res = fb_dev_unload_buffer(
-                dev,
-                dev->buffer_addr);
+                fbfs->dev,
+                fbfs->buffer_addr);
         if(res) {
-            dev->buffer_pages_loaded++;
-            spin_unlock(&dev->buffer_lock);
+            fbfs->buffer_pages_loaded++;
+            spin_unlock(&fbfs->buffer_lock);
             return res;
         }
-        if(dev->buffer_tail_pfn >= 0) {
-            res = page_free(VMEM_MIN_PAGE_ORDER, dev->buffer_tail_page);
+        if(fbfs->buffer_tail_pfn >= 0) {
+            res = page_free(VMEM_MIN_PAGE_ORDER, fbfs->buffer_tail_page);
             if(res) {
                 wprintk("Failed to free framebuffer tail page! (Leaking memory) (err=%s)\n",
                         errnostr(res));
             }
-            dev->buffer_tail_pfn = -1;
+            fbfs->buffer_tail_pfn = -1;
         }
 
-        dev->buffer_info = NULL;
-        res = fb_dev_put_mode_info(dev, dev->buffer_mode);
+        fbfs->buffer_info = NULL;
+        res = fb_dev_put_mode_info(fbfs->dev, fbfs->buffer_mode);
     }
-    spin_unlock(&dev->buffer_lock);
+    spin_unlock(&fbfs->buffer_lock);
 
     return 0;
 }
@@ -150,18 +175,20 @@ fb_dev_buffer_fs_node_flush_page(
         void __phys *addr)
 {
     int res;
-    struct fb_dev *dev =
-        container_of(fs_node, struct fb_dev, buffer_vfs_node.fs_node);
+    struct fb_dev_fs_node *fbfs =
+        container_of(fs_node, struct fb_dev_fs_node, buffer_vfs_node.fs_node);
+    DEBUG_ASSERT(KERNEL_ADDR(fbfs));
+    DEBUG_ASSERT(KERNEL_ADDR(fbfs->dev));
 
-    spin_lock(&dev->buffer_lock);
+    spin_lock(&fbfs->buffer_lock);
 
-    if(pfn == dev->buffer_tail_pfn) {
-        void *tail_page = __va(dev->buffer_tail_page);
-        void *buffer = __va(dev->buffer_addr);
+    if(pfn == fbfs->buffer_tail_pfn) {
+        void *tail_page = __va(fbfs->buffer_tail_page);
+        void *buffer = __va(fbfs->buffer_addr);
 
-        size_t tail_page_offset = dev->buffer_tail_pfn<<VMEM_MIN_PAGE_ORDER;
-        DEBUG_ASSERT(tail_page_offset < dev->buffer_info->buffer_size);
-        size_t tail_page_data_size = dev->buffer_info->buffer_size - tail_page_offset;
+        size_t tail_page_offset = fbfs->buffer_tail_pfn<<VMEM_MIN_PAGE_ORDER;
+        DEBUG_ASSERT(tail_page_offset < fbfs->buffer_info->buffer_size);
+        size_t tail_page_data_size = fbfs->buffer_info->buffer_size - tail_page_offset;
 
         DEBUG_ASSERT_MSG(tail_page_data_size < 1ULL<<VMEM_MIN_PAGE_ORDER,
                 "Framebuffer tail page is larger than VMEM_MIN_PAGE_ORDER (not strictly a problem but unexpected)");
@@ -169,7 +196,7 @@ fb_dev_buffer_fs_node_flush_page(
         memcpy(buffer + tail_page_offset, tail_page, tail_page_data_size);
     }
 
-    spin_unlock(&dev->buffer_lock);
+    spin_unlock(&fbfs->buffer_lock);
 
     // TODO This is ridiculuously inefficient (flushing full buffer on every page flush)
 //    res = fb_dev_flush_buffer(dev);
@@ -187,23 +214,25 @@ fb_dev_buffer_fs_node_getattr(
         size_t *value)
 {
     int res;
-    struct fb_dev *dev =
-        container_of(fs_node, struct fb_dev, buffer_vfs_node.fs_node);
+    struct fb_dev_fs_node *fbfs =
+        container_of(fs_node, struct fb_dev_fs_node, buffer_vfs_node.fs_node);
+    DEBUG_ASSERT(KERNEL_ADDR(fbfs));
+    DEBUG_ASSERT(KERNEL_ADDR(fbfs->dev));
 
-    spin_lock(&dev->buffer_lock);
+    spin_lock(&fbfs->buffer_lock);
 
     size_t mode;
     struct fb_mode_info *info;
-    if(dev->buffer_pages_loaded > 0) {
-        mode = dev->buffer_mode;
-        info = dev->buffer_info;
+    if(fbfs->buffer_pages_loaded > 0) {
+        mode = fbfs->buffer_mode;
+        info = fbfs->buffer_info;
     } else {
-        mode = fb_dev_get_mode(dev);
-        info = fb_dev_get_mode_info(dev, mode);
+        mode = fb_dev_get_mode(fbfs->dev);
+        info = fb_dev_get_mode_info(fbfs->dev, mode);
     }
 
     if(info == NULL) {
-        spin_unlock(&dev->buffer_lock);
+        spin_unlock(&fbfs->buffer_lock);
         return -EINVAL;
     }
 
@@ -221,10 +250,10 @@ fb_dev_buffer_fs_node_getattr(
     }
 
 exit:
-    if(dev->buffer_pages_loaded == 0) {
-        fb_dev_put_mode_info(dev, mode);
+    if(fbfs->buffer_pages_loaded == 0) {
+        fb_dev_put_mode_info(fbfs->dev, mode);
     }
-    spin_unlock(&dev->buffer_lock);
+    spin_unlock(&fbfs->buffer_lock);
 
     return res;
 }
@@ -240,14 +269,16 @@ fb_dev_buffer_fs_file_flush(
     if(fs_node == NULL) {
         return -ENXIO;
     }
-    struct fb_dev *dev =
-        container_of(fs_node, struct fb_dev, buffer_vfs_node.fs_node);
+    struct fb_dev_fs_node *fbfs =
+        container_of(fs_node, struct fb_dev_fs_node, buffer_vfs_node.fs_node);
+    DEBUG_ASSERT(KERNEL_ADDR(fbfs));
+    DEBUG_ASSERT(KERNEL_ADDR(fbfs->dev));
 
-    if(dev->buffer_tail_pfn >= 0) {
+    if(fbfs->buffer_tail_pfn >= 0) {
         fs_node_flush_all_fs_pages(fs_node);
     }
 
-    res = fb_dev_flush_buffer(dev);
+    res = fb_dev_flush_buffer(fbfs->dev);
     if(res) {
         return res;
     }
@@ -299,12 +330,14 @@ fb_dev_mode_set_fs_file_write(
 {
     int res;
 
-    struct fs_node *node = fs_path_get_fs_node(file->path);
-    if(node == NULL) {
+    struct fs_node *fs_node = fs_path_get_fs_node(file->path);
+    if(fs_node == NULL) {
         return -ENXIO;
     }
-    struct fb_dev *dev =
-        container_of(node, struct fb_dev, mode_set_vfs_node.fs_node);
+    struct fb_dev_fs_node *fbfs =
+        container_of(fs_node, struct fb_dev_fs_node, mode_set_vfs_node.fs_node);
+    DEBUG_ASSERT(KERNEL_ADDR(fbfs));
+    DEBUG_ASSERT(KERNEL_ADDR(fbfs->dev));
 
     if(file->seek_offset != 0) {
         return 0;
@@ -316,22 +349,22 @@ fb_dev_mode_set_fs_file_write(
 
     unsigned long long value = parse_unsigned_long_long(str_buf, 0);
 
-    spin_lock(&dev->buffer_lock);
+    spin_lock(&fbfs->buffer_lock);
 
-    if(dev->buffer_pages_loaded > 0) {
-        if(fb_dev_get_mode(dev) != value) {
+    if(fbfs->buffer_pages_loaded > 0) {
+        if(fb_dev_get_mode(fbfs->dev) != value) {
             // Cannot change modes while the buffer is loaded
-            spin_unlock(&dev->buffer_lock);
+            spin_unlock(&fbfs->buffer_lock);
             return -EBUSY;
         }
     }
-    res = fb_dev_set_mode(dev, value);
+    res = fb_dev_set_mode(fbfs->dev, value);
     if(res) {
-        spin_unlock(&dev->buffer_lock);
+        spin_unlock(&fbfs->buffer_lock);
         return res;
     }
 
-    spin_unlock(&dev->buffer_lock);
+    spin_unlock(&fbfs->buffer_lock);
 
     return buflen;
 }
@@ -343,18 +376,20 @@ fb_dev_mode_set_fs_file_read(
         ssize_t buflen,
         unsigned long flags)
 {
-    struct fs_node *node = fs_path_get_fs_node(file->path);
-    if(node == NULL) {
+    struct fs_node *fs_node = fs_path_get_fs_node(file->path);
+    if(fs_node == NULL) {
         return -ENXIO;
     }
-    struct fb_dev *dev =
-        container_of(node, struct fb_dev, mode_set_vfs_node.fs_node);
+    struct fb_dev_fs_node *fbfs =
+        container_of(fs_node, struct fb_dev_fs_node, mode_set_vfs_node.fs_node);
+    DEBUG_ASSERT(KERNEL_ADDR(fbfs));
+    DEBUG_ASSERT(KERNEL_ADDR(fbfs->dev));
 
     if(file->seek_offset != 0) {
         return 0;
     }
 
-    ssize_t index = fb_dev_get_mode(dev);
+    ssize_t index = fb_dev_get_mode(fbfs->dev);
     if(index < 0) {
         return index;
     }
@@ -423,8 +458,10 @@ fb_dev_mode_info_fs_node_setattr(
         int attr,
         size_t value)
 {
-    struct fb_dev *dev =
-        container_of(node, struct fb_dev, mode_info_vfs_node.fs_node);
+    struct fb_dev_fs_node *fbfs =
+        container_of(node, struct fb_dev_fs_node, mode_info_vfs_node.fs_node);
+    DEBUG_ASSERT(KERNEL_ADDR(fbfs));
+    DEBUG_ASSERT(KERNEL_ADDR(fbfs->dev));
 
     switch(attr)
     {
@@ -448,10 +485,13 @@ fb_dev_mode_info_fs_node_getattr(
 {
     int res;
 
-    struct fb_dev *dev =
-        container_of(node, struct fb_dev, mode_info_vfs_node.fs_node);
+    struct fb_dev_fs_node *fbfs =
+        container_of(node, struct fb_dev_fs_node, mode_info_vfs_node.fs_node);
+    DEBUG_ASSERT(KERNEL_ADDR(fbfs));
+    DEBUG_ASSERT(KERNEL_ADDR(fbfs->dev));
 
-    struct fb_mode_info *info = fb_dev_get_mode_info(dev, dev->mode_info_vfs_current_mode);
+    struct fb_mode_info *info =
+        fb_dev_get_mode_info(fbfs->dev, fbfs->mode_info_vfs_current_mode);
 
     switch(attr) {
         case FS_NODE_ATTR_DATA_SIZE:
@@ -479,8 +519,11 @@ fb_dev_mode_info_fs_file_write(
     if(node == NULL) {
         return -ENXIO;
     }
-    struct fb_dev *dev =
-        container_of(node, struct fb_dev, mode_info_vfs_node.fs_node);
+
+    struct fb_dev_fs_node *fbfs =
+        container_of(node, struct fb_dev_fs_node, mode_info_vfs_node.fs_node);
+    DEBUG_ASSERT(KERNEL_ADDR(fbfs));
+    DEBUG_ASSERT(KERNEL_ADDR(fbfs->dev));
 
     if(file->seek_offset != 0) {
         return 0;
@@ -491,7 +534,7 @@ fb_dev_mode_info_fs_file_write(
     str_buf[buflen] = '\0';
 
     unsigned long long value = parse_unsigned_long_long(str_buf, 0);
-    dev->mode_info_vfs_current_mode = value;
+    fbfs->mode_info_vfs_current_mode = value;
 
     return buflen;
 }
@@ -510,13 +553,14 @@ fb_dev_mode_info_fs_file_read(
     if(node == NULL) {
         return -ENXIO;
     }
-    struct fb_dev *dev =
-        container_of(node, struct fb_dev, mode_info_vfs_node.fs_node);
+    struct fb_dev_fs_node *fbfs =
+        container_of(node, struct fb_dev_fs_node, mode_info_vfs_node.fs_node);
 
-    DEBUG_ASSERT(KERNEL_ADDR(dev));
+    DEBUG_ASSERT(KERNEL_ADDR(fbfs));
+    DEBUG_ASSERT(KERNEL_ADDR(fbfs->dev));
 
     struct fb_mode_info *info =
-        fb_dev_get_mode_info(dev, dev->mode_info_vfs_current_mode);
+        fb_dev_get_mode_info(fbfs->dev, fbfs->mode_info_vfs_current_mode);
     if(info == NULL) {
         if(file->seek_offset == 0) {
             return 0; // Nothing to read
@@ -575,20 +619,33 @@ static struct fs_file_ops fb_dev_mode_info_fs_file_ops =
     .dir_readname = fs_file_cannot_dir_readname,
 };
 
-static int
-fb_dev_insert_vfs_nodes(
+static void
+fb_dev_fs_on_register(
         struct fb_dev *dev)
 {
     int res;
 
+    struct fb_dev_fs_node *fbfs = kmalloc(sizeof(*fbfs));
+    if(fbfs == NULL) {
+        return;
+    }
+    memset(fbfs, 0, sizeof(*fbfs));
+
+    fbfs->dev = dev;
+
+    spinlock_init(&fbfs->buffer_lock);
+    fbfs->buffer_pages_loaded = 0;
+    fbfs->mode_info_vfs_current_mode = 0;
+
     size_t buffer_inode;
 
-    dev->buffer_vfs_node.fs_node.node_ops = &fb_dev_buffer_fs_node_ops;
-    dev->buffer_vfs_node.fs_node.file_ops = &fb_dev_buffer_fs_file_ops;
+    fbfs->buffer_vfs_node.fs_node.unload = NULL;
+    fbfs->buffer_vfs_node.fs_node.node_ops = &fb_dev_buffer_fs_node_ops;
+    fbfs->buffer_vfs_node.fs_node.file_ops = &fb_dev_buffer_fs_file_ops;
 
     res = vfs_mount_insert_node(
             fb_dev_fs_mount,
-            &dev->buffer_vfs_node,
+            &fbfs->buffer_vfs_node,
             &buffer_inode);
     if(res) {
         dprintk("vfs_mount_insert_node returned %s\n",
@@ -608,19 +665,20 @@ fb_dev_insert_vfs_nodes(
 
     size_t mode_set_inode;
 
-    dev->mode_set_vfs_node.fs_node.node_ops = &fb_dev_mode_set_fs_node_ops;
-    dev->mode_set_vfs_node.fs_node.file_ops = &fb_dev_mode_set_fs_file_ops;
+    fbfs->mode_set_vfs_node.fs_node.unload = NULL;
+    fbfs->mode_set_vfs_node.fs_node.node_ops = &fb_dev_mode_set_fs_node_ops;
+    fbfs->mode_set_vfs_node.fs_node.file_ops = &fb_dev_mode_set_fs_file_ops;
 
     res = vfs_mount_insert_node(
             fb_dev_fs_mount,
-            &dev->mode_set_vfs_node,
+            &fbfs->mode_set_vfs_node,
             &mode_set_inode);
     if(res) {
         goto err2;
     }
 
     res = vfs_node_link(
-            &dev->buffer_vfs_node,
+            &fbfs->buffer_vfs_node,
             "mode",
             mode_set_inode);
     if(res) {
@@ -629,89 +687,54 @@ fb_dev_insert_vfs_nodes(
 
     size_t mode_info_inode;
 
-    dev->mode_info_vfs_node.fs_node.node_ops = &fb_dev_mode_info_fs_node_ops;
-    dev->mode_info_vfs_node.fs_node.file_ops = &fb_dev_mode_info_fs_file_ops;
+    fbfs->mode_info_vfs_node.fs_node.unload = NULL;
+    fbfs->mode_info_vfs_node.fs_node.node_ops = &fb_dev_mode_info_fs_node_ops;
+    fbfs->mode_info_vfs_node.fs_node.file_ops = &fb_dev_mode_info_fs_file_ops;
 
     res = vfs_mount_insert_node(
             fb_dev_fs_mount,
-            &dev->mode_info_vfs_node,
+            &fbfs->mode_info_vfs_node,
             &mode_info_inode);
     if(res) {
         goto err3;
     }
 
     res = vfs_node_link(
-            &dev->buffer_vfs_node,
+            &fbfs->buffer_vfs_node,
             "info",
             mode_info_inode);
     if(res) {
         goto err4;
     }
 
-    return 0;
+    return;
 
 err4:
     vfs_mount_remove_node(
         fb_dev_fs_mount,
-        &dev->mode_info_vfs_node);
+        &fbfs->mode_info_vfs_node);
 err3:
     vfs_mount_remove_node(
         fb_dev_fs_mount,
-        &dev->mode_set_vfs_node);
+        &fbfs->mode_set_vfs_node);
 err2:
     vfs_mount_unlink_root(
         fb_dev_fs_mount,
         dev->fb_dev_node.key);
-    vfs_node_unlink_all(&dev->buffer_vfs_node);
+    vfs_node_unlink_all(&fbfs->buffer_vfs_node);
 err1:
     vfs_mount_remove_node(
         fb_dev_fs_mount,
-        &dev->buffer_vfs_node);
+        &fbfs->buffer_vfs_node);
 err0:
-    return res;
+    return;
 }
 
-int
-register_fb_dev(
-        struct fb_dev *dev,
-        const char *name,
-        struct fb_driver *driver)
+static void
+fb_dev_fs_on_unregister(
+        struct fb_dev *dev)
 {
-    int res;
-    dprintk("Registering FB Dev %s\n",
-            name);
-    fb_dev_tree_lock_acquire();
-
-    struct stree_node *existing = stree_get(&fb_dev_tree, name);
-    if(existing != NULL) {
-        fb_dev_tree_lock_release();
-        return -EEXIST;
-    }
-
-    dev->driver = driver;
-    dev->fb_dev_node.key = name;
-
-    spinlock_init(&dev->buffer_lock);
-    dev->buffer_pages_loaded = 0;
-
-    dev->mode_info_vfs_current_mode = 0;
-
-    stree_insert(&fb_dev_tree, &dev->fb_dev_node);
-
-    if(fb_dev_fs_mount != NULL)
-    {
-        res = fb_dev_insert_vfs_nodes(dev);
-        if(res) {
-            stree_remove(&fb_dev_tree, dev->fb_dev_node.key);
-            fb_dev_tree_lock_release();
-            return res;
-        }
-    }
-
-    num_fb_dev++;
-
-    fb_dev_tree_lock_release();
-    return 0;
+    panic("Tried to unregister fb_dev from sysfs! (UNIMPL)\n");
 }
 
 static int
@@ -725,27 +748,27 @@ fb_dev_init_fs_mount(void)
         return -ENOMEM;
     }
 
-    fb_dev_tree_lock_acquire();
-
     fb_dev_fs_mount = mnt;
 
-    struct stree_node *node = stree_get_first(&fb_dev_tree);
-    for(; node != NULL; node = stree_get_next(node))
-    {
-        struct fb_dev *dev =
-            container_of(node, struct fb_dev, fb_dev_node);
-        res = fb_dev_insert_vfs_nodes(dev);
-        if(res) {
-            fb_dev_tree_lock_release();
-            return res;
-        }
+    struct fb_dev_hook *hook;
+    hook = hook_fb_dev_registry(
+            fb_dev_fs_on_register,
+            fb_dev_fs_on_unregister);
+    if(hook == NULL) {
+        vfs_mount_destroy(mnt);
+        return -ENOMEM;
     }
-    fb_dev_tree_lock_release();
+
+    fb_dev_fs_hook = hook;
 
     res = sysfs_register_mount(
             &fb_dev_fs_mount->fs_mount,
             "fbdev");
     if(res) {
+        fb_dev_fs_hook = NULL;
+        unhook_fb_dev_registry(hook);
+        fb_dev_fs_mount = NULL;
+        vfs_mount_destroy(mnt);
         return res;
     }
 

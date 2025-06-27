@@ -1,14 +1,13 @@
 #ifndef __KANAWHA__FB_DEV_H__
 #define __KANAWHA__FB_DEV_H__
 
+#include <kanawha/dev.h>
 #include <kanawha/types.h>
 #include <kanawha/ops.h>
 #include <kanawha/fs/mount.h>
 #include <kanawha/fs/sys/vfs.h>
 #include <kanawha/uapi/fb.h>
 
-struct fb_dev;
-struct fb_driver;
 struct fb_mode_info;
 
 // Device Ops
@@ -51,35 +50,7 @@ OP(load_buffer, FB_DEV_LOAD_BUFFER_SIG, ##__VA_ARGS__)\
 OP(unload_buffer, FB_DEV_UNLOAD_BUFFER_SIG, ##__VA_ARGS__)\
 OP(flush_buffer, FB_DEV_FLUSH_BUFFER_SIG, ##__VA_ARGS__)\
 
-struct fb_driver {
-DECLARE_OP_LIST_PTRS(FB_DEV_OP_LIST, struct fb_dev *);
-};
-
-struct fb_dev {
-    struct fb_driver *driver;
-    struct stree_node fb_dev_node;
-
-    spinlock_t buffer_lock;
-    size_t buffer_mode;
-    struct fb_mode_info *buffer_info;
-    size_t buffer_pages_loaded;
-    void __phys *buffer_addr;
-    void __phys *buffer_tail_page;
-    ssize_t buffer_tail_pfn;
-
-    struct vfs_node buffer_vfs_node;
-    struct vfs_node mode_set_vfs_node;
-    struct vfs_node mode_info_vfs_node;
-    size_t mode_info_vfs_current_mode;
-};
-
-DEFINE_OP_LIST_WRAPPERS(
-        FB_DEV_OP_LIST,
-        static inline,
-        /* No Prefix */,
-        fb_dev,
-        DRIVER_STRUCT_PTR_ACCESSOR,
-        SELF_ACCESSOR);
+DECLARE_DEV_TYPE(fb, FB_DEV_OP_LIST);
 
 #undef FB_DEV_OP_LIST
 #undef FB_DEV_GET_MODE_INFO_SIG
@@ -87,20 +58,5 @@ DEFINE_OP_LIST_WRAPPERS(
 #undef FB_DEV_SET_MODE_SIG
 #undef FB_DEV_LOAD_LAYER_SIG
 #undef FB_DEV_UNLOAD_LAYER_SIG
-
-int
-register_fb_dev(
-        struct fb_dev *dev,
-        const char *name,
-        struct fb_driver *driver);
-int
-unregister_fb_dev(
-        struct fb_dev *dev);
-
-struct fs_mount *
-fb_dev_get_mount(void);
-
-struct fb_dev *
-fb_dev_find(const char *name);
 
 #endif
