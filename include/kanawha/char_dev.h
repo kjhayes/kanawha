@@ -3,14 +3,12 @@
 
 #include <kanawha/types.h>
 #include <kanawha/ops.h>
+#include <kanawha/dev.h>
 #include <kanawha/stree.h>
 #include <kanawha/ptree.h>
 #include <kanawha/fs/mount.h>
 #include <kanawha/fs/node.h>
 #include <kanawha/fs/sys/vfs.h>
-
-struct char_dev;
-struct char_driver;
 
 #define CHAR_DEV_READ_SIG(RET,ARG)\
 RET(size_t)\
@@ -30,42 +28,10 @@ OP(read, CHAR_DEV_READ_SIG, ##__VA_ARGS__)\
 OP(write, CHAR_DEV_WRITE_SIG, ##__VA_ARGS__)\
 OP(flush, CHAR_DEV_FLUSH_SIG, ##__VA_ARGS__)
 
-struct char_driver {
-DECLARE_OP_LIST_PTRS(CHAR_DEV_OP_LIST, struct char_dev*)
-};
-
-struct char_dev {
-    struct char_driver *driver;
-    struct stree_node char_dev_node;
-    struct vfs_node vfs_node;
-};
-
-DEFINE_OP_LIST_WRAPPERS(
-        CHAR_DEV_OP_LIST,
-        static inline,
-        /* No Prefix */,
-        char_dev,
-        DRIVER_STRUCT_PTR_ACCESSOR,
-        SELF_ACCESSOR);
+DECLARE_DEV_TYPE(char, CHAR_DEV_OP_LIST);
 
 #undef CHAR_DEV_OP_LIST
 #undef CHAR_DEV_READ_SIG
 #undef CHAR_DEV_WRITE_SIG
-
-// Keeps a reference to "name"
-int
-register_char_dev(
-        struct char_dev *chr,
-        const char *name,
-        struct char_driver *driver);
-
-int
-unregister_char_dev(struct char_dev *dev);
-
-struct fs_mount *
-char_dev_get_mount(void);
-
-struct char_dev *
-char_dev_find(const char *name);
 
 #endif

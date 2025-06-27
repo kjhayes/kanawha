@@ -15,76 +15,26 @@
 #include <kanawha/assert.h>
 #include <kanawha/string.h>
 
-static size_t num_char_dev = 0;
-static DECLARE_STREE(char_dev_tree);
-DEFINE_LOCAL_THREAD_LOCK(char_dev_tree_lock);
+struct char_dev_fs_node {
+    struct char_dev *dev;
+    struct vfs_node vfs_node;
+};
+
+static inline struct char_dev *
+__fs_node_to_char_dev(
+        struct fs_node *node)
+{
+    struct char_dev_fs_node *__c =
+        container_of(node, struct char_dev_fs_node, vfs_node.fs_node);
+    return __c->dev;
+}
 
 static struct vfs_mount *char_dev_fs_mount = NULL;
 static struct fs_node_ops char_dev_fs_node_ops;
 static struct fs_file_ops char_dev_fs_file_ops;
+static struct char_dev_hook *char_dev_fs_hook = NULL;
 
-int
-register_char_dev(
-        struct char_dev *chr,
-        const char *name,
-        struct char_driver *driver)
-{
-    int res;
-
-    char_dev_tree_lock_acquire();
-
-    struct stree_node *existing = stree_get(&char_dev_tree, name);
-    if(existing != NULL) {
-        char_dev_tree_lock_release();
-        return -EEXIST;
-    }
-
-    chr->driver = driver;
-    dprintk("Registering char_dev \"%s\" name=%p\n", name, name);
-    chr->char_dev_node.key = name;
-
-    chr->vfs_node.fs_node.unload = NULL;
-    chr->vfs_node.fs_node.file_ops = &char_dev_fs_file_ops;
-    chr->vfs_node.fs_node.node_ops = &char_dev_fs_node_ops;
-
-    stree_insert(&char_dev_tree, &chr->char_dev_node);
-
-    // Assign the node a fs_node index
-    if(char_dev_fs_mount != NULL) {
-        res = vfs_mount_insert_node_and_link_root(
-                char_dev_fs_mount,
-                &chr->vfs_node,
-                name);
-        if(res) {
-            stree_remove(&char_dev_tree, name);
-            char_dev_tree_lock_release();
-            return res;
-        }
-    }
-
-    num_char_dev++;
-
-    char_dev_tree_lock_release();
-    return 0;
-}
-
-int
-unregister_char_dev(struct char_dev *dev)
-{
-    return -EUNIMPL;
-}
-
-struct char_dev *
-find_char_dev(const char *name)
-{
-    char_dev_tree_lock_acquire();
-    struct stree_node *node = stree_get(&char_dev_tree, name);
-    char_dev_tree_lock_release();
-    if(node == NULL) {
-        return NULL;
-    }
-    return container_of(node, struct char_dev, char_dev_node);
-}
+DEFINE_DEV_TYPE(char);
 
 // Chardev Sysfs
 
@@ -100,8 +50,7 @@ char_dev_fs_node_read(
         return -ENXIO;
     }
 
-    struct char_dev *dev =
-        container_of(fs_node, struct char_dev, vfs_node.fs_node);
+    struct char_dev *dev = __fs_node_to_char_dev(fs_node);
 
     if(flags & FS_FILE_READ_NON_BLOCKING) {
         return 0;
@@ -123,8 +72,8 @@ char_dev_fs_node_write(
     if(fs_node == NULL) {
         return -ENXIO;
     }
-    struct char_dev *dev =
-        container_of(fs_node, struct char_dev, vfs_node.fs_node);
+
+    struct char_dev *dev = __fs_node_to_char_dev(fs_node);
 
     if(flags & FS_FILE_WRITE_NON_BLOCKING) {
         return 0;
@@ -144,8 +93,8 @@ char_dev_fs_node_flush(
     if(fs_node == NULL) {
         return -ENXIO;
     }
-    struct char_dev *dev =
-        container_of(fs_node, struct char_dev, vfs_node.fs_node);
+
+    struct char_dev *dev = __fs_node_to_char_dev(fs_node);
 
     return char_dev_flush(dev);
 }
@@ -170,8 +119,7 @@ char_dev_fs_node_getattr(
         int attr,
         size_t *value)
 {
-    struct char_dev *dev =
-        container_of(fs_node, struct char_dev, vfs_node.fs_node);
+    struct char_dev *dev = __fs_node_to_char_dev(fs_node);
 
     switch(attr) {
         case FS_NODE_ATTR_DATA_SIZE:
@@ -212,6 +160,41 @@ char_dev_fs_file_ops = {
     .dir_readname = fs_file_cannot_dir_readname,
 };
 
+static void
+char_dev_sysfs_on_register(
+        struct char_dev *dev)
+{
+    int res;
+    struct char_dev_fs_node *node = kmalloc(sizeof(*node));
+    if(node == NULL) {
+        wprintk("Failed to register character device with sysfs!\n");
+        return;
+    }
+    node->dev = dev;
+
+    node->vfs_node.fs_node.unload = NULL;
+    node->vfs_node.fs_node.node_ops = &char_dev_fs_node_ops;
+    node->vfs_node.fs_node.file_ops = &char_dev_fs_file_ops;
+
+    res = vfs_mount_insert_node_and_link_root(
+            char_dev_fs_mount,
+            &node->vfs_node,
+            char_dev_get_name(dev));
+    if(res) {
+        kfree(node);
+        wprintk("Failed to register character device with sysfs!\n");
+        return;
+    }
+}
+
+static void
+char_dev_sysfs_on_unregister(
+        struct char_dev *dev)
+{
+    panic("Tried to deregister char_dev from sysfs! (UNIMPL)\n");
+    return;
+}
+
 static int
 char_dev_init_fs_mount(void)
 {
@@ -224,48 +207,29 @@ char_dev_init_fs_mount(void)
         return -ENOMEM;
     }
 
-    char_dev_tree_lock_acquire();
-
     char_dev_fs_mount = mnt;
 
-    struct stree_node *node = stree_get_first(&char_dev_tree);
-    for(; node != NULL; node = stree_get_next(node)) {
-        struct char_dev *dev =
-            container_of(node, struct char_dev, char_dev_node);
-        res = vfs_mount_insert_node_and_link_root(
-                mnt,
-                &dev->vfs_node,
-                node->key);
-        if(res) {
-            char_dev_tree_lock_release();
-            return res;
-        }
+    struct char_dev_hook *hook = hook_char_dev_registry(
+            char_dev_sysfs_on_register,
+            char_dev_sysfs_on_unregister);
+    if(hook == NULL) {
+        char_dev_fs_mount = NULL;
+        vfs_mount_destroy(mnt);
+        return -ENOMEM;
     }
-    char_dev_tree_lock_release();
+
+    char_dev_fs_hook = hook;
 
     res = sysfs_register_mount(&char_dev_fs_mount->fs_mount, "chardev");
     if(res) {
+        char_dev_fs_hook = NULL;
+        unhook_char_dev_registry(hook);
+        char_dev_fs_mount = NULL;
+        vfs_mount_destroy(mnt);
         return res;
     }
 
     return 0;
 }
 declare_init_desc(fs, char_dev_init_fs_mount, "Registering chardev Sysfs Mount");
-
-static int
-char_dev_dump_list(void) {
-    int res;
-    char_dev_tree_lock_acquire();
-    struct stree_node *snode;
-    printk("chardev {\n");
-    for(snode = stree_get_first(&char_dev_tree);
-        snode != NULL;
-        snode = stree_get_next(snode)) {
-        printk("\t%s\n", snode->key);
-    }
-    printk("}\n");
-    char_dev_tree_lock_release();
-    return 0;
-}
-declare_init(late, char_dev_dump_list);
 

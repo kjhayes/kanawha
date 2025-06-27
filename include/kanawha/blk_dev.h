@@ -73,7 +73,4 @@ register_blk_dev(struct blk_dev *blk,
 int
 unregister_blk_dev(struct blk_dev *blk);
 
-struct blk_dev *
-blk_dev_find(const char *name);
-
 #endif

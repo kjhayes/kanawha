@@ -92,18 +92,6 @@ unregister_blk_dev(struct blk_dev *blk)
     return -EUNIMPL;
 }
 
-struct blk_dev *
-blk_dev_find(const char *name)
-{
-    blk_dev_tree_lock_acquire();
-    struct stree_node *node = stree_get(&blk_dev_tree, name);
-    blk_dev_tree_lock_release();
-    if(node == NULL) {
-        return NULL;
-    }
-    return container_of(node, struct blk_dev, blk_dev_node);
-}
-
 static int
 blk_dev_init_fs_mount(void)
 {
