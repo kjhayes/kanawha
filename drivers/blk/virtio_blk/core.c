@@ -34,6 +34,9 @@ static unsigned long virtio_blk_count = 0;
 
 struct virtio_blk {
     struct blk_dev blk_dev;
+
+    size_t num_sectors;
+
     struct virtio_device *virtio_dev;
     struct virtio_queue *queue;
     char *name;
@@ -140,10 +143,28 @@ virtio_blk_dev_read(
     }
 }
 
+static ssize_t
+virtio_blk_num_sectors(
+        struct blk_dev *blk_dev)
+{
+    struct virtio_blk *blk =
+        container_of(blk_dev, struct virtio_blk, blk_dev);
+    return blk->num_sectors;
+}
+
+static order_t
+virtio_blk_sector_order(
+        struct blk_dev *blk_dev)
+{
+    return 9;
+}
+
 static struct blk_driver
 virtio_blk_driver = {
     .read = virtio_blk_dev_read,
     .write = virtio_blk_dev_write,
+    .num_sectors = virtio_blk_num_sectors,
+    .sector_order = virtio_blk_sector_order,
 };
 
 static int
@@ -223,12 +244,13 @@ virtio_blk_init_device(
         return res;
     }
 
+    blk->num_sectors = capacity;
+
     res = register_blk_dev(
             &blk->blk_dev,
             blk->name,
-            &virtio_blk_driver,
-            capacity,
-            9);
+            &virtio_blk_driver
+            );
     if(res) {
         kfree(blk->name);
         kfree(blk);

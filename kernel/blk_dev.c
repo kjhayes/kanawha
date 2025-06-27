@@ -8,88 +8,78 @@
 #include <kanawha/page_alloc.h>
 #include <kanawha/string.h>
 #include <kanawha/lock.h>
+#include <kanawha/kmalloc.h>
 #include <kanawha/fs/type.h>
 #include <kanawha/fs/mount.h>
 #include <kanawha/fs/node.h>
 #include <kanawha/fs/file.h>
 #include <kanawha/fs/sys/sysfs.h>
 
-static size_t num_blk_dev = 0;
-static DECLARE_STREE(blk_dev_tree);
-DEFINE_LOCAL_THREAD_LOCK(blk_dev_tree_lock);
+struct blk_dev_fs_node {
+    struct blk_dev *dev;
+    struct vfs_node vfs_node;
+
+    order_t page_order;
+    size_t sectors_per_page;
+    size_t num_sectors;
+    order_t sector_order;
+};
 
 static struct vfs_mount *blk_dev_fs_mount = NULL;
 static struct fs_node_ops blk_dev_fs_node_ops;
 static struct fs_file_ops blk_dev_fs_file_ops;
+static struct blk_dev_hook *blk_dev_fs_hook = NULL;
+
+DEFINE_DEV_TYPE(blk);
 
 /*
  * Internal API(s)
  */
 
-// Keeps a reference to "name"
-int
-register_blk_dev(struct blk_dev *blk,
-        const char *name,
-        struct blk_driver *driver,
-        size_t num_sectors,
-        order_t sector_order)
+static void
+blk_dev_fs_on_register(
+        struct blk_dev *dev
+        )
 {
     int res;
+    struct blk_dev_fs_node *node = kmalloc(sizeof(*node));
+    if(node == NULL) {
+        return;
+    }
+    node->dev = dev;
 
-    blk_dev_tree_lock_acquire();
+    node->num_sectors = blk_dev_num_sectors(dev);
+    node->sector_order = blk_dev_sector_order(dev);
 
-    struct stree_node *existing = stree_get(&blk_dev_tree, name);
-    if(existing != NULL) {
-        blk_dev_tree_lock_release();
-        return -EEXIST;
+    node->page_order = node->sector_order;
+    if(node->page_order < PAGE_ALLOC_MIN_ORDER) {
+        node->page_order = PAGE_ALLOC_MIN_ORDER;
+    }
+    if(node->page_order < VMEM_MIN_PAGE_ORDER) {
+        node->page_order = VMEM_MIN_PAGE_ORDER;
+    }
+    node->sectors_per_page = 1ULL<<(node->page_order - node->sector_order);
+
+    node->vfs_node.fs_node.unload = NULL;
+    node->vfs_node.fs_node.node_ops = &blk_dev_fs_node_ops;
+    node->vfs_node.fs_node.file_ops = &blk_dev_fs_file_ops;
+
+    res = vfs_mount_insert_node_and_link_root(
+            blk_dev_fs_mount,
+            &node->vfs_node,
+            blk_dev_get_name(dev));
+    if(res) {
+        return;
     }
 
-    blk->driver = driver;
-    dprintk("Registering blk_dev \"%s\"\n",
-            name);
-
-    blk->blk_dev_node.key = name;
-    blk->vfs_node.fs_node.file_ops = &blk_dev_fs_file_ops;
-    blk->vfs_node.fs_node.node_ops = &blk_dev_fs_node_ops;
-
-    blk->num_sectors = num_sectors;
-    blk->sector_order = sector_order;
-
-    blk->page_order = blk->sector_order;
-    if(blk->page_order < PAGE_ALLOC_MIN_ORDER) {
-        blk->page_order = PAGE_ALLOC_MIN_ORDER;
-    }
-    if(blk->page_order < VMEM_MIN_PAGE_ORDER) {
-        blk->page_order = VMEM_MIN_PAGE_ORDER;
-    }
-
-    blk->sectors_per_page = 1ULL<<(blk->page_order - blk->sector_order);
-
-    stree_insert(&blk_dev_tree, &blk->blk_dev_node);
-
-    if(blk_dev_fs_mount != NULL) {
-        res = vfs_mount_insert_node_and_link_root(
-                blk_dev_fs_mount,
-                &blk->vfs_node,
-                name);
-        if(res) {
-            stree_remove(&blk_dev_tree, name);
-            blk_dev_tree_lock_release();
-            return res;
-        }
-    }
-
-    num_blk_dev++;
-
-    blk_dev_tree_lock_release();
-
-    return 0;
 }
 
-int
-unregister_blk_dev(struct blk_dev *blk)
+static void
+blk_dev_fs_on_unregister(
+        struct blk_dev *dev
+        )
 {
-    return -EUNIMPL;
+    panic("Tried to deregister blk device! (UNIMPL)\n");
 }
 
 static int
@@ -104,27 +94,27 @@ blk_dev_init_fs_mount(void)
         return -ENOMEM;
     }
 
-    blk_dev_tree_lock_acquire();
-
     blk_dev_fs_mount = mnt;
 
-    struct stree_node *node = stree_get_first(&blk_dev_tree);
-    for(; node != NULL; node = stree_get_next(node)) {
-        struct blk_dev *dev =
-            container_of(node, struct blk_dev, blk_dev_node);
-        res = vfs_mount_insert_node_and_link_root(
-                mnt,
-                &dev->vfs_node,
-                node->key);
-        if(res) {
-            blk_dev_tree_lock_release();
-            return res;
-        }
+    struct blk_dev_hook *hook;
+    hook = hook_blk_dev_registry(
+            blk_dev_fs_on_register,
+            blk_dev_fs_on_unregister
+            );
+    if(hook == NULL) {
+        blk_dev_fs_mount = NULL;
+        vfs_mount_destroy(mnt);
+        return -ENOMEM;
     }
-    blk_dev_tree_lock_release();
+
+    blk_dev_fs_hook = hook;
 
     res = sysfs_register_mount(&blk_dev_fs_mount->fs_mount, "blkdev");
     if(res) {
+        blk_dev_fs_mount = NULL;
+        vfs_mount_destroy(mnt);
+        blk_dev_fs_hook = NULL;
+        unhook_blk_dev_registry(hook);
         return res;
     }
 
@@ -141,21 +131,22 @@ blk_dev_read_page(
 {
     int res;
 
-    struct blk_dev *blk_dev =
-        container_of(fs_node, struct blk_dev, vfs_node.fs_node);
+    struct blk_dev_fs_node *blk_dev_fs_node =
+        container_of(fs_node, struct blk_dev_fs_node, vfs_node.fs_node);
 
-    size_t start_sector = pfn * blk_dev->sectors_per_page;
-    size_t sectors_to_read = blk_dev->sectors_per_page;
+    size_t start_sector = pfn * blk_dev_fs_node->sectors_per_page;
+    size_t sectors_to_read = blk_dev_fs_node->sectors_per_page;
     size_t end_sector = start_sector + sectors_to_read;
 
     size_t extra_sectors = 0;
-    if(end_sector > blk_dev->num_sectors) {
-        extra_sectors = end_sector - blk_dev->num_sectors;
+
+    if(end_sector > blk_dev_fs_node->num_sectors) {
+        extra_sectors = end_sector - blk_dev_fs_node->num_sectors;
         sectors_to_read -= extra_sectors;
     }
 
     res = blk_dev_read(
-            blk_dev,
+            blk_dev_fs_node->dev,
             buffer,
             start_sector,
             sectors_to_read);
@@ -165,8 +156,8 @@ blk_dev_read_page(
 
     // Zero out any extra data
     for(size_t i = 0; i < extra_sectors; i++) {
-        size_t offset = sectors_to_read<<blk_dev->sector_order;
-        size_t extra_size = extra_sectors<<blk_dev->sector_order;
+        size_t offset = sectors_to_read<<blk_dev_fs_node->sector_order;
+        size_t extra_size = extra_sectors<<blk_dev_fs_node->sector_order;
         memset(buffer + offset, 0, extra_size);
     }
 
@@ -182,21 +173,21 @@ blk_dev_write_page(
 {
     int res;
 
-    struct blk_dev *blk_dev =
-        container_of(fs_node, struct blk_dev, vfs_node.fs_node);
+    struct blk_dev_fs_node *blk_dev_fs_node =
+        container_of(fs_node, struct blk_dev_fs_node, vfs_node.fs_node);
 
-    size_t start_sector = pfn * blk_dev->sectors_per_page;
-    size_t sectors_to_write = blk_dev->sectors_per_page;
+    size_t start_sector = pfn * blk_dev_fs_node->sectors_per_page;
+    size_t sectors_to_write = blk_dev_fs_node->sectors_per_page;
     size_t end_sector = start_sector + sectors_to_write;
 
     size_t extra_sectors = 0;
-    if(end_sector > blk_dev->num_sectors) {
-        extra_sectors = end_sector - blk_dev->num_sectors;
+    if(end_sector > blk_dev_fs_node->num_sectors) {
+        extra_sectors = end_sector - blk_dev_fs_node->num_sectors;
         sectors_to_write -= extra_sectors;
     }
 
     res = blk_dev_write(
-            blk_dev,
+            blk_dev_fs_node->dev,
             buffer,
             start_sector,
             sectors_to_write);
@@ -215,15 +206,15 @@ blk_dev_getattr(
 {
     int res;
 
-    struct blk_dev *blk_dev =
-        container_of(fs_node, struct blk_dev, vfs_node.fs_node);
+    struct blk_dev_fs_node *blk_dev_fs_node =
+        container_of(fs_node, struct blk_dev_fs_node, vfs_node.fs_node);
 
     switch(attr) {
         case FS_NODE_ATTR_DATA_SIZE:
-            *value = (size_t)blk_dev->num_sectors << blk_dev->sector_order;
+            *value = (size_t)blk_dev_fs_node->num_sectors << blk_dev_fs_node->sector_order;
             break;
         case FS_NODE_ATTR_PAGE_ORDER:
-            *value = blk_dev->page_order;
+            *value = blk_dev_fs_node->page_order;
             break;
         default:
             return -EINVAL;
