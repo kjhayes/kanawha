@@ -5,7 +5,6 @@
 #include <kanawha/errno.h>
 #include <kanawha/kmalloc.h>
 #include <kanawha/string.h>
-#include <kanawha/char_dev.h>
 #include <kanawha/assert.h>
 #include <kanawha/vmem.h>
 #include <kanawha/kbd.h>

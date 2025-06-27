@@ -1,5 +1,6 @@
 
-#include <kanawha/blk_dev.h>
+#include <kanawha/dev/blk.h>
+
 #include <kanawha/types.h>
 #include <kanawha/init.h>
 #include <kanawha/stddef.h>
@@ -14,8 +15,10 @@
 #include <kanawha/fs/node.h>
 #include <kanawha/fs/file.h>
 #include <kanawha/fs/sys/sysfs.h>
+#include <kanawha/fs/sys/vfs.h>
 
-struct blk_dev_fs_node {
+struct blk_dev_fs_node
+{
     struct blk_dev *dev;
     struct vfs_node vfs_node;
 
@@ -29,12 +32,6 @@ static struct vfs_mount *blk_dev_fs_mount = NULL;
 static struct fs_node_ops blk_dev_fs_node_ops;
 static struct fs_file_ops blk_dev_fs_file_ops;
 static struct blk_dev_hook *blk_dev_fs_hook = NULL;
-
-DEFINE_DEV_TYPE(blk);
-
-/*
- * Internal API(s)
- */
 
 static void
 blk_dev_fs_on_register(

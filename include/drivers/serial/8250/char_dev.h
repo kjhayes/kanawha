@@ -1,7 +1,7 @@
 #ifndef __KANAWHA__UART_8250_CHAR_DEV_H__
 #define __KANAWHA__UART_8250_CHAR_DEV_H__
 
-#include <kanawha/char_dev.h>
+#include <kanawha/dev/char.h>
 #include <kanawha/irq_domain.h>
 
 int

@@ -1,5 +1,6 @@
 
-#include <kanawha/char_dev.h>
+#include <kanawha/dev/char.h>
+
 #include <kanawha/init.h>
 #include <kanawha/mmio.h>
 

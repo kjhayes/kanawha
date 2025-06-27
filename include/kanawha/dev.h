@@ -6,6 +6,7 @@
 #include <kanawha/stree.h>
 #include <kanawha/list.h>
 #include <kanawha/stddef.h>
+#include <kanawha/kmalloc.h>
 
 /*
  * Declarations

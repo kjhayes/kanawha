@@ -8,7 +8,6 @@
 #include <kanawha/atomic.h>
 #include <kanawha/ptree.h>
 #include <kanawha/stree.h>
-#include <kanawha/fs/sys/vfs.h>
 
 struct blk_dev;
 struct blk_driver;

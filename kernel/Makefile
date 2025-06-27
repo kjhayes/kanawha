@@ -16,9 +16,6 @@ obj-y += \
 	common.o \
 	bitmap.o \
 	ramfile.o \
-	blk_dev.o \
-	char_dev.o \
-	fb_dev.o \
 	rand_dev.o \
 	irq_domain.o \
 	irq_dev.o \
@@ -48,6 +45,7 @@ obj-y += \
 
 obj-y += stack.o
 
+obj-y += dev/
 obj-y += fs/
 obj-y += syscall/
 obj-y += sched/

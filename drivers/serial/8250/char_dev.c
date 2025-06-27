@@ -1,5 +1,5 @@
 
-#include <kanawha/char_dev.h>
+#include <kanawha/dev/char.h>
 #include <kanawha/stddef.h>
 #include <kanawha/irq_domain.h>
 #include <drivers/serial/8250/common.h>

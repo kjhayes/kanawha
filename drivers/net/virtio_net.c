@@ -4,7 +4,7 @@
 #include <kanawha/string.h>
 #include <kanawha/stddef.h>
 #include <kanawha/irq.h>
-#include <kanawha/net/eth_dev.h>
+#include <kanawha/dev/net/eth.h>
 #include <drivers/virtio/driver.h>
 #include <drivers/virtio/virtio.h>
 #include <drivers/virtio/queue.h>

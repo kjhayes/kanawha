@@ -1,8 +1,10 @@
 
-#include <kanawha/net/eth_dev.h>
+#include <kanawha/dev/net/eth.h>
+
 #include <kanawha/stree.h>
 #include <kanawha/lock.h>
 #include <kanawha/stddef.h>
+
 #include <kanawha/fs/sys/sysfs.h>
 
 static DECLARE_STREE(eth_dev_tree);

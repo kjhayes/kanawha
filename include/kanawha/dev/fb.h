@@ -5,7 +5,6 @@
 #include <kanawha/types.h>
 #include <kanawha/ops.h>
 #include <kanawha/fs/mount.h>
-#include <kanawha/fs/sys/vfs.h>
 #include <kanawha/uapi/fb.h>
 
 struct fb_mode_info;

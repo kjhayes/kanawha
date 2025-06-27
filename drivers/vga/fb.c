@@ -1,5 +1,5 @@
 
-#include <kanawha/fb_dev.h>
+#include <kanawha/dev/fb.h>
 #include <kanawha/init.h>
 #include <kanawha/kmalloc.h>
 #include <kanawha/string.h>

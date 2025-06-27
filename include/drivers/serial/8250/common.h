@@ -1,7 +1,7 @@
 #ifndef __KANAWHA__SERIAL_UART_8250_COMMON_H__
 #define __KANAWHA__SERIAL_UART_8250_COMMON_H__
 
-#include <kanawha/char_dev.h>
+#include <kanawha/dev/char.h>
 #include <kanawha/uart.h>
 #include <kanawha/ops.h>
 

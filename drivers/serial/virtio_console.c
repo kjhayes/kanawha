@@ -4,7 +4,7 @@
 #include <kanawha/kmalloc.h>
 #include <kanawha/string.h>
 #include <kanawha/stddef.h>
-#include <kanawha/char_dev.h>
+#include <kanawha/dev/char.h>
 #include <kanawha/spinlock.h>
 #include <drivers/virtio/driver.h>
 #include <drivers/virtio/virtio.h>

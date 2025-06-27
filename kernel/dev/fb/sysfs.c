@@ -1,11 +1,8 @@
 
-#include <kanawha/fb_dev.h>
-#include <kanawha/fs/sys/sysfs.h>
-#include <kanawha/fs/node.h>
-#include <kanawha/fs/file.h>
+#include <kanawha/dev/fb.h>
+
 #include <kanawha/page_alloc.h>
 #include <kanawha/vmem.h>
-#include <kanawha/uapi/file.h>
 #include <kanawha/lock.h>
 #include <kanawha/spinlock.h>
 #include <kanawha/stree.h>
@@ -13,6 +10,13 @@
 #include <kanawha/string.h>
 #include <kanawha/parse.h>
 #include <kanawha/kmalloc.h>
+
+#include <kanawha/fs/node.h>
+#include <kanawha/fs/file.h>
+#include <kanawha/fs/sys/vfs.h>
+#include <kanawha/fs/sys/sysfs.h>
+
+#include <kanawha/uapi/file.h>
 
 struct fb_dev_fs_node
 {
@@ -34,8 +38,6 @@ struct fb_dev_fs_node
 
 static struct vfs_mount *fb_dev_fs_mount = NULL;
 static struct fb_dev_hook *fb_dev_fs_hook = NULL;
-
-DEFINE_DEV_TYPE(fb);
 
 static int
 fb_dev_buffer_fs_node_load_page(

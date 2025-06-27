@@ -3,7 +3,7 @@
 
 #include <kanawha/endian.h>
 #include <kanawha/types.h>
-#include <kanawha/fb_dev.h>
+#include <kanawha/dev/fb.h>
 #include <drivers/virtio/queue.h>
 #include <drivers/virtio/device.h>
 

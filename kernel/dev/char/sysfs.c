@@ -1,5 +1,6 @@
 
-#include <kanawha/char_dev.h>
+#include <kanawha/dev/char.h>
+
 #include <kanawha/string.h>
 #include <kanawha/kmalloc.h>
 #include <kanawha/stddef.h>
@@ -33,8 +34,6 @@ static struct vfs_mount *char_dev_fs_mount = NULL;
 static struct fs_node_ops char_dev_fs_node_ops;
 static struct fs_file_ops char_dev_fs_file_ops;
 static struct char_dev_hook *char_dev_fs_hook = NULL;
-
-DEFINE_DEV_TYPE(char);
 
 // Chardev Sysfs
 

@@ -2,7 +2,7 @@
 #include <kanawha/init.h>
 #include <kanawha/kmalloc.h>
 #include <kanawha/string.h>
-#include <kanawha/fb_dev.h>
+#include <kanawha/dev/fb.h>
 #include <kanawha/stddef.h>
 #include <kanawha/irq.h>
 #include <drivers/fb/virtio_gpu.h>

@@ -2,7 +2,7 @@
 #include <kanawha/init.h>
 #include <kanawha/kmalloc.h>
 #include <kanawha/string.h>
-#include <kanawha/blk_dev.h>
+#include <kanawha/dev/blk.h>
 #include <kanawha/stddef.h>
 #include <kanawha/irq.h>
 #include <drivers/virtio/driver.h>
