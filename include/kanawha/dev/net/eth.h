@@ -1,6 +1,7 @@
 #ifndef __KANAWHA__ETH_DEV_H__
 #define __KANAWHA__ETH_DEV_H__
 
+#include <kanawha/dev.h>
 #include <kanawha/ops.h>
 #include <kanawha/stree.h>
 #include <kanawha/list.h>
@@ -25,35 +26,7 @@ ARG(unsigned long, flags)\
 OP(read_mac, ETH_DEV_READ_MAC_SIG, ##__VA_ARGS__)\
 OP(send_frame, ETH_DEV_SEND_FRAME_SIG, ##__VA_ARGS__)
 
-struct eth_driver {
-DECLARE_OP_LIST_PTRS(ETHERNET_DEVICE_OP_LIST, struct eth_dev *)
-};
-
-struct eth_dev
-{
-    struct eth_driver *driver;
-
-    struct stree_node eth_dev_node;
-
-    struct vfs_node vfs_node;
-};
-
-DEFINE_OP_LIST_WRAPPERS(
-        ETHERNET_DEVICE_OP_LIST,
-        static inline,
-        /* No Prefix */,
-        eth_dev,
-        DRIVER_STRUCT_PTR_ACCESSOR,
-        SELF_ACCESSOR)
-
-int
-register_eth_dev(
-        struct eth_dev *dev,
-        const char *name,
-        struct eth_driver *driver);
-
-struct eth_dev *
-eth_dev_find(const char *name);
+DECLARE_DEV_TYPE(eth, ETHERNET_DEVICE_OP_LIST);
 
 #undef ETH_DEV_READ_MAC_SIG
 #undef ETH_DEV_SEND_FRAME_SIG
