@@ -20,7 +20,6 @@ obj-y += \
 	char_dev.o \
 	fb_dev.o \
 	rand_dev.o \
-	net_dev.o \
 	irq_domain.o \
 	irq_dev.o \
 	thread.o \

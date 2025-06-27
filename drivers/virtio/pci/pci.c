@@ -44,6 +44,15 @@ virtio_pci_get_id(struct pci_func *func)
     return 0;
 }
 
+static inline int
+virtio_pci_is_legacy(struct pci_func *func)
+{
+    if(func->device_id < 0x1040) {
+        return 1; // This is a legacy device
+    }
+    return 0;
+}
+
 static int
 virtio_pci_deinit_capabilities(
         struct virtio_pci_device *vpci_dev)
@@ -209,6 +218,7 @@ virtio_pci_init_device(
     vpci_dev->func = func;
     vpci_dev->virtio_dev.ops = &virtio_pci_device_ops;
     vpci_dev->virtio_dev.virtio_id = virtio_pci_get_id(func);
+    vpci_dev->virtio_dev.is_legacy = virtio_pci_is_legacy(func);
 
     if(vpci_dev->virtio_dev.virtio_id == 0) {
         kfree(vpci_dev);

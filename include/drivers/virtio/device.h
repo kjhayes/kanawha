@@ -105,6 +105,7 @@ struct virtio_device
     struct virtio_queue ** queues;
 
     uint16_t virtio_id;
+    unsigned is_legacy : 1;
 
     void *driver_priv;
 };

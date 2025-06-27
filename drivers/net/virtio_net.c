@@ -2,9 +2,9 @@
 #include <kanawha/init.h>
 #include <kanawha/kmalloc.h>
 #include <kanawha/string.h>
-#include <kanawha/net_dev.h>
 #include <kanawha/stddef.h>
 #include <kanawha/irq.h>
+#include <kanawha/net/eth_dev.h>
 #include <drivers/virtio/driver.h>
 #include <drivers/virtio/virtio.h>
 #include <drivers/virtio/queue.h>
@@ -22,6 +22,28 @@ struct virtio_net_config
     le16_t  rss_max_indirection_table_length;
     le32_t  supported_hash_types;
     le32_t  supported_tunnel_types;
+};
+
+struct virtio_net_hdr {
+#define VIRTIO_NET_HDR_F_NEEDS_CSUM 1
+#define VIRTIO_NET_HDR_F_DATA_VALID 2
+#define VIRTIO_NET_HDR_F_RSC_INFO 4
+    uint8_t flags;
+#define VIRTIO_NET_HDR_GSO_NONE 0
+#define VIRTIO_NET_HDR_GSO_TCPV4 1
+#define VIRTIO_NET_HDR_GSO_UDP 3
+#define VIRTIO_NET_HDR_GSO_TCPV6 4
+#define VIRTIO_NET_HDR_GSO_UDP_L4 5
+#define VIRTIO_NET_HDR_GSO_ECN 0x80
+    uint8_t gso_type;
+    le16_t hdr_len;
+    le16_t gso_size;
+    le16_t csum_start;
+    le16_t csum_offset;
+    le16_t num_buffers; // Not included without VIRTIO_NET_F_MRG_RXBUF if using legacy interface
+//    le32_t hash_value; // (Only if VIRTIO_NET_F_HASH_REPORT negotiated)
+//    le16_t hash_report; // (Only if VIRTIO_NET_F_HASH_REPORT negotiated)
+//    le16_t padding_reserved; // (Only if VIRTIO_NET_F_HASH_REPORT negotiated)
 };
 
 #define  VIRTIO_NET_F_CSUM                 (0)
@@ -62,19 +84,27 @@ struct virtio_net_config
 static DECLARE_SPINLOCK(virtio_net_count_lock);
 static unsigned long virtio_net_count = 0;
 
+struct virtio_net_queue_pair {
+    struct virtio_queue *recv;
+    struct virtio_queue *xmit;
+};
+
 struct virtio_net {
-    struct net_dev net_dev;
+    struct eth_dev eth_dev;
     struct virtio_device *virtio_dev;
     char *name;
+
+    size_t num_queue_pairs;
+    struct virtio_net_queue_pair queue_pairs[];
 };
 
 static int
 virtio_net_eth_read_mac(
-        struct net_dev *net_dev,
+        struct eth_dev *eth_dev,
         struct eth_mac_addr *addr_out)
 {
     int res;
-    struct virtio_net *dev = container_of(net_dev, struct virtio_net, net_dev);
+    struct virtio_net *dev = container_of(eth_dev, struct virtio_net, eth_dev);
 
     for(int i = 0; i < 6; i++)
     {
@@ -89,9 +119,57 @@ virtio_net_eth_read_mac(
     return 0;
 }
 
-static struct net_driver
-virtio_net_driver = {
-    .eth_read_mac = virtio_net_eth_read_mac,
+static int
+virtio_net_eth_send_frame(
+        struct eth_dev *eth_dev,
+        struct eth_frame *frame,
+        size_t len,
+        unsigned long flags)
+{
+    int res;
+
+    struct virtio_net *dev = container_of(eth_dev, struct virtio_net, eth_dev);
+
+    size_t datalen = len - sizeof(struct eth_frame_header) - 4;
+    printk("virtio_net_eth_send_frame: datalen=0x%lx\n", datalen);
+
+    // queue pair index to use
+    size_t pi = 0;
+
+    struct virtio_net_hdr hdr = {
+        .flags = 0,
+        .gso_type = VIRTIO_NET_HDR_GSO_NONE,
+        0,
+    };
+
+    void *input_buffers[2] = {
+        &hdr,
+        frame,
+    };
+    size_t input_lens[2] = {
+        sizeof(struct virtio_net_hdr) - (dev->virtio_dev->is_legacy ? 2 : 0),
+        len,
+    };
+
+    res = virtio_transact(
+            dev->queue_pairs[pi].xmit,
+            2,
+            input_buffers,
+            input_lens,
+            0,
+            NULL,
+            NULL);
+    if(res) {
+        return res;
+    }
+
+    return 0;
+}
+
+static struct eth_driver
+virtio_eth_driver = {
+    .read_mac = virtio_net_eth_read_mac,
+    .send_frame = virtio_net_eth_send_frame,
 };
 
 static int
@@ -137,14 +215,45 @@ virtio_net_init_device(
 
     dprintk("virtio_net_init_device\n");
 
-    struct virtio_net *net = kmalloc(sizeof(struct virtio_net));
+    size_t num_queue_pairs = 1;
+
+    struct virtio_net *net = kmalloc(sizeof(struct virtio_net) + (sizeof(struct virtio_net_queue_pair) * num_queue_pairs));
     if(net == NULL) {
         return -ENOMEM;
     }
     memset(net, 0, sizeof(struct virtio_net));
-
     net->virtio_dev = device;
 
+    // Find and activate all of the queue pairs
+    net->num_queue_pairs = num_queue_pairs;
+    if(net->virtio_dev->num_queues < num_queue_pairs * 2) {
+        kfree(net);
+        return -EINVAL;
+    }
+
+    for(size_t i = 0; i < net->num_queue_pairs; i++) {
+        net->queue_pairs[i].recv = net->virtio_dev->queues[2*i];
+        net->queue_pairs[i].xmit = net->virtio_dev->queues[(2*i) + 1];
+
+        res = virtio_queue_enable(net->queue_pairs[i].recv);
+        if(!res) {
+            res = virtio_queue_enable(net->queue_pairs[i].xmit);
+            if(res) {
+                virtio_queue_disable(net->queue_pairs[i].recv);
+            }
+        }
+        if(res) {
+            // Both of the current "i" queues should be disabled
+            for(int undo_i = 0; undo_i < i; undo_i++) {
+                virtio_queue_disable(net->queue_pairs[undo_i].recv);
+                virtio_queue_disable(net->queue_pairs[undo_i].xmit);
+            }
+            kfree(net);
+            return res;
+        }
+    }
+
+    // Register the device
     unsigned long dev_index;
     spin_lock(&virtio_net_count_lock);
     dev_index = virtio_net_count;
@@ -159,15 +268,23 @@ virtio_net_init_device(
 
     net->name = kstrdup(namebuf);
     if(net->name == NULL) {
+        for(int i = 0; i < net->num_queue_pairs; i++) {
+            virtio_queue_disable(net->queue_pairs[i].recv);
+            virtio_queue_disable(net->queue_pairs[i].xmit);
+        }
         kfree(net);
         return res;
     }
 
-    res = register_net_dev(
-            &net->net_dev,
+    res = register_eth_dev(
+            &net->eth_dev,
             net->name,
-            &virtio_net_driver);
+            &virtio_eth_driver);
     if(res) {
+        for(int i = 0; i < net->num_queue_pairs; i++) {
+            virtio_queue_disable(net->queue_pairs[i].recv);
+            virtio_queue_disable(net->queue_pairs[i].xmit);
+        }
         kfree(net->name);
         kfree(net);
         return res;
@@ -207,9 +324,9 @@ virtio_net_virtio_driver = {
 };
 
 static int
-register_virtio_net_driver(void)
+register_virtio_eth_driver(void)
 {
     return register_virtio_driver(&virtio_net_virtio_driver);
 }
-declare_init_desc(device, register_virtio_net_driver, "Registered Virtio Network Driver");
+declare_init_desc(device, register_virtio_eth_driver, "Registered Virtio Network Driver");
 
