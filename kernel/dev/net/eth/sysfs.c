@@ -5,7 +5,11 @@
 #include <kanawha/stddef.h>
 #include <kanawha/kmalloc.h>
 #include <kanawha/string.h>
+#include <kanawha/parse.h>
 #include <kanawha/fs/sys/sysfs.h>
+#include <kanawha/fs/sys/vfs.h>
+#include <kanawha/net/ethernet.h>
+#include <kanawha/endian.h>
 
 struct eth_dev_fs_node
 {
@@ -14,7 +18,8 @@ struct eth_dev_fs_node
 };
 
 static struct vfs_mount *eth_dev_fs_mount = NULL;
-static struct eth_dev_hook *eth_dev_fs_hook = NULL;
+static struct eth_dev_registry_hook *eth_dev_fs_hook = NULL;
+
 static struct fs_node_ops eth_dev_fs_node_ops;
 static struct fs_file_ops eth_dev_fs_file_ops;
 
@@ -41,8 +46,11 @@ eth_dev_fs_on_register(
             &edfs->vfs_node,
             eth_dev_get_name(dev));
     if(res) {
+        kfree(edfs);
         return;
     }
+
+    return;
 }
 
 static void
@@ -99,11 +107,48 @@ eth_dev_fs_file_write(
         return -EWOULDBLOCK;
     }
 
-    if(amount < sizeof(struct eth_frame_header)) {
+    if(amount < sizeof(struct eth_frame_hdr)) {
         return -EINVAL;
     }
 
-    res = eth_dev_send_frame(edfs->dev, (struct eth_frame*)buffer, amount, 0);
+    {
+        struct eth_frame_hdr *hdr = buffer;
+
+        struct eth_mac_addr src;
+        struct eth_mac_addr dst;
+
+        src.raw = hdr->src_addr;
+        dst.raw = hdr->dst_addr;
+
+        eth_type_t type = betoh16(hdr->type);
+
+        // TODO (Do some basic validation of the header)
+    }
+
+    struct eth_frame *frame =
+        eth_dev_alloc_frame(
+            edfs->dev,
+            amount,
+            0);
+
+    if(frame == NULL) {
+        return -ENOMEM;
+    }
+
+    memcpy(frame->data, buffer, amount);
+
+    res = eth_dev_send_frame(
+            edfs->dev,
+            frame);
+
+    // drop the packet regardless of success or failure to send
+    int drop_res = eth_dev_drop_frame(edfs->dev, frame);
+    if(drop_res) {
+        wprintk("Potential Memory Leak: eth_dev sysfs failed to drop allocated ethernet frame! (drop-err=%s)\n",
+                 errnostr(drop_res));
+    }
+
+    // from eth_dev_send_frame
     if(res) {
         return res;
     }
@@ -114,11 +159,12 @@ eth_dev_fs_file_write(
 static struct fs_node_ops
 eth_dev_fs_node_ops =
 {
+    .lookup = vfs_dir_lookup,
+
     .read_page = fs_node_cannot_read_page,
     .write_page = fs_node_cannot_write_page,
     .load_page = fs_node_cannot_load_page,
     .unload_page = fs_node_cannot_unload_page,
-    .lookup = fs_node_cannot_lookup,
     .mkfile = fs_node_cannot_mkfile,
     .mkdir = fs_node_cannot_mkdir,
     .link = fs_node_cannot_link,
@@ -137,11 +183,28 @@ eth_dev_fs_file_ops =
     .flush = fs_file_cannot_flush,
     .seek = fs_file_seek_pinned_zero,
     .poll = fs_file_cannot_poll,
-    .dir_next = fs_file_cannot_dir_next,
-    .dir_begin = fs_file_cannot_dir_begin,
-    .dir_readattr = fs_file_cannot_dir_readattr,
-    .dir_readname = fs_file_cannot_dir_readname,
+
+    .dir_next = vfs_dir_next,
+    .dir_begin = vfs_dir_begin,
+    .dir_readattr = vfs_dir_readattr,
+    .dir_readname = vfs_dir_readname,
 };
+
+static int
+eth_dev_fs_recv_callback(
+        struct eth_dev *dev,
+        struct eth_frame *buffer,
+        size_t buflen,
+        void *priv_state)
+{
+    struct edfs *edfs = priv_state;
+
+    printk("Ethernet Device (%s) Received Packet of Length 0x%lx\n",
+            eth_dev_get_name(dev),
+            buflen);
+
+    return 0;
+}
 
 static int
 eth_dev_init_fs_mount(void)
@@ -157,7 +220,7 @@ eth_dev_init_fs_mount(void)
 
     eth_dev_fs_mount = mnt;
 
-    struct eth_dev_hook *hook;
+    struct eth_dev_registry_hook *hook;
     hook = hook_eth_dev_registry(
             eth_dev_fs_on_register,
             eth_dev_fs_on_unregister);
@@ -178,5 +241,5 @@ eth_dev_init_fs_mount(void)
 
     return 0;
 }
-declare_init_desc(fs, eth_dev_init_fs_mount, "Registering chardev Sysfs Mount");
+declare_init_desc(fs, eth_dev_init_fs_mount, "Registering Ethernet Sysfs Mount");
 

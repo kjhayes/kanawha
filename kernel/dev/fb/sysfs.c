@@ -37,7 +37,7 @@ struct fb_dev_fs_node
 };
 
 static struct vfs_mount *fb_dev_fs_mount = NULL;
-static struct fb_dev_hook *fb_dev_fs_hook = NULL;
+static struct fb_dev_registry_hook *fb_dev_fs_hook = NULL;
 
 static int
 fb_dev_buffer_fs_node_load_page(
@@ -645,24 +645,14 @@ fb_dev_fs_on_register(
     fbfs->buffer_vfs_node.fs_node.node_ops = &fb_dev_buffer_fs_node_ops;
     fbfs->buffer_vfs_node.fs_node.file_ops = &fb_dev_buffer_fs_file_ops;
 
-    res = vfs_mount_insert_node(
+    res = vfs_mount_insert_node_and_link_root(
             fb_dev_fs_mount,
             &fbfs->buffer_vfs_node,
-            &buffer_inode);
+            fb_dev_get_name(dev));
     if(res) {
-        dprintk("vfs_mount_insert_node returned %s\n",
+        dprintk("vfs_mount_insert_node_and_link_root returned %s\n",
                 errnostr(res));
         goto err0;
-    }
-
-    res = vfs_mount_link_root(
-            fb_dev_fs_mount,
-            dev->fb_dev_node.key,
-            buffer_inode);
-    if(res) {
-        dprintk("vfs_mount_link_root returned %s\n",
-                errnostr(res));
-        goto err1;
     }
 
     size_t mode_set_inode;
@@ -722,7 +712,7 @@ err3:
 err2:
     vfs_mount_unlink_root(
         fb_dev_fs_mount,
-        dev->fb_dev_node.key);
+        fb_dev_get_name(dev));
     vfs_node_unlink_all(&fbfs->buffer_vfs_node);
 err1:
     vfs_mount_remove_node(
@@ -752,7 +742,7 @@ fb_dev_init_fs_mount(void)
 
     fb_dev_fs_mount = mnt;
 
-    struct fb_dev_hook *hook;
+    struct fb_dev_registry_hook *hook;
     hook = hook_fb_dev_registry(
             fb_dev_fs_on_register,
             fb_dev_fs_on_unregister);

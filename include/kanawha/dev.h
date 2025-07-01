@@ -12,10 +12,13 @@
  * Declarations
  */
 
+#define __DECLARE_DEV_STRUCT_REQUIRED_FIELDS(DNAME)\
+    struct DNAME ## _driver *driver;\
+    struct stree_node DNAME ## _dev_node;\
+
 #define __DECLARE_DEV_STRUCT(DNAME)\
     struct DNAME ## _dev {\
-        struct DNAME ## _driver *driver;\
-        struct stree_node DNAME ## _dev_node;\
+        __DECLARE_DEV_STRUCT_REQUIRED_FIELDS(DNAME);\
     };
 
 #define __DECLARE_DRIVER_STRUCT(DNAME, OP_LIST)\
@@ -71,15 +74,15 @@
             );
 
 #define DECLARE_DEV_TYPE(DNAME, OP_LIST)\
-    __DECLARE_DEV_STRUCT(DNAME)\
-    __DECLARE_DRIVER_STRUCT(DNAME, OP_LIST)\
-    __DECLARE_DRIVER_STRUCT_WRAPPERS(DNAME, OP_LIST)\
+    __DECLARE_DEV_STRUCT(DNAME);\
+    __DECLARE_DRIVER_STRUCT(DNAME, OP_LIST);\
+    __DECLARE_DRIVER_STRUCT_WRAPPERS(DNAME, OP_LIST);\
     __DECLARE_DEV_REGISTER_FUNC(DNAME);\
     __DECLARE_DEV_UNREGISTER_FUNC(DNAME);\
     __DECLARE_DEV_GET_NAME_FUNC(DNAME);\
-    __DECLARE_DEV_HOOK_STRUCT(DNAME)\
-    __DECLARE_DEV_HOOK_FUNC(DNAME)\
-    __DECLARE_DEV_UNHOOK_FUNC(DNAME)\
+    __DECLARE_DEV_HOOK_STRUCT(DNAME);\
+    __DECLARE_DEV_HOOK_FUNC(DNAME);\
+    __DECLARE_DEV_UNHOOK_FUNC(DNAME);\
 
 /*
  * Definitions

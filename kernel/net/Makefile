@@ -1,7 +1,7 @@
 
 obj-y += \
+	network.o \
 	ethernet.o \
-	eth_dev.o \
 	ip.o \
-	ip_dev.o \
+	icmp.o \
 

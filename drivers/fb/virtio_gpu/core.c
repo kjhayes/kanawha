@@ -369,10 +369,12 @@ virtio_gpu_init_device(
         return res;
     }
 
+    gpu->fb_dev.driver = &virtio_gpu_fb_driver;
+
     res = register_fb_dev(
             &gpu->fb_dev,
-            gpu->name,
-            &virtio_gpu_fb_driver);
+            gpu->name
+            );
     if(res) {
         virtio_queue_disable(gpu->control_queue);
         virtio_queue_disable(gpu->cursor_queue);

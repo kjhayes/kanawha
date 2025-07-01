@@ -31,7 +31,7 @@ struct blk_dev_fs_node
 static struct vfs_mount *blk_dev_fs_mount = NULL;
 static struct fs_node_ops blk_dev_fs_node_ops;
 static struct fs_file_ops blk_dev_fs_file_ops;
-static struct blk_dev_hook *blk_dev_fs_hook = NULL;
+static struct blk_dev_registry_hook *blk_dev_fs_hook = NULL;
 
 static void
 blk_dev_fs_on_register(
@@ -93,7 +93,7 @@ blk_dev_init_fs_mount(void)
 
     blk_dev_fs_mount = mnt;
 
-    struct blk_dev_hook *hook;
+    struct blk_dev_registry_hook *hook;
     hook = hook_blk_dev_registry(
             blk_dev_fs_on_register,
             blk_dev_fs_on_unregister

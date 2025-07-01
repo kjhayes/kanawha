@@ -220,10 +220,11 @@ x64_platform_vga_serial_register(void)
     x64_platform_vga.framebuffer = mmio_map((void __phys *)0xB8000, 2 * 80 * 25);
     vga_serial_clear(&x64_platform_vga, ' ', x64_platform_vga.default_attr);
 
+    x64_platform_vga.char_dev.driver = &vga_serial_driver;
+
     res = register_char_dev(
             &x64_platform_vga.char_dev,
-            "vga-serial",
-            &vga_serial_driver);
+            "vga-serial");
     if(res) {
         return res;
     }

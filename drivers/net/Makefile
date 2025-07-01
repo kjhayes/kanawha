@@ -1,3 +1,5 @@
 
-obj-$(CONFIG_VIRTIO_NET) += virtio_net.o
+obj-y += \
+	eth/ \
+	ipv4/ \
 

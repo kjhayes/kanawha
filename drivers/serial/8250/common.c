@@ -27,10 +27,12 @@ register_uart_8250(
 
     uart_8250->ops = ops;
 
+    uart_8250->char_dev.driver = char_driver;
+
     res = register_char_dev(
             &uart_8250->char_dev,
-            name,
-            char_driver);
+            name
+            );
     if(res) {
         return res;
     }

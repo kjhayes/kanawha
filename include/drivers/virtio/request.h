@@ -5,6 +5,11 @@
 #include <kanawha/pointer.h>
 #include <drivers/virtio/queue.h>
 
+typedef void(virtio_request_callback_f)(
+        struct virtio_request *req,
+        void *priv_state
+        );
+
 struct virtio_request
 {
     enum {
@@ -20,6 +25,9 @@ struct virtio_request
 
     ilist_node_t queue_node;
     struct virtio_queue *queue;
+
+    virtio_request_callback_f *complete_callback;
+    void *complete_callback_state;
 
     size_t len_written;
 };
@@ -79,6 +87,30 @@ virtio_request_await(
 
     return 0;
 }
+
+// 0 -> Request Completed
+// 1 -> Request Pending
+// <0 -> Error
+static inline int
+virtio_request_try_complete(
+        struct virtio_request *req)
+{
+    int res;
+    DEBUG_ASSERT(KERNEL_ADDR(req->queue));
+
+    res = virtio_queue_try_finish_request(req->queue, req);
+    if(res) {
+        return 1;
+    }
+
+    return 0;
+}
+
+int
+virtio_request_set_completion_callback(
+        struct virtio_request *req,
+        virtio_request_callback_f *callback,
+        void *priv_state);
 
 int
 virtio_transact(

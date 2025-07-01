@@ -2,7 +2,12 @@
 #include <kanawha/dev/irq.h>
 #include <kanawha/string.h>
 
-DEFINE_DEV_TYPE(irq);
+DEFINE_REGISTRY(
+        irq_dev,
+        registry_node,
+        REGISTRY_NO_INIT_FUNCTION,
+        REGISTRY_NO_DEINIT_FUNCTION
+        );
 
 unsigned long
 irq_dev_unknown_irq_status(

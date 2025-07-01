@@ -207,10 +207,11 @@ virtio_console_init_device(
     ilist_for_each(node, &cdev->port_list) {
         struct virtio_console_port *port =
             container_of(node, struct virtio_console_port, list_node);
+        port->char_dev.driver = &virtio_console_port_char_driver;
         res = register_char_dev(
                 &port->char_dev,
-                port->name,
-                &virtio_console_port_char_driver);
+                port->name
+                );
         if(res) {
             eprintk("Failed to register virtio console port char_dev! (err=%s)\n",
                     errnostr(res));

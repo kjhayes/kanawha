@@ -14,7 +14,7 @@ struct rand_dev_fs_node {
 };
 
 static struct vfs_mount *rand_dev_fs_mount = NULL;
-static struct rand_dev_hook *rand_dev_fs_hook = NULL;
+static struct rand_dev_registry_hook *rand_dev_fs_hook = NULL;
 
 static ssize_t 
 rand_dev_fs_file_read(
@@ -108,7 +108,7 @@ rand_dev_fs_on_register(
 
     res = vfs_mount_link_root(
             rand_dev_fs_mount,
-            dev->rand_dev_node.key,
+            rand_dev_get_name(dev),
             inode);
     if(res) {
         vfs_mount_remove_node(
@@ -138,7 +138,7 @@ rand_dev_init_fs_mount(void)
 
     rand_dev_fs_mount = mnt;
 
-    struct rand_dev_hook *hook;
+    struct rand_dev_registry_hook *hook;
     hook = hook_rand_dev_registry(
             rand_dev_fs_on_register,
             rand_dev_fs_on_unregister);

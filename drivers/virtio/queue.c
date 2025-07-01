@@ -419,6 +419,13 @@ virtio_queue_handle_used_notification(
         spin_lock(&queue->avail_lock);
         bitmap_clear(queue->avail_bitmap, avail_slot);
         spin_unlock(&queue->avail_lock);
+
+        if(req->complete_callback) {
+            (*req->complete_callback)(
+                    req,
+                    req->complete_callback_state
+                    );
+        }
     }
 
     // Update the last seen used ring index

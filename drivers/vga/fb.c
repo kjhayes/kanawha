@@ -551,10 +551,11 @@ register_vga_fb_dev(void)
         return res;
     }
 
+    fb->fb_dev.driver = &vga_fb_driver;
+
     res = register_fb_dev(
             &fb->fb_dev,
-            "vga",
-            &vga_fb_driver);
+            "vga");
     if(res) {
         printk("register_fb_dev returned %s\n",
                 errnostr(res));

@@ -184,10 +184,11 @@ virtio_rng_init_device(
         return res;
     }
 
+    rng->rand_dev.driver = &virtio_rng_rand_driver;
+
     res = register_rand_dev(
             &rng->rand_dev,
-            rng->name,
-            &virtio_rng_rand_driver);
+            rng->name);
     if(res) {
         virtio_queue_disable(rng->request_queue);
         virtio_request_destroy(rng->request);

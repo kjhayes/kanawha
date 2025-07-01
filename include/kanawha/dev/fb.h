@@ -1,13 +1,16 @@
 #ifndef __KANAWHA__FB_DEV_H__
 #define __KANAWHA__FB_DEV_H__
 
-#include <kanawha/dev.h>
+#include <kanawha/registry.h>
 #include <kanawha/types.h>
 #include <kanawha/ops.h>
 #include <kanawha/fs/mount.h>
 #include <kanawha/uapi/fb.h>
 
 struct fb_mode_info;
+
+struct fb_dev;
+struct fb_driver;
 
 // Device Ops
 
@@ -49,7 +52,27 @@ OP(load_buffer, FB_DEV_LOAD_BUFFER_SIG, ##__VA_ARGS__)\
 OP(unload_buffer, FB_DEV_UNLOAD_BUFFER_SIG, ##__VA_ARGS__)\
 OP(flush_buffer, FB_DEV_FLUSH_BUFFER_SIG, ##__VA_ARGS__)\
 
-DECLARE_DEV_TYPE(fb, FB_DEV_OP_LIST);
+struct fb_driver
+{
+DECLARE_OP_LIST_PTRS(FB_DEV_OP_LIST, struct fb_dev *);
+};
+
+struct fb_dev
+{
+    struct registry_node registry_node;
+    struct fb_driver *driver;
+};
+
+
+DEFINE_OP_LIST_WRAPPERS(
+        FB_DEV_OP_LIST,
+        static inline,
+        /* No Prefix */,
+        fb_dev,
+        DRIVER_STRUCT_PTR_ACCESSOR,
+        SELF_ACCESSOR);
+
+DECLARE_REGISTRY(fb_dev);
 
 #undef FB_DEV_OP_LIST
 #undef FB_DEV_GET_MODE_INFO_SIG

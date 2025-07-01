@@ -8,10 +8,10 @@ dump_ipv4_addr(
         )
 {
     (*printer)("%d.%d.%d.%d",
-            (u_t)addr->data[0],
-            (u_t)addr->data[1],
-            (u_t)addr->data[2],
-            (u_t)addr->data[3]
+            (u_t)addr->raw.data[0],
+            (u_t)addr->raw.data[1],
+            (u_t)addr->raw.data[2],
+            (u_t)addr->raw.data[3]
             );
     return 0;
 }
@@ -23,14 +23,14 @@ dump_ipv6_addr(
         )
 {
     (*printer)("%x:%x:%x:%x:%x:%x:%x:%x",
-            (u_t)betoh16(addr->data[0]),
-            (u_t)betoh16(addr->data[1]),
-            (u_t)betoh16(addr->data[2]),
-            (u_t)betoh16(addr->data[3]),
-            (u_t)betoh16(addr->data[4]),
-            (u_t)betoh16(addr->data[5]),
-            (u_t)betoh16(addr->data[6]),
-            (u_t)betoh16(addr->data[7])
+            (u_t)betoh16(addr->raw.data[0]),
+            (u_t)betoh16(addr->raw.data[1]),
+            (u_t)betoh16(addr->raw.data[2]),
+            (u_t)betoh16(addr->raw.data[3]),
+            (u_t)betoh16(addr->raw.data[4]),
+            (u_t)betoh16(addr->raw.data[5]),
+            (u_t)betoh16(addr->raw.data[6]),
+            (u_t)betoh16(addr->raw.data[7])
             );
     return 0;
 }

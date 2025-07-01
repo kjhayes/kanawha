@@ -245,11 +245,11 @@ virtio_blk_init_device(
     }
 
     blk->num_sectors = capacity;
+    blk->blk_dev.driver = &virtio_blk_driver;
 
     res = register_blk_dev(
             &blk->blk_dev,
-            blk->name,
-            &virtio_blk_driver
+            blk->name
             );
     if(res) {
         kfree(blk->name);

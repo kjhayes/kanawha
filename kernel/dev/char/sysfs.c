@@ -33,7 +33,7 @@ __fs_node_to_char_dev(
 static struct vfs_mount *char_dev_fs_mount = NULL;
 static struct fs_node_ops char_dev_fs_node_ops;
 static struct fs_file_ops char_dev_fs_file_ops;
-static struct char_dev_hook *char_dev_fs_hook = NULL;
+static struct char_dev_registry_hook *char_dev_fs_hook = NULL;
 
 // Chardev Sysfs
 
@@ -208,7 +208,7 @@ char_dev_init_fs_mount(void)
 
     char_dev_fs_mount = mnt;
 
-    struct char_dev_hook *hook = hook_char_dev_registry(
+    struct char_dev_registry_hook *hook = hook_char_dev_registry(
             char_dev_sysfs_on_register,
             char_dev_sysfs_on_unregister);
     if(hook == NULL) {

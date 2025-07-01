@@ -21,6 +21,9 @@ virtio_request_create(
     request->queue = queue;
     request->num_buffers = 0;
 
+    request->complete_callback = NULL;
+    request->complete_callback_state = NULL;
+
     int irq_flags = spin_lock_irq_save(&queue->req_lock);
     ilist_push_tail(&queue->unlaunched_reqs, &request->queue_node);
     spin_unlock_irq_restore(&queue->req_lock, irq_flags);
@@ -141,6 +144,29 @@ virtio_request_append_output(
             buffer,
             bufsize,
             1);
+}
+
+int
+virtio_request_set_completion_callback(
+        struct virtio_request *req,
+        virtio_request_callback_f *callback,
+        void *state)
+{
+    if(req->complete_callback != NULL) {
+        req->complete_callback_state = state;
+        req->complete_callback = callback;
+        return 0;
+    }
+    return -EALREADY;
+}
+
+int
+virtio_request_clear_complete_callback(
+        struct virtio_request *req)
+{
+    req->complete_callback = NULL;
+    req->complete_callback_state = NULL;
+    return 0;
 }
 
 int
