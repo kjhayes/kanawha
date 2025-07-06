@@ -188,8 +188,8 @@ pci_func_init_msix_info(
 
     info->cap = cap;
 
-    uint32_t bir_info = pci_cap_readb(func, cap, 0x4);
-    uint8_t bir = bir_info & 0xFF;
+    uint32_t bir_info = pci_cap_readl(func, cap, 0x4);
+    uint8_t bir = bir_info & 0b111;
     uint32_t bir_offset = bir_info & ~(0b111);
 
     if(bir >= 6) {
@@ -203,9 +203,9 @@ pci_func_init_msix_info(
     info->bir = &func->bars[bir];
     info->bir_offset = bir_offset;
 
-    uint32_t pending_bir_info = pci_cap_readb(func, cap, 0x8);
-    uint8_t pending_bir = pending_bir_info & 0xFF;
-    uint32_t pending_bir_offset = pending_bir_info & 0xFFFFFF00;
+    uint32_t pending_bir_info = pci_cap_readl(func, cap, 0x8);
+    uint8_t pending_bir = pending_bir_info & 0b111;
+    uint32_t pending_bir_offset = pending_bir_info & ~(0b111);
     if(pending_bir >= 6) {
         eprintk("pci_func_init_msix_info: Invalid Pending BIR (0x%x) >= 6\n", pending_bir);
         return -EINVAL;
