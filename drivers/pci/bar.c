@@ -7,10 +7,26 @@
 #include <kanawha/pio.h>
 #endif
 
+#ifdef CONFIG_DEBUG_LOG_PCI_BAR_ACCESSES
+#define DEBUG_LOG(...) printk(__VA_ARGS__)
+#else
+#define DEBUG_LOG(...)
+#endif
+
+#ifdef CONFIG_DEBUG_PCI_BAR_ACCESSES
+#define DEBUG_CHECK_BOUNDS(__bar, __offset, __size)\
+    DEBUG_ASSERT((__bar->size) >= ((__offset) + (__size)))
+#else
+#define DEBUG_CHECK_BOUNDS(__bar, __offset, __size)
+#endif
+
 uint8_t pci_bar_readb(struct pci_bar *bar, size_t offset)
 {
+    DEBUG_CHECK_BOUNDS(bar, offset, 1);
     switch(bar->type) {
         case PCI_BAR_MMIO:
+            DEBUG_LOG("PCI BAR MMIO 8-bit Read: offset=%p, phys_addr=%p\n",
+                    offset, bar->phys_addr + offset);
             return mmio_readb(bar->mmio.base + offset);
 #ifdef CONFIG_PORT_IO
         case PCI_BAR_PIO:
@@ -23,8 +39,11 @@ uint8_t pci_bar_readb(struct pci_bar *bar, size_t offset)
 }
 uint16_t pci_bar_readw(struct pci_bar *bar, size_t offset)
 {
+    DEBUG_CHECK_BOUNDS(bar, offset, 2);
     switch(bar->type) {
         case PCI_BAR_MMIO:
+            DEBUG_LOG("PCI BAR MMIO 16-bit Read: offset=%p, phys_addr=%p\n",
+                    offset, bar->phys_addr + offset);
             return mmio_readw(bar->mmio.base + offset);
 #ifdef CONFIG_PORT_IO
         case PCI_BAR_PIO:
@@ -37,8 +56,11 @@ uint16_t pci_bar_readw(struct pci_bar *bar, size_t offset)
 }
 uint32_t pci_bar_readl(struct pci_bar *bar, size_t offset)
 {
+    DEBUG_CHECK_BOUNDS(bar, offset, 4);
     switch(bar->type) {
         case PCI_BAR_MMIO:
+            DEBUG_LOG("PCI BAR MMIO 32-bit Read: offset=%p, phys_addr=%p\n",
+                    offset, bar->phys_addr + offset);
             return mmio_readl(bar->mmio.base + offset);
 #ifdef CONFIG_PORT_IO
         case PCI_BAR_PIO:
@@ -51,8 +73,11 @@ uint32_t pci_bar_readl(struct pci_bar *bar, size_t offset)
 }
 uint64_t pci_bar_readq(struct pci_bar *bar, size_t offset)
 {
+    DEBUG_CHECK_BOUNDS(bar, offset, 8);
     switch(bar->type) {
         case PCI_BAR_MMIO:
+            DEBUG_LOG("PCI BAR MMIO 64-bit Read: offset=%p, phys_addr=%p\n",
+                    offset, bar->phys_addr + offset);
             return mmio_readq(bar->mmio.base + offset);
 #ifdef CONFIG_PORT_IO
         case PCI_BAR_PIO:
@@ -67,8 +92,11 @@ uint64_t pci_bar_readq(struct pci_bar *bar, size_t offset)
 
 void pci_bar_writeb(struct pci_bar *bar, size_t offset, uint8_t val)
 {
+    DEBUG_CHECK_BOUNDS(bar, offset, 1);
     switch(bar->type) {
         case PCI_BAR_MMIO:
+            DEBUG_LOG("PCI BAR MMIO 8-bit Write: offset=%p, phys_addr=%p\n",
+                    offset, bar->phys_addr + offset);
             mmio_writeb(bar->mmio.base + offset, val);
             break;
 #ifdef CONFIG_PORT_IO
@@ -83,8 +111,11 @@ void pci_bar_writeb(struct pci_bar *bar, size_t offset, uint8_t val)
 }
 void pci_bar_writew(struct pci_bar *bar, size_t offset, uint16_t val)
 {
+    DEBUG_CHECK_BOUNDS(bar, offset, 2);
     switch(bar->type) {
         case PCI_BAR_MMIO:
+            DEBUG_LOG("PCI BAR MMIO 16-bit Write: offset=%p, phys_addr=%p\n",
+                    offset, bar->phys_addr + offset);
             mmio_writew(bar->mmio.base + offset, val);
             break;
 #ifdef CONFIG_PORT_IO
@@ -99,8 +130,12 @@ void pci_bar_writew(struct pci_bar *bar, size_t offset, uint16_t val)
 }
 void pci_bar_writel(struct pci_bar *bar, size_t offset, uint32_t val)
 {
+    DEBUG_CHECK_BOUNDS(bar, offset, 4);
+
     switch(bar->type) {
         case PCI_BAR_MMIO:
+            DEBUG_LOG("PCI BAR MMIO 32-bit Write: offset=%p, phys_addr=%p\n",
+                    offset, bar->phys_addr + offset);
             mmio_writel(bar->mmio.base + offset, val);
             break;
 #ifdef CONFIG_PORT_IO
@@ -115,8 +150,11 @@ void pci_bar_writel(struct pci_bar *bar, size_t offset, uint32_t val)
 }
 void pci_bar_writeq(struct pci_bar *bar, size_t offset, uint64_t val)
 {
+    DEBUG_CHECK_BOUNDS(bar, offset, 8);
     switch(bar->type) {
         case PCI_BAR_MMIO:
+            DEBUG_LOG("PCI BAR MMIO 64-bit Write: offset=%p, phys_addr=%p\n",
+                    offset, bar->phys_addr + offset);
             mmio_writeq(bar->mmio.base + offset, val);
             break;
 #ifdef CONFIG_PORT_IO

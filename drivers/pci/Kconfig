@@ -53,3 +53,13 @@ config PCIE_ACPI_MCFG
 
 endmenu
 
+config DEBUG_LOG_PCI_BAR_ACCESSES
+    bool "Debug Log PCI BAR Accesses"
+    depends on PCI && DEBUGGING
+    default n
+
+config DEBUG_PCI_BAR_ACCESSES
+    bool "Debug Bounds Check PCI BAR Accesses"
+    depends on PCI && DEBUGGING
+    default n
+
