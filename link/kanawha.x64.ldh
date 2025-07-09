@@ -98,6 +98,33 @@ XFOR_INIT_STAGE(DECLARE_INIT_STAGE_LINKER_SCRIPT_SECTIONS)
      *(.strtab* .strtab.*) 
   } :note
 
+  /* Debugging Sections */
+#ifdef CONFIG_DEBUGGING
+//  .debug_types : {
+//      *(.debug_types* .debug_types.*)
+//  } :note
+//  .debug_str : {
+//      *(.debug_str .debug_str.*)
+//  } :note
+//  .debug_aranges : {
+//      *(.debug_aranges* .debug_aranges.*)
+//  } :note
+//  .debug_loc : {
+//      *(.debug_loc* .debug_loc.*)
+//  } :note
+//  .debug_line : {
+//      *(.debug_line* .debug_line.*)
+//  } :note
+//  .debug_abbrev : {
+//      *(.debug_abbrev* .debug_abbrev.*)
+//  } :note
+//  .debug_pubnames : {
+//      *(.debug_pubnames* .debug_pubnames.*)
+//  } :note
+//  .debug_pubtypes : {
+//      *(.debug_pubtypes* .debug_pubtypes.*)
+//  } :note
+#endif
 
   /* Discard Sections */
 
