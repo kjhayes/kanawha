@@ -206,4 +206,8 @@ thread_relax_mapping(void * virtual_addr);
 
 DECLARE_EXTERN_PERCPU_VAR(struct thread_state *, __current_thread);
 
+const char *
+thread_status_to_string(
+        thread_status_t status);
+
 #endif

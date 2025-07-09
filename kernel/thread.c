@@ -670,14 +670,7 @@ dump_threads(printk_f *printer)
             container_of(node, struct thread_state, tree_node);
         (*printer)("\tThread(%ld): %s",
                 (sl_t)thread->id,
-                thread->status == THREAD_STATUS_RUNNING ? "RUNNING" :
-                thread->status == THREAD_STATUS_SCHEDULED ? "SCHEDULED" :
-                thread->status == THREAD_STATUS_READY ? "READY" :
-                thread->status == THREAD_STATUS_TIRED ? "TIRED" :
-                thread->status == THREAD_STATUS_SLEEPING ? "SLEEPING" :
-                thread->status == THREAD_STATUS_PREPARING ? "PREPARING" :
-                thread->status == THREAD_STATUS_ABANDONED ? "ABANDONED" :
-                "ERROR-INVALID-STATUS");
+                thread_status_to_string(thread->status));
 
         dump_thread_flags(thread, thread->flags, printer);
 
@@ -888,4 +881,18 @@ thread_relax_mapping(void * virtual_addr)
 //    return 0;
 //}
 //declare_init_desc(smp, thread_test, "Running Thread Test(s)");
+
+const char *
+thread_status_to_string(
+        thread_status_t status)
+{
+        return status == THREAD_STATUS_RUNNING ? "RUNNING" :
+               status == THREAD_STATUS_SCHEDULED ? "SCHEDULED" :
+               status == THREAD_STATUS_READY ? "READY" :
+               status == THREAD_STATUS_TIRED ? "TIRED" :
+               status == THREAD_STATUS_SLEEPING ? "SLEEPING" :
+               status == THREAD_STATUS_PREPARING ? "PREPARING" :
+               status == THREAD_STATUS_ABANDONED ? "ABANDONED" :
+               "ERROR-INVALID-STATUS";
+}
 
