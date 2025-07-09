@@ -77,9 +77,14 @@ lapic_msix_req(
         container_of(mb, struct lapic, pci_mailbox);
 
     for(size_t i = 0; i < num_req; i++) {
+        hwirq_t hwirq = lapic->pci_mailbox_next_to_give;
         addrs[i] = (uint64_t)lapic_msi_msg_addr(lapic) & 0xFFFFFFFFULL;
-        datas[i] = lapic_msi_msg_data(lapic, 32+i); // TODO: Don't start every MSI-X
-                                                   //       "Block" on IRQ 32...
+        datas[i] = lapic_msi_msg_data(lapic, hwirq);
+        if(lapic->pci_mailbox_next_to_give < 248) {
+            lapic->pci_mailbox_next_to_give++;
+        } else {
+            lapic->pci_mailbox_next_to_give = 32;
+        }
     }
 
     return 0;
@@ -160,6 +165,7 @@ register_cpu_lapic_pci_mailbox(
         struct lapic *lapic)
 {
     int res;
+    lapic->pci_mailbox_next_to_give = 32;
     res = register_pci_mailbox(
             &lapic->pci_mailbox,
             &lapic_pci_mailbox_ops);

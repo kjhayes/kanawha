@@ -142,6 +142,7 @@ struct lapic
 
 #ifdef CONFIG_PCI
     struct pci_mailbox pci_mailbox;
+    uint8_t pci_mailbox_next_to_give;
 #endif
 };
 
