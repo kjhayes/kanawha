@@ -4,9 +4,17 @@
 #include <drivers/usb/xhci/xhci.h>
 #include <drivers/usb/xhci/slot.h>
 
+int
+usb_xhci_init_device_contextes(
+        struct usb_xhci *dev);
+int
+usb_xhci_deinit_device_contextes(
+        struct usb_xhci *dev);
+
 struct usb_xhci_device
 {
     struct usb_xhci *xhci;
+    ilist_t xhci_list_node;
 
     size_t slot_index; // Indexed from 1
 

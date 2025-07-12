@@ -3,7 +3,7 @@
 #include <drivers/usb/xhci/xhci.h>
 #include <drivers/usb/xhci/reg.h>
 #include <drivers/usb/xhci/slot.h>
-#include <drivers/usb/xhci/dcbaa.h>
+#include <drivers/usb/xhci/device.h>
 #include <drivers/usb/xhci/command.h>
 #include <drivers/usb/xhci/event.h>
 #include <drivers/usb/xhci/cap.h>
@@ -243,16 +243,16 @@ usb_xhci_init_device(
         return res;
     }
 
-    res = usb_xhci_init_dcbaa(dev);
+    res = usb_xhci_init_device_contextes(dev);
     if(res) {
         kfree(dev);
         return res;
     }
-    dprintk("initialized the dcbaa!\n");
+    dprintk("initialized the device contextes!\n");
 
     res = usb_xhci_init_command_ring(dev, 255); // Single 4kb Page (probably)
     if(res) {
-        usb_xhci_deinit_dcbaa(dev);
+        usb_xhci_deinit_device_contextes(dev);
         kfree(dev);
         return res;
     }
@@ -261,7 +261,7 @@ usb_xhci_init_device(
     res = usb_xhci_init_interruptors(dev);
     if(res) {
         usb_xhci_deinit_command_ring(dev);
-        usb_xhci_deinit_dcbaa(dev);
+        usb_xhci_deinit_device_contextes(dev);
         kfree(dev);
         wprintk("Failed to init USB XHCI interruptors! (res=%s)\n",
                 errnostr(res));
@@ -272,7 +272,7 @@ usb_xhci_init_device(
     if(res) {
         usb_xhci_deinit_interruptors(dev);
         usb_xhci_deinit_command_ring(dev);
-        usb_xhci_deinit_dcbaa(dev);
+        usb_xhci_deinit_device_contextes(dev);
         kfree(dev);
         return res;
     }
@@ -281,7 +281,7 @@ usb_xhci_init_device(
     if(res) {
         usb_xhci_deinit_interruptors(dev);
         usb_xhci_deinit_command_ring(dev);
-        usb_xhci_deinit_dcbaa(dev);
+        usb_xhci_deinit_device_contextes(dev);
         kfree(dev);
         return res;
     }
@@ -290,7 +290,7 @@ usb_xhci_init_device(
     if(res) {
         usb_xhci_deinit_interruptors(dev);
         usb_xhci_deinit_command_ring(dev);
-        usb_xhci_deinit_dcbaa(dev);
+        usb_xhci_deinit_device_contextes(dev);
         kfree(dev);
         wprintk("Failed to init USB XHCI ports! (res=%s)\n",
                 errnostr(res));
@@ -314,7 +314,7 @@ usb_xhci_init_device(
         usb_xhci_deinit_ports(dev);
         usb_xhci_deinit_interruptors(dev);
         usb_xhci_deinit_command_ring(dev);
-        usb_xhci_deinit_dcbaa(dev);
+        usb_xhci_deinit_device_contextes(dev);
         kfree(dev);
         eprintk("USB XHCI Failed to Respond to No-Op Command (res=%s)!\n",
                 errnostr(res));

@@ -10,6 +10,8 @@
 #include <drivers/usb/xhci/event.h>
 #include <drivers/usb/xhci/port.h>
 
+struct usb_xhci_device;
+
 struct usb_xhci
 {
     struct pci_func *func;
@@ -26,9 +28,11 @@ struct usb_xhci
     size_t num_scratchpads;
     int is_64bit;
 
-    // dcbaa state
+    // device contextes state
     dma_addr_t dcbaa_dma;
     struct usb_xhci_dcbaa *dcbaa;
+    irq_lock_t devices_lock;
+    struct usb_xhci_device **devices;
 
     // command ring state
     struct usb_xhci_command_ring command_ring;
