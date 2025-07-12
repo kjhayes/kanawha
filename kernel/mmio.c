@@ -115,10 +115,7 @@ mmio_map(void __phys * paddr, size_t size)
             pad_above,
             total_size);
 
-    // TODO (Remove this check)
-    if((total_size & ((1ULL<<VMEM_MIN_PAGE_ORDER)-1)) != 0) {
-        panic("Padding math is flawed in mmio_map!\n");
-    }
+    DEBUG_ASSERT_MSG((total_size & ((1ULL<<VMEM_MIN_PAGE_ORDER)-1)) == 0, "Padding math is flawed in mmio_map!");
 
     size_t num_pages = total_size >> VMEM_MIN_PAGE_ORDER;
     void __phys * page_base = (void __phys *)((uintptr_t)paddr & ~((1ULL<<VMEM_MIN_PAGE_ORDER)-1));
