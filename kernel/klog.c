@@ -196,12 +196,6 @@ klog_fs_file_read(
 
     struct fs_node *fs_node = fs_path_get_fs_node(path);
 
-    if(flags & FS_FILE_READ_NON_BLOCKING) {
-        // TODO: Handle non-blocking reads
-        fs_path_put(path);
-        return 0;
-    }
-
     size_t offset = file->seek_offset;
 
     klog_tree_lock_acquire();
@@ -228,6 +222,7 @@ klog_fs_file_read(
     klog_tree_lock_release();
 
     fs_path_put(path);
+
     return amount;
 }
 
