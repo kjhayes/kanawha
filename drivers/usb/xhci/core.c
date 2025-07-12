@@ -13,24 +13,6 @@
 #include <kanawha/types.h>
 #include <kanawha/endian.h>
 
-static int
-usb_xhci_init_basic_info(
-        struct usb_xhci *dev)
-{
-    // Basic Info
-    dev->page_order = usb_xhci_read(dev, PAGESIZE) + 12;
-    dev->num_device_ctx = usb_xhci_read(dev, MaxSlots);
-    dev->is_64bit = usb_xhci_read(dev, AC64);
-
-    {
-    size_t lo = usb_xhci_read(dev, Max_Scratchpad_Bufs_Lo);
-    size_t high = usb_xhci_read(dev, Max_Scratchpad_Bufs_Hi);
-    dev->num_scratchpads = (high<<5) | lo;
-    }
-
-    return 0;
-}
-
 static void
 usb_xhci_legacy_support_capability_mark_os_ownership(
         struct usb_xhci *xhci,
@@ -69,6 +51,32 @@ usb_xhci_legacy_support_capability_check_for_bios_release(
             *res = -ETIMEDOUT;
         }
     }
+}
+
+static int
+usb_xhci_claim_from_bios(struct usb_xhci *dev)
+{
+    int res;
+
+    usb_xhci_for_each_capability_of_type(
+            dev,
+            USB_XHCI_EXT_CAPABILITY_ID_USB_LEGACY_SUPPORT,
+            usb_xhci_legacy_support_capability_mark_os_ownership,
+            NULL);
+
+    res = 0;
+    usb_xhci_for_each_capability_of_type(
+            dev,
+            USB_XHCI_EXT_CAPABILITY_ID_USB_LEGACY_SUPPORT,
+            usb_xhci_legacy_support_capability_mark_os_ownership,
+            (void*)&res);
+
+    if(res) {
+        eprintk("BIOS refused to relinquish control of the USB XHCI controller!\n");
+        return res;
+    }
+
+    return 0;
 }
 
 static int
@@ -206,28 +214,21 @@ usb_xhci_init_device(
         return res;
     }
 
-    res = usb_xhci_init_basic_info(dev);
+    // Basic Info
+    dev->page_order = usb_xhci_read(dev, PAGESIZE) + 12;
+    dev->num_device_ctx = usb_xhci_read(dev, MaxSlots);
+    dev->is_64bit = usb_xhci_read(dev, AC64);
+
+    {
+    size_t lo = usb_xhci_read(dev, Max_Scratchpad_Bufs_Lo);
+    size_t high = usb_xhci_read(dev, Max_Scratchpad_Bufs_Hi);
+    dev->num_scratchpads = (high<<5) | lo;
+    }
+
+    res = usb_xhci_claim_from_bios(dev);
     if(res) {
         kfree(dev);
         return res;
-    }
-
-    usb_xhci_for_each_capability_of_type(
-            dev,
-            USB_XHCI_EXT_CAPABILITY_ID_USB_LEGACY_SUPPORT,
-            usb_xhci_legacy_support_capability_mark_os_ownership,
-            NULL);
-
-    res = 0;
-    usb_xhci_for_each_capability_of_type(
-            dev,
-            USB_XHCI_EXT_CAPABILITY_ID_USB_LEGACY_SUPPORT,
-            usb_xhci_legacy_support_capability_mark_os_ownership,
-            (void*)&res);
-
-    if(res) {
-        eprintk("BIOS refused to relinquish control of the USB XHCI controller!\n");
-        return -EINVAL;
     }
 
     res = usb_xhci_halt(dev);
