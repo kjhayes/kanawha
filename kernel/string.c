@@ -171,3 +171,27 @@ kstrdup(const char *str)
     return clone;
 }
 
+// Trying to limit the use of __va and __pa, so these function will
+// hopefully help reduce direct use of those functions
+void memcpy_pp(void __phys *dest, void __phys *src, size_t n)
+{
+    void *dest_v = __va(dest);
+    void *src_v = __va(src);
+    memcpy(dest_v, src_v, n);
+}
+void memcpy_vp(void __phys *dest, void *src, size_t n)
+{
+    void *dest_v = __va(dest);
+    memcpy(dest_v, src, n);
+}
+void memcpy_pv(void *dest, void __phys *src, size_t n)
+{
+    void *src_v = __va(src);
+    memcpy(dest, src_v, n);
+}
+void memset_p(void __phys *str, int c, size_t n)
+{
+    void *str_v = __va(str);
+    memset(str_v, c, n);
+}
+
