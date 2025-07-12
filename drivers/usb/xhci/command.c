@@ -29,7 +29,7 @@ usb_xhci_init_command_ring(
 
     struct usb_xhci_command_ring *ring = &xhci->command_ring;
 
-    if(usb_xhci_command_ring_running(xhci)) {
+    if(usb_xhci_read(xhci, CRR)) {
         wprintk("usb_xhci_init_command_ring called while the command ring was running!\n");
         return -EBUSY;
     }
@@ -108,17 +108,9 @@ usb_xhci_init_command_ring(
     dprintk("RING_DEQUEUE_START=%p\n",
             start_addr);
 
-    res = usb_xhci_set_command_ring_pointer(
-            xhci,
-            start_addr,
-            1);
-    if(res) {
-        for(size_t i = 0; i < ring->num_dma_regions; i++) {
-            dma_free(ring->dma_regions[i], ring->region_size);
-        }
-        kfree(ring->dma_regions);
-        return res;
-    }
+    uint64_t crcr = (uint64_t)start_addr | 0b1;
+
+    usb_xhci_write(xhci, CRCR, crcr);
 
     return 0;
 }

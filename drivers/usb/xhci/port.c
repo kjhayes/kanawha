@@ -50,7 +50,7 @@ static int
 usb_xhci_port_assert_powered(
         struct usb_xhci_port *port)
 {
-    int have_ctrl = usb_xhci_cap_reg_get_port_power_control(port->xhci);
+    int have_ctrl = usb_xhci_read(port->xhci, PPC);
     if(!have_ctrl) {
         return 0;
     }
@@ -95,7 +95,7 @@ usb_xhci_init_ports(
 {
     int res;
 
-    xhci->num_ports = usb_xhci_cap_reg_get_max_ports(xhci);
+    xhci->num_ports = usb_xhci_read(xhci, MaxPorts);
     xhci->ports = kmalloc(sizeof(struct usb_xhci_port) * xhci->num_ports);
     if(xhci->ports == NULL) {
         return -ENOMEM;

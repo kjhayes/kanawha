@@ -17,17 +17,16 @@ static int
 usb_xhci_init_basic_info(
         struct usb_xhci *dev)
 {
-    // Register Offsets (Must be first)
-    dev->op_reg_offset = usb_xhci_cap_reg_get_cap_length(dev);
-    dev->port_reg_offset = 0x400;
-    dev->doorbell_offset = usb_xhci_cap_reg_get_doorbell_offset(dev);
-    dev->runtime_reg_offset = usb_xhci_cap_reg_get_runtime_reg_offset(dev);
-
     // Basic Info
-    dev->page_order = usb_xhci_op_reg_get_page_order(dev);
-    dev->num_device_ctx = usb_xhci_cap_reg_get_max_device_slots(dev);
-    dev->is_64bit = usb_xhci_cap_reg_get_64bit_capable(dev);
-    dev->num_scratchpads = usb_xhci_cap_reg_get_num_scratchpads(dev);
+    dev->page_order = usb_xhci_read(dev, PAGESIZE) + 12;
+    dev->num_device_ctx = usb_xhci_read(dev, MaxSlots);
+    dev->is_64bit = usb_xhci_read(dev, AC64);
+
+    {
+    size_t lo = usb_xhci_read(dev, Max_Scratchpad_Bufs_Lo);
+    size_t high = usb_xhci_read(dev, Max_Scratchpad_Bufs_Hi);
+    dev->num_scratchpads = (high<<5) | lo;
+    }
 
     return 0;
 }
@@ -82,7 +81,10 @@ usb_xhci_wait_for_ready(
     duration_t cur_delay = 0;
     duration_t delay_step = nsec_to_duration(100);
 
-    while(!(volatile int)usb_xhci_status_reg_get_host_controller_halted(dev)) {
+    while(1) {
+        if(!usb_xhci_read(dev, CNR)) {
+            break;
+        }
         clk_delay(delay_step);
         cur_delay += delay_step;
         if(cur_delay >= max_delay) {
@@ -100,10 +102,7 @@ usb_xhci_halt(
         struct usb_xhci *dev)
 {
     int res;
-    res = usb_xhci_command_reg_set_run_stop(dev, 0);
-    if(res) {
-        return res;
-    }
+    usb_xhci_write(dev, R_S, 0);
 
     res = usb_xhci_wait_for_ready(dev);
     if(res) {
@@ -118,10 +117,7 @@ usb_xhci_reset(
         struct usb_xhci *dev)
 {
     int res;
-    res = usb_xhci_command_reg_set_host_controller_reset(dev, 1);
-    if(res) {
-        return res;
-    }
+    usb_xhci_write(dev, HCRST, 1);
 
 #define USB_XHCI_RESET_MAX_WAIT_SEC 2
 
@@ -129,7 +125,7 @@ usb_xhci_reset(
     duration_t cur_delay = 0;
     duration_t delay_step = nsec_to_duration(100);
 
-    while((volatile int)usb_xhci_command_reg_get_host_controller_reset(dev)) {
+    while(usb_xhci_read(dev, HCRST)) {
         clk_delay(delay_step);
         cur_delay += delay_step;
         if(cur_delay >= max_delay) {
@@ -152,10 +148,7 @@ usb_xhci_resume(
         struct usb_xhci *dev)
 {
     int res;
-    res = usb_xhci_command_reg_set_run_stop(dev, 1);
-    if(res) {
-        return res;
-    }
+    usb_xhci_write(dev, R_S, 1);
 
 #define USB_XHCI_RESUME_MAX_WAIT_SEC 2
 
@@ -163,7 +156,10 @@ usb_xhci_resume(
     duration_t cur_delay = 0;
     duration_t delay_step = nsec_to_duration(100);
 
-    while((volatile int)usb_xhci_status_reg_get_host_controller_halted(dev)) {
+    while(1) {
+        if(!usb_xhci_read(dev, HCH)) {
+            break;
+        }
         clk_delay(delay_step);
         cur_delay += delay_step;
         if(cur_delay >= max_delay) {
@@ -204,6 +200,11 @@ usb_xhci_init_device(
 
     pci_func_raw_enable_mmio(dev->func);
     pci_func_raw_enable_bus_master(dev->func);
+
+    res = usb_xhci_bootstrap_reg_access(dev);
+    if(res) {
+        return res;
+    }
 
     res = usb_xhci_init_basic_info(dev);
     if(res) {

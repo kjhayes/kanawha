@@ -29,23 +29,16 @@ usb_xhci_init_dcbaa(
         return -EINVAL;
     }
 
-    res = usb_xhci_op_reg_set_device_ctx_base_address_array_pointer(
+    usb_xhci_write(
             dev,
-            dma_phys_addr(dev->dcbaa_dma));
-    if(res) {
-        dma_free(dev->dcbaa_dma,
-                 8*(dev->num_device_ctx+1));
-        return res;
-    }
+            DCBAAP,
+            (uint64_t)dma_phys_addr(dev->dcbaa_dma)
+            );
 
-    res = usb_xhci_set_max_device_slots_enabled(
+    usb_xhci_write(
             dev,
+            MaxSlotsEn,
             dev->num_device_ctx);
-    if(res) {
-        dma_free(dev->dcbaa_dma,
-                 8*(dev->num_device_ctx+1));
-        return res;
-    }
 
     return 0;
 }

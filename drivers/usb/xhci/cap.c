@@ -16,7 +16,7 @@ usb_xhci_for_each_capability_of_type(
         )
 
 {
-    size_t offset = usb_xhci_cap_reg_get_ext_cap_ptr(xhci);
+    size_t offset = usb_xhci_read(xhci, xECP);
     if(offset == 0) {
         return;
     }

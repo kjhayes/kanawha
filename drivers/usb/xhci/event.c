@@ -240,7 +240,7 @@ usb_xhci_interruptor_event_queue_notify(
         struct usb_xhci_trb __phys *phys_trb = &phys_seg[index];
         usb_xhci_interruptor_set_dequeue_pointer(intr, (void __phys *)phys_trb, segment, 1);
     } else {
-        if(usb_xhci_status_reg_get_host_system_error(intr->xhci)) {
+        if(usb_xhci_read(intr->xhci, HCE)) {
             eprintk("Failed to dequeue event from USB XHCI event queue and an error has been asserted by the host controller!\n");
         }
     }
@@ -310,7 +310,7 @@ usb_xhci_init_interruptor(
     size_t pages_needed = USB_XHCI_EVT_RING_ENTRIES / entries_per_page + !!(USB_XHCI_EVT_RING_ENTRIES % entries_per_page);
 
     // Check ERST Max
-    order_t erst_max_order = usb_xhci_cap_reg_get_event_ring_segment_table_max(dev);
+    order_t erst_max_order = usb_xhci_read(dev, ERST_Max);
     if(pages_needed > 1ULL<<erst_max_order) {
         irq_uninstall_action(intr->action);
         return -EINVAL;
@@ -435,10 +435,11 @@ usb_xhci_init_interruptors(
 {
     int res;
 
-    size_t max_intr = usb_xhci_cap_reg_get_max_interruptors(dev);
+    size_t max_intr = usb_xhci_read(dev, MaxIntrs);
 
     res = pci_func_start_irqs(dev->func);
     if(res) {
+        wprintk("USB XHCI Device failed to start IRQ(s)!\n");
         return res;
     }
 
@@ -480,7 +481,7 @@ usb_xhci_init_interruptors(
         }
     }
 
-    usb_xhci_command_reg_set_interruptor_enable(dev, 1);
+    usb_xhci_write(dev, INTE, 1);
 
     return 0;
 }
@@ -489,7 +490,7 @@ int
 usb_xhci_deinit_interruptors(
         struct usb_xhci *dev)
 {
-    usb_xhci_command_reg_set_interruptor_enable(dev, 0);
+    usb_xhci_write(dev, INTE, 0);
     for(size_t i = 0; i < dev->num_interruptors; i++) {
         usb_xhci_deinit_interruptor(dev, i);
     }
