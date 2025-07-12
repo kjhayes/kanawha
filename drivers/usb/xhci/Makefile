@@ -7,4 +7,5 @@ obj-y += \
 	port.o \
 	trb.o \
 	cap.o \
+	device.o \
 

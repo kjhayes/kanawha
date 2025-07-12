@@ -10,6 +10,8 @@ struct usb_xhci_port
 {
     struct usb_xhci *xhci;
     size_t register_offset;
+
+    struct tasklet *status_change_tasklet;
 };
 
 int

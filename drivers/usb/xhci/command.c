@@ -216,24 +216,24 @@ usb_xhci_command_ring_get_avail_trb_lockless(
         )
 {
     int full = 0;
-    if(ring->enqueue_index == 0) {
-        size_t prev_region;
-        if(ring->enqueue_region == 0) {
-            prev_region = ring->num_dma_regions-1;
+    if(ring->enqueue_index == ring->trbs_per_region-1) {
+        size_t next_region;
+        if(ring->enqueue_region == ring->num_dma_regions-1) {
+            next_region = 0;
         } else {
-            prev_region = ring->enqueue_region-1;
+            next_region = ring->enqueue_region+1;
         }
         struct usb_xhci_trb __phys *phys_region =
-            dma_phys_addr(ring->dma_regions[prev_region]);
+            dma_phys_addr(ring->dma_regions[next_region]);
 
-        struct usb_xhci_trb __phys *final_trb = &phys_region[ring->trbs_per_region-1];
-        struct usb_xhci_trb __phys *link = &phys_region[ring->trbs_per_region];
-        full = (final_trb == ring->dequeue_phys) || (link == ring->dequeue_phys);
+        struct usb_xhci_trb __phys *next_trb = &phys_region[0];
+
+        full = (ring->dequeue_phys == next_trb);
     }
     else {
         struct usb_xhci_trb __phys *phys_region =
             dma_phys_addr(ring->dma_regions[ring->enqueue_region]);
-        full = (ring->dequeue_phys == &phys_region[ring->enqueue_index-1]);
+        full = (ring->dequeue_phys == &phys_region[ring->enqueue_index+1]);
     }
 
     if(full) {

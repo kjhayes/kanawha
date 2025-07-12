@@ -2,7 +2,15 @@
 #include <drivers/usb/xhci/port.h>
 #include <drivers/usb/xhci/xhci.h>
 #include <drivers/usb/xhci/reg.h>
+#include <drivers/usb/xhci/device.h>
+#include <kanawha/tasklet.h>
 
+// Forward Decl
+static void
+usb_xhci_port_handle_status_change(
+        void *state);
+
+// Definitions
 static inline size_t
 usb_xhci_port_index(
         struct usb_xhci_port *port)
@@ -97,6 +105,14 @@ usb_xhci_init_ports(
     for(size_t i = 0; i < xhci->num_ports; i++) {
         xhci->ports[i].xhci = xhci;
         xhci->ports[i].register_offset = xhci->op_reg_offset + 0x400 + (0x10 * i);
+        xhci->ports[i].status_change_tasklet = tasklet_create(usb_xhci_port_handle_status_change, &xhci->ports[i]);
+        if(xhci->ports[i].status_change_tasklet == NULL) {
+            for(size_t undo_i = 0; undo_i < i; undo_i++) {
+                tasklet_destroy(xhci->ports[undo_i].status_change_tasklet);
+            }
+            kfree(xhci->ports);
+            return -EINVAL;
+        }
     }
 
     return 0;
@@ -106,6 +122,9 @@ int
 usb_xhci_deinit_ports(
         struct usb_xhci *xhci)
 {
+    for(size_t i = 0; i < xhci->num_ports; i++) {
+        tasklet_destroy(xhci->ports[i].status_change_tasklet);
+    }
     kfree(xhci->ports);
     return 0;
 }
@@ -138,6 +157,14 @@ usb_xhci_port_on_attach(
 {
     printk("Device Attached to USB Port %lu\n",
             (ul_t)usb_xhci_port_index(port));
+
+    struct usb_xhci_device *dev =
+        usb_xhci_create_device(port->xhci);
+
+    if(dev == NULL) {
+        return -EINVAL;
+    }
+
     return -EUNIMPL;
 }
 
@@ -155,7 +182,15 @@ int
 usb_xhci_port_notify_status_change(
         struct usb_xhci_port *port)
 {
-    // TODO: This should be put in a tasklet of some sort.
+    return tasklet_trigger(port->status_change_tasklet);
+}
+
+static void
+usb_xhci_port_handle_status_change(
+        void *state)
+{
+    struct usb_xhci_port *port = state;
+
     uint32_t portsc = usb_xhci_port_read_portsc(port);
 
     usb_xhci_port_write_portsc(port, portsc); // Clear all changed events
@@ -168,8 +203,6 @@ usb_xhci_port_notify_status_change(
             usb_xhci_port_on_deattach(port, portsc);
         }
     }
-
-    return 0;
 }
 
 int
