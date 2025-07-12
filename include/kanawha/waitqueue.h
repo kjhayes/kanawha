@@ -3,14 +3,14 @@
 
 #include <kanawha/types.h>
 #include <kanawha/list.h>
-#include <kanawha/spinlock.h>
+#include <kanawha/lock.h>
 #include <kanawha/thread.h>
 
 #define WAITQUEUE_DISABLED (1ULL<<0)
 
 struct waitqueue
 {
-    spinlock_t lock;
+    irq_lock_t lock;
     unsigned long flags;
     ilist_t waiting_threads;
     size_t num_threads;
