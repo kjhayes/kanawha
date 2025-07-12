@@ -120,6 +120,11 @@ void x64_init(void *in)
 
     enable_irqs();
 
+    res = handle_init_stage__threaded();
+    if(res) {
+        panic("Failed to handle init stage \"threaded\"! err=%s", errnostr(res));
+    }
+
     res = handle_init_stage__topo();
     if(res) {
         panic("Failed to handle init stage \"topo\"! err=%s", errnostr(res));
@@ -138,6 +143,11 @@ void x64_init(void *in)
     res = handle_init_stage__smp();
     if(res) {
         panic("Failed to handle init stage \"smp\"! err=%s", errnostr(res));
+    }
+
+    res = handle_init_stage__sched();
+    if(res) {
+        panic("Failed to handle init stage \"sched\"! err=%s", errnostr(res));
     }
 
     res = handle_init_stage__fs();

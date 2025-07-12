@@ -19,6 +19,7 @@ obj-y += \
 	irq_domain.o \
 	thread.o \
 	scheduler.o \
+	tasklet.o \
 	usermode.o \
 	syscall.o \
 	cpu.o \

@@ -14,10 +14,12 @@
     X(post_vmem)\
     X(kmalloc)\
     X(dynamic)\
+    X(threaded)\
     X(topo)\
     X(post_topo)\
     X(smp_bringup)\
     X(smp)\
+    X(sched)\
     X(fs)\
     X(platform)\
     X(bus)\
@@ -41,10 +43,12 @@
 // post_vmem - virtual memory map enabled (Non-essential regions can be added here)
 // kmalloc - dynamic memory allocator initialization
 // dynamic - first stage with kmalloc/kfree family of functions
+// threaded - current_thread() is valid and threads can be created
 // topo - system topology discovery
 // post_topo - total_num_cpus and percpu_ptr_specific working on BSP
 // smp_bringup - bringing up the AP's
 // smp - first smp phase (xcalls should work)
+// sched - "default" scheduler exists and is running
 // fs - filesystem registration
 // platform - non-bus based devices
 // bus - bus discovery/probing
