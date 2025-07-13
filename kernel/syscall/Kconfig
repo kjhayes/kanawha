@@ -118,3 +118,8 @@ config DEBUG_SYSCALL_SIGSEND
     depends on DEBUGGING
     default n
 
+config DEBUG_SYSCALL_RID
+    bool "Debug rid"
+    depends on DEBUGGING
+    default n
+
