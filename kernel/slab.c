@@ -213,7 +213,6 @@ recurse:
         return block->objects + (first_free * alloc->obj_size);
     }
 
-    // TODO allocate another block using page_alloc
     void __phys * new_block;
     res = page_alloc(SLAB_ALLOC_BLOCK_PAGE_ORDER, &new_block, 0);
     if(res) {
@@ -253,9 +252,14 @@ slab_free(struct slab_allocator *alloc, void *obj)
         bitmap_clear(block->bitmap, index);
         block->num_free++;
 
-        // TODO
-        // Check if this region is empty and dynamically allocated,
-        // and free it if we can
+        if((block->flags & SLAB_ALLOC_BLOCK_STATIC) == 0) {
+            // This block was dynamically allocated
+            if(block->num_free == block->num_slots) {
+                // This block is empty, so free it
+                ilist_remove(&alloc->block_list, &block->list_node);
+                page_free(SLAB_ALLOC_BLOCK_PAGE_ORDER, __pa(block));
+            }
+        }
 
         return;
     }
