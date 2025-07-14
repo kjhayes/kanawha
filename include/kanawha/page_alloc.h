@@ -5,7 +5,7 @@
 #include <kanawha/ptree.h>
 #include <kanawha/list.h>
 #include <kanawha/ops.h>
-#include <kanawha/spinlock.h>
+#include <kanawha/lock.h>
 
 #define PAGE_ALLOC_MIN_ORDER 12
 #define PAGE_ALLOC_MAX_ORDER 21
@@ -47,7 +47,7 @@ struct page_allocator
     void *state;
 
     unsigned long flags;
-    spinlock_t lock;
+    irq_lock_t lock;
 
     void __phys * base;
     size_t size;
