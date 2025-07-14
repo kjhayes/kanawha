@@ -27,6 +27,7 @@ handle_syscall(
     uint64_t ret_val;
 
     struct process *process = current_process();
+    DEBUG_ASSERT(KERNEL_ADDR(process));
 
     DEBUG_ASSERT_MSG(irqs_enabled(), "Handling syscall with IRQ(s) disabled!");
 

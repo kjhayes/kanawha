@@ -501,7 +501,6 @@ launch_init_process(void)
     struct fs_path *root;
     res = fs_path_mount_root(root_fs_mnt, &root);
     if(res) {
-        process_free(process);
         return res;
     }
 
@@ -509,7 +508,6 @@ launch_init_process(void)
     if(res) {
         eprintk("Failed to set init process root directory! (err=%s)\n",
                 errnostr(res));
-        process_free(process);
         return res;
     }
 
@@ -517,13 +515,11 @@ launch_init_process(void)
     if(res) {
         eprintk("Failed to set init process working directory! (err=%s)\n",
                 errnostr(res));
-        process_free(process);
         return res;
     }
 
     res = mmap_create(PROCESS_LOWMEM_SIZE, process);
     if(process->mmap == NULL) {
-        process_free(process);
         return res;
     }
 
@@ -531,13 +527,11 @@ launch_init_process(void)
     if(res) {
         eprintk("Failed to create init process file_table!\n",
                 errnostr(res));
-        process_free(process);
         return res;
     }
 
     res = environment_create(process);
     if(res) {
-        process_free(process);
         return res;
     }
 
@@ -706,7 +700,7 @@ process_set_scheduler(
     if(process->status == PROCESS_STATUS_SCHEDULED) {
         res = scheduler_add_thread(process->scheduler, &process->thread);
         if(res) {
-            wprintk("process_set_scheduler: swapped schedulers but could not re-scheduler thread on new scheduler! (err=%s)\n",
+            wprintk("process_set_scheduler: swapped schedulers but could not re-schedule thread on new scheduler! (err=%s)\n",
                     errnostr(res));
             process->status = PROCESS_STATUS_SUSPEND;
         }
@@ -989,6 +983,17 @@ process_terminate(
      * The process might actually still be running on some processor though
      * (the current thread is probably the process thread anyways)
      */
+
+    if(process != current_process()) {
+        // TODO this is bad
+        while(process->thread.status == THREAD_STATUS_RUNNING ||
+              process->thread.status == THREAD_STATUS_TIRED)
+        {
+            // Wait for the process to stop running
+        }
+        LOG("Process is now status=%s\n",
+            thread_status_to_string(process->thread.status));
+    }
 
     process->exitcode = exitcode;
     process->status = PROCESS_STATUS_ZOMBIE;
