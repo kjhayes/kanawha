@@ -11,6 +11,7 @@
 #include <kanawha/string.h>
 #include <kanawha/init.h>
 #include <kanawha/lock.h>
+#include <kanawha/page_alloc.h>
 
 static int __klog_boot_frames_used = 0;
 static uint8_t __klog_boot_frames[CONFIG_KLOG_BOOT_FRAMES * CONFIG_KLOG_FRAMESIZE];
@@ -124,10 +125,14 @@ klog_putc(char c)
 #include <kanawha/fs/sys/vfs.h>
 
 static struct vfs_mount *klog_fs_mount = NULL;
+
 static struct fs_node_ops klog_fs_node_ops;
 static struct fs_file_ops klog_fs_file_ops;
-
 static struct vfs_node klog_fs_node = { 0 };
+
+static struct fs_node_ops kmem_free_fs_node_ops;
+static struct fs_file_ops kmem_free_fs_file_ops;
+static struct vfs_node kmem_free_fs_node = { 0 };
 
 static int
 klog_init_fs_mount(void)
@@ -147,30 +152,30 @@ klog_init_fs_mount(void)
     klog_fs_node.fs_node.file_ops = &klog_fs_file_ops;
     klog_fs_node.fs_node.node_ops = &klog_fs_node_ops;
 
-    size_t inode;
-    res = vfs_mount_insert_node(
+    res = vfs_mount_insert_node_and_link_root(
             mnt,
             &klog_fs_node,
-            &inode);
+            "klog");
     if(res) {
         vfs_mount_destroy(mnt);
         return res;
     }
 
-    res = vfs_mount_link_root(
+    kmem_free_fs_node.fs_node.unload = NULL;
+    kmem_free_fs_node.fs_node.file_ops = &kmem_free_fs_file_ops;
+    kmem_free_fs_node.fs_node.node_ops = &kmem_free_fs_node_ops;
+
+    res = vfs_mount_insert_node_and_link_root(
             mnt,
-            "klog",
-            inode);
+            &kmem_free_fs_node,
+            "free");
     if(res) {
-        vfs_mount_remove_node(mnt, &klog_fs_node);
         vfs_mount_destroy(mnt);
         return res;
     }
 
-    res = sysfs_register_mount(&klog_fs_mount->fs_mount, "log");
+    res = sysfs_register_mount(&klog_fs_mount->fs_mount, "info");
     if(res) {
-        vfs_mount_unlink_root(mnt, "klog");
-        vfs_mount_remove_node(mnt, &klog_fs_node);
         vfs_mount_destroy(mnt);
         return res;
     }
@@ -248,6 +253,53 @@ klog_fs_node_ops =
 static struct fs_file_ops
 klog_fs_file_ops = {
     .read = klog_fs_file_read,
+    .write = fs_file_eof_write,
+    .flush = fs_file_nop_flush,
+    .seek = fs_file_seek_pinned_zero,
+    .poll = fs_file_cannot_poll,
+    .dir_begin = fs_file_cannot_dir_begin,
+    .dir_next = fs_file_cannot_dir_next,
+    .dir_readattr = fs_file_cannot_dir_readattr,
+    .dir_readname = fs_file_cannot_dir_readname,
+};
+
+static ssize_t 
+kmem_free_fs_file_read(
+        struct file *file,
+        void *buffer,
+        ssize_t amount,
+        unsigned long flags)
+{
+    if(file->seek_offset != 0) {
+        return 0;
+    }
+    snprintk(buffer, amount, "%lu", (ul_t)page_alloc_amount_free());
+    ((char*)buffer)[amount-1] = '\0';
+    return strlen(buffer);
+}
+
+static struct fs_node_ops
+kmem_free_fs_node_ops =
+{
+    .read_page = fs_node_cannot_read_page,
+    .write_page = fs_node_cannot_read_page,
+    .load_page = fs_node_cannot_load_page,
+    .unload_page = fs_node_cannot_unload_page,
+    .flush_page = fs_node_cannot_flush_page,
+    .flush = fs_node_flush_nop,
+    .getattr = fs_node_cannot_getattr,
+    .setattr = fs_node_cannot_setattr,
+    .lookup = fs_node_cannot_lookup,
+    .mkfile = fs_node_cannot_mkfile,
+    .mkdir = fs_node_cannot_mkdir,
+    .link = fs_node_cannot_link,
+    .symlink = fs_node_cannot_symlink,
+    .unlink = fs_node_cannot_unlink,
+};
+
+static struct fs_file_ops
+kmem_free_fs_file_ops = {
+    .read = kmem_free_fs_file_read,
     .write = fs_file_eof_write,
     .flush = fs_file_nop_flush,
     .seek = fs_file_seek_pinned_zero,
