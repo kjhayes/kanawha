@@ -333,9 +333,6 @@ process_alloc(
     }
     memset(process, 0, sizeof(struct process));
 
-    spinlock_init(&process->ref_lock);
-    process->refs = 0;
-
     spinlock_init(&process->status_lock);
     spinlock_init(&process->hierarchy_lock);
     ilist_init(&process->children);
@@ -983,7 +980,6 @@ process_terminate(
         spin_unlock_irq_restore(&process->status_lock, irq_flags);
         eprintk("process_terminate: __process_suspend_caller_lock returned: %s\n",
                 errnostr(res));
-        process->refs = 1;
         return res;
     }
 
@@ -1002,7 +998,6 @@ process_terminate(
     if(res) {
         eprintk("Failed to deregister process from procfs on termination! (err=%s)\n",
                 errnostr(res));
-        process->refs = 1;
     }
 #endif
 

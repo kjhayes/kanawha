@@ -41,10 +41,6 @@ struct process
     struct thread_state thread;
     struct scheduler *scheduler;
 
-    // Reference Counting
-    spinlock_t ref_lock;
-    unsigned long refs;
-
     // Status
     spinlock_t status_lock;
     unsigned long flags;
