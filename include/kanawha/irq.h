@@ -115,4 +115,6 @@ spin_unlock_pair_irq_restore(spinlock_t *lock_0, spinlock_t *lock_1, int flags) 
     enable_restore_irqs(flags);
 }
 
+// Called by the architecture when an interrupt goes unhandled
+
 #endif

@@ -150,11 +150,10 @@ X64_EXCP_XLIST(UNHANDLED_EXCEPTION_CASE)
     panic("Unhandled %s Exception! (vector=0x%x)\n", desc_str, (unsigned)state->vector);
 }
 
-__noreturn
 static void
 x64_unhandled_interrupt(struct x64_excp_state *state)
 {
-    panic("Unhandled Interrupt! (vector=0x%x)\n", (unsigned)state->vector);
+    unhandled_interrupt((struct excp_state *)state);
 }
 
 void x64_handle_exception(struct x64_excp_state *state)

@@ -13,6 +13,7 @@ obj-y += \
 	slab.o \
 	init.o \
 	errno.o \
+	excp.o \
 	common.o \
 	bitmap.o \
 	ramfile.o \

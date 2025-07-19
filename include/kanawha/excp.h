@@ -11,4 +11,7 @@ struct excp_state;
 
 void arch_excp_dump_state(struct excp_state *state, printk_f *printer);
 
+// Called by the architecture when an interrupt goes unhandled
+void unhandled_interrupt(struct excp_state *state);
+
 #endif

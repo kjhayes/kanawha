@@ -104,7 +104,7 @@ config ACPI
     Include support for the Advanced Power and Configuration Interface (ACPI)
 
 config ACPI_REQUIRED
-  bool "ACPI Required"
+  bool
   default n
   depends on ACPI
   help
@@ -124,7 +124,7 @@ config DEVICETREE
     Include support for the OpenFirmware Device Tree interface
 
 config DEVICETREE_REQUIRED
-  bool "Device Tree Required"
+  bool
   default n
   help
     Should the kernel panic if a device tree cannot be found?
