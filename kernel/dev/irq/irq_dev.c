@@ -1,6 +1,7 @@
 
 #include <kanawha/dev/irq.h>
 #include <kanawha/string.h>
+#include <kanawha/init.h>
 
 DEFINE_REGISTRY(
         irq_dev,
@@ -30,3 +31,10 @@ irq_dev_default_describe_irq(
     return 0;
 }
 
+#ifdef CONFIG_LOG_IRQDEV_REGISTRY_ON_LAUNCH
+static int
+dump_irq_dev_on_launch(void) {
+    return dump_irq_dev_registry(do_printk);
+}
+declare_init(launch, dump_irq_dev_on_launch);
+#endif

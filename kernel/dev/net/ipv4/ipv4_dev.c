@@ -1,5 +1,6 @@
 
 #include <kanawha/dev/net/ipv4.h>
+#include <kanawha/init.h>
 
 static int
 ipv4_dev_init(
@@ -32,3 +33,10 @@ ipv4_dev_internal_on_recv(
     return 0;
 }
 
+#ifdef CONFIG_LOG_IPV4DEV_REGISTRY_ON_LAUNCH
+static int
+dump_ipv4_dev_on_launch(void) {
+    return dump_ipv4_dev_registry(do_printk);
+}
+declare_init(launch, dump_ipv4_dev_on_launch);
+#endif

@@ -58,6 +58,31 @@ config LOG_INIT_STAGES
     default n
     help
       Print out a message with the start and end of each init function.
+
+menu "Log Devices on Launch"
+config LOG_CHARDEV_REGISTRY_ON_LAUNCH
+    bool "Log chardev Registry"
+    default n
+config LOG_BLKDEV_REGISTRY_ON_LAUNCH
+    bool "Log blkdev Registry"
+    default n
+config LOG_FBDEV_REGISTRY_ON_LAUNCH
+    bool "Log fbdev Registry"
+    default n
+config LOG_IRQDEV_REGISTRY_ON_LAUNCH
+    bool "Log irqdev Registry"
+    default n
+config LOG_RANDDEV_REGISTRY_ON_LAUNCH
+    bool "Log randdev Registry"
+    default n
+config LOG_ETHDEV_REGISTRY_ON_LAUNCH
+    bool "Log ethdev Registry"
+    default n
+config LOG_IPV4DEV_REGISTRY_ON_LAUNCH
+    bool "Log ipv4dev Registry"
+    default n
+endmenu
+
 endmenu
 
 menu "Debug Options"

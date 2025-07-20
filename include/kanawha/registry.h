@@ -3,6 +3,7 @@
 
 #include <kanawha/ops.h>
 #include <kanawha/lock.h>
+#include <kanawha/printk.h>
 #include <kanawha/stree.h>
 #include <kanawha/list.h>
 #include <kanawha/stddef.h>
@@ -51,6 +52,11 @@ struct registry_node {
             struct SNAME ## _registry_hook *hook\
             );
 
+#define __DECLARE_REGISTRY_DUMP_FUNC(SNAME)\
+    int \
+    dump_ ## SNAME ## _registry(\
+            printk_f *printer);
+ 
 #define DECLARE_REGISTRY(SNAME)\
     __DECLARE_REGISTRY_REGISTER_FUNC(SNAME);\
     __DECLARE_REGISTRY_UNREGISTER_FUNC(SNAME);\
@@ -58,6 +64,7 @@ struct registry_node {
     __DECLARE_REGISTRY_HOOK_STRUCT(SNAME);\
     __DECLARE_REGISTRY_HOOK_FUNC(SNAME);\
     __DECLARE_REGISTRY_UNHOOK_FUNC(SNAME);\
+    __DECLARE_REGISTRY_DUMP_FUNC(SNAME);\
 
 /*
  * Definitions
@@ -165,6 +172,27 @@ struct registry_node {
         return -EUNIMPL;\
     }
 
+#define __DEFINE_REGISTRY_DUMP_FUNC(SNAME)\
+    int \
+    dump_ ## SNAME ## _registry(\
+            printk_f *printer)\
+    {\
+        SNAME ## _registry_lock_acquire();\
+        \
+        (*printer)(#SNAME "_registry {\n");\
+        \
+        struct stree_node *iter = stree_get_first(&SNAME ## _registry_tree);\
+        while(iter) {\
+            (*printer)("\t%s\n", iter->key);\
+            iter = stree_get_next(iter);\
+        }\
+        (*printer)("}\n");\
+        \
+        SNAME ## _registry_lock_release();\
+        return 0;\
+    }
+
+
 // INIT_FUNCTION   -> int init_function(struct SNAME *member);
 //     Should return 0 on success, negative errno on failure
 // DEINIT_FUNCTION -> int deinit_function(struct SNAME *member);
@@ -180,6 +208,6 @@ struct registry_node {
     __DEFINE_REGISTRY_GET_NAME_FUNC(SNAME, REG_NODE_FIELD);\
     __DEFINE_REGISTRY_HOOK_FUNC(SNAME, REG_NODE_FIELD);\
     __DEFINE_REGISTRY_UNHOOK_FUNC(SNAME, REG_NODE_FIELD);\
-
+    __DEFINE_REGISTRY_DUMP_FUNC(SNAME);\
 
 #endif

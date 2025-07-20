@@ -1,6 +1,7 @@
 
 #include <kanawha/dev/blk.h>
 #include <kanawha/registry.h>
+#include <kanawha/init.h>
 
 static int
 blk_dev_init(struct blk_dev *dev)
@@ -20,4 +21,12 @@ DEFINE_REGISTRY(
         blk_dev_init,
         blk_dev_deinit
         );
+
+#ifdef CONFIG_LOG_BLKDEV_REGISTRY_ON_LAUNCH
+static int
+dump_blk_dev_on_launch(void) {
+    return dump_blk_dev_registry(do_printk);
+}
+declare_init(launch, dump_blk_dev_on_launch);
+#endif
 

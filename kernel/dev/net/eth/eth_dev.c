@@ -1,6 +1,7 @@
 
 #include <kanawha/dev/net/eth.h>
 #include <kanawha/registry.h>
+#include <kanawha/init.h>
 
 struct eth_dev_recv_hook
 {
@@ -147,3 +148,10 @@ DEFINE_REGISTRY(
         eth_dev_init,
         eth_dev_deinit);
 
+#ifdef CONFIG_LOG_ETHDEV_REGISTRY_ON_LAUNCH
+static int
+dump_eth_dev_on_launch(void) {
+    return dump_eth_dev_registry(do_printk);
+}
+declare_init(launch, dump_eth_dev_on_launch);
+#endif
