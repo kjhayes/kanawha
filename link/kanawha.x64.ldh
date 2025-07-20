@@ -12,7 +12,8 @@ ENTRY( x64_kernel_entry )
 
 PHDRS
 {
-  header PT_PHDR FILEHDR PHDRS FLAGS(4);
+  header PT_PHDR PHDRS FLAGS(4);
+  phdrs PT_LOAD FILEHDR PHDRS FLAGS(5);
   text PT_LOAD FLAGS(5);
   data PT_LOAD FLAGS(6);
   rodata PT_LOAD FLAGS(4);
@@ -22,12 +23,13 @@ PHDRS
 
 SECTIONS
 {  
-  __kernel_phys_start = CONFIG_X64_KERNEL_LOAD_ADDR;
+  . = CONFIG_X64_KERNEL_LOAD_ADDR;
+  __kernel_phys_start = .;
 
-  .hdrs CONFIG_X64_KERNEL_LOAD_ADDR : AT(CONFIG_X64_KERNEL_LOAD_ADDR) {
+  .hdrs ALIGN(16) : AT(CONFIG_X64_KERNEL_LOAD_ADDR) {
     *(.hdrs*) 
     *(.hdrs.*)
-  } :header
+  } :header :phdrs
 
   .boot.text ALIGN(16) : AT(ADDR(.boot.text)) {
       *(.boot.text*) *(boot.text.*)
