@@ -11,11 +11,11 @@ usb_xhci_port_handle_status_change(
         void *state);
 
 // Definitions
-static inline size_t
+size_t
 usb_xhci_port_index(
         struct usb_xhci_port *port)
 {
-    return ((void*)port - (void*)&port->xhci->ports[0])/sizeof(*port);
+    return (((void*)port - (void*)&port->xhci->ports[0])/sizeof(*port)) + 1;
 }
 
 static uint32_t
@@ -155,17 +155,36 @@ usb_xhci_port_on_attach(
         struct usb_xhci_port *port,
         uint32_t portsc)
 {
+    int res;
+
     printk("Device Attached to USB Port %lu\n",
             (ul_t)usb_xhci_port_index(port));
 
     struct usb_xhci_device *dev =
-        usb_xhci_create_device(port->xhci);
+        usb_xhci_create_device(
+                port->xhci); 
 
     if(dev == NULL) {
         return -EINVAL;
     }
 
-    return -EUNIMPL;
+    res = usb_xhci_address_root_hub_device(
+            dev,
+            port);
+    if(res) {
+        wprintk("Failed to address USB device!\n");
+        usb_xhci_destroy_device(dev);
+        return res;
+    }
+
+    res = usb_xhci_register_root_hub_device(dev);
+    if(res) {
+        wprintk("Failed to register USB device!\n");
+        usb_xhci_destroy_device(dev);
+        return res;
+    }
+
+    return 0;
 }
 
 static int

@@ -8,4 +8,7 @@ obj-y += \
 	trb.o \
 	cap.o \
 	device.o \
+	ctx.o \
+	ring.o \
+	endpoint.o \
 

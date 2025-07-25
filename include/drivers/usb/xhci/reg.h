@@ -279,4 +279,18 @@ USB_XHCI_FIELD_XLIST(USB_XHCI_DEFINE_WRITE_FIELD)
 #undef USB_XHCI_REG_XLIST
 #undef USB_XHCI_FIELD_XLIST
 
+static inline void
+usb_xhci_write_doorbell(
+        struct usb_xhci *xhci,
+        size_t doorbell_index,
+        uint8_t target,
+        uint16_t task_id)
+{
+    uint32_t value = ((uint32_t)task_id << 16) | target;
+    pci_bar_writel(
+            &xhci->func->bars[0],
+            xhci->doorbell_offset + ((uint32_t)doorbell_index * 4),
+            htole32(value));
+}
+
 #endif

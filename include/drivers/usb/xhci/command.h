@@ -6,6 +6,7 @@
 #include <kanawha/endian.h>
 #include <kanawha/list.h>
 #include <kanawha/lock.h>
+#include <drivers/usb/xhci/ring.h>
 
 struct usb_xhci;
 struct usb_xhci_trb;
@@ -13,18 +14,10 @@ struct usb_xhci_trb;
 struct usb_xhci_command_ring
 {
     struct usb_xhci *xhci;
-
-    size_t num_dma_regions;
-    size_t region_size;
-    size_t trbs_per_region; // Does not include the link TRB
-    dma_addr_t *dma_regions;
-
     irq_lock_t lock;
 
-    struct usb_xhci_trb __phys *dequeue_phys;
-    size_t enqueue_region;
-    size_t enqueue_index;
-    unsigned pcs : 1;
+    struct usb_xhci_trb_ring ring;
+
     ilist_t command_queue;
 };
 

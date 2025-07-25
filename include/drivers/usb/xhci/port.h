@@ -21,6 +21,10 @@ int
 usb_xhci_deinit_ports(
         struct usb_xhci *xhci);
 
+size_t
+usb_xhci_port_index(
+        struct usb_xhci_port *port);
+
 int
 usb_xhci_reset_all_ports(
         struct usb_xhci *xhci);

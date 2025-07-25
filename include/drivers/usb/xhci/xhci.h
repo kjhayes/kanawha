@@ -5,7 +5,6 @@
 #include <drivers/pci/pci.h>
 #include <drivers/pci/bar.h>
 #include <kanawha/dma.h>
-#include <drivers/usb/xhci/slot.h>
 #include <drivers/usb/xhci/command.h>
 #include <drivers/usb/xhci/event.h>
 #include <drivers/usb/xhci/port.h>

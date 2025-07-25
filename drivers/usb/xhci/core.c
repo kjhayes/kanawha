@@ -2,7 +2,6 @@
 #include <kanawha/init.h>
 #include <drivers/usb/xhci/xhci.h>
 #include <drivers/usb/xhci/reg.h>
-#include <drivers/usb/xhci/slot.h>
 #include <drivers/usb/xhci/device.h>
 #include <drivers/usb/xhci/command.h>
 #include <drivers/usb/xhci/event.h>

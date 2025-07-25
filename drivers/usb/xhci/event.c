@@ -4,6 +4,7 @@
 #include <drivers/usb/xhci/reg.h>
 #include <drivers/usb/xhci/port.h>
 #include <drivers/usb/xhci/command.h>
+#include <drivers/usb/xhci/device.h>
 #include <drivers/pci/irq.h>
 #include <kanawha/dma.h>
 #include <kanawha/types.h>
@@ -125,9 +126,10 @@ usb_xhci_interruptor_set_dequeue_pointer(
 static inline int
 usb_xhci_dispatch_port_status_change(
         struct usb_xhci *dev,
-        struct usb_xhci_trb *trb,
-        uint8_t cc)
+        struct usb_xhci_trb *trb)
 {
+    uint8_t cc = (trb->status>>24) & 0xFF;
+
     if(!usb_xhci_trb_completion_code_is_success(cc)) {
         return -EINVAL;
     }
@@ -150,10 +152,37 @@ usb_xhci_dispatch_port_status_change(
 static inline int
 usb_xhci_dispatch_command_completion(
         struct usb_xhci *dev,
-        struct usb_xhci_trb *trb,
-        uint8_t cc)
+        struct usb_xhci_trb *trb)
 {
     return usb_xhci_notify_command_completion(dev, trb);
+}
+
+static inline int
+usb_xhci_dispatch_transfer_event(
+        struct usb_xhci *xhci,
+        struct usb_xhci_trb *trb)
+{
+    int res;
+
+    uint8_t slot_id = (trb->control >> 24) & 0xFF;
+
+    irq_lock_acquire(&xhci->devices_lock);
+
+    struct usb_xhci_device *dev = xhci->devices[slot_id];
+    if(dev == NULL) {
+        irq_lock_release(&xhci->devices_lock);
+        wprintk("USB XHCI Received Transfer Event for Missing Device!\n");
+        return -ENXIO;
+    }
+
+    res = usb_xhci_device_notify_transfer_event(dev, trb);
+    if(res) {
+        irq_lock_release(&xhci->devices_lock);
+        return res;
+    }
+
+    irq_lock_release(&xhci->devices_lock);
+    return 0;
 }
 
 static inline int
@@ -164,15 +193,16 @@ usb_xhci_dispatch_event(
     uint32_t status = letoh32(trb->status);
     uint32_t control = letoh32(trb->control);
 
-    uint8_t type = (control >> 10) & 0x3F;
     uint8_t cc = (status >> 24) & 0xFF;
+    uint8_t type = (control >> 10) & 0x3F;
 
     switch(type) {
         case USB_XHCI_TRB_TYPE_PORT_STATUS_CHANGE_EVENT:
-            return usb_xhci_dispatch_port_status_change(intr->xhci, trb, cc);
+            return usb_xhci_dispatch_port_status_change(intr->xhci, trb);
         case USB_XHCI_TRB_TYPE_COMMAND_COMPLETION_EVENT:
-            return usb_xhci_dispatch_command_completion(intr->xhci, trb, cc);
+            return usb_xhci_dispatch_command_completion(intr->xhci, trb);
         case USB_XHCI_TRB_TYPE_TRANSFER_EVENT:
+            return usb_xhci_dispatch_transfer_event(intr->xhci, trb);
         case USB_XHCI_TRB_TYPE_BANDWIDTH_REQUEST_EVENT:
         case USB_XHCI_TRB_TYPE_DOORBELL_EVENT:
         case USB_XHCI_TRB_TYPE_HOST_CONTROLLER_EVENT:

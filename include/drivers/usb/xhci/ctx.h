@@ -1,9 +1,12 @@
-#ifndef __KANAWHA__USB_XHCI_SLOT_H__
-#define __KANAWHA__USB_XHCI_SLOT_H__
+#ifndef __KANAWHA__USB_XHCI_CTX_H__
+#define __KANAWHA__USB_XHCI_CTX_H__
 
 #include <stdint.h>
 #include <kanawha/assert.h>
 #include <kanawha/pointer.h>
+
+struct usb_xhci;
+struct usb_xhci_input_ctx;
 
 struct usb_xhci_slot_ctx {
     uint32_t route_string : 20;
@@ -54,23 +57,34 @@ struct usb_xhci_endpoint_ctx {
     uint32_t __rsvd_5;
     uint32_t __rsvd_6;
 } __attribute__((packed));
-ASSERT_FIELD_OFFSET(struct usb_xhci_endpoint_ctx, interval, 0x2);
-ASSERT_FIELD_OFFSET(struct usb_xhci_endpoint_ctx, max_packet_size, 0x6);
-ASSERT_FIELD_OFFSET(struct usb_xhci_endpoint_ctx, avg_trb_length, 0x10);
-ASSERT_FIELD_OFFSET(struct usb_xhci_endpoint_ctx, max_esit_payload_lo, 0x12);
 ASSERT_TYPE_SIZE(struct usb_xhci_endpoint_ctx, 0x20);
 
-struct usb_xhci_device_ctx {
-    struct usb_xhci_slot_ctx slot_ctx;
-    struct usb_xhci_endpoint_ctx ep_ctxs[31];
-} __attribute__((packed));
-ASSERT_TYPE_SIZE(struct usb_xhci_device_ctx, 0x400);
+struct usb_xhci_input_ctx *
+usb_xhci_create_input_ctx(
+        struct usb_xhci *xhci
+        );
 
-struct usb_xhci_dcbaa
-{
-    void __phys *scratchpad_array_ptr;
-    void __phys *device_ctx_base_address[];
-} __attribute__((packed));
-ASSERT_FIELD_OFFSET(struct usb_xhci_dcbaa, device_ctx_base_address, 8);
+int
+usb_xhci_destroy_input_ctx(
+        struct usb_xhci_input_ctx *ctx
+        );
+
+void *
+usb_xhci_input_ctx_add_ctx(
+        struct usb_xhci_input_ctx *ctx,
+        size_t ctx_index);
+
+int
+usb_xhci_input_ctx_drop_ctx(
+        struct usb_xhci_input_ctx *ctx,
+        size_t ctx_index);
+
+size_t
+usb_xhci_input_ctx_entry_size(
+        struct usb_xhci_input_ctx *ctx);
+
+void __phys *
+usb_xhci_input_ctx_phys_addr(
+        struct usb_xhci_input_ctx *ctx);
 
 #endif
