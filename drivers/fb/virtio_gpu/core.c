@@ -5,14 +5,14 @@
 #include <kanawha/dev/fb.h>
 #include <kanawha/stddef.h>
 #include <kanawha/irq.h>
+#include <kanawha/id.h>
 #include <drivers/fb/virtio_gpu.h>
 #include <drivers/virtio/driver.h>
 #include <drivers/virtio/virtio.h>
 #include <drivers/virtio/queue.h>
 #include <drivers/virtio/request.h>
 
-static DECLARE_SPINLOCK(virtio_gpu_count_lock);
-static unsigned long virtio_gpu_count = 0;
+DEFINE_LOCAL_ID_RANGE(virtio_gpu_id_range, 0);
 
 static struct fb_mode_info
 virtio_gpu_mode_0_info = {
@@ -193,7 +193,7 @@ virtio_gpu_fb_load_buffer(
 
     *base_out = dma_phys_addr(gpu->current_buffer);
 
-    dprintk("virtio_gpu_fb_load_buffer success!\n");
+    printk("virtio_gpu_fb_load_buffer success!\n");
     return 0;
 }
 
@@ -204,7 +204,7 @@ virtio_gpu_fb_unload_buffer(
 {
     int res;
 
-    dprintk("virtio_gpu_fb_unload_buffer\n");
+    printk("virtio_gpu_fb_unload_buffer\n");
 
     struct virtio_gpu *gpu =
         container_of(dev, struct virtio_gpu, fb_dev);
@@ -351,10 +351,7 @@ virtio_gpu_init_device(
     }
 
     unsigned long dev_index;
-    spin_lock(&virtio_gpu_count_lock);
-    dev_index = virtio_gpu_count;
-    virtio_gpu_count++;
-    spin_unlock(&virtio_gpu_count_lock);
+    dev_index = id_range_alloc(&virtio_gpu_id_range);
 
 #define NAMEBUFLEN 64
     char namebuf[NAMEBUFLEN];

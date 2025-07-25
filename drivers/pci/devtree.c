@@ -51,6 +51,7 @@ pci_ecam_dt_init_node(
 
     res = register_mmio_pci_ecam(
             ecam,
+            0, // We will assume there is only a single segment
             mmio_base,
             mmio_size);
     if(res) {
@@ -79,7 +80,7 @@ pci_ecam_dt_init_node(
         }
     }
 
-    res = probe_pci_segment_with_assumed_buses(
+    res = pci_probe_segment_with_assumed_buses(
             0,
             bus_start,
             bus_end - bus_start);

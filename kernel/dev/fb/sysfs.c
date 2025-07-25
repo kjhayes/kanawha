@@ -23,7 +23,7 @@ struct fb_dev_fs_node
     struct fb_dev *dev;
 
     spinlock_t buffer_lock;
-    size_t buffer_mode;
+    ssize_t buffer_mode;
     struct fb_mode_info *buffer_info;
     size_t buffer_pages_loaded;
     void __phys *buffer_addr;
@@ -280,9 +280,11 @@ fb_dev_buffer_fs_file_flush(
         fs_node_flush_all_fs_pages(fs_node);
     }
 
-    res = fb_dev_flush_buffer(fbfs->dev);
-    if(res) {
-        return res;
+    if(fbfs->buffer_pages_loaded > 0) {
+        res = fb_dev_flush_buffer(fbfs->dev);
+        if(res) {
+            return res;
+        }
     }
 
     return 0;

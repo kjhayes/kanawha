@@ -247,6 +247,8 @@ init_process_kernel_entry(void *in)
     struct process *process = current_process();
     DEBUG_ASSERT(process != NULL);
 
+    arch_on_process_entry();
+
     const char *binary_path = CONFIG_INIT_PROCESS_PATH;
 
     res = environment_set(process->environ, "ARGV", CONFIG_INIT_PROCESS_PATH " " CONFIG_INIT_PROCESS_ARGS);
@@ -303,6 +305,8 @@ spawned_process_kernel_entry(void *in)
 
     struct process *process = current_process();
     DEBUG_ASSERT(process);
+
+    arch_on_process_entry();
 
     void __user *entry = state->entry;
     void *arg = state->arg;
@@ -1345,3 +1349,10 @@ process_send_signal(
     return 0;
 }
 
+__attribute__((weak))
+int arch_on_process_entry(void)
+{
+    // By default do nothing and let the architecture
+    // provide a strong symbol if necessary.
+    return 0;
+}

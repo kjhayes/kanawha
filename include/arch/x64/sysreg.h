@@ -88,4 +88,32 @@ uint64_t read_rflags(void) {
     return val;
 }
 
+#define  MXCSR_INVALID_OP_FLAG      (1ULL<<0)
+#define  MXCSR_DENORMAL_FLAG        (1ULL<<1)
+#define  MXCSR_DIV_BY_ZERO_FLAG     (1ULL<<2)
+#define  MXCSR_OVERFLOW_FLAG        (1ULL<<3)
+#define  MXCSR_UNDERFLOW_FLAG       (1ULL<<4)
+#define  MXCSR_PRECISION_FLAG       (1ULL<<5)
+#define  MXCSR_DENORMALS_ARE_ZEROS  (1ULL<<6)
+#define  MXCSR_INVALID_OP_MASK      (1ULL<<7)
+#define  MXCSR_DENORMAL_OP_MASK     (1ULL<<8)
+#define  MXCSR_DIV_BY_ZERO_MASK     (1ULL<<9)
+#define  MXCSR_OVERFLOW_MASK        (1ULL<<10)
+#define  MXCSR_UNDERFLOW_MASK       (1ULL<<11)
+#define  MXCSR_PRECISION_MASK       (1ULL<<12)
+#define  MXCSR_ROUNDING_CONTROL     (1ULL<<13)
+#define  MXCSR_FLUSH_TO_ZERO        (1ULL<<15)
+
+static inline void
+write_mxcsr(uint32_t value) {
+    asm volatile ("ldmxcsr %0" : "=m" (value)); 
+}
+
+static inline uint32_t
+read_mxcsr(void) {
+    uint32_t value;
+    asm volatile ("stmxcsr %0" : "=m" (value)); 
+    return value;
+}
+
 #endif

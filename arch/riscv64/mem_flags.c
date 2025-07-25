@@ -12,8 +12,8 @@ static void __phys *kernel_virt_end = (void __phys *)&__kernel_virt_end;
 
 extern uint8_t __kernel_boot_start[];
 extern uint8_t __kernel_boot_end[];
-static void __phys *kernel_boot_start = (void __phys *)__kernel_boot_start;
-static void __phys *kernel_boot_end = (void __phys *)__kernel_boot_end;
+static void __phys * volatile kernel_boot_start = (void __phys *)__kernel_boot_start;
+static void __phys * volatile kernel_boot_end = (void __phys *)__kernel_boot_end;
 
 size_t __riscv64_identity_map_offset = 0;
 static void __phys *kernel_phys_base = NULL;

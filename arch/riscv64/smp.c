@@ -89,7 +89,7 @@ riscv64_ap_init(void *__trampoline) {
 }
 
 extern void riscv64_ap_entry(void *, void*);
-static void __phys *riscv64_ap_entry_ptr = (void __phys *)&riscv64_ap_entry;
+static void __phys * volatile riscv64_ap_entry_ptr = (void __phys *)&riscv64_ap_entry;
 
 static int
 riscv64_smp_bringup_aps(void)

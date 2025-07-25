@@ -72,9 +72,9 @@ riscv64_boot_alloc_page_table(void)
 extern uint8_t __kernel_virt_start[];
 extern uint8_t __kernel_virt_end[];
 __attribute__((section(DATA_SECTION)))
-static uintptr_t kernel_start = (uintptr_t)&__kernel_virt_start;
+static void __phys * volatile kernel_start = (void __phys *)&__kernel_virt_start;
 __attribute__((section(DATA_SECTION)))
-static uintptr_t kernel_end = (uintptr_t)&__kernel_virt_end;
+static void __phys * volatile kernel_end = (void __phys *)&__kernel_virt_end;
 
 static void
 __attribute__((section(TEXT_SECTION)))
@@ -251,7 +251,7 @@ riscv64_boot_setup_paging(void __phys *kernel_phys_base)
     }
 
     // High-mem identity map
-    uintptr_t highmem_identity_map_base = ((kernel_end + ((1ULL<<ROOT_PAGE_ORDER)-1)) & ~((1ULL<<ROOT_PAGE_ORDER)-1));
+    uintptr_t highmem_identity_map_base = (((uintptr_t)kernel_end + ((1ULL<<ROOT_PAGE_ORDER)-1)) & ~((1ULL<<ROOT_PAGE_ORDER)-1));
     mapping_size = (1ULL<<CONFIG_RISCV64_IDENTITY_MAP_ORDER);
     riscv64_boot_drill_mapping(
             root_pt,

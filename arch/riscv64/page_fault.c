@@ -67,6 +67,7 @@ riscv64_vmem_page_fault_handler(
     }
 
     res = vmem_map_handle_page_fault(
+            gen_excp_state,
             faulting_addr,
             flags,
             cur_map);

@@ -108,6 +108,7 @@ riscv64_route_trap(
         struct riscv64_excp_state *state)
 {
     struct thread_state *cur_thread = current_thread();
+    struct thread_state *new_thread;
 
     // TODO update process->user_ip if we came from usermode
     if((state->sstatus & SSTATUS_MASK_SPP) == 0) {
@@ -179,7 +180,7 @@ riscv64_route_trap(
     }
 
 exit:
-    struct thread_state *new_thread = query_resched();
+    new_thread = query_resched();
     if(new_thread != NULL) {
         thread_switch(new_thread);
     } else {
@@ -227,5 +228,15 @@ riscv64_shared_interrupt_domain(void) {
 struct irq_domain *
 riscv64_shared_exception_domain(void) {
     return riscv64_exception_irq_domain;
+}
+
+void
+arch_excp_dump_state(struct excp_state *gen_excp_state, printk_f *printer) 
+{
+    struct riscv64_excp_state *state = (void*)gen_excp_state;
+
+    (*printer)("\tSCAUSE = %p\n", state->scause);
+    (*printer)("\tSTVAL  = %p\n", state->stval);
+    (*printer)("\tSEPC   = %p\n", state->sepc);
 }
 

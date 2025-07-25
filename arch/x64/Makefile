@@ -25,6 +25,7 @@ obj-y += \
 	mem_flags.o \
 	lapic/ \
 	cpuid.o \
+	process.o \
 
 obj-$(CONFIG_X64_MULTIBOOT2_BOOT) += mb2_boot.o
 

@@ -249,4 +249,7 @@ process_send_signal(
 void
 dump_processes(printk_f *printer);
 
+// Allows for architecture specific initialization of a process thread
+int arch_on_process_entry(void);
+
 #endif
