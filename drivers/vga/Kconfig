@@ -2,7 +2,7 @@
 config VGA_FB_DEV
     bool "VGA Framebuffer Device"
     default y
-    depends on X64 && !X64_BOOT_VGA
+    depends on X64
 
 config VGA_RAMFILE
     bool "VGA Framebuffer Ramfile"
