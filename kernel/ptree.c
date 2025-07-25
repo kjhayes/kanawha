@@ -326,7 +326,7 @@ ptree_get_prev(struct ptree_node *node)
         return node->left;
     }
 
-    struct ptree_node *parent;
+    struct ptree_node *parent = node->parent;
 
     while(parent) {
         if(parent->right == node) {

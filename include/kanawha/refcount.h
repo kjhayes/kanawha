@@ -63,7 +63,7 @@ refcount_alive(refcount_t *count)
 static inline int
 refcount_dead(refcount_t *count)
 {
-    return !refcount_dead(count);
+    return !refcount_alive(count);
 }
 
 // Only kills the refcount if it would immediately be reapable

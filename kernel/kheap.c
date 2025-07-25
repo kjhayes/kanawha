@@ -74,10 +74,10 @@ kheap_grow(
     return 0;
 }
 
+__attribute__((unused))
 static int
 kheap_shrink(struct kheap *heap)
 {
-    int res;
     size_t page_size = (1ULL << CONFIG_HEAP_GROWTH_ORDER);
     if(heap->mapped < page_size) {
         return -EINVAL;

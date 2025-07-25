@@ -58,6 +58,7 @@ buddy_order_total_free(struct buddy_order *order) {
     return (1ULL<<order->order) * order->num_pages;
 }
 
+#ifdef CONFIG_DEBUG_BUDDY_ALLOC
 static inline void
 buddy_region_dump_orders(struct buddy_region *region, printk_f *printer)
 {
@@ -70,6 +71,7 @@ buddy_region_dump_orders(struct buddy_region *region, printk_f *printer)
                 order->order, (unsigned long)order->num_pages, (1UL<<(order->order)), (unsigned long)total_free);
     }
 }
+#endif
 
 size_t
 buddy_region_total_free(struct buddy_region *region) {
@@ -222,18 +224,19 @@ buddy_region_free(
 
         // Figure out which page is the start of the coalesced page (lower)
         size_t lower_min_page_index, higher_min_page_index;
-        struct buddy_page *lower_page, *higher_page;
+        struct buddy_page *lower_page;
+	// struct buddy_page *higher_page;
 
         if((uintptr_t)page < (uintptr_t)buddy_page) {
             lower_min_page_index = min_page_index;
             higher_min_page_index = buddy_min_page_index;
             lower_page = page;
-            higher_page = buddy_page;
+	    //higher_page = buddy_page;
         } else {
             lower_min_page_index = buddy_min_page_index;
             higher_min_page_index = min_page_index;
             lower_page = buddy_page;
-            higher_page = page;
+            //higher_page = page;
         }
 
         // Mark the upper page as free
@@ -281,9 +284,11 @@ buddy_region_alloc(
             dprintk("buddy_region_alloc: could not allocate page of order (%d)\n", order);
             dprintk("buddy_region: amount_free = 0x%llx, amount_total = 0x%llx\n",
                     buddy_region_total_free(region), region->page_bytes);
+
 #ifdef CONFIG_DEBUG_BUDDY_ALLOC
             buddy_region_dump_orders(region, do_printk);
 #endif
+
             return -ENOMEM;
         }
 

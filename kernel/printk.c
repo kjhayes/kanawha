@@ -626,9 +626,8 @@ snprintk_print_buffer(
 }
 
 int
-snprintk(char *buf, size_t size, const char *fmt, ...) {
-    int res;
-
+snprintk(char *buf, size_t size, const char *fmt, ...)
+{
     struct snprintk_state state;
 
     state.chars_attempted = 0;
@@ -646,7 +645,7 @@ snprintk(char *buf, size_t size, const char *fmt, ...) {
     va_list args;
     va_start(args, fmt);
 
-    res = vprintk(&state.vprintk_state, fmt, &args);
+    vprintk(&state.vprintk_state, fmt, &args);
 
     va_end(args);
 
