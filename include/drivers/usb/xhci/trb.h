@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <kanawha/endian.h>
+#include <kanawha/attribute.h>
 
 #define USB_XHCI_TRB_COMPLETION_CODE_XLIST(X)\
 X(INVALID,                           (0))\
@@ -87,11 +88,11 @@ const static unsigned int USB_XHCI_TRB_TYPE_ ## __NAME = __VAL;
 USB_XHCI_TRB_TYPE_XLIST(__DEFINE_CONST)
 #undef __DEFINE_CONST
 
-struct usb_xhci_trb {
+struct __packed usb_xhci_trb {
     le64_t param;
     le32_t status;
     le32_t control;
-} __attribute__((packed));
+};
 ASSERT_TYPE_SIZE(struct usb_xhci_trb, 16);
 
 int

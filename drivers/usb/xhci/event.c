@@ -297,12 +297,12 @@ usb_xhci_interruptor_irq_handler(
     return IRQ_NONE;
 }
 
-struct usb_xhci_erst_entry {
+struct __packed usb_xhci_erst_entry {
     le64_t segment_phys;
     le16_t segment_size;
     uint16_t __rsvd_0;
     uint32_t __rsvd_1;
-} __attribute__((packed));
+};
 ASSERT_TYPE_SIZE(struct usb_xhci_erst_entry, 16);
 
 static int

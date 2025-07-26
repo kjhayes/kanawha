@@ -12,12 +12,12 @@ struct mb2_memory_info {
     struct mb2_info_tag *mem_map_tag;
 };
 
-struct mb2_mem_map_entry {
+struct __packed mb2_mem_map_entry {
     uint64_t base;
     uint64_t length;
     uint32_t type;
     uint32_t reserved;
-} __attribute__((packed));
+};
 
 static void
 mb2_memory_info_handler(

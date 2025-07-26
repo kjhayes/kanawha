@@ -1,6 +1,8 @@
 #ifndef __KANAWHA__ARCH_X64_EXCEPTION_H__
 #define __KANAWHA__ARCH_X64_EXCEPTION_H__
 
+#include <kanawha/attribute.h>
+
 #define X64_NUM_EXCP 32
 
 #define X64_EXCP_TYPE_FAULT 0
@@ -82,7 +84,7 @@ irq_t x64_request_cpu_irq_vector(cpu_id_t cpu);
 void
 x64_nop_iret(void);
 
-struct
+struct __packed
 x64_excp_state
 {
     union {
@@ -95,7 +97,7 @@ x64_excp_state
     uint64_t cs;
     uint64_t rflags;
     uint64_t rsp;
-} __attribute__((packed));
+};
 
 __noreturn void
 x64_unhandled_exception(struct x64_excp_state *state);

@@ -10,13 +10,13 @@
 
 #define MCFG_SIG_STRING "MCFG"
 
-struct acpi_mcfg_entry {
+struct __packed acpi_mcfg_entry {
     uint64_t base_addr;
     uint16_t segment;
     uint8_t start_bus;
     uint8_t end_bus;
     uint32_t reserved;
-} __attribute__((packed));
+};
 
 ASSERT_TYPE_SIZE(struct acpi_mcfg_entry, 16);
 

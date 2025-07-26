@@ -9,11 +9,12 @@
 #include <kanawha/stddef.h>
 #include <kanawha/types.h>
 #include <kanawha/percpu.h>
+#include <kanawha/attribute.h>
 
-struct gdt64_segment {
+struct __packed gdt64_segment {
   union {
     uint64_t raw;
-    struct {
+    struct __packed {
       uint16_t limit_low_16 : 16;
       uint32_t base_low_24 : 24;
       uint8_t accessed : 1;
@@ -29,20 +30,20 @@ struct gdt64_segment {
       uint8_t sz_32 : 1;
       uint8_t granularity : 1;
       uint8_t base_high_8 : 8;
-    } __attribute__((packed));
+    };
   };
-} __attribute__((packed));
+};
 _Static_assert(sizeof(struct gdt64_segment) == 8, "sizeof(struct gdt64_segment) is not exactly 8 bytes!");
 
 #define X64_GDT_SYSTEM_SEGMENT_TYPE_TSS 0b1001
 
-struct gdt64_system_segment {
+struct __packed gdt64_system_segment {
   union {
-    struct {
+    struct __packed {
       uint64_t raw_low;
       uint64_t raw_high;
-    } __attribute((packed));
-    struct {
+    };
+    struct __packed {
       uint16_t limit_low_16 : 16;
       uint32_t base_low_24 : 24;
       uint8_t type : 4;
@@ -55,26 +56,26 @@ struct gdt64_system_segment {
       uint8_t granularity : 1;
       uint64_t base_high_40 : 40;
       uint32_t __resv0_1 : 32;
-    } __attribute__((packed));
+    };
   };
-} __attribute__((packed));
+};
 _Static_assert(sizeof(struct gdt64_system_segment) == 16, "sizeof(struct gdt64_system_segment) is not exactly 16 bytes!");
 
-struct gdt64_descriptor {
+struct __packed gdt64_descriptor {
     uint16_t limit;
     uint64_t address;
-} __attribute__((packed));
+};
 
 _Static_assert(sizeof(struct gdt64_descriptor) == 10, "sizeof(struct gdt64_segment) is not exactly 10 bytes!");
 
-struct gdt64 {
+struct __packed gdt64 {
     struct gdt64_segment null;
     struct gdt64_segment kernel_code;
     struct gdt64_segment kernel_data;
     struct gdt64_system_segment tss;
     struct gdt64_segment user_data;
     struct gdt64_segment user_code;
-} __attribute__((packed));
+};
 
 #define X64_NULL_GDT_SEGMENT_OFFSET        offsetof(struct gdt64, null)
 #define X64_KERNEL_CODE_GDT_SEGMENT_OFFSET offsetof(struct gdt64, kernel_code)

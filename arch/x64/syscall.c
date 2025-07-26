@@ -21,21 +21,21 @@
 extern void x64_syscall_entry(void);
 extern void x64_syscall_entry_compatibility_mode(void);
 
-struct x64_syscall_trampoline
+struct __packed x64_syscall_trampoline
 {
     void __user *user_return;
     void __user *user_stack;
     void *trampoline_stack_base;
-} __attribute__((packed));
+};
 
 static DECLARE_PERCPU_VAR(struct x64_syscall_trampoline, x64_local_syscall_trampoline);
 void __user * __percpu *x64_syscall_trampoline_percpu_ptr = PERCPU_NULL;
 
-struct x64_syscall_state {
+struct __packed x64_syscall_state {
     uint64_t callee_regs[NUM_CALLEE_REGS];
     uint64_t caller_regs[NUM_CALLER_REGS];
     void __user *user_stack_ptr;
-} __attribute__((packed));
+};
 
 void
 x64_route_syscall(struct x64_syscall_state *state)

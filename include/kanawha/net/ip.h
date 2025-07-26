@@ -4,16 +4,17 @@
 #include <kanawha/types.h>
 #include <kanawha/endian.h>
 #include <kanawha/printk.h>
+#include <kanawha/attribute.h>
 
 #define IPV4_MINIMUM_PACKET_HEADER_SIZE (5*4)
 
-struct ipv4_raw_addr {
+struct __packed ipv4_raw_addr {
     uint8_t data[4];
-} __attribute__((packed));
+};
 
-struct ipv6_raw_addr {
+struct __packed ipv6_raw_addr {
     be16_t data[8];
-} __attribute__((packed));
+};
 
 #define IPV4_PROT_ICMP  (1)     // Internet Control Message Protocol
 #define IPV4_PROT_IGMP  (2)     // Internet Group Management Protocol
@@ -23,7 +24,7 @@ struct ipv6_raw_addr {
 #define IPV4_PROT_OSPF  (89)    // Open Shortest Path First
 #define IPV4_PROT_SCTP  (132)   // Stream Control Transmission Protocol
 
-struct ipv4_pkt_hdr {
+struct __packed ipv4_pkt_hdr {
     uint8_t version_and_ihl;
     uint8_t ecn_and_dscp;
     be16_t total_length;
@@ -35,14 +36,14 @@ struct ipv4_pkt_hdr {
     be16_t checksum;
     struct ipv4_raw_addr src_addr;
     struct ipv4_raw_addr dst_addr;
-} __attribute__((packed));
+};
 
 ASSERT_TYPE_SIZE(struct ipv4_pkt_hdr, IPV4_MINIMUM_PACKET_HEADER_SIZE);
 
-struct ipv4_raw_packet {
+struct __packed ipv4_raw_packet {
     struct ipv4_pkt_hdr hdr;
     uint8_t data[];
-} __attribute__((packed));
+};
 
 struct ipv4_addr {
     union {

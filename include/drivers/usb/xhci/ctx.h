@@ -8,7 +8,7 @@
 struct usb_xhci;
 struct usb_xhci_input_ctx;
 
-struct usb_xhci_slot_ctx {
+struct __packed usb_xhci_slot_ctx {
     uint32_t route_string : 20;
     uint32_t speed : 4;
     uint32_t __rsvd_0 : 1;
@@ -30,10 +30,10 @@ struct usb_xhci_slot_ctx {
     uint32_t __rsvd_4;
     uint32_t __rsvd_5;
     uint32_t __rsvd_6;
-} __attribute__((packed));
+};
 ASSERT_TYPE_SIZE(struct usb_xhci_slot_ctx, 0x20);
 
-struct usb_xhci_endpoint_ctx {
+struct __packed usb_xhci_endpoint_ctx {
     uint32_t endpoint_state : 3;
     uint32_t __rsvd_0 : 5;
     uint32_t mult : 2;
@@ -56,7 +56,7 @@ struct usb_xhci_endpoint_ctx {
     uint32_t __rsvd_4;
     uint32_t __rsvd_5;
     uint32_t __rsvd_6;
-} __attribute__((packed));
+};
 ASSERT_TYPE_SIZE(struct usb_xhci_endpoint_ctx, 0x20);
 
 struct usb_xhci_input_ctx *

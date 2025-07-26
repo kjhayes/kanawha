@@ -4,8 +4,9 @@
 #include <kanawha/types.h>
 #include <kanawha/pointer.h>
 #include <kanawha/string.h>
+#include <kanawha/attribute.h>
 
-#define __mmio __attribute__((noderef))
+#define __mmio __noderef
 
 void __mmio *mmio_map(void __phys * paddr, size_t size);
 int mmio_unmap(void __mmio *addr, size_t size);

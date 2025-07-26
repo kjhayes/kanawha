@@ -3,8 +3,6 @@
 
 #include <kanawha/attribute.h>
 
-#define __user __attribute__((address_space(3)))
-
 __noreturn
 void enter_usermode(void *arg);
 

@@ -3,12 +3,13 @@
 
 #include <kanawha/types.h>
 #include <kanawha/cpu.h>
+#include <kanawha/attribute.h>
 
-struct riscv64_percpu_state {
+struct __packed riscv64_percpu_state {
     size_t percpu_offset; // Offset 0 DO NOT MOVE
     uint64_t trap_stash_t0; // Offset 8 DO NOT MOVE
     uint64_t trap_stash_sp; // Offset 16 DO NOT MOVE
-} __attribute__((packed));
+};
 
 extern struct riscv64_percpu_state
 __riscv64_percpu_data[CONFIG_MAX_CPUS];

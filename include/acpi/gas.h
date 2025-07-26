@@ -2,6 +2,7 @@
 #define __KANAWHA__ACPI_GAS_H__
 
 #include <kanawha/types.h>
+#include <kanawha/attribute.h>
 
 #define DECLARE_U8_CONSTANTS(__NAME, __VAL)\
     const static uint8_t __NAME = __VAL;
@@ -28,13 +29,13 @@ X(ACPI_GAS_ACCESS_SIZE_DWORD, 0x3)\
 X(ACPI_GAS_ACCESS_SIZE_QUAD,  0x4)
 ACPI_GAS_ACCESS_SIZE_XLIST(DECLARE_U8_CONSTANTS)
 
-struct acpi_gas {
+struct __packed acpi_gas {
     uint8_t asid;
     uint8_t reg_bit_width;
     uint8_t reg_bit_offset;
     uint8_t access_size;
     uint64_t address;
-} __attribute__((packed));
+};
 
 #undef DECLARE_U8_CONSTANTS
 

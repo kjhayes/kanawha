@@ -58,7 +58,7 @@ ACPI_FADT_PM_PROFILE_XLIST(DECLARE_U8_CONSTANTS)
 #define ACPI_FADT_ARM_BOOT_ARCH_PSCI_COMPLIANT (1ULL<<0)
 #define ACPI_FADT_ARM_BOOT_ARCH_PSCI_USE_HVC   (1ULL<<1)
 
-struct acpi_fadt {
+struct __packed acpi_fadt {
     struct acpi_table_hdr hdr;
     uint32_t facs_ptr;
     uint32_t dsdt_ptr;
@@ -115,7 +115,7 @@ struct acpi_fadt {
     struct acpi_gas sleep_ctrl_reg;
     struct acpi_gas sleep_status_reg;
     uint64_t hypervisor_vendor_id;
-} __attribute__((packed));
+};
 
 ASSERT_TYPE_SIZE(struct acpi_fadt, 276);
 

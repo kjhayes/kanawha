@@ -14,15 +14,15 @@
 #include <acpi/sysfs.h>
 #endif
 
-struct acpi_rsdt {
+struct __packed acpi_rsdt {
     struct acpi_table_hdr hdr;
     uint32_t table_ptrs[];
-} __attribute__((packed));
+};
 
-struct acpi_xsdt {
+struct __packed acpi_xsdt {
     struct acpi_table_hdr hdr;
     uint64_t table_ptrs[];
-} __attribute__((packed));
+};
 
 DEFINE_LOCAL_THREAD_LOCK(acpi_table_lock);
 

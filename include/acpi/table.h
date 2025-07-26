@@ -7,15 +7,15 @@
 #include <kanawha/fs/sys/vfs.h>
 #endif
 
-struct acpi_rsdp {
+struct __packed acpi_rsdp {
     uint8_t signature[8];
     uint8_t checksum;
     char oem_id[6];
     uint8_t revision;
     uint32_t rsdt_ptr;
-} __attribute__((packed));
+};
 
-struct acpi_xsdp {
+struct __packed acpi_xsdp {
     uint8_t signature[8];
     uint8_t checksum;
     char oem_id[6];
@@ -25,9 +25,9 @@ struct acpi_xsdp {
     uint64_t xsdt_ptr;
     uint8_t ext_checksum;
     uint8_t reserved[3];
-} __attribute__((packed));
+};
 
-struct acpi_table_hdr {
+struct __packed acpi_table_hdr {
     uint8_t signature[4];
     uint32_t length;
     uint8_t revision;
@@ -37,12 +37,12 @@ struct acpi_table_hdr {
     uint32_t oem_revision;
     uint32_t creator_id;
     uint32_t creator_revision;
-} __attribute__((packed));
+};
 
-struct acpi_table_data {
+struct __packed acpi_table_data {
     struct acpi_table_hdr hdr;
     uint8_t data[];
-} __attribute__((packed));
+};
 
 ASSERT_TYPE_SIZE(struct acpi_table_data, sizeof(struct acpi_table_hdr));
 

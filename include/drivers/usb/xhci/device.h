@@ -34,17 +34,17 @@ struct usb_xhci_device
 
 struct usb_xhci;
 
-struct usb_xhci_output_ctx {
+struct __packed usb_xhci_output_ctx {
     struct usb_xhci_slot_ctx slot_ctx;
     struct usb_xhci_endpoint_ctx ep_ctxs[31];
-} __attribute__((packed));
+};
 ASSERT_TYPE_SIZE(struct usb_xhci_output_ctx, 0x400);
 
-struct usb_xhci_dcbaa
+struct __packed usb_xhci_dcbaa
 {
     void __phys *scratchpad_array_ptr;
     void __phys *output_ctx_base_address[];
-} __attribute__((packed));
+};
 ASSERT_FIELD_OFFSET(struct usb_xhci_dcbaa, output_ctx_base_address, 8);
 
 struct usb_xhci_device *

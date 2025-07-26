@@ -22,8 +22,8 @@
 #define EXT2_OS_FREEBSD  3
 #define EXT2_OS_BSD_LITE 4
 
-struct ext2_superblock {
-    struct { // Present in all versions
+struct __packed ext2_superblock {
+    struct __packed { // Present in all versions
       le32_t total_inodes;
       le32_t total_blocks;
       le32_t superuser_resv_blocks;
@@ -50,7 +50,7 @@ struct ext2_superblock {
       le16_t uid_resv;
       le16_t gid_resv;
     };
-    struct { // Major Version >= 1
+    struct __packed { // Major Version >= 1
       le32_t first_non_resv_inode;
       le16_t inode_size;
       le16_t this_block_group;
@@ -69,7 +69,7 @@ struct ext2_superblock {
       le32_t journal_device;
       le32_t orphan_inode_head;
     } extended;
-} __attribute__((packed));
+};
 
 _Static_assert(sizeof(struct ext2_superblock) == 236, "struct ext2_superblock has incorrect size!");
 

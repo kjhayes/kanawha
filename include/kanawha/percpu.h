@@ -4,6 +4,7 @@
 #include <kanawha/cpu.h>
 #include <kanawha/types.h>
 #include <kanawha/export.h>
+#include <kanawha/attribute.h>
 
 // "per-cpu variables"
 //
@@ -15,8 +16,6 @@
 //
 // A __percpu Pointer Should NEVER be dereferenced normally, and must
 // pass through one of the per-cpu macros to be used
-
-#define __percpu_section __attribute__((section(".kpercpu")))
 
 #if defined(CONFIG_X64)
 #include <arch/x64/percpu.h>
@@ -32,8 +31,6 @@
 #ifndef __arch_percpu_ptr_specific
 #error "Architecture did not define __arch_percpu_ptr_specific in percpu.h!"
 #endif
-
-#define __percpu __attribute__((noderef, address_space(2)))
 
 #define DECLARE_PERCPU_VAR(__TYPE, __NAME) \
     __TYPE __percpu_section __percpu_var__ ## __NAME; \

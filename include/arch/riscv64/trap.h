@@ -4,6 +4,7 @@
 #include <arch/riscv64/asm/regs.S>
 #include <kanawha/types.h>
 #include <kanawha/irq.h>
+#include <kanawha/attribute.h>
 
 #define RISCV64_EXCEPTION_XLIST(X)\
 X(0, "Instruction Address Misaligned")\
@@ -28,7 +29,7 @@ X(9, "Supervisor External Interrupt")\
 #define RISCV64_EXCEPTION_IRQ_DOMAIN_SIZE 64
 #define RISCV64_INTERRUPT_IRQ_DOMAIN_SIZE 64
 
-struct riscv64_excp_state
+struct __packed riscv64_excp_state
 {
     uint64_t sepc;
     uint64_t stval;
@@ -39,7 +40,7 @@ struct riscv64_excp_state
     uint64_t caller_regs[RISCV64_THREAD_NUM_CALLER_REGS];
     uint64_t callee_regs[RISCV64_THREAD_NUM_CALLEE_REGS];
 
-} __attribute__((packed));
+};
 
 extern struct irq_domain *riscv64_exception_irq_domain;
 extern struct irq_domain *riscv64_interrupt_irq_domain;

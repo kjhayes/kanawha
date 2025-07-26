@@ -156,10 +156,10 @@ virtio_gpu_resource_attach_backing(
 {
     int res;
 
-    struct {
+    struct __packed {
         struct virtio_gpu_resource_attach_backing req;
         struct virtio_gpu_mem_entry mem_entry;
-    } __attribute__((packed)) req_data;
+    } req_data;
 
     req_data.req.hdr.type = htole32(VIRTIO_GPU_CMD_RESOURCE_ATTACH_BACKING);
     req_data.req.resource_id = htole32(resource->id);

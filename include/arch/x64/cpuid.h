@@ -7,12 +7,12 @@
 #define CPUID_VENDOR_ID_STRING 0x0
 #define CPUID_GETFEATURES      0x1
 
-struct x64_cpuid_result {
+struct __packed x64_cpuid_result {
     uint32_t eax;
     uint32_t ebx;
     uint32_t ecx;
     uint32_t edx;
-} __attribute__((packed));
+};
 
 // 0 -> cpuid not supported, else cpuid support is detected
 extern int

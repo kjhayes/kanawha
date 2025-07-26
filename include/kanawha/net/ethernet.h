@@ -13,17 +13,17 @@
 
 // "raw" Packed Structures
 
-struct eth_raw_mac_addr {
+struct __packed eth_raw_mac_addr {
     uint8_t data[ETH_MAC_ADDR_LEN];
-} __attribute__((packed));
+};
 
 ASSERT_TYPE_SIZE(struct eth_raw_mac_addr, ETH_MAC_ADDR_LEN);
 
-struct eth_frame_hdr {
+struct __packed eth_frame_hdr {
     struct eth_raw_mac_addr dst_addr;
     struct eth_raw_mac_addr src_addr;
     be16_t type;
-} __attribute__((packed));
+};
 
 struct eth_raw_frame {
     struct eth_frame_hdr hdr;

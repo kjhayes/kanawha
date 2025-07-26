@@ -3,10 +3,11 @@
 
 #include <kanawha/types.h>
 #include <kanawha/endian.h>
+#include <kanawha/attribute.h>
 
 #define ISO9660_VOLUME_IDENTIFIER_STRING "CD001"
 
-struct iso9660_dec_datetime {
+struct __packed iso9660_dec_datetime {
     uint8_t year[4];
     uint8_t month[2];
     uint8_t day[2];
@@ -15,7 +16,7 @@ struct iso9660_dec_datetime {
     uint8_t sec[2];
     uint8_t centisec[2];
     int8_t timezone;
-} __attribute__((packed));
+};
 
 #define ISO9660_VOLUME_DESC_TYPE_BOOT_RECORD   (0)
 #define ISO9660_VOLUME_DESC_TYPE_PRIMARY       (1)
@@ -24,19 +25,19 @@ struct iso9660_dec_datetime {
 
 #define ISO9660_VOLUME_DESC_TYPE_TERMINATOR    (255)
 
-struct iso9660_volume_desc { 
+struct __packed iso9660_volume_desc { 
     int8_t type;
     uint8_t ident[5];
     int8_t version;
 
     union {
         uint8_t raw_data[2041];
-        struct __attribute__((packed)) {
+        struct __packed {
             uint8_t boot_system_ident[32];
             uint8_t boot_ident[32];
             uint8_t boot_system_use[1977];
         } boot_record;
-        struct __attribute__((packed)) {
+        struct __packed {
             uint8_t __unused_0;
             uint8_t system_ident[32];
             uint8_t volume_ident[32];
@@ -69,7 +70,7 @@ struct iso9660_volume_desc {
             uint8_t __resv[653];
         } primary;
     };
-} __attribute__((packed));
+};
 
 ASSERT_TYPE_SIZE(struct iso9660_volume_desc, 2048);
 

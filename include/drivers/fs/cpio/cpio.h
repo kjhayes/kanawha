@@ -2,6 +2,7 @@
 #define __KANAWHA__FS_CPIO_CPIO_H__
 
 #include <kanawha/types.h>
+#include <kanawha/attribute.h>
 
 typedef enum {
     CPIO_ASCII,
@@ -10,7 +11,7 @@ typedef enum {
 
 #define CPIO_HEADER_MAGIC 0x71c7
 
-struct cpio_binary_header {
+struct __packed cpio_binary_header {
     uint16_t c_magic;
     uint16_t c_dev;
     uint16_t c_ino;
@@ -22,7 +23,7 @@ struct cpio_binary_header {
     uint16_t c_mtime[2];
     uint16_t c_namesize;
     uint16_t c_filesize[2];
-} __attribute__((packed));
+};
 
 struct cpio_header {
     struct cpio_binary_header binary;

@@ -12,7 +12,7 @@ struct x64_percpu_data {
     // Scratch percpu register which can be used in special circumstances
     uint64_t scratch; // Offset 8
 }
-__attribute__((packed));
+__packed;
 
 
 extern struct x64_percpu_data
