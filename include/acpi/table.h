@@ -4,7 +4,7 @@
 #include <kanawha/types.h>
 #ifdef CONFIG_ACPI_SYSFS
 #include <kanawha/list.h>
-#include <kanawha/fs/sys/vfs.h>
+#include <kanawha/sysfs/vfs.h>
 #endif
 
 struct __packed acpi_rsdp {

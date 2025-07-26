@@ -14,8 +14,8 @@
 #include <kanawha/fs/mount.h>
 #include <kanawha/fs/node.h>
 #include <kanawha/fs/file.h>
-#include <kanawha/fs/sys/sysfs.h>
-#include <kanawha/fs/sys/vfs.h>
+#include <kanawha/sysfs/sysfs.h>
+#include <kanawha/sysfs/vfs.h>
 
 struct blk_dev_fs_node
 {

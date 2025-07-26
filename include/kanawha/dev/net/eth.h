@@ -7,7 +7,7 @@
 #include <kanawha/list.h>
 #include <kanawha/lock.h>
 #include <kanawha/net/ethernet.h>
-#include <kanawha/fs/sys/vfs.h>
+#include <kanawha/sysfs/vfs.h>
 
 struct eth_dev;
 struct eth_driver;

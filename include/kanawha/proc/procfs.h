@@ -1,7 +1,7 @@
 #ifndef __KANAWHA__PROC_PROCFS_H__
 #define __KANAWHA__PROC_PROCFS_H__
 
-#include <kanawha/fs/sys/vfs.h>
+#include <kanawha/sysfs/vfs.h>
 
 struct procfs_process_data {
     struct vfs_struct_node *vfs_struct_node;

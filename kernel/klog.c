@@ -1,5 +1,5 @@
 
-#define KEEP_FS_NODE_STRUCT_DEF
+
 #include <kanawha/fs/node.h>
 
 #include <kanawha/ptree.h>
@@ -121,8 +121,8 @@ klog_putc(char c)
  */
 
 #include <kanawha/fs/file.h>
-#include <kanawha/fs/sys/sysfs.h>
-#include <kanawha/fs/sys/vfs.h>
+#include <kanawha/sysfs/sysfs.h>
+#include <kanawha/sysfs/vfs.h>
 
 static struct vfs_mount *klog_fs_mount = NULL;
 

@@ -8,7 +8,7 @@
 #include <kanawha/ptree.h>
 #include <kanawha/fs/mount.h>
 #include <kanawha/fs/node.h>
-#include <kanawha/fs/sys/vfs.h>
+#include <kanawha/sysfs/vfs.h>
 
 struct char_dev;
 struct char_driver;

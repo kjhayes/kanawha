@@ -1,8 +1,8 @@
 
 #include <kanawha/dev/rand.h>
 #include <kanawha/fs/mount.h>
-#include <kanawha/fs/sys/vfs.h>
-#include <kanawha/fs/sys/sysfs.h>
+#include <kanawha/sysfs/vfs.h>
+#include <kanawha/sysfs/sysfs.h>
 #include <kanawha/init.h>
 #include <kanawha/lock.h>
 #include <kanawha/kmalloc.h>

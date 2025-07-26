@@ -6,8 +6,8 @@
 #include <kanawha/kmalloc.h>
 #include <kanawha/string.h>
 #include <kanawha/parse.h>
-#include <kanawha/fs/sys/sysfs.h>
-#include <kanawha/fs/sys/vfs.h>
+#include <kanawha/sysfs/sysfs.h>
+#include <kanawha/sysfs/vfs.h>
 #include <kanawha/net/ip.h>
 #include <kanawha/endian.h>
 

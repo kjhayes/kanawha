@@ -8,8 +8,8 @@
 #include <kanawha/fs/mount.h>
 #include <kanawha/fs/node.h>
 #include <kanawha/fs/file.h>
-#include <kanawha/fs/sys/sysfs.h>
-#include <kanawha/fs/sys/vfs.h>
+#include <kanawha/sysfs/sysfs.h>
+#include <kanawha/sysfs/vfs.h>
 
 static DECLARE_ILIST(sysfs_temp_list);
 DEFINE_LOCAL_THREAD_LOCK(sysfs_lock);

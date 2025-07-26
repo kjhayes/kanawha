@@ -55,6 +55,7 @@ obj-y += mb2/
 obj-y += proc/
 obj-y += net/
 obj-y += linux/
+obj-y += sysfs/
 
 obj-y += memdump.o
 

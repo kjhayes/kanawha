@@ -1,5 +1,5 @@
 
-#include <kanawha/fs/sys/sysfs.h>
+#include <kanawha/sysfs/sysfs.h>
 #include <kanawha/fs/type.h>
 #include <kanawha/stree.h>
 #include <kanawha/spinlock.h>

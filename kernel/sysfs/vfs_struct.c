@@ -1,5 +1,5 @@
 
-#include <kanawha/fs/sys/vfs.h>
+#include <kanawha/sysfs/vfs.h>
 #include <kanawha/kmalloc.h>
 #include <kanawha/string.h>
 #include <kanawha/assert.h>

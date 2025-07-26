@@ -2,7 +2,7 @@
 #define __KANAWHA__FS_CPIO_FILE_H__
 
 #include <kanawha/fs/file.h>
-#define KEEP_FS_NODE_STRUCT_DEF
+
 #include <kanawha/fs/node.h>
 
 extern struct fs_file_ops cpio_file_ops;

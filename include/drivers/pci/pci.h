@@ -11,7 +11,7 @@
 #include <kanawha/dev/irq.h>
 
 #ifdef CONFIG_SYSFS_PCI
-#include <kanawha/fs/sys/vfs.h>
+#include <kanawha/sysfs/vfs.h>
 #endif
 
 #define PCI_MAX_BUSES_PER_SEGMENT (1ULL<<8)

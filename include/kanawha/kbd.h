@@ -4,7 +4,7 @@
 #include <kanawha/bitmap.h>
 #include <kanawha/stree.h>
 #include <kanawha/waitqueue.h>
-#include <kanawha/fs/sys/vfs.h>
+#include <kanawha/sysfs/vfs.h>
 
 #include <kanawha/uapi/kbd.h>
 

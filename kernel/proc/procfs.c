@@ -1,6 +1,6 @@
 
-#include <kanawha/fs/sys/sysfs.h>
-#include <kanawha/fs/sys/vfs.h>
+#include <kanawha/sysfs/sysfs.h>
+#include <kanawha/sysfs/vfs.h>
 #include <kanawha/init.h>
 #include <kanawha/proc/process.h>
 #include <kanawha/string.h>

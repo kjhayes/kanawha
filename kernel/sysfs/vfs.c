@@ -1,5 +1,5 @@
 
-#include <kanawha/fs/sys/vfs.h>
+#include <kanawha/sysfs/vfs.h>
 #include <kanawha/fs/file.h>
 #include <kanawha/fs/node.h>
 #include <kanawha/kmalloc.h>

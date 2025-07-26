@@ -1,7 +1,7 @@
 #ifndef __KANAWHA__FS_CPIO_DIR_H__
 #define __KANAWHA__FS_CPIO_DIR_H__
 
-#define KEEP_FS_NODE_STRUCT_DEF
+
 #include <kanawha/fs/node.h>
 #include <kanawha/fs/file.h>
 #include <drivers/fs/cpio/cpio.h>

@@ -4,7 +4,7 @@
 #include <kanawha/ptree.h>
 #include <kanawha/waitqueue.h>
 
-#define KEEP_FS_NODE_STRUCT_DEF
+
 #include <kanawha/fs/node.h>
 
 struct pipe

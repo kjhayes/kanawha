@@ -7,6 +7,3 @@ obj-y += \
 	file.o \
 	flat.o
 
-obj-y += \
-	sys/
-

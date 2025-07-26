@@ -227,6 +227,10 @@ menu "Filesystem Options"
 source "kernel/fs/Kconfig"
 endmenu
 
+menu "sysfs Options"
+source "kernel/sysfs/Kconfig"
+endmenu
+
 menu "Schedulers"
 source "kernel/sched/Kconfig"
 endmenu

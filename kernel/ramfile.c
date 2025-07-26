@@ -3,8 +3,8 @@
 #include <kanawha/fs/mount.h>
 #include <kanawha/fs/node.h>
 #include <kanawha/fs/file.h>
-#include <kanawha/fs/sys/sysfs.h>
-#include <kanawha/fs/sys/vfs.h>
+#include <kanawha/sysfs/sysfs.h>
+#include <kanawha/sysfs/vfs.h>
 #include <kanawha/proc/file_table.h>
 #include <kanawha/types.h>
 #include <kanawha/stddef.h>

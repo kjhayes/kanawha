@@ -9,8 +9,8 @@
 #include <kanawha/kmalloc.h>
 #include <kanawha/fs/node.h>
 #include <kanawha/fs/file.h>
-#include <kanawha/fs/sys/sysfs.h>
-#include <kanawha/fs/sys/vfs.h>
+#include <kanawha/sysfs/sysfs.h>
+#include <kanawha/sysfs/vfs.h>
 
 static DECLARE_STREE(kbd_tree);
 DEFINE_LOCAL_THREAD_LOCK(kbd_tree_lock);

@@ -6,7 +6,7 @@
 #include <kanawha/ops.h>
 #include <kanawha/stree.h>
 #include <kanawha/ptree.h>
-#include <kanawha/fs/sys/vfs.h>
+#include <kanawha/sysfs/vfs.h>
 
 struct rand_dev;
 struct rand_driver;

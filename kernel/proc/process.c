@@ -15,7 +15,7 @@
 #include <kanawha/stddef.h>
 #include <kanawha/timer.h>
 #include <kanawha/lock.h>
-#include <kanawha/fs/sys/sysfs.h>
+#include <kanawha/sysfs/sysfs.h>
 #include <kanawha/assert.h>
 #include <kanawha/proc/mmap.h>
 #include <kanawha/uapi/spawn.h>

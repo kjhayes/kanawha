@@ -1,8 +1,8 @@
 
 #include <kanawha/fs/file.h>
 #include <kanawha/fs/node.h>
-#include <kanawha/fs/sys/sysfs.h>
-#include <kanawha/fs/sys/vfs.h>
+#include <kanawha/sysfs/sysfs.h>
+#include <kanawha/sysfs/vfs.h>
 #include <drivers/pci/match.h>
 #include <drivers/pci/pci.h>
 #include <drivers/pci/cfg.h>

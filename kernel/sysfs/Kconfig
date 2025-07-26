@@ -1,6 +1,4 @@
 
-menu "sysfs Options"
-
 config PROCFS
     bool "procfs"
     default y
@@ -13,6 +11,4 @@ config SYSFS_PCI
     depends on PCI
     help
       Include a "pci" sysfs directory
-
-endmenu
 

@@ -1,5 +1,5 @@
 
-#define KEEP_FS_NODE_STRUCT_DEF
+
 #include <kanawha/init.h>
 #include <kanawha/fs/type.h>
 #include <kanawha/fs/mount.h>

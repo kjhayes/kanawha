@@ -1,59 +1,3 @@
-
-#ifdef KEEP_FS_NODE_STRUCT_DEF
-#ifndef __KANAWHA__FS_NODE_STRUCT_DEF__
-#define __KANAWHA__FS_NODE_STRUCT_DEF__
-#include <kanawha/ops.h>
-#include <kanawha/types.h>
-#include <kanawha/stree.h>
-#include <kanawha/ptree.h>
-#include <kanawha/spinlock.h>
-#include <kanawha/lock.h>
-
-struct fs_type;
-struct fs_mount;
-struct fs_node;
-
-struct fs_node
-{
-    // Operate on the node directly
-    struct fs_node_ops *node_ops;
-    // Operate on a file descriptor/node pair
-    struct fs_file_ops *file_ops;
-
-    // Unload this node, including freeing this struct
-    // (If NULL, fs_mount_unload_node will be used instead,
-    //  if non-NULL, fs_mount_unload_node will not be invoked)
-    int(*unload)(struct fs_node *node);
-
-    struct fs_mount *mount;
-
-    spinlock_t page_lock;
-    struct ptree page_cache;
-
-    irq_lock_t path_lock;
-    ilist_t path_list;
-
-    // not a refcount_t because the mount cache_lock protects us
-    int refcount;
-    struct ptree_node cache_node;
-};
-
-static inline void
-fs_node_path_lock_acquire(
-        struct fs_node *node)
-{
-    irq_lock_acquire(&node->path_lock);
-}
-static inline void
-fs_node_path_lock_release(
-        struct fs_node *node)
-{
-    irq_lock_release(&node->path_lock);
-}
-
-#endif
-#endif
-
 #ifndef __KANAWHA__FS_NODE_H__
 #define __KANAWHA__FS_NODE_H__
 
@@ -189,6 +133,43 @@ OP(unlink, FS_NODE_UNLINK_SIG, ##__VA_ARGS__)
 struct fs_node_ops {
 DECLARE_OP_LIST_PTRS(FS_NODE_OP_LIST, struct fs_node *)
 };
+
+struct fs_node
+{
+    // Operate on the node directly
+    struct fs_node_ops *node_ops;
+    // Operate on a file descriptor/node pair
+    struct fs_file_ops *file_ops;
+
+    // Unload this node, including freeing this struct
+    // (If NULL, fs_mount_unload_node will be used instead,
+    //  if non-NULL, fs_mount_unload_node will not be invoked)
+    int(*unload)(struct fs_node *node);
+
+    struct fs_mount *mount;
+
+    spinlock_t page_lock;
+    struct ptree page_cache;
+
+    irq_lock_t path_lock;
+    ilist_t path_list;
+
+    unsigned long refcount;
+    struct ptree_node cache_node;
+};
+
+static inline void
+fs_node_path_lock_acquire(
+        struct fs_node *node)
+{
+    irq_lock_acquire(&node->path_lock);
+}
+static inline void
+fs_node_path_lock_release(
+        struct fs_node *node)
+{
+    irq_lock_release(&node->path_lock);
+}
 
 #define FS_PAGE_FLAG_DIRTY (1ULL<<0)
 struct fs_page
