@@ -2,6 +2,7 @@
 obj-y += \
 	ptree.o \
 	stree.o \
+	ref.o \
 	buddy.o \
 	kheap.o \
 	kmalloc/ \

@@ -19,7 +19,9 @@
 
 typedef ATOMIC_BOOL_TYPE atomic_bool_t;
 typedef ATOMIC_COUNTER_TYPE atomic_t;
+typedef ATOMIC_COUNTER_TYPE atomic_val_t;
 typedef ATOMIC_UCOUNTER_TYPE uatomic_t;
+typedef ATOMIC_UCOUNTER_TYPE uatomic_val_t;
 
 // External API Forward Declarations
 
@@ -38,6 +40,12 @@ atomic_t atomic_fetch_dec(atomic_t *);
 #endif
 #ifndef arch_atomic_fetch_dec
 #define arch_atomic_fetch_dec(v) __atomic_fetch_sub(v, 1, __ATOMIC_SEQ_CST)
+#endif
+#ifndef arch_atomic_set
+#define arch_atomic_set(x, v) __atomic_store(x, &(v), __ATOMIC_SEQ_CST)
+#endif
+#ifndef arch_atomic_set_relaxed
+#define arch_atomic_set_relaxed(x, v) do {*x = v;} while(0)
 #endif
 
 /*
@@ -84,6 +92,14 @@ atomic_fetch_inc(atomic_t *x)
 static inline atomic_t
 atomic_fetch_dec(atomic_t *x)
 { return arch_atomic_fetch_dec(x); }
+
+static inline void
+atomic_set(atomic_t *x, atomic_val_t val)
+{ arch_atomic_set(x, val); }
+
+static inline void
+atomic_set_relaxed(atomic_t *x, atomic_val_t val)
+{ arch_atomic_set_relaxed(x, val); }
 
 
 static inline int
