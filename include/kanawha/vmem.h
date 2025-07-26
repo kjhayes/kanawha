@@ -17,8 +17,8 @@
 
 #include <kanawha/types.h>
 #include <kanawha/ptree.h>
-#include <kanawha/refcount.h>
 #include <kanawha/printk.h>
+#include <kanawha/spinlock.h>
 #include <kanawha/list.h>
 #include <kanawha/types.h>
 #include <kanawha/pointer.h>
