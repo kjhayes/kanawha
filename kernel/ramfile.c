@@ -32,10 +32,7 @@ struct ramfile
 static struct vfs_mount *ramfile_fs_mount = NULL;
 
 #define RAMFILE_FROM_FS_NODE(fs_node_ptr)\
-    ({ (struct ramfile *)container_of(\
-            container_of(fs_node_ptr, struct vfs_node, fs_node),\
-            struct ramfile,\
-            vfs_node); })
+    (container_of(((struct vfs_node*)(fs_node_ptr)->backing.priv_state), struct ramfile, vfs_node))
 
 static int
 ramfile_read_page(
@@ -401,8 +398,8 @@ create_ramfile(
 
     ramfile->page_refs = 0;
 
-    ramfile->vfs_node.fs_node.backing.file_ops = &ramfile_fs_file_ops;
-    ramfile->vfs_node.fs_node.backing.node_ops = &ramfile_fs_node_ops;
+    ramfile->vfs_node.fs_file_ops = &ramfile_fs_file_ops;
+    ramfile->vfs_node.fs_node_ops = &ramfile_fs_node_ops;
 
     res = vfs_mount_insert_node_and_link_root(
             ramfile_fs_mount,
