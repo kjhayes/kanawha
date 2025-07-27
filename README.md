@@ -1,7 +1,7 @@
 
 # Kanawha Kernel
 
-![screenshot](images/logo.png)
+![Logo](images/logo.png)
 
 A simple hobby kernel I'm writing in my free time.
 
