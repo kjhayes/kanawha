@@ -401,8 +401,8 @@ create_ramfile(
 
     ramfile->page_refs = 0;
 
-    ramfile->vfs_node.fs_node.file_ops = &ramfile_fs_file_ops;
-    ramfile->vfs_node.fs_node.node_ops = &ramfile_fs_node_ops;
+    ramfile->vfs_node.fs_node.backing.file_ops = &ramfile_fs_file_ops;
+    ramfile->vfs_node.fs_node.backing.node_ops = &ramfile_fs_node_ops;
 
     res = vfs_mount_insert_node_and_link_root(
             ramfile_fs_mount,

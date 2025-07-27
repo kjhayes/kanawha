@@ -643,8 +643,8 @@ fb_dev_fs_on_register(
 
     size_t buffer_inode;
 
-    fbfs->buffer_vfs_node.fs_node.node_ops = &fb_dev_buffer_fs_node_ops;
-    fbfs->buffer_vfs_node.fs_node.file_ops = &fb_dev_buffer_fs_file_ops;
+    fbfs->buffer_vfs_node.fs_node.backing.node_ops = &fb_dev_buffer_fs_node_ops;
+    fbfs->buffer_vfs_node.fs_node.backing.file_ops = &fb_dev_buffer_fs_file_ops;
 
     res = vfs_mount_insert_node_and_link_root(
             fb_dev_fs_mount,
@@ -658,8 +658,8 @@ fb_dev_fs_on_register(
 
     size_t mode_set_inode;
 
-    fbfs->mode_set_vfs_node.fs_node.node_ops = &fb_dev_mode_set_fs_node_ops;
-    fbfs->mode_set_vfs_node.fs_node.file_ops = &fb_dev_mode_set_fs_file_ops;
+    fbfs->mode_set_vfs_node.fs_node.backing.node_ops = &fb_dev_mode_set_fs_node_ops;
+    fbfs->mode_set_vfs_node.fs_node.backing.file_ops = &fb_dev_mode_set_fs_file_ops;
 
     res = vfs_mount_insert_node(
             fb_dev_fs_mount,
@@ -679,8 +679,8 @@ fb_dev_fs_on_register(
 
     size_t mode_info_inode;
 
-    fbfs->mode_info_vfs_node.fs_node.node_ops = &fb_dev_mode_info_fs_node_ops;
-    fbfs->mode_info_vfs_node.fs_node.file_ops = &fb_dev_mode_info_fs_file_ops;
+    fbfs->mode_info_vfs_node.fs_node.backing.node_ops = &fb_dev_mode_info_fs_node_ops;
+    fbfs->mode_info_vfs_node.fs_node.backing.file_ops = &fb_dev_mode_info_fs_file_ops;
 
     res = vfs_mount_insert_node(
             fb_dev_fs_mount,

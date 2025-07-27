@@ -171,8 +171,8 @@ char_dev_sysfs_on_register(
     }
     node->dev = dev;
 
-    node->vfs_node.fs_node.node_ops = &char_dev_fs_node_ops;
-    node->vfs_node.fs_node.file_ops = &char_dev_fs_file_ops;
+    node->vfs_node.fs_node.backing.node_ops = &char_dev_fs_node_ops;
+    node->vfs_node.fs_node.backing.file_ops = &char_dev_fs_file_ops;
 
     res = vfs_mount_insert_node_and_link_root(
             char_dev_fs_mount,

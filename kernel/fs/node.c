@@ -14,7 +14,7 @@
 #include <kanawha/vmem.h>
 #include <kanawha/irq.h>
 
-#define FS_NODE_OPS_ACCESSOR(__self, __field) __self->node_ops->__field
+#define FS_NODE_OPS_ACCESSOR(__self, __field) __self->backing.node_ops->__field
 
 DEFINE_OP_LIST_WRAPPERS(
         FS_NODE_OP_LIST,
@@ -49,13 +49,13 @@ struct fs_node_ops *
 fs_node_get_node_ops(
         struct fs_node *node)
 {
-    return node->node_ops;
+    return node->backing.node_ops;
 }
 struct fs_file_ops *
 fs_node_get_file_ops(
         struct fs_node *node)
 {
-    return node->file_ops;
+    return node->backing.file_ops;
 }
 
 size_t

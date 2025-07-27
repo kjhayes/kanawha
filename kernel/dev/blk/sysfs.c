@@ -57,8 +57,8 @@ blk_dev_fs_on_register(
     }
     node->sectors_per_page = 1ULL<<(node->page_order - node->sector_order);
 
-    node->vfs_node.fs_node.node_ops = &blk_dev_fs_node_ops;
-    node->vfs_node.fs_node.file_ops = &blk_dev_fs_file_ops;
+    node->vfs_node.fs_node.backing.node_ops = &blk_dev_fs_node_ops;
+    node->vfs_node.fs_node.backing.file_ops = &blk_dev_fs_file_ops;
 
     res = vfs_mount_insert_node_and_link_root(
             blk_dev_fs_mount,

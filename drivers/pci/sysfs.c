@@ -105,8 +105,8 @@ insert_func_with_match_lock(
 {
     int res;
 
-    func->vfs_node.fs_node.file_ops = &pci_fs_file_ops;
-    func->vfs_node.fs_node.node_ops = &pci_fs_node_ops;
+    func->vfs_node.fs_node.backing.file_ops = &pci_fs_file_ops;
+    func->vfs_node.fs_node.backing.node_ops = &pci_fs_node_ops;
 
     char namebuf[32];
     snprintk(namebuf, 32, "%d.%d.%d.%d",

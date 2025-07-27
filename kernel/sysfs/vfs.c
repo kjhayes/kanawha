@@ -266,8 +266,8 @@ vfs_mount_create(void)
 
     init_fs_mount_struct(&mnt->fs_mount, &vfs_mount_ops);
 
-    mnt->root_node.fs_node.node_ops = &vfs_root_node_ops;
-    mnt->root_node.fs_node.file_ops = &vfs_root_file_ops;
+    mnt->root_node.fs_node.backing.node_ops = &vfs_root_node_ops;
+    mnt->root_node.fs_node.backing.file_ops = &vfs_root_file_ops;
     res = vfs_mount_insert_node(
             mnt,
             &mnt->root_node,

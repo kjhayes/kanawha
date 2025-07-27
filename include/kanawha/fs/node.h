@@ -134,12 +134,16 @@ struct fs_node_ops {
 DECLARE_OP_LIST_PTRS(FS_NODE_OP_LIST, struct fs_node *)
 };
 
-struct fs_node
-{
+struct fs_node_backing {
     // Operate on the node directly
     struct fs_node_ops *node_ops;
     // Operate on a file descriptor/node pair
     struct fs_file_ops *file_ops;
+};
+
+struct fs_node
+{
+    struct fs_node_backing backing;
 
     struct fs_mount *mount;
 

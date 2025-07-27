@@ -275,8 +275,8 @@ pipe_fs_mount_load_node(
     pipe->tail = 0;
     spinlock_init(&pipe->lock);
 
-    pipe->fs_node.node_ops = &pipe_fs_node_ops;
-    pipe->fs_node.file_ops = &pipe_fs_file_ops;
+    pipe->fs_node.backing.node_ops = &pipe_fs_node_ops;
+    pipe->fs_node.backing.file_ops = &pipe_fs_file_ops;
 
     res = waitqueue_init(&pipe->read_queue);
     if(res) {

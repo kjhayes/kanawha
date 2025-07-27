@@ -86,8 +86,8 @@ register_kbd(
         return res;
     }
 
-    kbd->vfs_node.fs_node.file_ops = &kbd_fs_file_ops;
-    kbd->vfs_node.fs_node.node_ops = &kbd_fs_node_ops;
+    kbd->vfs_node.fs_node.backing.file_ops = &kbd_fs_file_ops;
+    kbd->vfs_node.fs_node.backing.node_ops = &kbd_fs_node_ops;
 
 
     // Assign the node a fs_node index

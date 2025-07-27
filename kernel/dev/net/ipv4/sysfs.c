@@ -39,8 +39,8 @@ ipv4_dev_fs_on_register(
 
     edfs->dev = dev;
 
-    edfs->vfs_node.fs_node.file_ops = &ipv4_dev_fs_file_ops;
-    edfs->vfs_node.fs_node.node_ops = &ipv4_dev_fs_node_ops;
+    edfs->vfs_node.fs_node.backing.file_ops = &ipv4_dev_fs_file_ops;
+    edfs->vfs_node.fs_node.backing.node_ops = &ipv4_dev_fs_node_ops;
 
     res = vfs_mount_insert_node_and_link_root(
             ipv4_dev_fs_mount,

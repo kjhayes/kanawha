@@ -115,8 +115,8 @@ do_register_table(
 
     DEBUG_ASSERT(KERNEL_ADDR(acpi_fs_mount));
 
-    table->sysfs_node.fs_node.node_ops = &acpi_fs_node_ops;
-    table->sysfs_node.fs_node.file_ops = &acpi_fs_file_ops;
+    table->sysfs_node.fs_node.backing.node_ops = &acpi_fs_node_ops;
+    table->sysfs_node.fs_node.backing.file_ops = &acpi_fs_file_ops;
 
     size_t inode;
     res = vfs_mount_insert_node(

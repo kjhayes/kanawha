@@ -154,12 +154,12 @@ ext2_mount_load_node(
 
     switch(node->inode.mode & 0xF000) {
       case 0x8000:
-        node->fs_node.file_ops = &ext2_file_file_ops;
-        node->fs_node.node_ops = &ext2_file_node_ops;
+        node->fs_node.backing.file_ops = &ext2_file_file_ops;
+        node->fs_node.backing.node_ops = &ext2_file_node_ops;
         break;
       case 0x4000:
-        node->fs_node.file_ops = &ext2_dir_file_ops;
-        node->fs_node.node_ops = &ext2_dir_node_ops;
+        node->fs_node.backing.file_ops = &ext2_dir_file_ops;
+        node->fs_node.backing.node_ops = &ext2_dir_node_ops;
         break;
       default:
         wprintk("ext2_mount_load_node: node (0x%lx) is not a directory or regular file (mode=0x%x)\n",

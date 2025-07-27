@@ -118,8 +118,8 @@ cpio_mount_load_node(
     memset(node, 0, sizeof(struct cpio_file_node));
 
     node->mnt = mnt;
-    node->fs_node.file_ops = &cpio_file_ops;
-    node->fs_node.node_ops = &cpio_node_ops;
+    node->fs_node.backing.file_ops = &cpio_file_ops;
+    node->fs_node.backing.node_ops = &cpio_node_ops;
 
     node->header_offset = offset;
     node->data_offset =
@@ -208,8 +208,8 @@ cpio_mount_file(
 
     mnt->root_node.mnt = mnt;
     mnt->root_node.fs_node.mount = &mnt->fs_mount;
-    mnt->root_node.fs_node.node_ops = &cpio_dir_node_ops;
-    mnt->root_node.fs_node.file_ops = &cpio_dir_file_ops;
+    mnt->root_node.fs_node.backing.node_ops = &cpio_dir_node_ops;
+    mnt->root_node.fs_node.backing.file_ops = &cpio_dir_file_ops;
     
     printk("Initialized CPIO Filesystem Mount\n");
     
