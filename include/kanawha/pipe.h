@@ -18,8 +18,6 @@ struct pipe
 
     struct waitqueue read_queue;
     struct waitqueue write_queue;
-
-    struct fs_node fs_node;
 };
 
 struct fs_node *

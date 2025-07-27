@@ -75,8 +75,7 @@ pipe_fs_file_read(
     if(node == NULL) {
         return -ENXIO;
     }
-    struct pipe *pipe =
-        container_of(node, struct pipe, fs_node);
+    struct pipe *pipe = node->backing.priv_state;
 
     DEBUG_ASSERT(KERNEL_ADDR(pipe));
     DEBUG_ASSERT(KERNEL_ADDR(pipe->buffer));
@@ -136,8 +135,7 @@ pipe_fs_file_write(
     if(node == NULL) {
         return -ENXIO;
     }
-    struct pipe *pipe =
-        container_of(node, struct pipe, fs_node);
+    struct pipe *pipe = node->backing.priv_state;
 
     DEBUG_ASSERT(KERNEL_ADDR(pipe));
     DEBUG_ASSERT(KERNEL_ADDR(pipe->buffer));
@@ -195,9 +193,7 @@ pipe_fs_file_poll(
     if(node == NULL) {
         return -ENXIO;
     }
-    struct pipe *pipe =
-        container_of(node, struct pipe, fs_node);
-
+    struct pipe *pipe = node->backing.priv_state;
 
     spin_lock(&pipe->lock);
 
@@ -245,10 +241,11 @@ pipe_fs_root_index(struct fs_mount *mnt, size_t *index)
     return -EINVAL;
 }
 
-static struct fs_node *
+static int
 pipe_fs_mount_load_node(
         struct fs_mount *mnt,
-        size_t index)
+        size_t index,
+	struct fs_node_backing *backing)
 {
     int res;
 
@@ -261,7 +258,7 @@ pipe_fs_mount_load_node(
     struct pipe *pipe = kmalloc(sizeof(struct pipe));
     if(pipe == NULL) {
         wprintk("Failed to allocate pipefs node: Out of Memory\n");
-        return NULL;
+        return res;
     }
 
     pipe->buflen = DEFAULT_PIPE_BUFSIZE;
@@ -269,21 +266,22 @@ pipe_fs_mount_load_node(
     if(pipe->buffer == NULL) {
         wprintk("Failed to allocate pipefs node buffer: Out of Memory\n");
         kfree(pipe);
-        return NULL;
+        return res;
     }
     pipe->head = 0;
     pipe->tail = 0;
     spinlock_init(&pipe->lock);
 
-    pipe->fs_node.backing.node_ops = &pipe_fs_node_ops;
-    pipe->fs_node.backing.file_ops = &pipe_fs_file_ops;
+    backing->node_ops = &pipe_fs_node_ops;
+    backing->file_ops = &pipe_fs_file_ops;
+    backing->priv_state = pipe;
 
     res = waitqueue_init(&pipe->read_queue);
     if(res) {
         wprintk("Failed to init pipefs node read queue: %s\n",
                 errnostr(res));
         kfree(pipe);
-        return NULL;
+        return res;
     }
 
     res = waitqueue_init(&pipe->write_queue);
@@ -294,19 +292,19 @@ pipe_fs_mount_load_node(
         wake_all(&pipe->read_queue);
         waitqueue_deinit(&pipe->read_queue);
         kfree(pipe);
-        return NULL;
+        return res;
     }
 
-    return &pipe->fs_node;
+    return 0;
 }
 
 static int
 pipe_fs_mount_unload_node(
         struct fs_mount *mnt,
-        struct fs_node *node)
+	size_t index,
+        struct fs_node_backing *backing)
 {
-    struct pipe *pipe =
-        container_of(node, struct pipe, fs_node);
+    struct pipe *pipe = backing->priv_state;
 
     waitqueue_disable(&pipe->read_queue);
     wake_all(&pipe->read_queue);
