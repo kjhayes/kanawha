@@ -57,8 +57,8 @@ blk_dev_fs_on_register(
     }
     node->sectors_per_page = 1ULL<<(node->page_order - node->sector_order);
 
-    node->vfs_node.fs_node.backing.node_ops = &blk_dev_fs_node_ops;
-    node->vfs_node.fs_node.backing.file_ops = &blk_dev_fs_file_ops;
+    node->vfs_node.fs_node_ops = &blk_dev_fs_node_ops;
+    node->vfs_node.fs_file_ops = &blk_dev_fs_file_ops;
 
     res = vfs_mount_insert_node_and_link_root(
             blk_dev_fs_mount,
@@ -127,8 +127,8 @@ blk_dev_read_page(
 {
     int res;
 
-    struct blk_dev_fs_node *blk_dev_fs_node =
-        container_of(fs_node, struct blk_dev_fs_node, vfs_node.fs_node);
+    struct vfs_node *vfs_node = fs_node->backing.priv_state;
+    struct blk_dev_fs_node *blk_dev_fs_node = container_of(vfs_node, struct blk_dev_fs_node, vfs_node);
 
     size_t start_sector = pfn * blk_dev_fs_node->sectors_per_page;
     size_t sectors_to_read = blk_dev_fs_node->sectors_per_page;
@@ -169,8 +169,8 @@ blk_dev_write_page(
 {
     int res;
 
-    struct blk_dev_fs_node *blk_dev_fs_node =
-        container_of(fs_node, struct blk_dev_fs_node, vfs_node.fs_node);
+    struct vfs_node *vfs_node = fs_node->backing.priv_state;
+    struct blk_dev_fs_node *blk_dev_fs_node = container_of(vfs_node, struct blk_dev_fs_node, vfs_node);
 
     size_t start_sector = pfn * blk_dev_fs_node->sectors_per_page;
     size_t sectors_to_write = blk_dev_fs_node->sectors_per_page;
@@ -202,8 +202,8 @@ blk_dev_getattr(
 {
     int res;
 
-    struct blk_dev_fs_node *blk_dev_fs_node =
-        container_of(fs_node, struct blk_dev_fs_node, vfs_node.fs_node);
+    struct vfs_node *vfs_node = fs_node->backing.priv_state;
+    struct blk_dev_fs_node *blk_dev_fs_node = container_of(vfs_node, struct blk_dev_fs_node, vfs_node);
 
     switch(attr) {
         case FS_NODE_ATTR_DATA_SIZE:
