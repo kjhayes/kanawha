@@ -9,6 +9,12 @@
 
 #define SYSCALL_WRITE_MAX_CHUNK_SIZE 0x1000
 
+#ifdef CONFIG_DEBUG_SYSCALL_WRITE
+#define LOG(fmt, ...) printk("PID(%ld) syscall_write: " fmt, (sl_t)process->id, ##__VA_ARGS__)
+#else
+#define LOG(...)
+#endif
+
 ssize_t
 syscall_write(
         struct process *process,
@@ -18,12 +24,9 @@ syscall_write(
 {
     ssize_t res;
 
-#ifdef CONFIG_DEBUG_SYSCALL_WRITE
-    printk("PID(%ld) syscall_write(file=%ld, size=0x%llx)\n",
-            (sl_t)process->id,
+    LOG("file=%ld, size=0x%llx\n",
             (sl_t)file,
             (ull_t)size);
-#endif
 
     struct file *desc
         = file_table_get_file(
@@ -32,14 +35,13 @@ syscall_write(
                 file);
 
     if(desc == NULL) {
-        dprintk("PID(%ld) syscall_write: descriptor (%ld) does not exist!\n",
-                process->id, file);
+	LOG("file descriptor does not exist!\n");
         return -ENXIO;
     }
 
     if((desc->access_flags & FILE_PERM_WRITE) == 0) {
-        dprintk("PID(%ld) syscall_write: file descriptor (%ld) does not have write permissions!\n",
-                process->id, desc->table_node.key);
+	LOG("file descriptor (%ld) does not have write permissions!\n",
+                desc->table_node.key);
         file_table_put_file(process->file_table, process, desc);
         return -EPERM;
     }
@@ -51,8 +53,8 @@ syscall_write(
     ssize_t amount_to_write = buffer_len > size ? size : buffer_len;
     ssize_t amount_written = amount_to_write;
 
-    dprintk("Reading from usermem %p, size=0x%llx\n",
-            src, (ull_t)amount_read);
+    LOG("Reading from usermem %p, size=0x%llx\n", src, (ull_t)amount_to_write);
+
     res = process_read_usermem(
             process,
             buffer,
@@ -75,7 +77,7 @@ syscall_write(
             flags);
     if(amount_written < 0) {
         res = amount_written;
-        eprintk("syscall_write: direct_file_write returned %s\n",
+        LOG("direct_file_write returned %s\n",
                 errnostr(res));
         DEBUG_ASSERT(res < 0);
         goto exit;
@@ -87,9 +89,6 @@ syscall_write(
 exit:
     file_table_put_file(process->file_table, process, desc);
     kfree(buffer);
-#ifdef CONFIG_DEBUG_SYSCALL_WRITE
-    printk("PID(%lld) syscall_write: returning 0x%llx\n",
-            (sll_t)process->id, (ull_t)res);
-#endif
+    LOG("returning 0x%llx\n", (ull_t)res);
     return res;
 }

@@ -676,4 +676,13 @@ fs_node_flush_nop(
 {
     return 0;
 }
+int
+fs_node_flush_page_nop(
+        struct fs_node *node,
+        uintptr_t pfn,
+        unsigned long flags,
+        void __phys * addr)
+{
+    return 0;
+}
 

@@ -217,7 +217,7 @@ fs_file_paged_seek(
         ssize_t offset,
         int whence);
 
-// Flush file by flushing alll fs_pages
+// Flush file by flushing all fs_pages
 int
 fs_file_paged_flush(
         struct file *file,

@@ -11,4 +11,4 @@ config EXT2_FS
 
 config RAMFS
     tristate "RAMFS"
-    default n
+    default y

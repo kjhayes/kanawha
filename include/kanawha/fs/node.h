@@ -372,5 +372,10 @@ int
 fs_node_flush_nop(
         struct fs_node *node,
         unsigned long flags);
-
+int
+fs_node_flush_page_nop(
+        struct fs_node *node,
+        uintptr_t pfn,
+        unsigned long flags,
+        void __phys * addr);
 #endif
