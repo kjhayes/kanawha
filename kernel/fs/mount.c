@@ -5,12 +5,14 @@
 #include <kanawha/stddef.h>
 #include <kanawha/assert.h>
 #include <kanawha/vmem.h>
+#include <kanawha/kmalloc.h>
+#include <kanawha/string.h>
 
 static int
 fs_unload_node(
         struct fs_node *node)
 {
-    return fs_mount_unload_node(node->mount, node);
+    return fs_mount_unload_node(node->mount, node->cache_node.key, &node->backing);
 }
 
 int
@@ -29,6 +31,8 @@ fs_mount_get_node(
         struct fs_mount *mnt,
         size_t node_index)
 {
+    int res;
+
     struct fs_node *fs_node = NULL;
     struct ptree_node *node;
 
@@ -38,18 +42,13 @@ fs_mount_get_node(
 
     node = ptree_get(&mnt->node_cache, node_index);
 
-    if(node == NULL) {
-        dprintk("load_node mnt=%p, mnt->load_node=%p, mnt->unload_node=%p, node_index=%p\n",
-                mnt, mnt->ops->load_node, mnt->ops->unload_node, node_index);
-        fs_node = fs_mount_load_node(mnt, node_index);
-
-        if(fs_node == NULL) {
-            spin_unlock(&mnt->cache_lock);
-            return NULL;
-        }
-
-        dprintk("fs_mount_load_node -> %p, node_ops = %p, file_ops = %p\n",
-                fs_node, fs_node->node_ops, fs_node->file_ops);
+    if(node == NULL)
+    {
+	fs_node = kmalloc(sizeof(*fs_node));
+	if(fs_node == NULL) {
+	    return NULL;
+	}
+	memset(fs_node, 0, sizeof(*fs_node));
 
         spinlock_init(&fs_node->page_lock);
         ptree_init(&fs_node->page_cache);
@@ -60,11 +59,19 @@ fs_mount_get_node(
         fs_node->mount = mnt;
         fs_node->refcount = 1;
 
-        int res;
+        res = fs_mount_load_node(mnt, node_index, &fs_node->backing);
+        if(res) {
+	    kfree(fs_node);
+            spin_unlock(&mnt->cache_lock);
+            return NULL;
+        }
+
         res = ptree_insert(&mnt->node_cache, &fs_node->cache_node, node_index);
         if(res) {
-            fs_unload_node(fs_node);
-            fs_node = NULL;
+	    fs_mount_unload_node(mnt, node_index, &fs_node->backing);
+	    kfree(fs_node);
+            spin_unlock(&mnt->cache_lock);
+	    return NULL;
         }
 
     } else {

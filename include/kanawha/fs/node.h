@@ -139,6 +139,8 @@ struct fs_node_backing {
     struct fs_node_ops *node_ops;
     // Operate on a file descriptor/node pair
     struct fs_file_ops *file_ops;
+
+    void *priv_state;
 };
 
 struct fs_node

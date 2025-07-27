@@ -10,6 +10,7 @@
 struct fs_type;
 struct fs_mount;
 struct fs_node;
+struct fs_node_backing;
 
 // Get the root fs_node of the mount
 #define FS_MOUNT_ROOT_INDEX_SIG(RET,ARG)\
@@ -18,12 +19,15 @@ ARG(size_t*, root_node_index)
 
 // Populate RAM-based data structures for the fs_node
 #define FS_MOUNT_LOAD_NODE_SIG(RET,ARG)\
-RET(struct fs_node *)\
-ARG(size_t, node_index)
+RET(int)\
+ARG(size_t, node_index)\
+ARG(struct fs_node_backing *, backing)
 
+// Free any data allocated by fs_mount_load_node
 #define FS_MOUNT_UNLOAD_NODE_SIG(RET,ARG)\
 RET(int)\
-ARG(struct fs_node *, node)
+ARG(size_t, node_index)\
+ARG(struct fs_node_backing *, backing)
 
 // Synchronize any mount global state with whatever backing store may exist
 // (usually flushes FS global state to disk)
