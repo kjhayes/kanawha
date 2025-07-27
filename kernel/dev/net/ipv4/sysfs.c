@@ -39,8 +39,8 @@ ipv4_dev_fs_on_register(
 
     edfs->dev = dev;
 
-    edfs->vfs_node.fs_node.backing.file_ops = &ipv4_dev_fs_file_ops;
-    edfs->vfs_node.fs_node.backing.node_ops = &ipv4_dev_fs_node_ops;
+    edfs->vfs_node.fs_file_ops = &ipv4_dev_fs_file_ops;
+    edfs->vfs_node.fs_node_ops = &ipv4_dev_fs_node_ops;
 
     res = vfs_mount_insert_node_and_link_root(
             ipv4_dev_fs_mount,
@@ -82,7 +82,7 @@ ipv4_dev_fs_file_write(
     }
 
     struct ipv4_dev_fs_node *idfs =
-        container_of(fs_node, struct ipv4_dev_fs_node, vfs_node.fs_node);
+        container_of(fs_node->backing.priv_state, struct ipv4_dev_fs_node, vfs_node);
 
     if(flags & FS_FILE_READ_NON_BLOCKING) {
         return -EWOULDBLOCK;
