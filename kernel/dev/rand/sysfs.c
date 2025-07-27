@@ -31,7 +31,7 @@ rand_dev_fs_file_read(
         return -ENXIO;
     }
     struct rand_dev_fs_node *rdfs =
-        container_of(node, struct rand_dev_fs_node, vfs_node.fs_node);
+        container_of(node->backing.priv_state, struct rand_dev_fs_node, vfs_node);
 
     if(buflen <= 0) {
         return -EINVAL;
@@ -92,8 +92,8 @@ rand_dev_fs_on_register(
 
     rdfs->dev = dev;
 
-    rdfs->vfs_node.fs_node.backing.node_ops = &rand_dev_fs_node_ops;
-    rdfs->vfs_node.fs_node.backing.file_ops = &rand_dev_fs_file_ops;
+    rdfs->vfs_node.fs_node_ops = &rand_dev_fs_node_ops;
+    rdfs->vfs_node.fs_file_ops = &rand_dev_fs_file_ops;
 
     size_t inode;
 
