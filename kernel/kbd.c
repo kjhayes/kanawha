@@ -86,9 +86,8 @@ register_kbd(
         return res;
     }
 
-    kbd->vfs_node.fs_node.backing.file_ops = &kbd_fs_file_ops;
-    kbd->vfs_node.fs_node.backing.node_ops = &kbd_fs_node_ops;
-
+    kbd->vfs_node.fs_file_ops = &kbd_fs_file_ops;
+    kbd->vfs_node.fs_node_ops = &kbd_fs_node_ops;
 
     // Assign the node a fs_node index
     if(kbd_fs_mount != NULL) {
@@ -264,8 +263,8 @@ kbd_fs_file_read(
         return -ENXIO;
     }
 
-    struct kbd *kbd =
-        container_of(fs_node, struct kbd, vfs_node.fs_node);
+    struct vfs_node *vfs_node = fs_node->backing.priv_state;
+    struct kbd *kbd = container_of(vfs_node, struct kbd, vfs_node);
 
     struct kbd_event event;
     size_t max_events = amount / sizeof(struct kbd_event);
