@@ -16,7 +16,8 @@ struct vfs_node
     size_t children_count;
     struct stree children_tree;
 
-    struct fs_node fs_node;
+    struct fs_node_ops *fs_node_ops;
+    struct fs_file_ops *fs_file_ops;
 };
 
 struct vfs_mount

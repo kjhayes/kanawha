@@ -66,8 +66,8 @@ __vfs_struct_add_field(
     field->raw_write = raw_write;
     field->state = state;
 
-    field->vfs_node.fs_node.backing.node_ops = &vfs_field_node_ops;
-    field->vfs_node.fs_node.backing.file_ops = &vfs_field_file_ops;
+    field->vfs_node.fs_node_ops = &vfs_field_node_ops;
+    field->vfs_node.fs_file_ops = &vfs_field_file_ops;
 
     res = vfs_mount_insert_node(
             struct_node->mnt,
@@ -175,7 +175,7 @@ vfs_field_fs_file_read(
         return -EUNIMPL;
     }
 
-    struct vfs_struct_field *field = container_of(fs_node, struct vfs_struct_field, vfs_node.fs_node);
+    struct vfs_struct_field *field = container_of(fs_node->backing.priv_state, struct vfs_struct_field, vfs_node);
 
     return (*field->raw_read)(field, file->seek_offset, buffer, buflen);
 }
@@ -198,7 +198,7 @@ vfs_field_fs_file_write(
         return -EUNIMPL;
     }
 
-    struct vfs_struct_field *field = container_of(fs_node, struct vfs_struct_field, vfs_node.fs_node);
+    struct vfs_struct_field *field = container_of(fs_node->backing.priv_state, struct vfs_struct_field, vfs_node);
 
     return (*field->raw_write)(field, file->seek_offset, buffer, buflen);
 }
@@ -251,8 +251,8 @@ vfs_create_struct_node(
 
     node->mnt = mnt;
 
-    node->vfs_node.fs_node.backing.node_ops = &vfs_struct_node_node_ops;
-    node->vfs_node.fs_node.backing.file_ops = &vfs_struct_node_file_ops;
+    node->vfs_node.fs_node_ops = &vfs_struct_node_node_ops;
+    node->vfs_node.fs_file_ops = &vfs_struct_node_file_ops;
 
     spinlock_init(&node->field_tree_lock);
     stree_init(&node->field_tree);

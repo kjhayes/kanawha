@@ -7,10 +7,11 @@
 #include <kanawha/stddef.h>
 #include <kanawha/types.h>
 
-struct fs_node *
+int
 vfs_mount_load_node(
         struct fs_mount *fs_mnt,
-        size_t inode)
+        size_t inode,
+	struct fs_node_backing *backing)
 {
     dprintk("vfs_mount_load_node(inode=%p)\n",
             inode);
@@ -24,26 +25,30 @@ vfs_mount_load_node(
     pnode = ptree_get(&mnt->inode_tree, inode);
     if(pnode == NULL) {
         spin_unlock(&mnt->lock);
-        return NULL;
+        return -ENXIO;
     }
     struct vfs_node *node =
         container_of(pnode, struct vfs_node, inode_node);
 
+    backing->node_ops = node->fs_node_ops;
+    backing->file_ops = node->fs_file_ops;
+    backing->priv_state = node;
+
     spin_unlock(&mnt->lock);
 
-    return &node->fs_node;
+    return 0;
 }
 
 int
 vfs_mount_unload_node(
         struct fs_mount *mnt,
-        struct fs_node *fs_node)
+	size_t index,
+        struct fs_node_backing *backing)
 {
     dprintk("vfs_mount_unload_node(fs_node=%p)\n",
             fs_node);
 
-    struct vfs_node *node =
-        container_of(fs_node, struct vfs_node, fs_node);
+    struct vfs_node *node = backing->priv_state;
 
     return 0;
 }
@@ -88,8 +93,7 @@ vfs_dir_lookup(
     dprintk("vfs_dir_lookup(name=%s)\n",
             name);
 
-    struct vfs_node *node =
-        container_of(fs_node, struct vfs_node, fs_node);
+    struct vfs_node *node = fs_node->backing.priv_state;
 
     DEBUG_ASSERT(KERNEL_ADDR(fs_node));
     DEBUG_ASSERT(KERNEL_ADDR(node));
@@ -143,8 +147,7 @@ vfs_dir_next(
         return -EINVAL;
     }
 
-    struct vfs_node *node =
-        container_of(fs_node, struct vfs_node, fs_node);
+    struct vfs_node *node = fs_node->backing.priv_state;
 
     dir->dir_offset++;
     if(dir->dir_offset == node->children_count) {
@@ -181,8 +184,7 @@ vfs_dir_readname(
         return -EINVAL;
     }
 
-    struct vfs_node *node =
-        container_of(fs_node, struct vfs_node, fs_node);
+    struct vfs_node *node = fs_node->backing.priv_state;
 
     spin_lock(&node->hierarchy_lock);
     if(dir->dir_offset+1 > node->children_count) {
@@ -266,8 +268,8 @@ vfs_mount_create(void)
 
     init_fs_mount_struct(&mnt->fs_mount, &vfs_mount_ops);
 
-    mnt->root_node.fs_node.backing.node_ops = &vfs_root_node_ops;
-    mnt->root_node.fs_node.backing.file_ops = &vfs_root_file_ops;
+    mnt->root_node.fs_node_ops = &vfs_root_node_ops;
+    mnt->root_node.fs_file_ops = &vfs_root_file_ops;
     res = vfs_mount_insert_node(
             mnt,
             &mnt->root_node,
@@ -307,8 +309,6 @@ vfs_mount_insert_node(
     spinlock_init(&node->hierarchy_lock);
     stree_init(&node->children_tree);
     node->children_count = 0;
-    node->fs_node.mount = &mnt->fs_mount;
-    node->fs_node.refcount = 0;
     mnt->num_nodes++;
 
     DEBUG_ASSERT(mnt->num_nodes > 0);
@@ -329,14 +329,7 @@ vfs_mount_remove_node(
     int res;
     spin_lock(&mnt->lock);
 
-    if(node->fs_node.refcount > 0) {
-        spin_unlock(&mnt->lock);
-        // Cannot remove a node which has references.
-        return -EBUSY;
-    }
-
     struct ptree_node *rem = ptree_remove(&mnt->inode_tree, node->inode_node.key);
-    node->fs_node.mount = NULL;
     mnt->num_nodes--;
 
     res = vfs_node_unlink_all(node);
