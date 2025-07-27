@@ -148,8 +148,8 @@ klog_init_fs_mount(void)
 
     klog_fs_mount = mnt;
 
-    klog_fs_node.fs_node.backing.file_ops = &klog_fs_file_ops;
-    klog_fs_node.fs_node.backing.node_ops = &klog_fs_node_ops;
+    klog_fs_node.fs_file_ops = &klog_fs_file_ops;
+    klog_fs_node.fs_node_ops = &klog_fs_node_ops;
 
     res = vfs_mount_insert_node_and_link_root(
             mnt,
@@ -160,8 +160,8 @@ klog_init_fs_mount(void)
         return res;
     }
 
-    kmem_free_fs_node.fs_node.backing.file_ops = &kmem_free_fs_file_ops;
-    kmem_free_fs_node.fs_node.backing.node_ops = &kmem_free_fs_node_ops;
+    kmem_free_fs_node.fs_file_ops = &kmem_free_fs_file_ops;
+    kmem_free_fs_node.fs_node_ops = &kmem_free_fs_node_ops;
 
     res = vfs_mount_insert_node_and_link_root(
             mnt,
