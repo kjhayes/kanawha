@@ -25,8 +25,8 @@ static inline struct char_dev *
 __fs_node_to_char_dev(
         struct fs_node *node)
 {
-    struct char_dev_fs_node *__c =
-        container_of(node, struct char_dev_fs_node, vfs_node.fs_node);
+    struct vfs_node *vfs_node = node->backing.priv_state;
+    struct char_dev_fs_node *__c = container_of(vfs_node, struct char_dev_fs_node, vfs_node);
     return __c->dev;
 }
 
@@ -171,8 +171,8 @@ char_dev_sysfs_on_register(
     }
     node->dev = dev;
 
-    node->vfs_node.fs_node.backing.node_ops = &char_dev_fs_node_ops;
-    node->vfs_node.fs_node.backing.file_ops = &char_dev_fs_file_ops;
+    node->vfs_node.fs_node_ops = &char_dev_fs_node_ops;
+    node->vfs_node.fs_file_ops = &char_dev_fs_file_ops;
 
     res = vfs_mount_insert_node_and_link_root(
             char_dev_fs_mount,
