@@ -13,7 +13,7 @@ static int
 fs_unload_node(
         struct fs_node *node)
 {
-    return fs_mount_unload_node(node->mount, node->cache_node.key, &node->backing);
+    return fs_mount_unload_node(node->mount, node->cache_node.key, node);
 }
 
 int
@@ -59,7 +59,7 @@ fs_mount_get_node(
         fs_node->mount = mnt;
         fs_node->refcount = 1;
 
-        res = fs_mount_load_node(mnt, node_index, &fs_node->backing);
+        res = fs_mount_load_node(mnt, node_index, fs_node);
         if(res) {
 	    kfree(fs_node);
             spin_unlock(&mnt->cache_lock);
@@ -68,7 +68,7 @@ fs_mount_get_node(
 
         res = ptree_insert(&mnt->node_cache, &fs_node->cache_node, node_index);
         if(res) {
-	    fs_mount_unload_node(mnt, node_index, &fs_node->backing);
+	    fs_mount_unload_node(mnt, node_index, fs_node);
 	    kfree(fs_node);
             spin_unlock(&mnt->cache_lock);
 	    return NULL;

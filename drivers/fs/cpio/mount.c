@@ -72,7 +72,7 @@ static int
 cpio_mount_load_node(
         struct fs_mount *fs_mnt,
         size_t node_index,
-	struct fs_node_backing *backing)
+	struct fs_node *fs_node)
 {
     int res;
 
@@ -80,9 +80,9 @@ cpio_mount_load_node(
     struct cpio_mount *mnt = container_of(fs_mnt, struct cpio_mount, fs_mount);
 
     if(node_index == CPIO_ROOT_INDEX) {
-        backing->node_ops = &cpio_dir_node_ops;
-        backing->file_ops = &cpio_dir_file_ops;
-	backing->priv_state = &mnt->root_node;
+        fs_node->backing.node_ops = &cpio_dir_node_ops;
+        fs_node->backing.file_ops = &cpio_dir_file_ops;
+	fs_node->backing.priv_state = &mnt->root_node;
         return 0;
     }
 
@@ -122,9 +122,9 @@ cpio_mount_load_node(
     memset(node, 0, sizeof(struct cpio_file_node));
 
     node->mnt = mnt;
-    backing->file_ops = &cpio_file_ops;
-    backing->node_ops = &cpio_node_ops;
-    backing->priv_state = node;
+    fs_node->backing.file_ops = &cpio_file_ops;
+    fs_node->backing.node_ops = &cpio_node_ops;
+    fs_node->backing.priv_state = node;
 
     node->header_offset = offset;
     node->data_offset =
@@ -140,16 +140,16 @@ static int
 cpio_mount_unload_node(
         struct fs_mount *fs_mount,
 	size_t index,
-        struct fs_node_backing *backing)
+        struct fs_node *fs_node)
 {
     struct cpio_mount *mnt =
         container_of(fs_mount, struct cpio_mount, fs_mount);
 
-    if(&mnt->root_node == backing->priv_state) {
+    if(&mnt->root_node == fs_node->backing.priv_state) {
         return 0;
     }
 
-    struct cpio_file_node *node = backing->priv_state;
+    struct cpio_file_node *node = fs_node->backing.priv_state;
 
     kfree(node);
 

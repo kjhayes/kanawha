@@ -21,13 +21,13 @@ ARG(size_t*, root_node_index)
 #define FS_MOUNT_LOAD_NODE_SIG(RET,ARG)\
 RET(int)\
 ARG(size_t, node_index)\
-ARG(struct fs_node_backing *, backing)
+ARG(struct fs_node *, fs_node)
 
 // Free any data allocated by fs_mount_load_node
 #define FS_MOUNT_UNLOAD_NODE_SIG(RET,ARG)\
 RET(int)\
 ARG(size_t, node_index)\
-ARG(struct fs_node_backing *, backing)
+ARG(struct fs_node *, fs_node)
 
 // Synchronize any mount global state with whatever backing store may exist
 // (usually flushes FS global state to disk)

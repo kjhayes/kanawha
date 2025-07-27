@@ -77,7 +77,7 @@ static int
 ext2_mount_load_node(
         struct fs_mount *fs_mount,
         size_t node_index,
-	struct fs_node_backing *backing)
+	struct fs_node *fs_node)
 {
     int res;
 
@@ -156,12 +156,12 @@ ext2_mount_load_node(
 
     switch(node->inode.mode & 0xF000) {
       case 0x8000:
-        backing->file_ops = &ext2_file_file_ops;
-        backing->node_ops = &ext2_file_node_ops;
+        fs_node->backing.file_ops = &ext2_file_file_ops;
+        fs_node->backing.node_ops = &ext2_file_node_ops;
         break;
       case 0x4000:
-        backing->file_ops = &ext2_dir_file_ops;
-        backing->node_ops = &ext2_dir_node_ops;
+        fs_node->backing.file_ops = &ext2_dir_file_ops;
+        fs_node->backing.node_ops = &ext2_dir_node_ops;
         break;
       default:
         wprintk("ext2_mount_load_node: node (0x%lx) is not a directory or regular file (mode=0x%x)\n",
@@ -171,7 +171,7 @@ ext2_mount_load_node(
         kfree(node);
         return -EUNIMPL;
     }
-    backing->priv_state = node;
+    fs_node->backing.priv_state = node;
 
     dprintk("EXT2 Loaded Node (0x%llx)\n",
             (ull_t)node_index);
@@ -185,13 +185,13 @@ static int
 ext2_mount_unload_node(
         struct fs_mount *fs_mount,
 	size_t index,
-        struct fs_node_backing *backing)
+        struct fs_node *fs_node)
 {
     int res;
 
     struct ext2_mount *mnt =
         container_of(fs_mount, struct ext2_mount, fs_mount);
-    struct ext2_fs_node *node = backing->priv_state;
+    struct ext2_fs_node *node = fs_node->backing.priv_state;
 
     if(node->inode_dirty) {
         size_t grp_index = ext2_fs_node_to_group_num(node);

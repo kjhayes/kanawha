@@ -11,7 +11,7 @@ int
 vfs_mount_load_node(
         struct fs_mount *fs_mnt,
         size_t inode,
-	struct fs_node_backing *backing)
+	struct fs_node *fs_node)
 {
     dprintk("vfs_mount_load_node(inode=%p)\n",
             inode);
@@ -30,9 +30,9 @@ vfs_mount_load_node(
     struct vfs_node *node =
         container_of(pnode, struct vfs_node, inode_node);
 
-    backing->node_ops = node->fs_node_ops;
-    backing->file_ops = node->fs_file_ops;
-    backing->priv_state = node;
+    fs_node->backing.node_ops = node->fs_node_ops;
+    fs_node->backing.file_ops = node->fs_file_ops;
+    fs_node->backing.priv_state = node;
 
     spin_unlock(&mnt->lock);
 
@@ -43,12 +43,12 @@ int
 vfs_mount_unload_node(
         struct fs_mount *mnt,
 	size_t index,
-        struct fs_node_backing *backing)
+        struct fs_node *fs_node)
 {
     dprintk("vfs_mount_unload_node(fs_node=%p)\n",
             fs_node);
 
-    struct vfs_node *node = backing->priv_state;
+    struct vfs_node *node = fs_node->backing.priv_state;
 
     return 0;
 }

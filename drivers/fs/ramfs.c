@@ -514,7 +514,7 @@ ramfs_dir_unlink(
 	struct fs_node *fs_node,
 	const char *name)
 {
-    printk("ramfs_dir_unlink\n");
+    dprintk("ramfs_dir_unlink\n");
     struct ramfs_node *node = fs_node->backing.priv_state;
 
     size_t inode;
@@ -534,7 +534,7 @@ ramfs_dir_unlink(
     }
 
     if(!found) {
-	printk("Failed to find \"%s\"\n", name);
+	dprintk("Failed to find \"%s\"\n", name);
 	return -EINVAL;
     }
 
@@ -544,14 +544,14 @@ ramfs_dir_unlink(
     struct ptree_node *pnode = ptree_get(&mnt->inode_tree, inode);
     if(pnode == NULL) {
 	// Removed an invalid dirent?
-	printk("Failed to find inode %d\n", (int)inode);
+	dprintk("Failed to find inode %d\n", (int)inode);
 	return 0;
     }
     struct ramfs_node *linked_to = container_of(pnode, struct ramfs_node, inode_node);
 
     if(!ilist_empty(&linked_to->directory)) {
 	// Cannot remove non-empty directory
-	printk("Cannot remove non-empty directory\n");
+	dprintk("Cannot remove non-empty directory\n");
 	return -EINVAL;
     }
 
@@ -620,7 +620,7 @@ static int
 ramfs_mount_load_node(
         struct fs_mount *fs_mount,
         size_t node_index,
-	struct fs_node_backing *backing)
+	struct fs_node *fs_node)
 {
     struct ramfs_mount *mnt = container_of(fs_mount, struct ramfs_mount, fs_mount);
     struct ptree_node *pnode = ptree_get(&mnt->inode_tree, node_index);
@@ -630,9 +630,9 @@ ramfs_mount_load_node(
 
     struct ramfs_node *node = container_of(pnode, struct ramfs_node, inode_node);
 
-    backing->file_ops = node->file_ops;
-    backing->node_ops = node->node_ops;
-    backing->priv_state = node;
+    fs_node->backing.file_ops = node->file_ops;
+    fs_node->backing.node_ops = node->node_ops;
+    fs_node->backing.priv_state = node;
 
     return 0;
 }
@@ -641,7 +641,7 @@ static int
 ramfs_mount_unload_node(
         struct fs_mount *fs_mount,
 	size_t node_index,
-        struct fs_node_backing *backing)
+        struct fs_node *fs_node)
 {
     struct ramfs_mount *mnt = container_of(fs_mount, struct ramfs_mount, fs_mount);
 

@@ -245,7 +245,7 @@ static int
 pipe_fs_mount_load_node(
         struct fs_mount *mnt,
         size_t index,
-	struct fs_node_backing *backing)
+	struct fs_node *fs_node)
 {
     int res;
 
@@ -272,9 +272,9 @@ pipe_fs_mount_load_node(
     pipe->tail = 0;
     spinlock_init(&pipe->lock);
 
-    backing->node_ops = &pipe_fs_node_ops;
-    backing->file_ops = &pipe_fs_file_ops;
-    backing->priv_state = pipe;
+    fs_node->backing.node_ops = &pipe_fs_node_ops;
+    fs_node->backing.file_ops = &pipe_fs_file_ops;
+    fs_node->backing.priv_state = pipe;
 
     res = waitqueue_init(&pipe->read_queue);
     if(res) {
@@ -302,9 +302,9 @@ static int
 pipe_fs_mount_unload_node(
         struct fs_mount *mnt,
 	size_t index,
-        struct fs_node_backing *backing)
+        struct fs_node *fs_node)
 {
-    struct pipe *pipe = backing->priv_state;
+    struct pipe *pipe = fs_node->backing.priv_state;
 
     waitqueue_disable(&pipe->read_queue);
     wake_all(&pipe->read_queue);
