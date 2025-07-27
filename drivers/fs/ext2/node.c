@@ -111,9 +111,8 @@ ext2_fs_node_to_group_num(
         struct ext2_fs_node *node)
 {
     struct ext2_mount *mnt = node->mount;
-    size_t inode_index = node->fs_node.cache_node.key;
 
-    return (inode_index-1) / mnt->inodes_per_group;
+    return (node->inode_index-1) / mnt->inodes_per_group;
 }
 
 int
@@ -125,8 +124,7 @@ ext2_fs_node_read_page(
 {
     int res;
 
-    struct ext2_fs_node *node =
-        container_of(fs_node, struct ext2_fs_node, fs_node);
+    struct ext2_fs_node *node = fs_node->backing.priv_state;
 
     size_t block_no;
     res = ext2_node_pfn_to_block(node, pfn, &block_no);
@@ -164,8 +162,7 @@ ext2_fs_node_write_page(
 
     dprintk("ext2_fs_node_write_page pfn=%p\n", pfn);
 
-    struct ext2_fs_node *node =
-        container_of(fs_node, struct ext2_fs_node, fs_node);
+    struct ext2_fs_node *node = fs_node->backing.priv_state;
 
     size_t block_no;
     res = ext2_node_pfn_to_block(node, pfn, &block_no);
@@ -222,8 +219,7 @@ ext2_fs_node_getattr(
         int attr,
         size_t *value)
 {
-    struct ext2_fs_node *node =
-        container_of(fs_node, struct ext2_fs_node, fs_node);
+    struct ext2_fs_node *node = fs_node->backing.priv_state;
 
     switch(attr) {
         case FS_NODE_ATTR_DATA_SIZE:
@@ -248,8 +244,7 @@ ext2_fs_node_setattr(
         int attr,
         size_t value)
 {
-    struct ext2_fs_node *node =
-        container_of(fs_node, struct ext2_fs_node, fs_node);
+    struct ext2_fs_node *node = fs_node->backing.priv_state;
 
     switch(attr) {
         case FS_NODE_ATTR_DATA_SIZE:
@@ -266,13 +261,12 @@ ext2_fs_node_flush(
 {
     int res;
 
-    struct ext2_fs_node *node =
-        container_of(fs_node, struct ext2_fs_node, fs_node);
+    struct ext2_fs_node *node = fs_node->backing.priv_state;
 
     if(node->inode_dirty) {
         res = ext2_mount_write_inode_data(
                 node->mount,
-                node->fs_node.cache_node.key,
+                node->inode_index,
                 &node->inode);
         if(res) {
             return res;

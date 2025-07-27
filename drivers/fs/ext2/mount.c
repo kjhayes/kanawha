@@ -73,10 +73,11 @@ ext2_mount_write_inode_data(
     return 0;
 }
 
-static struct fs_node *
+static int
 ext2_mount_load_node(
         struct fs_mount *fs_mount,
-        size_t node_index)
+        size_t node_index,
+	struct fs_node_backing *backing)
 {
     int res;
 
@@ -87,12 +88,12 @@ ext2_mount_load_node(
 
     if(node_index == 0) {
         panic("ext2_mount_load_node: Cannot load reserved inode 0!\n");
-        return NULL;
+	return -EINVAL;
     }
 
     if(node_index >= mnt->num_inodes) {
         wprintk("ext2_mount_load_node index=0x%lx >= num_inodes=0x%lx\n", node_index, mnt->num_inodes);
-        return NULL;
+	return -EINVAL;
     }
 
     size_t group_index = (node_index-1) / mnt->inodes_per_group;
@@ -101,7 +102,7 @@ ext2_mount_load_node(
     struct ext2_group *group = ext2_get_group(mnt, group_index);
     if(group == NULL) {
         wprintk("ext2_mount_load_node: Failed to get group (group_index=0x%lx)\n", group_index);
-        return NULL;
+	return -ENXIO;
     }
     DEBUG_ASSERT(group->mnt == mnt);
 
@@ -109,10 +110,11 @@ ext2_mount_load_node(
     if(node == NULL) {
         wprintk("ext2_mount_load_node: Failed to allocate node!\n");
         ext2_put_group(mnt, group);
-        return NULL;
+        return -ENOMEM;
     }
     memset(node, 0, sizeof(struct ext2_fs_node));
 
+    node->inode_index = node_index;
     node->mount = mnt;
     spinlock_init(&node->lock);
     spinlock_init(&node->dir_lock);
@@ -124,14 +126,14 @@ ext2_mount_load_node(
                 errnostr(res));
         ext2_put_group(mnt, group);
         kfree(node);
-        return NULL;
+        return res;
     }
     else if(!is_inode_alloced) {
         wprintk("ext2_mount_load_node: Tried to load unallocated node 0x%llx!\n",
                 (ull_t)node_index);
         ext2_put_group(mnt, group);
         kfree(node);
-        return NULL;
+        return -ENXIO;
     }
 
     res = ext2_group_read_inode(
@@ -143,7 +145,7 @@ ext2_mount_load_node(
                 node_index, index_in_group, group_index);
         ext2_put_group(mnt, group);
         kfree(node);
-        return NULL;
+        return res;
     }
     node->inode_dirty = 0;
 
@@ -154,12 +156,12 @@ ext2_mount_load_node(
 
     switch(node->inode.mode & 0xF000) {
       case 0x8000:
-        node->fs_node.backing.file_ops = &ext2_file_file_ops;
-        node->fs_node.backing.node_ops = &ext2_file_node_ops;
+        backing->file_ops = &ext2_file_file_ops;
+        backing->node_ops = &ext2_file_node_ops;
         break;
       case 0x4000:
-        node->fs_node.backing.file_ops = &ext2_dir_file_ops;
-        node->fs_node.backing.node_ops = &ext2_dir_node_ops;
+        backing->file_ops = &ext2_dir_file_ops;
+        backing->node_ops = &ext2_dir_node_ops;
         break;
       default:
         wprintk("ext2_mount_load_node: node (0x%lx) is not a directory or regular file (mode=0x%x)\n",
@@ -167,28 +169,29 @@ ext2_mount_load_node(
                 node->inode.mode);
         ext2_put_group(mnt, group);
         kfree(node);
-        return NULL;
+        return -EUNIMPL;
     }
+    backing->priv_state = node;
 
     dprintk("EXT2 Loaded Node (0x%llx)\n",
             (ull_t)node_index);
 
     ext2_put_group(mnt, group);
 
-    return &node->fs_node;
+    return 0;
 }
 
 static int
 ext2_mount_unload_node(
         struct fs_mount *fs_mount,
-        struct fs_node *fs_node)
+	size_t index,
+        struct fs_node_backing *backing)
 {
     int res;
 
     struct ext2_mount *mnt =
         container_of(fs_mount, struct ext2_mount, fs_mount);
-    struct ext2_fs_node *node =
-        container_of(fs_node, struct ext2_fs_node, fs_node);
+    struct ext2_fs_node *node = backing->priv_state;
 
     if(node->inode_dirty) {
         size_t grp_index = ext2_fs_node_to_group_num(node);
@@ -198,7 +201,7 @@ ext2_mount_unload_node(
             res = -EINVAL;
             goto err;
         }
-        ext2_group_write_inode(group, (node->fs_node.cache_node.key-1)%mnt->inodes_per_group, &node->inode);
+        ext2_group_write_inode(group, (index-1)%mnt->inodes_per_group, &node->inode);
         node->inode_dirty = 0;
     }
 

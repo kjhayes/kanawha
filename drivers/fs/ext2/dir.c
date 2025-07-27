@@ -30,8 +30,7 @@ ext2_dir_read_at(
         size_t offset,
         struct ext2_linked_dir_entry *out)
 {
-    struct ext2_fs_node *node =
-        container_of(fs_node, struct ext2_fs_node, fs_node);
+    struct ext2_fs_node *node = fs_node->backing.priv_state;
 
     int res;
     res = fs_node_paged_read(
@@ -53,8 +52,7 @@ ext2_dir_write_at(
         size_t offset,
         struct ext2_linked_dir_entry *out)
 {
-    struct ext2_fs_node *node =
-        container_of(fs_node, struct ext2_fs_node, fs_node);
+    struct ext2_fs_node *node = fs_node->backing.priv_state;
 
     int res;
     res = fs_node_paged_write(
@@ -73,14 +71,13 @@ ext2_dir_write_at(
 // Lock on the parent_node should not be held
 static int
 ext2_dir_add_linked_entry(
+	struct fs_node *backing_node,
         struct ext2_fs_node *parent_node,
         size_t inode,
         uint8_t file_type,
         const char *name)
 {
     int res;
-
-    struct fs_node *backing_node = &parent_node->fs_node;
 
     if(inode == 0) {
         wprintk("ext2_dir_add_linked_entry: request to add link to reserved inode=0! (name=%s)\n",
@@ -370,8 +367,7 @@ ext2_dir_mkfile(
 {
     int res;
 
-    struct ext2_fs_node *node =
-        container_of(fs_node, struct ext2_fs_node, fs_node);
+    struct ext2_fs_node *node = fs_node->backing.priv_state;
 
     dprintk("ext2_dir_mkfile: %s\n",
             filename);
@@ -414,6 +410,7 @@ ext2_dir_mkfile(
     }
 
     res = ext2_dir_add_linked_entry(
+	    fs_node,
             node,
             inode,
             EXT2_DIR_FT_REG_FILE,
@@ -425,7 +422,7 @@ ext2_dir_mkfile(
         return res;
     }
 
-    fs_node_flush_all_fs_pages(&node->fs_node);
+    fs_node_flush_all_fs_pages(fs_node);
 
     return 0;
 }
@@ -438,8 +435,7 @@ ext2_dir_mkdir(
 {
     int res;
 
-    struct ext2_fs_node *parent_node =
-        container_of(parent_fs_node, struct ext2_fs_node, fs_node);
+    struct ext2_fs_node *parent_node = parent_fs_node->backing.priv_state;
 
     printk("ext2_dir_mkdir: %s\n",
             filename);
@@ -506,10 +502,10 @@ ext2_dir_mkdir(
         return res;
     }
 
-    struct ext2_fs_node *child_node =
-        container_of(child_fs_node, struct ext2_fs_node, fs_node);
+    struct ext2_fs_node *child_node = child_fs_node->backing.priv_state;
 
     res = ext2_dir_add_linked_entry(
+	    child_fs_node,
             child_node,
             inode,
             EXT2_DIR_FT_DIR,
@@ -522,8 +518,9 @@ ext2_dir_mkdir(
     }
 
     res = ext2_dir_add_linked_entry(
+	    child_fs_node,
             child_node,
-            parent_node->fs_node.cache_node.key,
+            parent_node->inode_index,
             EXT2_DIR_FT_DIR,
             "..");
     if(res) {
@@ -532,11 +529,12 @@ ext2_dir_mkdir(
                 inode);
         return res;
     }
-    fs_node_flush_all_fs_pages(&child_node->fs_node);
+    fs_node_flush_all_fs_pages(child_fs_node);
 
     // Create a link from the parent directory to the new directory
 
     res = ext2_dir_add_linked_entry(
+	    parent_fs_node,
             parent_node,
             inode,
             EXT2_DIR_FT_DIR,
@@ -549,7 +547,7 @@ ext2_dir_mkdir(
                 inode);
         return res;
     }
-    fs_node_flush_all_fs_pages(&parent_node->fs_node);
+    fs_node_flush_all_fs_pages(parent_fs_node);
 
     return 0;
 }
@@ -561,8 +559,7 @@ ext2_dir_unlink(
 {
     int res;
 
-    struct ext2_fs_node *parent_node =
-        container_of(parent_fs_node, struct ext2_fs_node, fs_node);
+    struct ext2_fs_node *parent_node = parent_fs_node->backing.priv_state;
 
     size_t child_inode;
     res = ext2_dir_node_lookup(
@@ -582,8 +579,7 @@ ext2_dir_getattr(
         int attr,
         size_t *value)
 {
-    struct ext2_fs_node *node =
-        container_of(fs_node, struct ext2_fs_node, fs_node);
+    struct ext2_fs_node *node = fs_node->backing.priv_state;
 
     switch(attr) {
         case FS_NODE_ATTR_DATA_SIZE:
@@ -608,8 +604,7 @@ ext2_dir_setattr(
         int attr,
         size_t value)
 {
-    struct ext2_fs_node *node =
-        container_of(fs_node, struct ext2_fs_node, fs_node);
+    struct ext2_fs_node *node = fs_node->backing.priv_state;
 
     switch(attr) {
         case FS_NODE_ATTR_DATA_SIZE:
