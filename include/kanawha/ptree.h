@@ -50,6 +50,12 @@ struct ptree_node * ptree_get_max_less(struct ptree *tree, uintptr_t key);
 // Inclusive
 struct ptree_node *ptree_get_max_less_or_eq(struct ptree *tree, uintptr_t key);
 
+// Non-inclusive
+struct ptree_node * ptree_get_min_greater(struct ptree *tree, uintptr_t key);
+
+// Inclusive
+struct ptree_node *ptree_get_min_greater_or_eq(struct ptree *tree, uintptr_t key);
+
 // "First" is the node with the least key
 struct ptree_node * ptree_get_first(struct ptree *tree);
 // "Last" is the node with the greatest key

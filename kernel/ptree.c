@@ -263,6 +263,50 @@ ptree_get_max_less_or_eq(struct ptree *tree, uintptr_t key)
 }
 
 struct ptree_node *
+ptree_get_min_greater(struct ptree *tree, uintptr_t key)
+{
+    struct ptree_node *current_min = NULL;
+    struct ptree_node *current = tree->root;
+    while(current != NULL) {
+	if(current->key > key) {
+	    if(current_min == NULL || current_min->key > current->key) {
+		current_min = current;
+	    }
+	    current = current->left;
+	    continue;
+	} else { // Current key is too small
+	    current = current->right;
+	    continue;
+	}
+    }
+
+    return current_min;
+}
+
+struct ptree_node *
+ptree_get_min_greater_or_eq(struct ptree *tree, uintptr_t key)
+{
+    struct ptree_node *current_min = NULL;
+    struct ptree_node *current = tree->root;
+    while(current != NULL) {
+	if(current->key > key) {
+	    if(current_min == NULL || current_min->key > current->key) {
+		current_min = current;
+	    }
+	    current = current->left;
+	    continue;
+	} else { // Current key is too small
+	    if(current->key == key) {
+		return current;
+	    }
+	    current = current->right;
+	    continue;
+	}
+    }
+    return current_min;
+}
+
+struct ptree_node *
 ptree_get_first(struct ptree *tree)
 {
     struct ptree_node *least = tree->root;

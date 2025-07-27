@@ -24,7 +24,7 @@ struct ramfs_node
     struct ptree page_tree;
     size_t size;
 
-    unsigned long dirent_refs;
+    atomic_t dirent_refs;
     ilist_t directory;
 };
 
@@ -116,6 +116,60 @@ ramfs_file_unload_page(
 }
 
 static int
+ramfs_file_free_all_pages(
+	struct ramfs_node *node)
+{
+    struct ptree_node *pnode;
+    do {
+	pnode = ptree_get_first(&node->page_tree);
+	if(pnode == NULL) {
+	    break;
+	}
+	ptree_remove(&node->page_tree, pnode->key);
+	struct ramfs_page *page = container_of(pnode, struct ramfs_page, node);
+	page_free(RAMFS_PAGE_ORDER, page->page);
+    } while(1);
+
+    return 0;
+}
+
+static int
+ramfs_file_resize(
+	struct ramfs_node *node,
+	size_t new_size)
+{
+    if(new_size >= node->size) {
+	node->size = new_size;
+	return 0;
+    }
+
+    // We need to shrink
+
+    if(new_size == 0) {
+	return ramfs_file_free_all_pages(node);
+    }
+
+    // Will add an unnecessary page in some cases
+    // (part of the reason we special case resizing to zero)
+    uintptr_t new_num_pages = (new_size >> RAMFS_PAGE_ORDER) + 1;
+
+    struct ptree_node *pnode;
+    do {
+	pnode = ptree_get_min_greater_or_eq(&node->page_tree, new_num_pages);
+	if(pnode == NULL) {
+	    break;
+	}
+	ptree_remove(&node->page_tree, pnode->key);
+	struct ramfs_page *page = container_of(pnode, struct ramfs_page, node);
+	page_free(RAMFS_PAGE_ORDER, page->page);
+    } while(1);
+
+    node->size = new_size;
+
+    return 0;
+}
+
+static int
 ramfs_file_getattr(
         struct fs_node *fs_node,
         int attr,
@@ -150,9 +204,7 @@ ramfs_file_setattr(
 
     switch(attr) {
         case FS_NODE_ATTR_DATA_SIZE:
-	    node->size = value;
-	    // TODO Actually resize the node
-            return 0;
+	    return ramfs_file_resize(node, value);
     }
 
     return -EINVAL;
@@ -294,7 +346,7 @@ ramfs_create_link(
     }
     dirent->inode = child->inode_node.key;
 
-    child->dirent_refs++;
+    atomic_fetch_inc(&child->dirent_refs);
 
     ilist_push_tail(&dir->directory, &dirent->list_node);
 
@@ -321,7 +373,7 @@ ramfs_dir_mkfile(
     child->node_ops = &ramfs_file_node_ops;
     child->file_ops = &ramfs_file_file_ops;
     ilist_init(&child->directory);
-    child->dirent_refs = 0;
+    atomic_set_relaxed(&child->dirent_refs, 0);
     ptree_init(&child->page_tree);
 
     struct ramfs_mount *mnt = container_of(fs_node->mount, struct ramfs_mount, fs_mount);
@@ -362,7 +414,7 @@ ramfs_dir_mkdir(
     child->node_ops = &ramfs_dir_node_ops;
     child->file_ops = &ramfs_dir_file_ops;
     ilist_init(&child->directory);
-    child->dirent_refs = 0;
+    atomic_set_relaxed(&child->dirent_refs, 0);
     ptree_init(&child->page_tree);
 
     struct ramfs_mount *mnt = container_of(fs_node->mount, struct ramfs_mount, fs_mount);
@@ -457,6 +509,62 @@ ramfs_dir_dir_readname(
     return 0;
 }
 
+int
+ramfs_dir_unlink(
+	struct fs_node *fs_node,
+	const char *name)
+{
+    printk("ramfs_dir_unlink\n");
+    struct ramfs_node *node = fs_node->backing.priv_state;
+
+    size_t inode;
+  
+    int found = 0;
+    ilist_node_t *iter;
+    ilist_for_each(iter, &node->directory) {
+	struct ramfs_dirent *dirent = container_of(iter, struct ramfs_dirent, list_node);
+	if(strcmp(dirent->name, name) == 0) {
+	    inode = dirent->inode;
+	    found = 1;
+	    ilist_remove(&node->directory, iter);
+	    kfree(dirent->name);
+	    kfree(dirent);
+	    break;
+	}
+    }
+
+    if(!found) {
+	printk("Failed to find \"%s\"\n", name);
+	return -EINVAL;
+    }
+
+    // Decrement the references to the inode
+
+    struct ramfs_mount *mnt = container_of(fs_node->mount, struct ramfs_mount, fs_mount);
+    struct ptree_node *pnode = ptree_get(&mnt->inode_tree, inode);
+    if(pnode == NULL) {
+	// Removed an invalid dirent?
+	printk("Failed to find inode %d\n", (int)inode);
+	return 0;
+    }
+    struct ramfs_node *linked_to = container_of(pnode, struct ramfs_node, inode_node);
+
+    if(!ilist_empty(&linked_to->directory)) {
+	// Cannot remove non-empty directory
+	printk("Cannot remove non-empty directory\n");
+	return -EINVAL;
+    }
+
+    atomic_val_t refs = atomic_fetch_dec(&linked_to->dirent_refs);
+    if(refs == 1) {
+	// We just closed the last reference to this node
+	ptree_remove(&mnt->inode_tree, linked_to->inode_node.key);
+	ramfs_file_free_all_pages(linked_to);
+	kfree(linked_to);
+    }
+    return 0;
+}
+
 static struct fs_node_ops
 ramfs_dir_node_ops =
 {
@@ -469,8 +577,9 @@ ramfs_dir_node_ops =
     .flush = fs_node_flush_nop,
     .flush_page = fs_node_flush_page_nop,
 
+    .unlink = ramfs_dir_unlink,
+
     .link = fs_node_cannot_link,
-    .unlink = fs_node_cannot_unlink,
     .symlink = fs_node_cannot_symlink, 
     .mkfifo = fs_node_cannot_mkfifo,
     .load_page = fs_node_cannot_load_page,
