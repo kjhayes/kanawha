@@ -25,8 +25,7 @@ pci_cfg_fs_node_read_page(
 {
     int res;
 
-    struct vfs_node *vfs_node =
-        container_of(fs_node, struct vfs_node, fs_node);
+    struct vfs_node *vfs_node = fs_node->backing.priv_state;
     struct pci_func *func =
         container_of(vfs_node, struct pci_func, vfs_node);
 
@@ -105,8 +104,8 @@ insert_func_with_match_lock(
 {
     int res;
 
-    func->vfs_node.fs_node.backing.file_ops = &pci_fs_file_ops;
-    func->vfs_node.fs_node.backing.node_ops = &pci_fs_node_ops;
+    func->vfs_node.fs_file_ops = &pci_fs_file_ops;
+    func->vfs_node.fs_node_ops = &pci_fs_node_ops;
 
     char namebuf[32];
     snprintk(namebuf, 32, "%d.%d.%d.%d",
