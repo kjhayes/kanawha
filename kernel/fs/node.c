@@ -16,13 +16,20 @@
 
 #define FS_NODE_OPS_ACCESSOR(__self, __field) __self->backing.node_ops->__field
 
-DEFINE_OP_LIST_WRAPPERS(
+#define FS_NODE_OP_ACQUIRE_LOCK(ptr)\
+    rlock_read_lock(&ptr->backing_lock)
+#define FS_NODE_OP_RELEASE_LOCK(ptr)\
+    rlock_read_unlock(&ptr->backing_lock)
+
+DEFINE_OP_LIST_WRAPPERS_WITH_PRE_POST(
         FS_NODE_OP_LIST,
         ,
         /* No Prefix */,
         fs_node,
         FS_NODE_OPS_ACCESSOR,
-        SELF_ACCESSOR)
+        SELF_ACCESSOR,
+	FS_NODE_OP_ACQUIRE_LOCK,
+	FS_NODE_OP_RELEASE_LOCK)
 
 int
 fs_node_get(struct fs_node *node)

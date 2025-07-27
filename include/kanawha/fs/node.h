@@ -7,6 +7,7 @@
 #include <kanawha/ptree.h>
 #include <kanawha/spinlock.h>
 #include <kanawha/lock.h>
+#include <kanawha/rwlock.h>
 
 struct fs_type;
 struct fs_mount;
@@ -145,6 +146,7 @@ struct fs_node_backing {
 
 struct fs_node
 {
+    rlock_t backing_lock;
     struct fs_node_backing backing;
 
     struct fs_mount *mount;

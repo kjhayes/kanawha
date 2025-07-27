@@ -7,6 +7,7 @@
 #include <kanawha/vmem.h>
 #include <kanawha/kmalloc.h>
 #include <kanawha/string.h>
+#include <kanawha/rwlock.h>
 
 static int
 fs_unload_node(
@@ -49,6 +50,8 @@ fs_mount_get_node(
 	    return NULL;
 	}
 	memset(fs_node, 0, sizeof(*fs_node));
+
+	rlock_init(&fs_node->backing_lock);
 
         spinlock_init(&fs_node->page_lock);
         ptree_init(&fs_node->page_cache);
