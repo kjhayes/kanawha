@@ -10,7 +10,6 @@ extern struct fs_node_ops cpio_node_ops;
 
 struct cpio_file_node
 {
-    struct fs_node fs_node;
     struct cpio_mount *mnt;
 
     size_t header_offset;

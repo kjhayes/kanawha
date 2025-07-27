@@ -68,10 +68,11 @@ cpio_read_header(struct cpio_mount *mnt, size_t offset, struct cpio_header *hdr)
 }
 
 
-static struct fs_node *
+static int
 cpio_mount_load_node(
         struct fs_mount *fs_mnt,
-        size_t node_index)
+        size_t node_index,
+	struct fs_node_backing *backing)
 {
     int res;
 
@@ -79,7 +80,10 @@ cpio_mount_load_node(
     struct cpio_mount *mnt = container_of(fs_mnt, struct cpio_mount, fs_mount);
 
     if(node_index == CPIO_ROOT_INDEX) {
-        return &mnt->root_node.fs_node;
+        backing->node_ops = &cpio_dir_node_ops;
+        backing->file_ops = &cpio_dir_file_ops;
+	backing->priv_state = &mnt->root_node;
+        return 0;
     }
 
     struct cpio_header hdr;
@@ -90,7 +94,7 @@ cpio_mount_load_node(
     while(!found) {
         res = cpio_read_header(mnt, offset, &hdr);
         if(res) {
-            return NULL;
+            return res;
         }
 
         if(hdr.binary.c_ino == node_index) {
@@ -108,18 +112,19 @@ cpio_mount_load_node(
     }
 
     if(!found) {
-        return NULL;
+        return -ENXIO;
     }
 
     struct cpio_file_node *node = kmalloc(sizeof(struct cpio_file_node));
     if(node == NULL) {
-        return NULL;
+        return -ENOMEM;
     }
     memset(node, 0, sizeof(struct cpio_file_node));
 
     node->mnt = mnt;
-    node->fs_node.backing.file_ops = &cpio_file_ops;
-    node->fs_node.backing.node_ops = &cpio_node_ops;
+    backing->file_ops = &cpio_file_ops;
+    backing->node_ops = &cpio_node_ops;
+    backing->priv_state = node;
 
     node->header_offset = offset;
     node->data_offset =
@@ -128,23 +133,23 @@ cpio_mount_load_node(
         + ((hdr.binary.c_namesize + 1) & ~1);
     node->data_size = hdr.binary.c_filesize[1] + ((size_t)hdr.binary.c_filesize[0]<<16);
 
-    return &node->fs_node;
+    return 0;
 }
 
 static int
 cpio_mount_unload_node(
         struct fs_mount *fs_mount,
-        struct fs_node *fs_node)
+	size_t index,
+        struct fs_node_backing *backing)
 {
     struct cpio_mount *mnt =
         container_of(fs_mount, struct cpio_mount, fs_mount);
 
-    if(&mnt->root_node == container_of(fs_node, struct cpio_dir_node, fs_node)) {
+    if(&mnt->root_node == backing->priv_state) {
         return 0;
     }
 
-    struct cpio_file_node *node =
-        container_of(fs_node, struct cpio_file_node, fs_node);
+    struct cpio_file_node *node = backing->priv_state;
 
     kfree(node);
 
@@ -207,10 +212,7 @@ cpio_mount_file(
     mnt->type = CPIO_BINARY; // For now, this is all we will support
 
     mnt->root_node.mnt = mnt;
-    mnt->root_node.fs_node.mount = &mnt->fs_mount;
-    mnt->root_node.fs_node.backing.node_ops = &cpio_dir_node_ops;
-    mnt->root_node.fs_node.backing.file_ops = &cpio_dir_file_ops;
-    
+   
     printk("Initialized CPIO Filesystem Mount\n");
     
     *out_ptr = &mnt->fs_mount;

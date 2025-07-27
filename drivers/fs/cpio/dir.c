@@ -21,8 +21,7 @@ cpio_dir_begin(
         return -EINVAL;
     }
 
-    struct cpio_dir_node *dir_node =
-        container_of(fs_node, struct cpio_dir_node, fs_node);
+    struct cpio_dir_node *dir_node = fs_node->backing.priv_state;
     struct cpio_mount *mount = dir_node->mnt;
 
     struct cpio_header hdr;
@@ -72,8 +71,7 @@ cpio_dir_next(
         return -EINVAL;
     }
 
-    struct cpio_dir_node *dir_node =
-        container_of(fs_node, struct cpio_dir_node, fs_node);
+    struct cpio_dir_node *dir_node = fs_node->backing.priv_state;
     struct cpio_mount *mount = dir_node->mnt;
 
     struct cpio_header hdr;
@@ -155,8 +153,7 @@ cpio_dir_readname(
         return -EINVAL;
     }
 
-    struct cpio_dir_node *dir_node =
-        container_of(fs_node, struct cpio_dir_node, fs_node);
+    struct cpio_dir_node *dir_node = fs_node->backing.priv_state;
     struct cpio_mount *mount = dir_node->mnt;
 
     struct cpio_header hdr;
@@ -197,8 +194,7 @@ cpio_dir_node_lookup(
 {
     int res;
 
-    struct cpio_dir_node *dir_node =
-        container_of(fs_node, struct cpio_dir_node, fs_node);
+    struct cpio_dir_node *dir_node = fs_node->backing.priv_state;
     struct cpio_mount *mount = dir_node->mnt;
 
     uintptr_t offset = 0;

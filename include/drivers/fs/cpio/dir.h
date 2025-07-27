@@ -13,7 +13,6 @@ struct cpio_mount;
 
 struct cpio_dir_node
 {
-    struct fs_node fs_node;
     struct cpio_mount *mnt;
 };
 

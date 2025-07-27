@@ -34,8 +34,7 @@ cpio_node_read_page(
 {
     int res;
 
-    struct cpio_file_node *cpio_file =
-        container_of(node, struct cpio_file_node, fs_node);
+    struct cpio_file_node *cpio_file = node->backing.priv_state;
 
     uintptr_t offset =
         pfn << CPIO_FILE_PAGE_ORDER;
@@ -76,8 +75,7 @@ cpio_node_write_page(
 {
     int res;
 
-    struct cpio_file_node *cpio_file =
-        container_of(node, struct cpio_file_node, fs_node);
+    struct cpio_file_node *cpio_file = node->backing.priv_state;
 
     uintptr_t offset =
         pfn << CPIO_FILE_PAGE_ORDER;
@@ -111,8 +109,7 @@ cpio_node_getattr(
         int attr,
         size_t *value)
 {
-    struct cpio_file_node *cpio_file =
-        container_of(node, struct cpio_file_node, fs_node);
+    struct cpio_file_node *cpio_file = node->backing.priv_state;
 
     switch(attr) {
         case FS_NODE_ATTR_DATA_SIZE:
