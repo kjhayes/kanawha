@@ -643,7 +643,6 @@ fb_dev_fs_on_register(
 
     size_t buffer_inode;
 
-    fbfs->buffer_vfs_node.fs_node.unload = NULL;
     fbfs->buffer_vfs_node.fs_node.node_ops = &fb_dev_buffer_fs_node_ops;
     fbfs->buffer_vfs_node.fs_node.file_ops = &fb_dev_buffer_fs_file_ops;
 
@@ -659,7 +658,6 @@ fb_dev_fs_on_register(
 
     size_t mode_set_inode;
 
-    fbfs->mode_set_vfs_node.fs_node.unload = NULL;
     fbfs->mode_set_vfs_node.fs_node.node_ops = &fb_dev_mode_set_fs_node_ops;
     fbfs->mode_set_vfs_node.fs_node.file_ops = &fb_dev_mode_set_fs_file_ops;
 
@@ -681,7 +679,6 @@ fb_dev_fs_on_register(
 
     size_t mode_info_inode;
 
-    fbfs->mode_info_vfs_node.fs_node.unload = NULL;
     fbfs->mode_info_vfs_node.fs_node.node_ops = &fb_dev_mode_info_fs_node_ops;
     fbfs->mode_info_vfs_node.fs_node.file_ops = &fb_dev_mode_info_fs_file_ops;
 

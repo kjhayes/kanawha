@@ -10,12 +10,7 @@ static int
 fs_unload_node(
         struct fs_node *node)
 {
-    if(node->unload != NULL) {
-        DEBUG_ASSERT(KERNEL_ADDR(node->unload));
-        return (*node->unload)(node);
-    } else {
-        return fs_mount_unload_node(node->mount, node);
-    }
+    return fs_mount_unload_node(node->mount, node);
 }
 
 int

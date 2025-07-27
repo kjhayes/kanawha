@@ -92,7 +92,6 @@ rand_dev_fs_on_register(
 
     rdfs->dev = dev;
 
-    rdfs->vfs_node.fs_node.unload = NULL;
     rdfs->vfs_node.fs_node.node_ops = &rand_dev_fs_node_ops;
     rdfs->vfs_node.fs_node.file_ops = &rand_dev_fs_file_ops;
 

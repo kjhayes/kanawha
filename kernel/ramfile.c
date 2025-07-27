@@ -401,7 +401,6 @@ create_ramfile(
 
     ramfile->page_refs = 0;
 
-    ramfile->vfs_node.fs_node.unload = NULL;
     ramfile->vfs_node.fs_node.file_ops = &ramfile_fs_file_ops;
     ramfile->vfs_node.fs_node.node_ops = &ramfile_fs_node_ops;
 

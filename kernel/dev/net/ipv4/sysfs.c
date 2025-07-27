@@ -39,7 +39,6 @@ ipv4_dev_fs_on_register(
 
     edfs->dev = dev;
 
-    edfs->vfs_node.fs_node.unload = NULL;
     edfs->vfs_node.fs_node.file_ops = &ipv4_dev_fs_file_ops;
     edfs->vfs_node.fs_node.node_ops = &ipv4_dev_fs_node_ops;
 

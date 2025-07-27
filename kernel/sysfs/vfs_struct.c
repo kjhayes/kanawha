@@ -66,7 +66,6 @@ __vfs_struct_add_field(
     field->raw_write = raw_write;
     field->state = state;
 
-    field->vfs_node.fs_node.unload = NULL;
     field->vfs_node.fs_node.node_ops = &vfs_field_node_ops;
     field->vfs_node.fs_node.file_ops = &vfs_field_file_ops;
 
@@ -252,7 +251,6 @@ vfs_create_struct_node(
 
     node->mnt = mnt;
 
-    node->vfs_node.fs_node.unload = NULL;
     node->vfs_node.fs_node.node_ops = &vfs_struct_node_node_ops;
     node->vfs_node.fs_node.file_ops = &vfs_struct_node_file_ops;
 

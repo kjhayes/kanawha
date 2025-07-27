@@ -88,7 +88,6 @@ register_kbd(
 
     kbd->vfs_node.fs_node.file_ops = &kbd_fs_file_ops;
     kbd->vfs_node.fs_node.node_ops = &kbd_fs_node_ops;
-    kbd->vfs_node.fs_node.unload = NULL;
 
 
     // Assign the node a fs_node index

@@ -57,7 +57,6 @@ blk_dev_fs_on_register(
     }
     node->sectors_per_page = 1ULL<<(node->page_order - node->sector_order);
 
-    node->vfs_node.fs_node.unload = NULL;
     node->vfs_node.fs_node.node_ops = &blk_dev_fs_node_ops;
     node->vfs_node.fs_node.file_ops = &blk_dev_fs_file_ops;
 

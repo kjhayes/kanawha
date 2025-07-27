@@ -171,7 +171,6 @@ char_dev_sysfs_on_register(
     }
     node->dev = dev;
 
-    node->vfs_node.fs_node.unload = NULL;
     node->vfs_node.fs_node.node_ops = &char_dev_fs_node_ops;
     node->vfs_node.fs_node.file_ops = &char_dev_fs_file_ops;
 

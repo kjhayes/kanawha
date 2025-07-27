@@ -277,7 +277,6 @@ pipe_fs_mount_load_node(
 
     pipe->fs_node.node_ops = &pipe_fs_node_ops;
     pipe->fs_node.file_ops = &pipe_fs_file_ops;
-    pipe->fs_node.unload = NULL;
 
     res = waitqueue_init(&pipe->read_queue);
     if(res) {

@@ -148,7 +148,6 @@ klog_init_fs_mount(void)
 
     klog_fs_mount = mnt;
 
-    klog_fs_node.fs_node.unload = NULL;
     klog_fs_node.fs_node.file_ops = &klog_fs_file_ops;
     klog_fs_node.fs_node.node_ops = &klog_fs_node_ops;
 
@@ -161,7 +160,6 @@ klog_init_fs_mount(void)
         return res;
     }
 
-    kmem_free_fs_node.fs_node.unload = NULL;
     kmem_free_fs_node.fs_node.file_ops = &kmem_free_fs_file_ops;
     kmem_free_fs_node.fs_node.node_ops = &kmem_free_fs_node_ops;
 
