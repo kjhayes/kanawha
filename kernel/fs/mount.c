@@ -56,9 +56,6 @@ fs_mount_get_node(
         spinlock_init(&fs_node->page_lock);
         ptree_init(&fs_node->page_cache);
 
-        irq_lock_init(&fs_node->path_lock);
-        ilist_init(&fs_node->path_list);
-
         fs_node->mount = mnt;
         fs_node->refcount = 1;
 
@@ -102,8 +99,6 @@ fs_mount_put_node(
     }
     else if(node->refcount == 1) {
         // We're removing the last reference
-
-        DEBUG_ASSERT(ilist_empty(&node->path_list));
 
         res = fs_node_flush_all_fs_pages(node);
         if(res) {

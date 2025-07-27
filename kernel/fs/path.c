@@ -50,10 +50,7 @@ assign_fs_node_to_fs_path(
     if(res) {
         return res;
     }
-    fs_node_path_lock_acquire(node);
-    ilist_push_tail(&node->path_list, &path->fs_node_node);
     path->fs_node = node;
-    fs_node_path_lock_release(node);
     return 0;
 }
 
@@ -266,10 +263,6 @@ __fs_path_put(struct fs_path *path)
     } else {
         ilist_remove(&root_fs_path_list, &path->child_node);
     }
-
-    fs_node_path_lock_acquire(path->fs_node);
-    ilist_remove(&path->fs_node->path_list, &path->fs_node_node);
-    fs_node_path_lock_release(path->fs_node);
 
     fs_node_put(path->fs_node);
     if(path->name) {

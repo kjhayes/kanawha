@@ -154,25 +154,9 @@ struct fs_node
     spinlock_t page_lock;
     struct ptree page_cache;
 
-    irq_lock_t path_lock;
-    ilist_t path_list;
-
     unsigned long refcount;
     struct ptree_node cache_node;
 };
-
-static inline void
-fs_node_path_lock_acquire(
-        struct fs_node *node)
-{
-    irq_lock_acquire(&node->path_lock);
-}
-static inline void
-fs_node_path_lock_release(
-        struct fs_node *node)
-{
-    irq_lock_release(&node->path_lock);
-}
 
 #define FS_PAGE_FLAG_DIRTY (1ULL<<0)
 struct fs_page
