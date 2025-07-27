@@ -30,7 +30,7 @@ acpi_fs_node_read_page(
     int res;
 
     struct acpi_table *ptr =
-        container_of(fs_node, struct acpi_table, sysfs_node.fs_node);
+        container_of(fs_node->backing.priv_state, struct acpi_table, sysfs_node);
 
     uintptr_t offset = pfn << ACPI_SYSFS_PAGE_ORDER;
     ssize_t room_left = ptr->table->hdr.length - offset;
@@ -60,7 +60,7 @@ acpi_fs_node_getattr(
     int res;
 
     struct acpi_table *ptr =
-        container_of(fs_node, struct acpi_table, sysfs_node.fs_node);
+        container_of(fs_node->backing.priv_state, struct acpi_table, sysfs_node);
 
     switch(attr) {
         case FS_NODE_ATTR_DATA_SIZE:
@@ -115,8 +115,8 @@ do_register_table(
 
     DEBUG_ASSERT(KERNEL_ADDR(acpi_fs_mount));
 
-    table->sysfs_node.fs_node.backing.node_ops = &acpi_fs_node_ops;
-    table->sysfs_node.fs_node.backing.file_ops = &acpi_fs_file_ops;
+    table->sysfs_node.fs_node_ops = &acpi_fs_node_ops;
+    table->sysfs_node.fs_file_ops = &acpi_fs_file_ops;
 
     size_t inode;
     res = vfs_mount_insert_node(
