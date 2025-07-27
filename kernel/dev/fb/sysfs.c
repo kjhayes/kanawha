@@ -48,7 +48,7 @@ fb_dev_buffer_fs_node_load_page(
 {
     int res;
     struct fb_dev_fs_node *fbfs =
-        container_of(fs_node, struct fb_dev_fs_node, buffer_vfs_node.fs_node);
+        container_of(fs_node->backing.priv_state, struct fb_dev_fs_node, buffer_vfs_node);
 
     DEBUG_ASSERT(KERNEL_ADDR(fbfs));
     DEBUG_ASSERT(KERNEL_ADDR(fbfs->dev));
@@ -136,7 +136,7 @@ fb_dev_buffer_fs_node_unload_page(
 {
     int res;
     struct fb_dev_fs_node *fbfs =
-        container_of(fs_node, struct fb_dev_fs_node, buffer_vfs_node.fs_node);
+        container_of(fs_node->backing.priv_state, struct fb_dev_fs_node, buffer_vfs_node);
 
     DEBUG_ASSERT(KERNEL_ADDR(fbfs));
     DEBUG_ASSERT(KERNEL_ADDR(fbfs->dev));
@@ -178,7 +178,7 @@ fb_dev_buffer_fs_node_flush_page(
 {
     int res;
     struct fb_dev_fs_node *fbfs =
-        container_of(fs_node, struct fb_dev_fs_node, buffer_vfs_node.fs_node);
+        container_of(fs_node->backing.priv_state, struct fb_dev_fs_node, buffer_vfs_node);
     DEBUG_ASSERT(KERNEL_ADDR(fbfs));
     DEBUG_ASSERT(KERNEL_ADDR(fbfs->dev));
 
@@ -217,7 +217,7 @@ fb_dev_buffer_fs_node_getattr(
 {
     int res;
     struct fb_dev_fs_node *fbfs =
-        container_of(fs_node, struct fb_dev_fs_node, buffer_vfs_node.fs_node);
+        container_of(fs_node->backing.priv_state, struct fb_dev_fs_node, buffer_vfs_node);
     DEBUG_ASSERT(KERNEL_ADDR(fbfs));
     DEBUG_ASSERT(KERNEL_ADDR(fbfs->dev));
 
@@ -272,7 +272,7 @@ fb_dev_buffer_fs_file_flush(
         return -ENXIO;
     }
     struct fb_dev_fs_node *fbfs =
-        container_of(fs_node, struct fb_dev_fs_node, buffer_vfs_node.fs_node);
+        container_of(fs_node->backing.priv_state, struct fb_dev_fs_node, buffer_vfs_node);
     DEBUG_ASSERT(KERNEL_ADDR(fbfs));
     DEBUG_ASSERT(KERNEL_ADDR(fbfs->dev));
 
@@ -339,7 +339,7 @@ fb_dev_mode_set_fs_file_write(
         return -ENXIO;
     }
     struct fb_dev_fs_node *fbfs =
-        container_of(fs_node, struct fb_dev_fs_node, mode_set_vfs_node.fs_node);
+        container_of(fs_node->backing.priv_state, struct fb_dev_fs_node, mode_set_vfs_node);
     DEBUG_ASSERT(KERNEL_ADDR(fbfs));
     DEBUG_ASSERT(KERNEL_ADDR(fbfs->dev));
 
@@ -385,7 +385,7 @@ fb_dev_mode_set_fs_file_read(
         return -ENXIO;
     }
     struct fb_dev_fs_node *fbfs =
-        container_of(fs_node, struct fb_dev_fs_node, mode_set_vfs_node.fs_node);
+        container_of(fs_node->backing.priv_state, struct fb_dev_fs_node, mode_set_vfs_node);
     DEBUG_ASSERT(KERNEL_ADDR(fbfs));
     DEBUG_ASSERT(KERNEL_ADDR(fbfs->dev));
 
@@ -463,7 +463,7 @@ fb_dev_mode_info_fs_node_setattr(
         size_t value)
 {
     struct fb_dev_fs_node *fbfs =
-        container_of(node, struct fb_dev_fs_node, mode_info_vfs_node.fs_node);
+        container_of(node->backing.priv_state, struct fb_dev_fs_node, mode_info_vfs_node);
     DEBUG_ASSERT(KERNEL_ADDR(fbfs));
     DEBUG_ASSERT(KERNEL_ADDR(fbfs->dev));
 
@@ -490,7 +490,7 @@ fb_dev_mode_info_fs_node_getattr(
     int res;
 
     struct fb_dev_fs_node *fbfs =
-        container_of(node, struct fb_dev_fs_node, mode_info_vfs_node.fs_node);
+        container_of(node->backing.priv_state, struct fb_dev_fs_node, mode_info_vfs_node);
     DEBUG_ASSERT(KERNEL_ADDR(fbfs));
     DEBUG_ASSERT(KERNEL_ADDR(fbfs->dev));
 
@@ -525,7 +525,7 @@ fb_dev_mode_info_fs_file_write(
     }
 
     struct fb_dev_fs_node *fbfs =
-        container_of(node, struct fb_dev_fs_node, mode_info_vfs_node.fs_node);
+        container_of(node->backing.priv_state, struct fb_dev_fs_node, mode_info_vfs_node);
     DEBUG_ASSERT(KERNEL_ADDR(fbfs));
     DEBUG_ASSERT(KERNEL_ADDR(fbfs->dev));
 
@@ -558,7 +558,7 @@ fb_dev_mode_info_fs_file_read(
         return -ENXIO;
     }
     struct fb_dev_fs_node *fbfs =
-        container_of(node, struct fb_dev_fs_node, mode_info_vfs_node.fs_node);
+        container_of(node->backing.priv_state, struct fb_dev_fs_node, mode_info_vfs_node);
 
     DEBUG_ASSERT(KERNEL_ADDR(fbfs));
     DEBUG_ASSERT(KERNEL_ADDR(fbfs->dev));
@@ -643,8 +643,8 @@ fb_dev_fs_on_register(
 
     size_t buffer_inode;
 
-    fbfs->buffer_vfs_node.fs_node.backing.node_ops = &fb_dev_buffer_fs_node_ops;
-    fbfs->buffer_vfs_node.fs_node.backing.file_ops = &fb_dev_buffer_fs_file_ops;
+    fbfs->buffer_vfs_node.fs_node_ops = &fb_dev_buffer_fs_node_ops;
+    fbfs->buffer_vfs_node.fs_file_ops = &fb_dev_buffer_fs_file_ops;
 
     res = vfs_mount_insert_node_and_link_root(
             fb_dev_fs_mount,
@@ -658,8 +658,8 @@ fb_dev_fs_on_register(
 
     size_t mode_set_inode;
 
-    fbfs->mode_set_vfs_node.fs_node.backing.node_ops = &fb_dev_mode_set_fs_node_ops;
-    fbfs->mode_set_vfs_node.fs_node.backing.file_ops = &fb_dev_mode_set_fs_file_ops;
+    fbfs->mode_set_vfs_node.fs_node_ops = &fb_dev_mode_set_fs_node_ops;
+    fbfs->mode_set_vfs_node.fs_file_ops = &fb_dev_mode_set_fs_file_ops;
 
     res = vfs_mount_insert_node(
             fb_dev_fs_mount,
@@ -679,8 +679,8 @@ fb_dev_fs_on_register(
 
     size_t mode_info_inode;
 
-    fbfs->mode_info_vfs_node.fs_node.backing.node_ops = &fb_dev_mode_info_fs_node_ops;
-    fbfs->mode_info_vfs_node.fs_node.backing.file_ops = &fb_dev_mode_info_fs_file_ops;
+    fbfs->mode_info_vfs_node.fs_node_ops = &fb_dev_mode_info_fs_node_ops;
+    fbfs->mode_info_vfs_node.fs_file_ops = &fb_dev_mode_info_fs_file_ops;
 
     res = vfs_mount_insert_node(
             fb_dev_fs_mount,
