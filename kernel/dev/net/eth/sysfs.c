@@ -37,8 +37,8 @@ eth_dev_fs_on_register(
 
     edfs->dev = dev;
 
-    edfs->vfs_node.fs_node.backing.file_ops = &eth_dev_fs_file_ops;
-    edfs->vfs_node.fs_node.backing.node_ops = &eth_dev_fs_node_ops;
+    edfs->vfs_node.fs_file_ops = &eth_dev_fs_file_ops;
+    edfs->vfs_node.fs_node_ops = &eth_dev_fs_node_ops;
 
     res = vfs_mount_insert_node_and_link_root(
             eth_dev_fs_mount,
@@ -72,7 +72,7 @@ eth_dev_fs_file_read(
     }
 
     struct eth_dev_fs_node *edfs =
-        container_of(fs_node, struct eth_dev_fs_node, vfs_node.fs_node);
+        container_of(fs_node->backing.priv_state, struct eth_dev_fs_node, vfs_node);
 
     if(flags & FS_FILE_READ_NON_BLOCKING) {
         return -EWOULDBLOCK;
@@ -100,7 +100,7 @@ eth_dev_fs_file_write(
     }
 
     struct eth_dev_fs_node *edfs =
-        container_of(fs_node, struct eth_dev_fs_node, vfs_node.fs_node);
+        container_of(fs_node->backing.priv_state, struct eth_dev_fs_node, vfs_node);
 
     if(flags & FS_FILE_READ_NON_BLOCKING) {
         return -EWOULDBLOCK;
