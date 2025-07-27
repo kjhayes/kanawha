@@ -83,7 +83,7 @@ mmio_8250_read_reg(
     return mmio_readb(addr);
 }
 
-static void
+static int
 mmio_8250_write_reg(
         struct uart_8250 *uart,
         reg_8250_t reg,
@@ -91,6 +91,7 @@ mmio_8250_write_reg(
 {
     uint8_t __mmio *addr = enable_reg_addr(uart, reg);
     mmio_writeb(addr, value);
+    return 0;
 }
 
 static struct uart_8250_ops

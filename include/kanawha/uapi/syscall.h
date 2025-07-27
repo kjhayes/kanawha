@@ -8,7 +8,7 @@
 typedef int syscall_id_t;
 
 #define SYSCALL_SIG_EXIT(RET,ARG)\
-RET(void)\
+RET(int)\
 ARG(int, exitcode)
 
 #define SYSCALL_SIG_OPEN(RET,ARG)\

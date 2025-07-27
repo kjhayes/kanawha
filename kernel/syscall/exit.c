@@ -7,7 +7,7 @@
 #include <kanawha/attribute.h>
 
 __noreturn
-void
+int
 syscall_exit(
         struct process *process,
         int exitcode)

@@ -25,7 +25,7 @@ RET(uint8_t)\
 ARG(reg_8250_t, reg)
 
 #define UART_8250_WRITE_REG_SIG(RET,ARG)\
-RET(void)\
+RET(int)\
 ARG(reg_8250_t, reg)\
 ARG(uint8_t, val)
 

@@ -104,7 +104,7 @@ pc_com_8250_read_reg(
     return inb(port);
 }
 
-static void
+static int
 pc_com_8250_write_reg(
         struct uart_8250 *uart,
         reg_8250_t reg,
@@ -112,6 +112,7 @@ pc_com_8250_write_reg(
 {
     pio_t port = pc_com_enable_reg_port(uart, reg);
     outb(port, value);
+    return 0;
 }
 
 static struct uart_8250_ops
