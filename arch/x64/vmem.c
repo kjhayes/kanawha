@@ -1447,7 +1447,6 @@ arch_vmem_paged_region_map(
     int res;
 
     DEBUG_ASSERT(KERNEL_ADDR(region));
-    DEBUG_ASSERT(KERNEL_ADDR(__va(phys_addr)));
 
     if(offset % X64_PT_ENTRY_REGION_SIZE ||
        size % X64_PT_ENTRY_REGION_SIZE)

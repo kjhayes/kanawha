@@ -45,4 +45,9 @@ _Static_assert(round_up_order(4) == 2, "round_up_order is incorrect!");
 _Static_assert(round_up_order(16) == 4, "round_up_order is incorrect!");
 _Static_assert(round_up_order(17) == 5, "round_up_order is incorrect!");
 
+#define MIN(x,y) (x > y ? y : x)
+#define MAX(x,y) (x < y ? y : x)
+
+#define is_pow2(x) ((x > 0) && ((x & (x-1)) == 0))
+
 #endif

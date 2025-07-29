@@ -240,9 +240,9 @@ page_alloc(order_t order, void __phys * *addr, unsigned long flags)
     DEBUG_ASSERT_MSG(KERNEL_ADDR(alloc),
             "alloc = %p",
             (void*)alloc);
-    DEBUG_ASSERT_MSG(KERNEL_ADDR(__va(*addr)),
-            "addr paddr = %p, vaddr %p",
-            (void*)*addr, (void*)__va((*addr)));
+//    DEBUG_ASSERT_MSG(KERNEL_ADDR(__va(*addr)),
+//            "addr paddr = %p, vaddr %p",
+//            (void*)*addr, (void*)__va((*addr)));
     return 0;
 }
 

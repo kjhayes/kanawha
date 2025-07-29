@@ -14,4 +14,6 @@ void pause(void) {
     arch_pause();
 }
 
+#define unreachable() __builtin_unreachable()
+
 #endif

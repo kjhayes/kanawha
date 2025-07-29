@@ -12,3 +12,7 @@ config EXT2_FS
 config RAMFS
     tristate "RAMFS"
     default y
+
+config FAT
+    tristate "FAT"
+    default y

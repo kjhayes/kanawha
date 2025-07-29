@@ -6,6 +6,7 @@
 #include <kanawha/stddef.h>
 #include <kanawha/list.h>
 #include <kanawha/page_alloc.h>
+#include <kanawha/lock.h>
 #include <kanawha/string.h>
 #include <kanawha/fs/type.h>
 #include <kanawha/fs/mount.h>
@@ -43,6 +44,8 @@ struct ramfs_page
 struct ramfs_mount
 {
     struct fs_mount fs_mount;
+
+    thread_lock_t inode_lock;
     struct ptree inode_tree;
 
     struct ramfs_node root_node;
@@ -378,11 +381,13 @@ ramfs_dir_mkfile(
 
     struct ramfs_mount *mnt = container_of(fs_node->mount, struct ramfs_mount, fs_mount);
 
+    thread_lock_acquire(&mnt->inode_lock);
     res = ptree_insert_any(&mnt->inode_tree, &child->inode_node);
     if(res) {
 	kfree(child);
 	return res;
     }
+    thread_lock_release(&mnt->inode_lock);
 
     res = ramfs_create_link(dir, child, filename);
     if(res) {
@@ -419,11 +424,13 @@ ramfs_dir_mkdir(
 
     struct ramfs_mount *mnt = container_of(fs_node->mount, struct ramfs_mount, fs_mount);
 
+    thread_lock_acquire(&mnt->inode_lock);
     res = ptree_insert_any(&mnt->inode_tree, &child->inode_node);
     if(res) {
 	kfree(child);
 	return res;
     }
+    thread_lock_release(&mnt->inode_lock);
 
     res = ramfs_create_link(dir, child, filename);
     if(res) {
@@ -541,10 +548,13 @@ ramfs_dir_unlink(
     // Decrement the references to the inode
 
     struct ramfs_mount *mnt = container_of(fs_node->mount, struct ramfs_mount, fs_mount);
+
+    thread_lock_acquire(&mnt->inode_lock);
     struct ptree_node *pnode = ptree_get(&mnt->inode_tree, inode);
     if(pnode == NULL) {
 	// Removed an invalid dirent?
 	dprintk("Failed to find inode %d\n", (int)inode);
+        thread_lock_release(&mnt->inode_lock);
 	return 0;
     }
     struct ramfs_node *linked_to = container_of(pnode, struct ramfs_node, inode_node);
@@ -552,6 +562,7 @@ ramfs_dir_unlink(
     if(!ilist_empty(&linked_to->directory)) {
 	// Cannot remove non-empty directory
 	dprintk("Cannot remove non-empty directory\n");
+        thread_lock_release(&mnt->inode_lock);
 	return -EINVAL;
     }
 
@@ -562,6 +573,8 @@ ramfs_dir_unlink(
 	ramfs_file_free_all_pages(linked_to);
 	kfree(linked_to);
     }
+    thread_lock_release(&mnt->inode_lock);
+
     return 0;
 }
 
@@ -623,10 +636,13 @@ ramfs_mount_load_node(
 	struct fs_node *fs_node)
 {
     struct ramfs_mount *mnt = container_of(fs_mount, struct ramfs_mount, fs_mount);
+
+    thread_lock_acquire(&mnt->inode_lock);
     struct ptree_node *pnode = ptree_get(&mnt->inode_tree, node_index);
     if(pnode == NULL) {
 	return -ENXIO;
     }
+    thread_lock_release(&mnt->inode_lock);
 
     struct ramfs_node *node = container_of(pnode, struct ramfs_node, inode_node);
 
@@ -644,8 +660,6 @@ ramfs_mount_unload_node(
         struct fs_node *fs_node)
 {
     struct ramfs_mount *mnt = container_of(fs_mount, struct ramfs_mount, fs_mount);
-
-    DEBUG_ASSERT(KERNEL_ADDR(ptree_get(&mnt->inode_tree, node_index)));
 
     return 0;
 }
@@ -678,6 +692,7 @@ ramfs_type_mount_special(
 
     init_fs_mount_struct(&mnt->fs_mount, &ramfs_mount_ops);
 
+    thread_lock_init(&mnt->inode_lock);
     ptree_init(&mnt->inode_tree);
 
     mnt->root_node.node_ops = &ramfs_dir_node_ops;

@@ -3,6 +3,7 @@
 
 #include <kanawha/types.h>
 #include <kanawha/pointer.h>
+#include <kanawha/assert.h>
 
 #define VMEM_MIN_PAGE_ORDER 12
 
@@ -23,12 +24,15 @@ struct arch_vmem_region
 
 static inline void *
 __va(void __phys * paddr) {
+    DEBUG_ASSERT((uintptr_t)paddr < (uintptr_t)1ULL<<CONFIG_X64_IDENTITY_MAP_ORDER);
     return (void *)(paddr + CONFIG_X64_VIRTUAL_BASE);
 }
 
 static inline void __phys *
 __pa(void * vaddr) {
-    return (void __phys *)(vaddr - CONFIG_X64_VIRTUAL_BASE);
+    void __phys *paddr = (void __phys *)(vaddr - CONFIG_X64_VIRTUAL_BASE);
+    DEBUG_ASSERT((uintptr_t)paddr < (uintptr_t)1ULL<<CONFIG_X64_IDENTITY_MAP_ORDER);
+    return paddr;
 }
 
 #endif
