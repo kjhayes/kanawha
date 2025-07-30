@@ -318,6 +318,7 @@ kfb_set_current_mode(
             MMAP_SHARED|MMAP_PROT_READ|MMAP_PROT_WRITE);
         if(mmap_res) {
             // shit shit shit shit shit shit
+            abort();
         } else {
             fb->have_buffer_data = 1;
         }
@@ -459,9 +460,9 @@ __kfb_convert_from_rgba(
             return 0;
         case FB_LAYER_FORMAT_BYTE_R3G3B2:
             *(uint8_t*)to_data =
-                    ((r >> 5) & 0x07)
-                  | ((g >> 2) & 0x38)
-                  | ((b >> 0) & 0xC0);
+                    (((r >> 5) & 0b111) << 0)
+                  | (((g >> 5) & 0b111) << 3)
+                  | (((b >> 6) & 0b011) << 6);
             return 0;
         case FB_LAYER_FORMAT_VGA_ATTR:
             *(uint8_t*)to_data =
@@ -553,13 +554,6 @@ kfb_blit_image_with_transform_onto_layer(
         return 0;
     }
 
-    if(offset_x + width > layer_info->width) {
-        return -EINVAL;
-    }
-    if(offset_y + height > layer_info->height) {
-        return -EINVAL;
-    }
-
     if(image->resx == 0 || image->resy == 0) {
         return -EINVAL;
     }
@@ -567,109 +561,77 @@ kfb_blit_image_with_transform_onto_layer(
         return -EINVAL;
     }
 
-    int x_sample, y_sample;
-    int x_fill, y_fill;
+    double px_step = 1.0 / (double)width;
+    double py_step = 1.0 / (double)height;
 
-    if(image->resx == width) {
-        x_sample = 1;
-        x_fill = 1;
-    } else if(image->resx < width) {
-        x_sample = 1;
-        x_fill = width / image->resx;
-    } else {
-        x_sample = image->resx / width;
-        x_fill = 1;
-    }
-
-    if(image->resy == height) {
-        y_sample = 1;
-        y_fill = 1;
-    } else if(image->resy < height) {
-        y_sample = 1;
-        y_fill = height / image->resy;
-    } else {
-        y_sample = image->resy / height;
-        y_fill = 1;
-    }
-
-#undef FROM_OFFSET
-#define FROM_OFFSET(__x,__y) image->offset + ((__x)*image->stride) + ((__y)*image->stride*image->resx)
-#undef TO_OFFSET
-#define TO_OFFSET(__x, __y) layer_info->offset + ((__x)*layer_info->stride) + ((__y)*layer_info->stride*layer_info->width)
-
-    if(x_fill == 0 || y_fill == 0) {
+    if(px_step <= 0.0 || py_step <= 0.0) {
         return -EINVAL;
     }
 
-    for(size_t write_y = offset_y; write_y < offset_y + height; write_y += y_fill) {
-      for(size_t write_x = offset_x; write_x < offset_x + width; write_x += x_fill) {
+#undef FROM_OFFSET
+#define FROM_OFFSET(__px,__py) \
+    image->offset + \
+    (((size_t)(__px * image->resx))*image->stride) + \
+    (((size_t)(__py * image->resy))*image->stride*image->resx)
 
-          size_t num_sampled = 0;
-          uint32_t sampled_rgba = 0;
+#undef TO_OFFSET
+#define TO_OFFSET(__x, __y) \
+    layer_info->offset + \
+    (((size_t)(__x))*layer_info->stride) + \
+    (((size_t)(__y))*layer_info->stride*layer_info->width)
 
-          size_t read_y_start = (write_y - offset_y)/y_fill; 
-          size_t read_x_start = (write_x - offset_x)/x_fill;
+    for(size_t y = 0; y < height; y++) {
+      for(size_t x = 0; x < width; x++) {
 
-          for(size_t read_y = read_y_start; read_y < read_y_start + y_sample; read_y++) {
-              for(size_t read_x = read_x_start; read_x < read_x_start + x_sample; read_x++) {
-                  size_t from_offset = FROM_OFFSET(read_x, read_y);
-                  if(from_offset >= image->data_size) {
-                      continue;
-                  }
-                  uint8_t *from_data = &image->data[from_offset];
-                  uint32_t cur_rgba;
+          uint32_t cur_rgba = 0;
 
-                  int res = __kfb_convert_to_rgba(
-                      image->format,
-                      from_data,
-                      (uint8_t*)&cur_rgba);
-                  if(res) {
-                      continue;
-                  }
+          double px = (double)x / (double)width;
+          double py = (double)y / (double)height;
 
-                  __kfb_merge_rgba(
-                          &sampled_rgba,
-                          cur_rgba,
-                          num_sampled);
-                  num_sampled++;
-              }
+          size_t from_offset = FROM_OFFSET(px, py);
+          if((from_offset + layer_info->stride) > image->data_size) {
+              continue;
           }
+          uint8_t *from_data = &image->data[from_offset];
 
-          if(num_sampled == 0) {
+          int res = __kfb_convert_to_rgba(
+              image->format,
+              from_data,
+              (uint8_t*)&cur_rgba);
+          if(res) {
               continue;
           }
 
           if(xform) {
               kfb_rgba_t to_xform = {
-                  .r = (sampled_rgba) & 0xFF,
-                  .g = (sampled_rgba>>8) & 0xFF,
-                  .b = (sampled_rgba>>16) & 0xFF,
-                  .a = (sampled_rgba>>24) & 0xFF,
+                  .r = (cur_rgba) & 0xFF,
+                  .g = (cur_rgba>>8) & 0xFF,
+                  .b = (cur_rgba>>16) & 0xFF,
+                  .a = (cur_rgba>>24) & 0xFF,
               };
               to_xform = (*xform)(to_xform, xform_state);
-              sampled_rgba =
+              cur_rgba =
                   (uint32_t)to_xform.r |
                   (((uint32_t)to_xform.g&0xFF)<<8) |
                   (((uint32_t)to_xform.b&0xFF)<<16) |
                   (((uint32_t)to_xform.a&0xFF)<<24);
           }
          
-          if(((sampled_rgba>>24)&0xFF) > 0) {
-              size_t cur_fill_x = x_fill;
-              size_t cur_fill_y = y_fill;
-
-              for(size_t fy = 0; fy < cur_fill_y; fy++) {
-                  for(size_t fx = 0; fx < cur_fill_x; fx++) {
-                      size_t to_offset = TO_OFFSET(write_x + fx, write_y + fy);
-                      if(to_offset >= fb->current_mode_info->buffer_size) {
-                          continue;
-                      }
-                      int res = __kfb_convert_from_rgba(
-                          &sampled_rgba,
-                          layer_info->format,
-                          &fb->buffer_data[to_offset]);
-                  }
+          if(((cur_rgba>>24)&0xFF) > 0) {
+              size_t to_offset = TO_OFFSET(offset_x + x, offset_y + y);
+              if(offset_x + x >= layer_info->width) {
+                  break;
               }
+              if(offset_y + y >= layer_info->height) {
+                  break;
+              }
+              if(to_offset >= fb->current_mode_info->buffer_size) {
+                  continue;
+              }
+              int res = __kfb_convert_from_rgba(
+                  &cur_rgba,
+                  layer_info->format,
+                  &fb->buffer_data[to_offset]);
           }
       }
     }
