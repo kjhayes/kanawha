@@ -7,6 +7,9 @@
 char *strerror(
         int errnum)
 {
+    if(errnum < 0) {
+	errnum = -errnum;
+    }
     switch(errnum) 
     {
 

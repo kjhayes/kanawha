@@ -7,8 +7,15 @@
 #endif
 
 #if !defined(__JMP_BUFSIZE) || !defined(__SIGJMP_BUFSIZE)
-#error "Architecture did not define __JMP_BUFSIZE or __SIGJMP_BUFSIZE!"
+
+// TODO
+
+#ifndef __ASSEMBLER__
+typedef void *jmp_buf[0];
+typedef void *sigjmp_buf[0];
 #endif
+
+#else
 
 #ifndef __ASSEMBLER__
 
@@ -24,5 +31,5 @@ int    sigsetjmp(sigjmp_buf, int);
 int   _setjmp(jmp_buf);
 
 #endif
-
+#endif
 #endif
