@@ -437,7 +437,7 @@ ext2_dir_mkdir(
 
     struct ext2_fs_node *parent_node = parent_fs_node->backing.priv_state;
 
-    printk("ext2_dir_mkdir: %s\n",
+    dprintk("ext2_dir_mkdir: %s\n",
             filename);
 
     size_t group_num = ext2_fs_node_to_group_num(parent_node);
