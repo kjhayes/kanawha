@@ -164,8 +164,8 @@ page_alloc_get_allocator(
     ilist_node_t *node;
     struct page_allocator *alloc;
 
-    DEBUG_ASSERT(order >= PAGE_ALLOC_MIN_ORDER);
-    DEBUG_ASSERT(order <= PAGE_ALLOC_MAX_ORDER);
+    DEBUG_ASSERT_MSG(order >= PAGE_ALLOC_MIN_ORDER, "Cannot allocate page of size=%d", (s_t)order);
+    DEBUG_ASSERT_MSG(order <= PAGE_ALLOC_MAX_ORDER, "Cannot allocate page of size=%d", (s_t)order);
 
     ilist_for_each(node, &page_allocator_list) {
         alloc = container_of(node, struct page_allocator, list_node);

@@ -159,6 +159,53 @@ int strncmp(const char *lhs, const char *rhs, size_t n)
     return 0;
 }
 
+static char
+__to_upper(char c) {
+    if('a' <= c && c <= 'z') {
+	return c + ('A' - 'a');
+    }
+    return c;
+}
+
+int strcasecmp(const char *lhs, const char *rhs, size_t n)
+{
+    do {
+        unsigned char diff = (unsigned char)__to_upper(*lhs) - (unsigned char)__to_upper(*rhs);
+        if(diff != 0) {
+            return diff;
+        }
+
+        if(*lhs == '\0' || *rhs == '\0') {
+            break;
+        }
+
+        lhs++;
+        rhs++;
+
+    } while(1);
+
+    return 0;
+}
+int strncasecmp(const char *lhs, const char *rhs, size_t n)
+{
+    while(n > 0) {
+        n--;
+        unsigned char diff = (unsigned char)__to_upper(*lhs) - (unsigned char)__to_upper(*rhs);
+        if(diff != 0) {
+            return diff;
+        }
+
+        if(*lhs == '\0' || *rhs == '\0') {
+            break;
+        }
+
+        lhs++;
+        rhs++;
+    }
+
+    return 0;
+}
+
 char *
 kstrdup(const char *str)
 {

@@ -43,5 +43,7 @@ ext2_file_file_ops = {
     .dir_begin = fs_file_cannot_dir_begin,
     .dir_readattr = fs_file_cannot_dir_readattr,
     .dir_readname = fs_file_cannot_dir_readname,
+
+    .poll = fs_file_cannot_poll,
 };
 

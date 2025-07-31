@@ -49,6 +49,10 @@ cpio_node_read_page(
 
     void *original_buf = buf;
 
+    DEBUG_ASSERT(KERNEL_ADDR(cpio_file));
+    DEBUG_ASSERT(KERNEL_ADDR(cpio_file->mnt));
+    DEBUG_ASSERT(KERNEL_ADDR(cpio_file->mnt->backing_file));
+
     res = fs_node_paged_read(
             cpio_file->mnt->backing_file,
             backing_offset,

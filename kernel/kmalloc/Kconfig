@@ -4,8 +4,8 @@ choice
     default KMALLOC_KHEAP
     config KMALLOC_KHEAP
         bool "Heap Allocator"
-    config KMALLOC_DEBUG_PAGED
-        bool "Debug Paged Allocator"
-        depends on DEBUGGING
+#    config KMALLOC_DEBUG_PAGED
+#        bool "Debug Paged Allocator"
+#        depends on DEBUGGING
 endchoice
 

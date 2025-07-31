@@ -2,6 +2,7 @@
 #define __KANAWHA__KMALLOC_H__
 
 #include <kanawha/types.h>
+#include <kanawha/string.h>
 
 #define KMALLOC_ALIGN_ORDER 4
 
@@ -14,5 +15,16 @@ int kfree_specific(void *addr, size_t size);
 // for the architecture and track the size internally
 void * kmalloc(size_t size);
 void kfree(void * addr);
+
+// Same as kmalloc but zeros the memory on success
+static inline void *
+kzmalloc(size_t size)
+{
+    void *alloc = kmalloc(size);
+    if(alloc != NULL) {
+	memset(alloc, 0, size);
+    }
+    return alloc;
+}
 
 #endif
