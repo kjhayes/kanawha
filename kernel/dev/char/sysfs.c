@@ -164,7 +164,7 @@ char_dev_sysfs_on_register(
         struct char_dev *dev)
 {
     int res;
-    struct char_dev_fs_node *node = kmalloc(sizeof(*node));
+    struct char_dev_fs_node *node = kmalloc(sizeof(*node), KM_KERNEL);
     if(node == NULL) {
         wprintk("Failed to register character device with sysfs!\n");
         return;

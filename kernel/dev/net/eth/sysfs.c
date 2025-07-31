@@ -29,7 +29,7 @@ eth_dev_fs_on_register(
 {
     int res;
 
-    struct eth_dev_fs_node *edfs = kmalloc(sizeof(*edfs));
+    struct eth_dev_fs_node *edfs = kmalloc(sizeof(*edfs), KM_KERNEL);
     if(edfs == NULL) {
         return;
     }

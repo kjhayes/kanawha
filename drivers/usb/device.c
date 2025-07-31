@@ -26,6 +26,7 @@ usb_host_register_device(
     if(res) {
         wprintk("Failed to get device descriptor! (err=%s)\n",
                 errnostr(res));
+	return res;
     }
 
     printk("Descriptor= 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x\n",
@@ -61,6 +62,7 @@ usb_device_control_transfer(
         void __phys *buffer,
         size_t buflen)
 {
+    int res;
     int trt;
     int data_dir;
     int status_dir;
@@ -76,6 +78,8 @@ usb_device_control_transfer(
         status_dir = USB_STATUS_STAGE_DIR_OUT;
     }
 
+    printk("USB Status Stage\n");
+
     struct usb_transfer *setup;
     setup = usb_device_create_setup_stage_transfer(
             device,
@@ -90,9 +94,22 @@ usb_device_control_transfer(
         return -EINVAL;
     }
 
-    // TODO Launch and Await Setup Transfer
+    res = usb_transfer_launch(setup);
+    if(res) {
+	wprintk("Failed to launch USB setup stage transfer (err=%s)\n", errnostr(res));
+	usb_device_destroy_transfer(device, setup);
+	return res;
+    }
+    res = usb_transfer_await(setup);
+    if(res) {
+	wprintk("Failed to await USB setup stage transfer (err=%s)\n", errnostr(res));
+	usb_device_destroy_transfer(device, setup);
+	return res;
+    }
 
     usb_device_destroy_transfer(device, setup);
+
+    printk("USB Data Stage\n");
 
     struct usb_transfer *data;
     data = usb_device_create_data_stage_transfer(
@@ -105,9 +122,22 @@ usb_device_control_transfer(
         return -EINVAL;
     }
 
-    // TODO Launch and Await Data Transfer
+    res = usb_transfer_launch(data);
+    if(res) {
+	wprintk("Failed to launch USB data stage transfer (err=%s)\n", errnostr(res));
+	usb_device_destroy_transfer(device, data);
+	return res;
+    }
+    res = usb_transfer_await(data);
+    if(res) {
+	wprintk("Failed to await USB data stage transfer (err=%s)\n", errnostr(res));
+	usb_device_destroy_transfer(device, data);
+	return res;
+    }
 
     usb_device_destroy_transfer(device, data);
+
+    printk("USB Status Stage\n");
 
     struct usb_transfer *status;
     status = usb_device_create_status_stage_transfer(
@@ -118,7 +148,18 @@ usb_device_control_transfer(
         return -EINVAL;
     }
 
-    // TODO Launch and Await Status Transfer
+    res = usb_transfer_launch(status);
+    if(res) {
+	wprintk("Failed to launch USB status stage transfer (err=%s)\n", errnostr(res));
+	usb_device_destroy_transfer(device, status);
+	return res;
+    }
+    res = usb_transfer_await(status);
+    if(res) {
+	wprintk("Failed to await USB status stage transfer (err=%s)\n", errnostr(res));
+	usb_device_destroy_transfer(device, status);
+	return res;
+    }
 
     usb_device_destroy_transfer(device, status);
 
@@ -166,6 +207,8 @@ usb_device_get_descriptor(
 
     void *dma_virt = dma_virt_addr(dma_buffer);
     memcpy(buffer, dma_virt, buflen);
+
+    dma_free(dma_buffer, buflen);
 
     return 0;
 }

@@ -52,11 +52,10 @@ usb_xhci_init_device_contextes(
 
     irq_lock_init(&dev->devices_lock);
 
-    struct usb_xhci_device **devices = kmalloc(sizeof(struct usb_xhci_device*) * dev->num_device_ctx);
+    struct usb_xhci_device **devices = kzmalloc(sizeof(struct usb_xhci_device*) * dev->num_device_ctx, KM_KERNEL);
     if(devices == NULL) {
         return -ENOMEM;
     }
-    memset(devices, 0, sizeof(struct usb_xhci_device*) * dev->num_device_ctx);
 
     res = dma_alloc(
             8*(dev->num_device_ctx+1),
@@ -121,11 +120,10 @@ usb_xhci_create_device(
 {
     int res;
 
-    struct usb_xhci_device *dev = kmalloc(sizeof(*dev));
+    struct usb_xhci_device *dev = kzmalloc(sizeof(*dev), KM_KERNEL);
     if(dev == NULL) {
         return NULL;
     }
-    memset(dev, 0, sizeof(*dev));
 
     dev->xhci = xhci;
     dev->slot_index = 0; // Invalid slot

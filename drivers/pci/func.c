@@ -180,7 +180,7 @@ pci_probe_func(
         return -ENXIO;
     }
 
-    struct pci_func *func = kmalloc(sizeof(struct pci_func));
+    struct pci_func *func = kmalloc(sizeof(struct pci_func), KM_KERNEL);
     if(func == NULL) {
         eprintk("Failed to allocate PCI device struct!\n");
         return -ENOMEM;

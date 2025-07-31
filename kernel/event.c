@@ -133,11 +133,10 @@ create_periodic_event(
         periodic_callback_f *callback)
 {
     struct periodic_event *evt =
-        kmalloc(sizeof(struct periodic_event));
+        kzmalloc(sizeof(struct periodic_event), KM_KERNEL);
     if(evt == NULL) {
         return NULL;
     }
-    memset(evt, 0, sizeof(struct periodic_event));
 
     evt->state = state;
     evt->callback = callback;

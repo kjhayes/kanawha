@@ -33,7 +33,7 @@ kbd_init_struct(
     kbd->buf_tail = 0;
 
     if(kbd->read_queue == NULL) {
-        kbd->read_queue = kmalloc(sizeof(struct waitqueue));
+        kbd->read_queue = kmalloc(sizeof(struct waitqueue), KM_KERNEL);
         if(kbd->read_queue == NULL) {
             return -ENOMEM;
         }

@@ -32,7 +32,7 @@ syscall_dirname(
     size_t buf_len = user_namebuflen < SYSCALL_DIRNAME_MAX_NAME_LEN 
         ? user_namebuflen : SYSCALL_DIRNAME_MAX_NAME_LEN;
 
-    char * name_buf = kmalloc(buf_len);
+    char * name_buf = kmalloc(buf_len, KM_KERNEL);
     if(name_buf == NULL) {
         file_table_put_file(
                 process->file_table,

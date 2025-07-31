@@ -52,7 +52,7 @@ pcie_acpi_probe_mcfg_table(void)
                 cur->start_bus,
                 cur->end_bus);
 
-        struct mmio_pci_ecam *ecam = kmalloc(sizeof(struct mmio_pci_ecam));
+        struct mmio_pci_ecam *ecam = kmalloc(sizeof(struct mmio_pci_ecam), KM_KERNEL);
         if(ecam == NULL) {
             wprintk("Failed to allocate struct for MCFG PCIe ECAM!\n");
             break;

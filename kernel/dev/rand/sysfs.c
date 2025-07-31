@@ -84,7 +84,7 @@ rand_dev_fs_on_register(
 {
     int res;
 
-    struct rand_dev_fs_node *rdfs = kmalloc(sizeof(*rdfs));
+    struct rand_dev_fs_node *rdfs = kmalloc(sizeof(*rdfs), KM_KERNEL);
     if(rdfs == NULL) {
         return;
     }

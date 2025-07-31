@@ -15,25 +15,33 @@ static DECLARE_BITMAP(kmalloc_debug_bitmap, (1ULL<<CONFIG_HEAP_SIZE_ORDER));
 #define KMALLOC_BITMAP_NUM_BITS (1ULL<<CONFIG_HEAP_SIZE_ORDER)
 #endif
 
-void * kmalloc(size_t size)
+struct __packed kmalloc_hdr {
+    size_t total_size;
+};
+
+#define KMALLOC_ALIGN (1ULL<<KMALLOC_ALIGN_ORDER)
+#define KMALLOC_ALIGN_MASK (KMALLOC_ALIGN-1)
+#define KMALLOC_ALIGN_MAX_PADDING \
+    (KMALLOC_ALIGN-(sizeof(struct kmalloc_hdr) & KMALLOC_ALIGN_MASK))
+#define KMALLOC_PADDING \
+    ((KMALLOC_ALIGN_MAX_PADDING < (1ULL<<KMALLOC_ALIGN_ORDER)) ? KMALLOC_ALIGN_MAX_PADDING : 0)
+
+struct kmallocation {
+    struct kmalloc_hdr hdr;
+    uint8_t padding[KMALLOC_PADDING];
+    uint8_t data[];
+};
+
+_Static_assert((sizeof(struct kmallocation) & KMALLOC_ALIGN_MASK) == 0, "sizeof(struct kmallocation) is not a multiple of 1ULL<<KMALLOC_ALIGN_ORDER)");
+
+void * kmalloc(size_t size, unsigned long flags)
 {
     if(size == 0) {
         // Free will ignore NULL so this is fine
         return NULL;
     }
 
-    size_t bookkeeping_size = sizeof(size_t);
-    size_t bookkeeping_misalign_patch =
-        (1ULL<<KMALLOC_ALIGN_ORDER)-
-        (bookkeeping_size & ((1ULL<<KMALLOC_ALIGN_ORDER)-1));
-
-    if(bookkeeping_misalign_patch == KMALLOC_ALIGN_ORDER) {
-        bookkeeping_misalign_patch = 0;
-    }
-
-    bookkeeping_size += bookkeeping_misalign_patch;
-
-    size_t req_size = size + bookkeeping_size;
+    size_t req_size = sizeof(struct kmallocation) + size;
 
     kmalloc_lock_acquire();
 
@@ -45,9 +53,7 @@ void * kmalloc(size_t size)
         return alloc;
     }
 
-    DEBUG_ASSERT(req_size >= size);
-    DEBUG_ASSERT(req_size >= bookkeeping_size);
-    DEBUG_ASSERT(req_size >= size + bookkeeping_size);
+    DEBUG_ASSERT(req_size >= size + sizeof(struct kmallocation));
 
 #ifdef CONFIG_DEBUG_KMALLOC_BITMAP
     for(size_t i = 0; i < req_size; i++)
@@ -66,10 +72,10 @@ void * kmalloc(size_t size)
 
     kmalloc_lock_release();
 
-    size_t *size_ptr = (size_t*)alloc;
-    *size_ptr = req_size;
+    struct kmallocation *allocation = (struct kmallocation *)alloc;
+    allocation->hdr.total_size = req_size;
 
-    void *ret = alloc + bookkeeping_size;
+    void *ret = allocation->data;
 
     dprintk("kmalloc(0x%llx) -> [%p-%p)\n",size,ret,ret+size);
 
@@ -85,10 +91,11 @@ void kfree(void *addr)
 
     kmalloc_lock_acquire();
 
-    size_t *size_ptr = (size_t*)(addr - (1ULL<<KMALLOC_ALIGN_ORDER));
-    size_t size = *size_ptr;
+    struct kmallocation *allocation = container_of(addr, struct kmallocation, data);
 
-    int res = kfree_specific((void*)size_ptr, size);
+    size_t size = allocation->hdr.total_size;
+
+    int res = kfree_specific(allocation, size);
     if(res) {
         dprintk("kfree call to kfree_specific failed! (err=%s)\n", errnostr(res));
     }
@@ -96,7 +103,7 @@ void kfree(void *addr)
 #ifdef CONFIG_DEBUG_KMALLOC_BITMAP
     for(size_t i = 0; i < size; i++)
     {
-        uintptr_t byte_offset = ((void *)size_ptr - kmalloc_heap.vbase) + i;
+        uintptr_t byte_offset = ((void *)allocation - kmalloc_heap.vbase) + i;
         DEBUG_ASSERT(byte_offset < KMALLOC_BITMAP_NUM_BITS);
         if(!bitmap_check(kmalloc_debug_bitmap, byte_offset)) {
             panic("kfree double free detected (heap_offset=%p, vaddr=%p, alloc_offset=%p)!\n",

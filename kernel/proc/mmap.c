@@ -24,11 +24,10 @@ mmap_create(
 {
     int res;
 
-    struct mmap *mmap = kmalloc(sizeof(struct mmap));
+    struct mmap *mmap = kzmalloc(sizeof(struct mmap), KM_KERNEL);
     if(mmap == NULL) {
         return -ENOMEM;
     }
-    memset(mmap, 0, sizeof(struct mmap));
 
     spinlock_init(&mmap->lock);
     ptree_init(&mmap->region_tree);
@@ -453,12 +452,11 @@ mmap_map_region(
     DEBUG_ASSERT(KERNEL_ADDR(mmap));
 
     struct mmap_region *region;
-    region = kmalloc(sizeof(struct mmap_region));
+    region = kzmalloc(sizeof(struct mmap_region), KM_KERNEL);
     if(region == NULL) {
         res = -ENOMEM;
         goto err1;
     }
-    memset(region, 0, sizeof(struct mmap_region));
 
     region->mmap = mmap;
     region->mmap_flags = mmap_flags;
@@ -567,12 +565,11 @@ mmap_map_region_exact(
     DEBUG_ASSERT(KERNEL_ADDR(mmap));
 
     struct mmap_region *region;
-    region = kmalloc(sizeof(struct mmap_region));
+    region = kzmalloc(sizeof(struct mmap_region), KM_KERNEL);
     if(region == NULL) {
         res = -ENOMEM;
         goto err1;
     }
-    memset(region, 0, sizeof(struct mmap_region));
 
     region->mmap = mmap;
     region->mmap_flags = mmap_flags;
@@ -810,7 +807,7 @@ mmap_region_load_page(
         panic("mmap_region_load_page with unknown mmap type! (not MMAP_ANON, MMAP_SHARED or MMAP_PRIVATE)\n");
     }
 
-    struct mmap_page *page = kmalloc(sizeof(struct mmap_page));
+    struct mmap_page *page = kzmalloc(sizeof(struct mmap_page), KM_KERNEL);
     if(page == NULL) {
         if(page_flags & MMAP_PAGE_ANON) {
             page_free(order, paddr);
@@ -820,7 +817,6 @@ mmap_region_load_page(
         }
         return -ENOMEM;
     }
-    memset(page, 0, sizeof(struct mmap_page));
 
     page->order = order;
     page->flags = page_flags;
@@ -828,7 +824,7 @@ mmap_region_load_page(
     if(page->flags & MMAP_ANON) {
         if(page->flags & MMAP_PAGE_COPY_ON_WRITE) {
             // This should never happen but stay consistent if our caller is weird
-            page->anon_sharing_level = kmalloc(sizeof(atomic_t));
+            page->anon_sharing_level = kmalloc(sizeof(atomic_t), KM_KERNEL);
             if(page->anon_sharing_level == NULL) {
                 page_free(order, paddr);
                 kfree(page);
@@ -1499,11 +1495,10 @@ mmap_page_clone(
 {
     int res;
 
-    struct mmap_page *page = kmalloc(sizeof(struct mmap_page));
+    struct mmap_page *page = kzmalloc(sizeof(struct mmap_page), KM_KERNEL);
     if(page == NULL) {
         return -ENOMEM;
     }
-    memset(page, 0, sizeof(struct mmap_page));
 
     page->flags = from->flags;
     page->order = from->order;
@@ -1526,7 +1521,7 @@ mmap_page_clone(
             // We need to make this a shared anonymous copy-on-write page
            
             page->flags |= MMAP_PAGE_COPY_ON_WRITE;
-            page->anon_sharing_level = kmalloc(sizeof(atomic_t));
+            page->anon_sharing_level = kzmalloc(sizeof(atomic_t), KM_KERNEL);
             if(page->anon_sharing_level == NULL) {
                 kfree(page);
                 return -ENOMEM;
@@ -1597,7 +1592,7 @@ mmap_region_clone(
 {
     int res;
 
-    struct mmap_region *region = kmalloc(sizeof(struct mmap_region));
+    struct mmap_region *region = kzmalloc(sizeof(struct mmap_region), KM_KERNEL);
     if(region == NULL) {
         return -ENOMEM;
     }

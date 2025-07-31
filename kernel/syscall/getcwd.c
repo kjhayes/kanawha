@@ -79,7 +79,7 @@ syscall_getcwd(
 
     } while(1);
 
-    char *path_buffer = kmalloc(len + 1);
+    char *path_buffer = kmalloc(len + 1, KM_KERNEL);
     if(path_buffer == NULL) {
         return -ENOMEM;
     }

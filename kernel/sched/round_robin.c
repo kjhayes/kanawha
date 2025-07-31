@@ -52,11 +52,10 @@ static struct scheduler *
 rr_sched_alloc_instance(
         struct scheduler_type *type)
 {
-    struct rr_scheduler *sched = kmalloc(sizeof(struct rr_scheduler));
+    struct rr_scheduler *sched = kzmalloc(sizeof(struct rr_scheduler), KM_KERNEL);
     if(sched == NULL) {
         return NULL;
     }
-    memset(sched, 0, sizeof(struct rr_scheduler));
 
     sched->current_rr_thread = percpu_calloc(sizeof(struct rr_thread*));
     if(sched->current_rr_thread == PERCPU_NULL) {
@@ -173,11 +172,10 @@ rr_sched_add_thread(
     struct rr_scheduler *rr_sched =
         container_of(sched, struct rr_scheduler, sched);
 
-    struct rr_thread *thread = kmalloc(sizeof(struct rr_thread));
+    struct rr_thread *thread = kzmalloc(sizeof(struct rr_thread), KM_KERNEL);
     if(thread == NULL) {
         return -ENOMEM;
     }
-    memset(thread, 0, sizeof(struct rr_thread));
 
     thread->state = state;
     int irq_flags = spin_lock_irq_save(&rr_sched->list_lock);

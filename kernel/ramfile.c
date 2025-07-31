@@ -382,11 +382,10 @@ create_ramfile(
     }
 
     struct ramfile *ramfile =
-        kmalloc(sizeof(struct ramfile));
+        kzmalloc(sizeof(struct ramfile), KM_KERNEL);
     if(ramfile == NULL) {
         return -ENOMEM;
     }
-    memset(ramfile, 0, sizeof(struct ramfile));
 
     ramfile->size = size;
     ramfile->paddr = paddr;

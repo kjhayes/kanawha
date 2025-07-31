@@ -49,7 +49,7 @@ __add_dma_region(
         page_flags |= PAGE_ALLOC_32BIT;
     }
 
-    struct dma_region *region = kmalloc(sizeof(struct dma_region));
+    struct dma_region *region = kmalloc(sizeof(struct dma_region), KM_KERNEL);
     if(region == NULL) {
         return NULL;
     }
@@ -70,7 +70,7 @@ __add_dma_region(
     dprintk("__add_dma_region: page_alloc(order=%ld) -> %p\n",
             (sl_t)region->order, region->phys_page);
 
-    struct dma_free_block *block = kmalloc(sizeof(struct dma_free_block));
+    struct dma_free_block *block = kmalloc(sizeof(struct dma_free_block), KM_KERNEL);
     if(block == NULL) {
         page_free(order, region->phys_page);
         kfree(region);
@@ -150,7 +150,7 @@ __dma_region_alloc(
 //            size_t misalign_above = (phys_end - size) & align_mask;
 //            size_t total_size = blk->size;
 //
-//            struct dma_free_block *above = kmalloc(sizeof(struct dma_free_block));
+//            struct dma_free_block *above = kmalloc(sizeof(struct dma_free_block), KM_KERNEL);
 //            if(above == NULL) {
 //                // Not enough memory to split the block in two
 //                continue;
@@ -242,7 +242,7 @@ __dma_region_free(
     }
 
     if(blk_above == NULL && blk_below == NULL) {
-        struct dma_free_block *blk = kmalloc(sizeof(struct dma_free_block));
+        struct dma_free_block *blk = kmalloc(sizeof(struct dma_free_block), KM_KERNEL);
         if(blk == NULL) {
             region->free_mem -= size;
             return -ENOMEM;

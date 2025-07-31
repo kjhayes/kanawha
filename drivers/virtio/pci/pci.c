@@ -92,15 +92,12 @@ virtio_pci_init_capabilities(
     {
         num_found++;
 
-        dprintk("before vcap_kmalloc\n");
         struct virtio_pci_cap *vcap =
-            kmalloc(sizeof(struct virtio_pci_cap));
-        dprintk("after vcap_kmalloc\n");
+            kzmalloc(sizeof(struct virtio_pci_cap), KM_KERNEL);
         if(vcap == NULL) {
             res = -ENOMEM;
             break;
         }
-        memset(vcap, 0, sizeof(struct virtio_pci_cap));
 
         vcap->cap = cap;
         vcap->cap_len =     pci_cap_readb(func, cap, 0x2);
@@ -209,11 +206,10 @@ virtio_pci_init_device(
         return res;
     }
 
-    struct virtio_pci_device *vpci_dev = kmalloc(sizeof(struct virtio_pci_device));
+    struct virtio_pci_device *vpci_dev = kzmalloc(sizeof(struct virtio_pci_device), KM_KERNEL);
     if(vpci_dev == NULL) {
         return -ENOMEM;
     }
-    memset(vpci_dev, 0, sizeof(struct virtio_pci_device));
 
     vpci_dev->func = func;
     vpci_dev->virtio_dev.ops = &virtio_pci_device_ops;

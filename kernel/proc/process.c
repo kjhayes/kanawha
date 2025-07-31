@@ -330,12 +330,11 @@ process_alloc(
 {
     int res;
 
-    struct process *process = kmalloc(sizeof(struct process));
+    struct process *process = kzmalloc(sizeof(struct process), KM_KERNEL);
     if(process == NULL) {
         eprintk("process_alloc: Out of Memory!\n");
         goto err0;
     }
-    memset(process, 0, sizeof(struct process));
 
     spinlock_init(&process->status_lock);
     spinlock_init(&process->hierarchy_lock);
@@ -1167,11 +1166,10 @@ process_spawn_child(
     DEBUG_ASSERT(KERNEL_ADDR(parent));
 
     struct spawned_process_state *state =
-        kmalloc(sizeof(struct spawned_process_state));
+        kzmalloc(sizeof(struct spawned_process_state), KM_KERNEL);
     if(state == NULL) {
         return NULL;
     }
-    memset(state, 0, sizeof(struct spawned_process_state));
 
     state->arg = arg;
     state->entry = user_entry;

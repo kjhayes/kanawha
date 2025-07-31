@@ -82,11 +82,10 @@ irq_install_handler(
         irq_handler_f *handler)
 {
     struct irq_action *action;
-    action = kmalloc(sizeof(struct irq_action));
+    action = kzmalloc(sizeof(struct irq_action), KM_KERNEL);
     if(action == NULL) {
         return NULL;
     }
-    memset(action, 0, sizeof(struct irq_action));
 
     action->desc = desc;
     action->type = IRQ_ACTION_HANDLER;
@@ -108,11 +107,10 @@ irq_install_direct_link(struct irq_desc *from, struct irq_desc *to)
     DEBUG_ASSERT_MSG(from != to, "Trivial IRQ Loop %p == %p", from, to);
 
     struct irq_action *action;
-    action = kmalloc(sizeof(struct irq_action));
+    action = kzmalloc(sizeof(struct irq_action), KM_KERNEL);
     if(action == NULL) {
         return NULL;
     }
-    memset(action, 0, sizeof(struct irq_action));
 
     action->desc = from;
     action->type = IRQ_ACTION_DIRECT_LINK;
@@ -139,11 +137,10 @@ irq_install_percpu_link(
         struct irq_desc *desc)
 {
     struct irq_action *action;
-    action = kmalloc(sizeof(struct irq_action));
+    action = kzmalloc(sizeof(struct irq_action), KM_KERNEL);
     if(action == NULL) {
         return NULL;
     }
-    memset(action, 0, sizeof(struct irq_action));
 
     action->desc = desc;
     action->type = IRQ_ACTION_PERCPU_LINK;
@@ -185,11 +182,10 @@ irq_install_resolved_link(
         irq_resolver_f *resolver)
 {
     struct irq_action *action;
-    action = kmalloc(sizeof(struct irq_action));
+    action = kzmalloc(sizeof(struct irq_action), KM_KERNEL);
     if(action == NULL) {
         return NULL;
     }
-    memset(action, 0, sizeof(struct irq_action));
 
     action->desc = desc;
     action->type = IRQ_ACTION_RESOLVED_LINK;
@@ -456,22 +452,20 @@ alloc_irq_domain_linear(
 {
     int res;
     struct linear_irq_domain *domain;
-    domain = kmalloc(sizeof(struct linear_irq_domain));
+    domain = kzmalloc(sizeof(struct linear_irq_domain), KM_KERNEL);
     if(domain == NULL) {
         return NULL;
     }
-    memset(domain, 0, sizeof(struct irq_domain));
 
     domain->base_hwirq = base_hwirq;
     domain->domain.revmap = linear_irq_domain_revmap;
 
     domain->domain.num_irq = num_irq;
-    domain->domain.irq_descs = kmalloc(sizeof(struct irq_desc) * num_irq);
+    domain->domain.irq_descs = kzmalloc(sizeof(struct irq_desc) * num_irq, KM_KERNEL);
     if(domain->domain.irq_descs == NULL) {
         kfree(domain);
         return NULL;
     }
-    memset(domain->domain.irq_descs, 0, sizeof(struct irq_desc) * num_irq);
 
     rlock_write_lock(&irq_domain_map_lock);
 

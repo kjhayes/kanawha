@@ -78,11 +78,10 @@ ps2_kbd_attach(
     DEBUG_ASSERT(KERNEL_ADDR(port->ops->send));
     DEBUG_ASSERT(KERNEL_ADDR(driver));
 
-    struct ps2_kbd *kbd = kmalloc(sizeof(struct ps2_kbd));
+    struct ps2_kbd *kbd = kzmalloc(sizeof(struct ps2_kbd), KM_KERNEL);
     if(kbd == NULL) {
         return -ENOMEM;
     }
-    memset(kbd, 0, sizeof(struct ps2_kbd));
 
     kbd->port = port;
     kbd->scanset = &qwerty_scanset_2;

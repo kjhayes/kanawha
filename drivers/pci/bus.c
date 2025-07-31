@@ -39,7 +39,7 @@ pci_probe_bus(
         return 0;
     }
 
-    struct pci_bus *bus = kmalloc(sizeof(struct pci_bus));
+    struct pci_bus *bus = kmalloc(sizeof(struct pci_bus), KM_KERNEL);
     if(bus == NULL) {
         return -ENOMEM;
     }

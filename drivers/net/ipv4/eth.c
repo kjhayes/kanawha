@@ -62,7 +62,7 @@ ipv4_over_eth_alloc_packet(
     frame->data->hdr.dst_addr = ETH_MAC_ADDR_BROADCAST.raw;
     frame->data->hdr.type = htobe16(ETH_TYPE_IPV4);
 
-    struct ipv4_over_eth_packet *pkt = kmalloc(sizeof(*pkt));
+    struct ipv4_over_eth_packet *pkt = kmalloc(sizeof(*pkt), KM_KERNEL);
     pkt->eth_frame = frame;
     pkt->ipv4_packet.data = (struct ipv4_raw_packet*)frame->data->data;
     pkt->ipv4_packet.dev = ipv4_dev;
@@ -131,7 +131,7 @@ ipv4_attach_to_eth_dev(
 {
     int res;
 
-    struct ipv4_over_eth_dev *dev = kmalloc(sizeof(*dev));
+    struct ipv4_over_eth_dev *dev = kmalloc(sizeof(*dev), KM_KERNEL);
     if(dev == NULL) {
         return -ENOMEM;
     }

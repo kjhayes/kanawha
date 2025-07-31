@@ -111,12 +111,11 @@ fs_node_get_page(
     pnode = ptree_get(&node->page_cache, pfn);
     if(pnode == NULL) {
 
-        page = kmalloc(sizeof(struct fs_page));
+        page = kzmalloc(sizeof(struct fs_page), KM_KERNEL);
         if(page == NULL) {
             spin_unlock_irq_restore(&node->page_lock, irq_flags);
             return NULL;
         }
-        memset(page, 0, sizeof(struct fs_page));
 
         page->pins = 1;
 

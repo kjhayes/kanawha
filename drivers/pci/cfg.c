@@ -83,7 +83,7 @@ pci_probe_segment_with_assumed_buses(
     if(segment == NULL) {
         printk("Registering PCI Segment %lu\n", segment_id);
 
-        segment = kmalloc(sizeof(struct pci_segment));
+        segment = kmalloc(sizeof(struct pci_segment), KM_KERNEL);
         if(segment == NULL) {
             eprintk("Ran out of memory when allocating PCI segment struct!\n");
             spin_unlock(&pci_segment_list_lock); 

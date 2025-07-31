@@ -210,7 +210,7 @@ char *
 kstrdup(const char *str)
 {
     size_t len = strlen(str);
-    char *clone = kmalloc(len+1);
+    char *clone = kmalloc(len+1, KM_KERNEL);
     if(clone == NULL) {
         return clone;
     }

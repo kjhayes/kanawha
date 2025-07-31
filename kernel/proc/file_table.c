@@ -1,7 +1,6 @@
 
 #include <kanawha/proc/file_table.h>
 #include <kanawha/string.h>
-#include <kanawha/kmalloc.h>
 #include <kanawha/page_alloc.h>
 #include <kanawha/stddef.h>
 #include <kanawha/vmem.h>
@@ -37,11 +36,10 @@ file_table_create(
 {
     int res;
 
-    struct file_table *table = kmalloc(sizeof(struct file_table));
+    struct file_table *table = kzmalloc(sizeof(struct file_table), KM_KERNEL);
     if(table == NULL) {
         return -ENOMEM;
     }
-    memset(table, 0, sizeof(struct file_table));
 
     table->num_open_files = 0;
     spinlock_init(&table->lock);
@@ -65,11 +63,10 @@ file_table_clone(
     int res;
     dprintk("file_table_clone\n");
 
-    struct file_table *child = kmalloc(sizeof(struct file_table));
+    struct file_table *child = kzmalloc(sizeof(struct file_table), KM_KERNEL);
     if(child == NULL) {
         return -ENOMEM;
     }
-    memset(child, 0, sizeof(struct file_table));
 
     spin_lock(&parent->lock);
 
@@ -84,12 +81,10 @@ file_table_clone(
         DEBUG_ASSERT(KERNEL_ADDR(node));
 
         struct file *parent_file = container_of(node, struct file, table_node);
-        struct file *child_file =
-            kmalloc(sizeof(struct file));
+        struct file *child_file = kzmalloc(sizeof(struct file), KM_KERNEL);
         if(child_file == NULL) {
             return -ENOMEM;
         }
-        memset(child_file, 0, sizeof(struct file));
 
         child_file->seek_offset = parent_file->seek_offset;
         child_file->dir_offset = parent_file->dir_offset;
@@ -219,12 +214,10 @@ file_table_open_path(
 {
     int res;
 
-    struct file *desc =
-        kmalloc(sizeof(struct file));
+    struct file *desc = kzmalloc(sizeof(struct file), KM_KERNEL);
     if(desc == NULL) {
         return -ENOMEM;
     }
-    memset(desc, 0, sizeof(struct file));
 
     fs_path_get(path);
     desc->path = path;
@@ -462,12 +455,11 @@ file_table_dup_into(
         dst++;
     }
 
-    struct file *dst_file = kmalloc(sizeof(struct file));
+    struct file *dst_file = kzmalloc(sizeof(struct file), KM_KERNEL);
     if(dst_file == NULL) {
         res = -ENOMEM;
         goto exit;
     }
-    memset(dst_file, 0, sizeof(struct file));
 
     dst_file->seek_offset = src_file->seek_offset;
     dst_file->dir_offset = src_file->dir_offset;

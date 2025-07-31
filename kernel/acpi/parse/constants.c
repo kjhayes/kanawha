@@ -123,7 +123,7 @@ acpi_parse_string_const(
     if(term_out) {
         acpi_ctx_restore(ctx, &chk);
 
-        char *buffer = kmalloc(len);
+        char *buffer = kmalloc(len, KM_KERNEL);
         if(buffer == NULL) {
             return -ENOMEM;
         }

@@ -9,7 +9,7 @@ struct acpi_termlist *
 acpi_create_empty_termlist(void)
 {
     struct acpi_termlist *terms =
-        kmalloc(sizeof(struct acpi_termlist));
+        kmalloc(sizeof(struct acpi_termlist), KM_KERNEL);
     if(terms == NULL) {
         return NULL;
     }

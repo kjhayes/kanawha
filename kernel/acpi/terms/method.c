@@ -58,7 +58,7 @@ acpi_create_method_invocation_term(
         struct acpi_termlist *terms)
 {
     struct acpi_method_invocation_term *iterm =
-        kmalloc(sizeof(*iterm));
+        kmalloc(sizeof(*iterm), KM_KERNEL);
     if(iterm == NULL) {
         return NULL;
     }

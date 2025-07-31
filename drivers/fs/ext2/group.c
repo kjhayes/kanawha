@@ -73,7 +73,7 @@ ext2_get_group(
     spin_lock(&mnt->group_cache_lock);
 
     if(mnt->group_cache[index] == NULL) {
-        struct ext2_group *group = kmalloc(sizeof(struct ext2_group));
+        struct ext2_group *group = kmalloc(sizeof(struct ext2_group), KM_KERNEL);
         if(group == NULL) {
             spin_unlock(&mnt->group_cache_lock);
             return NULL;
@@ -140,7 +140,7 @@ ext2_group_populate_blk_bitmap(
         return 0;
     }
 
-    grp->blk_bitmap = kmalloc(grp->mnt->block_size);
+    grp->blk_bitmap = kmalloc(grp->mnt->block_size, KM_KERNEL);
     if(grp->blk_bitmap == NULL) {
         spin_unlock(&grp->blk_lock);
         return -ENOMEM;
@@ -225,7 +225,7 @@ ext2_group_populate_inode_bitmap(
         return 0;
     }
 
-    grp->inode_bitmap = kmalloc(grp->mnt->block_size);
+    grp->inode_bitmap = kmalloc(grp->mnt->block_size, KM_KERNEL);
     if(grp->inode_bitmap == NULL) {
         spin_unlock(&grp->inode_lock);
         return -ENOMEM;

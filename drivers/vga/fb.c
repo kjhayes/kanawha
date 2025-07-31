@@ -222,11 +222,10 @@ register_vga_fb_dev(void)
 {
     int res;
 
-    struct vga_fb *fb = kmalloc(sizeof(struct vga_fb));
+    struct vga_fb *fb = kzmalloc(sizeof(struct vga_fb), KM_KERNEL);
     if(fb == NULL) {
         return -ENOMEM;
     }
-    memset(fb, 0, sizeof(struct vga_fb));
 
     res = vga_dev_init(&fb->vga_dev);
     if(res) {

@@ -40,7 +40,7 @@ tasklet_create(
         void *state)
 {
     struct tasklet *tasklet;
-    tasklet = kmalloc(sizeof(*tasklet));
+    tasklet = kmalloc(sizeof(*tasklet), KM_KERNEL);
 
     tasklet->func = func;
     tasklet->state = state;

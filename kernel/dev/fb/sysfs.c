@@ -629,7 +629,7 @@ fb_dev_fs_on_register(
 {
     int res;
 
-    struct fb_dev_fs_node *fbfs = kmalloc(sizeof(*fbfs));
+    struct fb_dev_fs_node *fbfs = kmalloc(sizeof(*fbfs), KM_KERNEL);
     if(fbfs == NULL) {
         return;
     }

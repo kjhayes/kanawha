@@ -48,7 +48,7 @@ syscall_write(
 
     size_t buffer_len = size > SYSCALL_WRITE_MAX_CHUNK_SIZE
         ? SYSCALL_WRITE_MAX_CHUNK_SIZE : size;
-    void *buffer = kmalloc(buffer_len);
+    void *buffer = kmalloc(buffer_len, KM_KERNEL);
 
     ssize_t amount_to_write = buffer_len > size ? size : buffer_len;
     ssize_t amount_written = amount_to_write;

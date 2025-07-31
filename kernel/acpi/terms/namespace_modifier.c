@@ -59,7 +59,7 @@ acpi_create_scope_term(
         struct acpi_termlist *termlist)
 {
     struct acpi_scope_term *term =
-        kmalloc(sizeof(*term));
+        kmalloc(sizeof(*term), KM_KERNEL);
     if(term == NULL) {
         return NULL;
     }

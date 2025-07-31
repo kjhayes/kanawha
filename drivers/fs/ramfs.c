@@ -77,11 +77,10 @@ ramfs_file_load_page(
     if(pnode == NULL)
     {
 	if(flags & FS_NODE_LOAD_PAGE_MAY_CREATE) {
-	    struct ramfs_page *page = kmalloc(sizeof(*page));
+	    struct ramfs_page *page = kzmalloc(sizeof(*page), KM_KERNEL);
 	    if(page == NULL) {
 		return -ENOMEM;
 	    }
-	    memset(page, 0, sizeof(*page));
 
 	    res = page_alloc(RAMFS_PAGE_ORDER, &page->page, 0);
 	    if(res) {
@@ -336,11 +335,10 @@ ramfs_create_link(
 	struct ramfs_node *child,
 	const char *name)
 {
-    struct ramfs_dirent *dirent = kmalloc(sizeof(*dirent));
+    struct ramfs_dirent *dirent = kzmalloc(sizeof(*dirent), KM_KERNEL);
     if(dirent == NULL) {
 	return -ENOMEM;
     }
-    memset(dirent, 0, sizeof(*dirent));
 
     dirent->name = kstrdup(name);
     if(dirent->name == NULL) {
@@ -366,11 +364,10 @@ ramfs_dir_mkfile(
 
     struct ramfs_node *dir = fs_node->backing.priv_state;
 
-    struct ramfs_node *child = kmalloc(sizeof(*child));
+    struct ramfs_node *child = kzmalloc(sizeof(*child), KM_KERNEL);
     if(child == NULL) {
 	return -ENOMEM;
     }
-    memset(child, 0, sizeof(*child));
 
     child->size = 0;
     child->node_ops = &ramfs_file_node_ops;
@@ -409,11 +406,10 @@ ramfs_dir_mkdir(
 
     struct ramfs_node *dir = fs_node->backing.priv_state;
 
-    struct ramfs_node *child = kmalloc(sizeof(*child));
+    struct ramfs_node *child = kzmalloc(sizeof(*child), KM_KERNEL);
     if(child == NULL) {
 	return -ENOMEM;
     }
-    memset(child, 0, sizeof(*child));
 
     child->size = 0;
     child->node_ops = &ramfs_dir_node_ops;
@@ -684,11 +680,10 @@ ramfs_type_mount_special(
 	return  -EINVAL;
     }
 
-    struct ramfs_mount *mnt = kmalloc(sizeof(*mnt));
+    struct ramfs_mount *mnt = kzmalloc(sizeof(*mnt), KM_KERNEL);
     if(mnt == NULL) {
 	return -ENOMEM;
     }
-    memset(mnt, 0, sizeof(*mnt));
 
     init_fs_mount_struct(&mnt->fs_mount, &ramfs_mount_ops);
 

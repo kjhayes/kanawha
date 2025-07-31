@@ -28,7 +28,7 @@ env_get(
 
     dprintk("keylen=0x%lx\n", keylen);
 
-    char *key_buf = kmalloc(keylen + 1);
+    char *key_buf = kmalloc(keylen + 1, KM_KERNEL);
     if(key_buf == NULL) {
         return -ENOMEM;
     }
@@ -103,11 +103,11 @@ env_set(
         return res;
     }
 
-    char *key_buf = kmalloc(keylen + 1);
+    char *key_buf = kmalloc(keylen + 1, KM_KERNEL);
     if(key_buf == NULL) {
         return -ENOMEM;
     }
-    char *val_buf = kmalloc(vallen + 1);
+    char *val_buf = kmalloc(vallen + 1, KM_KERNEL);
     if(val_buf == NULL) {
         kfree(key_buf);
         return -ENOMEM;
@@ -176,7 +176,7 @@ env_clear(
     dprintk("syscall_env: ENV_CLEAR keylen=%p\n",
             keylen);
 
-    char *buffer = kmalloc(keylen+1);
+    char *buffer = kmalloc(keylen+1, KM_KERNEL);
     if(buffer == NULL) {
         return -ENOMEM;
     }

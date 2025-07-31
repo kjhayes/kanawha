@@ -17,11 +17,10 @@ static struct acpi_term *
 __create_constant_term(void)
 {
     struct acpi_term *term;
-    term = kmalloc(sizeof(struct acpi_term));
+    term = kzmalloc(sizeof(struct acpi_term), KM_KERNEL);
     if(term == NULL) {
         return term;
     }
-    memset(term, 0, sizeof(*term));
     term->destroy = __destroy_constant_term;
     return term;
 }
@@ -273,11 +272,10 @@ __dump_string_constant_term(
 struct acpi_term *
 acpi_create_string_term(const char *value)
 {
-    struct acpi_term *term = kmalloc(sizeof(struct acpi_term));
+    struct acpi_term *term = kzmalloc(sizeof(struct acpi_term), KM_KERNEL);
     if(term == NULL) {
         return NULL;
     }
-    memset(term, 0, sizeof(struct acpi_term));
 
     term->priv.ptr = kstrdup(value);
     if(term->priv.ptr == NULL) {

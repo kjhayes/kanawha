@@ -180,11 +180,10 @@ pci_func_init_msix_info(
         return 0;
     }
 
-    struct pci_msix_info *info = kmalloc(sizeof(struct pci_msix_info));
+    struct pci_msix_info *info = kzmalloc(sizeof(struct pci_msix_info), KM_KERNEL);
     if(info == NULL) {
         return -ENOMEM;
     }
-    memset(info, 0, sizeof(struct pci_msix_info));
 
     info->cap = cap;
 
@@ -266,11 +265,10 @@ pci_func_start_msix(struct pci_func *func)
         return -ENXIO;
     }
 
-    struct msix_irq_dev *msix_dev = kmalloc(sizeof(struct msix_irq_dev));
+    struct msix_irq_dev *msix_dev = kzmalloc(sizeof(struct msix_irq_dev), KM_KERNEL);
     if(msix_dev == NULL) {
         return -ENOMEM;
     }
-    memset(msix_dev, 0, sizeof(struct msix_irq_dev));
 
     uint16_t msg_ctrl = pci_msix_read_msg_ctrl(func, info);
     msg_ctrl &= ~(1ULL<<15); // Enable MSI-X before we start configuring
@@ -287,29 +285,26 @@ pci_func_start_msix(struct pci_func *func)
 
     dprintk("pci_func_start_msix: num_irqs=0x%lx\n", msix_dev->num_irqs);
 
-    uint64_t *addrs = kmalloc(sizeof(uint64_t) * msix_dev->num_irqs);
+    uint64_t *addrs = kzmalloc(sizeof(uint64_t) * msix_dev->num_irqs, KM_KERNEL);
     if(addrs == NULL) {
         kfree(msix_dev);
         return -ENOMEM;
     }
-    memset(addrs, 0, sizeof(uint64_t) * msix_dev->num_irqs);
     
-    uint32_t *datas = kmalloc(sizeof(uint32_t) * msix_dev->num_irqs);
+    uint32_t *datas = kzmalloc(sizeof(uint32_t) * msix_dev->num_irqs, KM_KERNEL);
     if(datas == NULL) {
         kfree(msix_dev);
         kfree(addrs);
         return -ENOMEM;
     }
-    memset(datas, 0, sizeof(uint32_t) * msix_dev->num_irqs);
 
-    struct irq_desc **descs = kmalloc(sizeof(struct irq_desc *) * msix_dev->num_irqs);
+    struct irq_desc **descs = kzmalloc(sizeof(struct irq_desc *) * msix_dev->num_irqs, KM_KERNEL);
     if(descs == NULL) {
         kfree(msix_dev);
         kfree(addrs);
         kfree(datas);
         return -ENOMEM;
     }
-    memset(descs, 0, sizeof(struct irq_desc *) * msix_dev->num_irqs);
 
     res = pci_mailbox_find_msix(
         msix_dev->num_irqs,
@@ -343,13 +338,12 @@ pci_func_start_msix(struct pci_func *func)
     kfree(addrs);
     kfree(datas);
 
-    msix_dev->link_actions = kmalloc(sizeof(struct irq_action*) * msix_dev->num_irqs);
+    msix_dev->link_actions = kzmalloc(sizeof(struct irq_action*) * msix_dev->num_irqs, KM_KERNEL);
     if(msix_dev->link_actions == NULL) {
         kfree(msix_dev);
         kfree(descs);
         return -ENOMEM;
     }
-    memset(msix_dev->link_actions, 0, sizeof(struct irq_action*) * msix_dev->num_irqs);
 
     struct irq_domain *domain =
         alloc_irq_domain_linear(0, msix_dev->num_irqs);

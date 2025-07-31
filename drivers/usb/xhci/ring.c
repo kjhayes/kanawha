@@ -22,7 +22,7 @@ usb_xhci_init_trb_ring(
     ring->num_dma_regions = pages_needed;
     ring->region_size = page_size;
     ring->trbs_per_region = trbs_per_page;
-    ring->dma_regions = kmalloc(sizeof(dma_addr_t) * ring->num_dma_regions);
+    ring->dma_regions = kmalloc(sizeof(dma_addr_t) * ring->num_dma_regions, KM_KERNEL);
     if(ring->dma_regions == NULL) {
         return -ENOMEM;
     }

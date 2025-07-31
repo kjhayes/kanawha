@@ -112,11 +112,11 @@ virtio_rng_init_device(
         return -EINVAL;
     }
 
-    struct virtio_rng_device *rng = kmalloc(sizeof(struct virtio_rng_device));
+    struct virtio_rng_device *rng =
+	kzmalloc(sizeof(struct virtio_rng_device), KM_KERNEL);
     if(rng == NULL) {
         return -ENOMEM;
     }
-    memset(rng, 0, sizeof(struct virtio_rng_device));
 
     rng->request_queue = device->queues[0];
     if(rng->request_queue == NULL) {

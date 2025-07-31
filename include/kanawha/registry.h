@@ -139,7 +139,7 @@ struct registry_node {
             void(*on_unregister)(struct SNAME *member)\
             )\
     {\
-        struct SNAME ## _registry_hook *hook = kmalloc(sizeof(*hook));\
+        struct SNAME ## _registry_hook *hook = kmalloc(sizeof(*hook), KM_KERNEL);\
         if(hook == NULL) {\
             return NULL;\
         }\

@@ -210,7 +210,7 @@ virtio_blk_init_device(
 
     dprintk("virtio-blk (capacity = 0x%lx sectors)\n", capacity);
 
-    struct virtio_blk *blk = kmalloc(sizeof(struct virtio_blk));
+    struct virtio_blk *blk = kmalloc(sizeof(struct virtio_blk), KM_KERNEL);
     if(blk == NULL) {
         return -ENOMEM;
     }

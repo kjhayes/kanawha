@@ -89,11 +89,11 @@ virtio_console_init_device(
         return -EINVAL;
     }
 
-    struct virtio_console_device *cdev = kmalloc(sizeof(struct virtio_console_device));
+    struct virtio_console_device *cdev =
+	kzmalloc(sizeof(struct virtio_console_device), KM_KERNEL);
     if(cdev == NULL) {
         return -ENOMEM;
     }
-    memset(cdev, 0, sizeof(struct virtio_console_device));
 
     DEBUG_ASSERT(KERNEL_ADDR(device->queues));
 
@@ -136,13 +136,13 @@ virtio_console_init_device(
         DEBUG_ASSERT(KERNEL_ADDR(recv_queue));
         DEBUG_ASSERT(KERNEL_ADDR(xmit_queue));
 
-        struct virtio_console_port *port = kmalloc(sizeof(struct virtio_console_port));
+        struct virtio_console_port *port =
+	    kzmalloc(sizeof(struct virtio_console_port), KM_KERNEL);
         if(port == NULL) {
             res = -ENOMEM;
             ports_failed = 1;
             break;
         }
-        memset(port, 0, sizeof(struct virtio_console_port));
 
         port->device = cdev;
         port->xmit_queue = xmit_queue;

@@ -19,7 +19,7 @@ pci_probe_device(
     }
 
     struct pci_device *device;
-    device = kmalloc(sizeof(struct pci_device));
+    device = kmalloc(sizeof(struct pci_device), KM_KERNEL);
     if(device == NULL) {
         kfree(device);
         return -ENOMEM;

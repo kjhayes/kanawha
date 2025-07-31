@@ -169,13 +169,12 @@ __fs_path_traverse(
         return -EINVAL;
     }
 
-    struct fs_path *child = kmalloc(sizeof(struct fs_path));
+    struct fs_path *child = kzmalloc(sizeof(struct fs_path), KM_KERNEL);
     if(child == NULL) {
         fs_node_put(child_fs_node);
         fs_path_global_lock_release();
         return -ENOMEM;
     }
-    memset(child, 0, sizeof(struct fs_path));
 
 #ifdef CONFIG_DEBUG_CHECKSUM_FS_PATH
     child->__checksum = FS_PATH_CHECKSUM;
@@ -295,11 +294,10 @@ fs_path_create_anon_pipe(
     int res;
 
     struct fs_path *pipe =
-        kmalloc(sizeof(struct fs_path));
+        kzmalloc(sizeof(struct fs_path), KM_KERNEL);
     if(pipe == NULL) {
         return -ENOMEM;
     }
-    memset(pipe, 0, sizeof(struct fs_path));
 
 #ifdef CONFIG_DEBUG_CHECKSUM_FS_PATH
     pipe->__checksum = FS_PATH_CHECKSUM;
@@ -353,11 +351,10 @@ fs_path_mount_root(
     DEBUG_ASSERT(KERNEL_ADDR(out));
 
     struct fs_path *mntpoint =
-        kmalloc(sizeof(struct fs_path));
+        kzmalloc(sizeof(struct fs_path), KM_KERNEL);
     if(mntpoint == NULL) {
         return -ENOMEM;
     }
-    memset(mntpoint, 0, sizeof(struct fs_path));
 
 #ifdef CONFIG_DEBUG_CHECKSUM_FS_PATH
     mntpoint->__checksum = FS_PATH_CHECKSUM;
@@ -414,11 +411,10 @@ fs_path_mount_dir(
     int res;
 
     struct fs_path *mntpoint =
-        kmalloc(sizeof(struct fs_path));
+        kzmalloc(sizeof(struct fs_path), KM_KERNEL);
     if(mntpoint == NULL) {
         return -ENOMEM;
     }
-    memset(mntpoint, 0, sizeof(struct fs_path));
 
 #ifdef CONFIG_DEBUG_CHECKSUM_FS_PATH
     mntpoint->__checksum = FS_PATH_CHECKSUM;

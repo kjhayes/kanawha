@@ -9,7 +9,9 @@ acpi_path_create(
         size_t length,
         int parent_prefix_count)
 {
-    struct acpi_path *path = kmalloc(sizeof(struct acpi_path) + (length * sizeof(struct acpi_name)));
+    struct acpi_path *path =
+	kmalloc(sizeof(struct acpi_path) + (length * sizeof(struct acpi_name)),
+		KM_KERNEL);
     if(path == NULL) {
         return NULL;
     }

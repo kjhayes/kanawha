@@ -21,11 +21,10 @@ usb_xhci_create_input_ctx(
     int res;
 
     struct usb_xhci_input_ctx *ctx;
-    ctx = kmalloc(sizeof(*ctx));
+    ctx = kzmalloc(sizeof(*ctx), KM_KERNEL);
     if(ctx == NULL) {
         return NULL;
     }
-    memset(ctx, 0, sizeof(*ctx));
 
     ctx->xhci = xhci;
     ctx->size = (usb_xhci_read(ctx->xhci, CSZ) ? 64 : 32) * 33;
@@ -75,7 +74,7 @@ usb_xhci_input_ctx_add_ctx(
     uint32_t *virt = dma_virt_addr(ctx->dma_buffer);
 
     virt[1] |= (1ULL<<ctx_index);
-    printk("add_flags=0x%x\n", virt[1]);
+    //printk("add_flags=0x%x\n", virt[1]);
 
     size_t ctx_size = usb_xhci_read(ctx->xhci, CSZ) ? 64 : 32;
     return dma_virt_addr(ctx->dma_buffer) + ((1+ctx_index) * ctx_size);

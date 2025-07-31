@@ -17,12 +17,11 @@ virtio_gpu_create_resource_2d(
     int res;
 
     struct virtio_gpu_resource *resource;
-    resource = kmalloc(sizeof(struct virtio_gpu_resource));
+    resource = kzmalloc(sizeof(struct virtio_gpu_resource), KM_KERNEL);
     if(resource == NULL) {
         wprintk("virtio_gpu_create_resource_2d: could not allocate resource struct!\n");
         return NULL;
     }
-    memset(resource, 0, sizeof(struct virtio_gpu_resource));
 
     resource->width = width;
     resource->height = height;

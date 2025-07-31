@@ -24,7 +24,7 @@ struct timer
 int
 provide_timer(struct timer_dev *dev, size_t alarm)
 {
-    struct timer *timer = kmalloc(sizeof(struct timer));
+    struct timer *timer = kmalloc(sizeof(struct timer), KM_KERNEL);
     if(timer == NULL) {
         return -ENOMEM;
     }

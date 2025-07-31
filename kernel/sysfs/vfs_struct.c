@@ -244,7 +244,7 @@ vfs_create_struct_node(
     int res;
 
     struct vfs_struct_node *node;
-    node = kmalloc(sizeof(struct vfs_struct_node));
+    node = kmalloc(sizeof(struct vfs_struct_node), KM_KERNEL);
     if(node == NULL) {
         return NULL;
     }
@@ -448,7 +448,7 @@ vfs_struct_node_add_unsigned_long_field(
 
     struct vfs_struct_unsigned_long_field *field;
 
-    field = kmalloc(sizeof(*field));
+    field = kmalloc(sizeof(*field), KM_KERNEL);
     if(field == NULL) {
         return -ENOMEM;
     }
@@ -542,7 +542,7 @@ vfs_struct_node_add_buffer_field(
 
     struct vfs_struct_buffer_field *field;
 
-    field = kmalloc(sizeof(*field));
+    field = kmalloc(sizeof(*field), KM_KERNEL);
     if(field == NULL) {
         return -ENOMEM;
     }

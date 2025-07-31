@@ -72,7 +72,7 @@ xcall_ipi_handler(
 
 int
 xcall_queue(cpu_id_t cpu, xcall_f *func, void *arg) {
-    struct pending_xcall *xcall = kmalloc(sizeof(struct pending_xcall));
+    struct pending_xcall *xcall = kmalloc(sizeof(struct pending_xcall), KM_KERNEL);
     if(xcall == NULL) {
         return -ENOMEM;
     }

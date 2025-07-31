@@ -295,11 +295,10 @@ virtio_gpu_init_device(
         return -EINVAL;
     }
 
-    struct virtio_gpu *gpu = kmalloc(sizeof(struct virtio_gpu));
+    struct virtio_gpu *gpu = kzmalloc(sizeof(struct virtio_gpu), KM_KERNEL);
     if(gpu == NULL) {
         return -ENOMEM;
     }
-    memset(gpu, 0, sizeof(struct virtio_gpu));
 
     spinlock_init(&gpu->resource_lock);
     ptree_init(&gpu->resource_tree);

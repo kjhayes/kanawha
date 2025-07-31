@@ -33,21 +33,19 @@ virtio_queue_init_struct(
     ilist_init(&queue->launched_reqs);
     ilist_init(&queue->complete_reqs);
 
-    queue->desc_bitmap = kmalloc(BITMAP_SIZE(queue_size));
+    // Every Descriptor Starts as Zero (Free)
+    queue->desc_bitmap = kzmalloc(BITMAP_SIZE(queue_size), KM_KERNEL);
     if(queue->desc_bitmap == NULL) {
         kfree(queue);
         return -ENOMEM;
     }
-    // Every Descriptor Starts as Zero (Free)
-    memset(queue->desc_bitmap, 0, BITMAP_SIZE(queue_size));
 
-    queue->avail_bitmap = kmalloc(BITMAP_SIZE(queue_size));
+    queue->avail_bitmap = kzmalloc(BITMAP_SIZE(queue_size), KM_KERNEL);
     if(queue->avail_bitmap == NULL) {
         kfree(queue->desc_bitmap);
         kfree(queue);
         return -ENOMEM;
     }
-    memset(queue->avail_bitmap, 0, BITMAP_SIZE(queue_size));
 
     size_t desc_table_size = 16 * queue_size;
     size_t avail_ring_size = 6 + (2 * queue_size);

@@ -109,7 +109,7 @@ acpi_create_unary_arith_term(
         struct acpi_target *target)
 {
     struct acpi_unary_arith_term *term =
-        kmalloc(sizeof(struct acpi_unary_arith_term));
+        kmalloc(sizeof(struct acpi_unary_arith_term), KM_KERNEL);
     if(term == NULL) {
         return NULL;
     }
@@ -200,7 +200,7 @@ acpi_create_binary_arith_term(
         struct acpi_target *target)
 {
     struct acpi_binary_arith_term *term =
-        kmalloc(sizeof(struct acpi_binary_arith_term));
+        kmalloc(sizeof(struct acpi_binary_arith_term), KM_KERNEL);
     if(term == NULL) {
         return NULL;
     }

@@ -31,11 +31,10 @@ ipv4_dev_fs_on_register(
 {
     int res;
 
-    struct ipv4_dev_fs_node *edfs = kmalloc(sizeof(*edfs));
+    struct ipv4_dev_fs_node *edfs = kzmalloc(sizeof(*edfs), KM_KERNEL);
     if(edfs == NULL) {
         return;
     }
-    memset(edfs, 0, sizeof(*edfs));
 
     edfs->dev = dev;
 

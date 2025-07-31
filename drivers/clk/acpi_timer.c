@@ -85,12 +85,11 @@ init_acpi_pm_timer_clk(void)
 
     struct acpi_fadt *fadt = (struct acpi_fadt*)table->table;
 
-    struct acpi_pm_timer *clk = kmalloc(sizeof(struct acpi_pm_timer));
+    struct acpi_pm_timer *clk = kzmalloc(sizeof(struct acpi_pm_timer), KM_KERNEL);
     if(clk == NULL) {
         eprintk("Failed to allocate ACPI PM Timer\n");
         return -ENOMEM;
     }
-    memset(clk, 0, sizeof(struct acpi_pm_timer));
 
     printk("Found FADT (%p)\n", fadt);
 

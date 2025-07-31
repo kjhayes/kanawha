@@ -172,13 +172,13 @@ x64_gdt_init_smp(void)
             cpu->gdt = &x64_bsp_gdt64;
             cpu->tss_segment = &x64_bsp_tss_data;
         } else {
-            cpu->gdt = kmalloc(sizeof(struct gdt64));
+            cpu->gdt = kmalloc(sizeof(struct gdt64), KM_KERNEL);
             if(cpu->gdt == NULL) {
                 return -ENOMEM;
             }
             memcpy(cpu->gdt, &x64_bsp_gdt64, sizeof(struct gdt64));
 
-            cpu->tss_segment = kmalloc(X64_TSS_SEGMENT_SIZE);
+            cpu->tss_segment = kmalloc(X64_TSS_SEGMENT_SIZE, KM_KERNEL);
             if(cpu->tss_segment == NULL) {
                 return -ENOMEM;
             }

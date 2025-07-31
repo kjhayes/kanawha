@@ -17,11 +17,10 @@ static struct acpi_term *
 __create_local_term(void)
 {
     struct acpi_term *term =
-        kmalloc(sizeof(struct acpi_term));
+        kzmalloc(sizeof(struct acpi_term), KM_KERNEL);
     if(term == NULL) {
         return NULL;
     }
-    memset(term, 0, sizeof(*term));
 
     term->destroy = __destroy_local_term;
 

@@ -43,7 +43,7 @@ __acpi_destroy_object(struct acpi_obj *obj)
 struct acpi_obj *
 __acpi_obj_create(void)
 {
-    struct acpi_obj *obj = kmalloc(sizeof(*obj));
+    struct acpi_obj *obj = kmalloc(sizeof(*obj), KM_KERNEL);
     if(obj == NULL) {
         return NULL;
     }

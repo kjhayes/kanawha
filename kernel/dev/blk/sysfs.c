@@ -39,7 +39,7 @@ blk_dev_fs_on_register(
         )
 {
     int res;
-    struct blk_dev_fs_node *node = kmalloc(sizeof(*node));
+    struct blk_dev_fs_node *node = kmalloc(sizeof(*node), KM_KERNEL);
     if(node == NULL) {
         return;
     }

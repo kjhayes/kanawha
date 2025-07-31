@@ -55,7 +55,7 @@ hook_eth_dev_receive(
     int res;
 
     struct eth_dev_recv_hook *hook;
-    hook = kmalloc(sizeof(*hook));
+    hook = kmalloc(sizeof(*hook), KM_KERNEL);
     if(hook == NULL) {
         return NULL;
     }

@@ -10,7 +10,7 @@ static inline struct acpi_target *
 __alloc_target(void)
 {
     struct acpi_target *target =
-        kmalloc(sizeof(*target));
+        kmalloc(sizeof(*target), KM_KERNEL);
     return target;
 }
 

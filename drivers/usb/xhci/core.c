@@ -197,11 +197,10 @@ usb_xhci_init_device(
 
     dprintk("usb_xhci_init_device!\n");
 
-    struct usb_xhci *dev = kmalloc(sizeof(*dev));
+    struct usb_xhci *dev = kzmalloc(sizeof(*dev), KM_KERNEL);
     if(dev == NULL) {
         return -ENOMEM;
     }
-    memset(dev, 0, sizeof(*dev));
 
     dev->func = func;
 

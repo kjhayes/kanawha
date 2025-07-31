@@ -287,12 +287,11 @@ ps2_8042_probe(void)
 {
     int res;
 
-    struct ps2_8042 *ps2 = kmalloc(sizeof(struct ps2_8042));
+    struct ps2_8042 *ps2 = kzmalloc(sizeof(struct ps2_8042), KM_KERNEL);
     if(ps2 == NULL) {
         res = -ENOMEM;
         goto err0;
     }
-    memset(ps2, 0, sizeof(struct ps2_8042));
 
     spinlock_init(&ps2->lock);
     ps2->data_port    = PS2_8042_STANDARD_DATA_PORT;
@@ -344,12 +343,12 @@ ps2_8042_probe(void)
     }
 
     // Allocate the first port struct / buffer
-    ps2->first_port = kmalloc(sizeof(struct ps2_8042_port));
+    ps2->first_port = kzmalloc(sizeof(struct ps2_8042_port), KM_KERNEL);
     if(ps2->first_port == NULL) {
         res = -ENOMEM;
         goto err1;
     }
-    memset(ps2->first_port, 0, sizeof(struct ps2_8042_port));
+
     ps2->first_port->controller = ps2;
     ps2->first_port->port.ops = &ps2_8042_first_port_ops;
     ps2->first_port->port.callback = NULL;
@@ -394,13 +393,13 @@ ps2_8042_probe(void)
         }
 
         // Allocate the second port struct / buffer
-        ps2->second_port = kmalloc(sizeof(struct ps2_8042_port));
+        ps2->second_port = kzmalloc(sizeof(struct ps2_8042_port), KM_KERNEL);
         if(ps2->second_port == NULL) {
             res = -ENOMEM;
             ps2->second_port = NULL;
             goto err2;
         }
-        memset(ps2->second_port, 0, sizeof(struct ps2_8042_port));
+
         ps2->second_port->controller = ps2;
         ps2->second_port->port.ops = &ps2_8042_second_port_ops;
         ps2->second_port->port.callback = NULL;

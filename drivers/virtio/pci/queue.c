@@ -42,11 +42,10 @@ virtio_pci_create_queue(
     int res;
 
     struct virtio_pci_queue *queue =
-        kmalloc(sizeof(struct virtio_pci_queue));
+        kzmalloc(sizeof(struct virtio_pci_queue), KM_KERNEL);
     if(queue == NULL) {
         return NULL;
     }
-    memset(queue, 0, sizeof(struct virtio_pci_queue));
 
     res = virtio_pci_device_set_queue_cfg(
             device,

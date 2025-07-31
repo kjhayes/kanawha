@@ -96,11 +96,10 @@ usb_xhci_init_ports(
     int res;
 
     xhci->num_ports = usb_xhci_read(xhci, MaxPorts);
-    xhci->ports = kmalloc(sizeof(struct usb_xhci_port) * xhci->num_ports);
+    xhci->ports = kzmalloc(sizeof(struct usb_xhci_port) * xhci->num_ports, KM_KERNEL);
     if(xhci->ports == NULL) {
         return -ENOMEM;
     }
-    memset(xhci->ports, 0, sizeof(struct usb_xhci_port) * xhci->num_ports);
 
     for(size_t i = 0; i < xhci->num_ports; i++) {
         xhci->ports[i].xhci = xhci;

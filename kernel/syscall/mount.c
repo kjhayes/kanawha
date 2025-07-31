@@ -35,7 +35,7 @@ syscall_mount(
                   (sl_t)process->id, errnostr(res));
           return res;
       }
-      char *fs_type_buf = kmalloc(fs_type_strlen+1);
+      char *fs_type_buf = kmalloc(fs_type_strlen+1, KM_KERNEL);
       if(fs_type_buf == NULL) {
           return -ENOMEM;
       }
@@ -84,7 +84,7 @@ syscall_mount(
                   (sl_t)process->id, errnostr(res));
           return res;
       }
-      char *src_buf = kmalloc(src_strlen+1);
+      char *src_buf = kmalloc(src_strlen+1, KM_KERNEL);
       if(src_buf == NULL) {
           return -ENOMEM;
       } 
@@ -203,7 +203,7 @@ syscall_mount(
                 errnostr(res));
         return res;
     }
-    char *dst_name_buf = kmalloc(dst_name_strlen+1);
+    char *dst_name_buf = kmalloc(dst_name_strlen+1, KM_KERNEL);
     if(dst_name_buf == NULL) {
         return -ENOMEM;
     }

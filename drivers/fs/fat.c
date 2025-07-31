@@ -1003,7 +1003,7 @@ fat_mount_load_node(
 
     if(index == 0) {
 	// This is the root inode
-	struct fat_node *node = kzmalloc(sizeof(struct fat_node));
+	struct fat_node *node = kzmalloc(sizeof(struct fat_node), KM_KERNEL);
 	if(node == NULL) {
 	    return -ENOMEM;
 	}
@@ -1019,7 +1019,7 @@ fat_mount_load_node(
 	return 0;
     }
 
-    struct fat_node *node = kzmalloc(sizeof(struct fat_node));
+    struct fat_node *node = kzmalloc(sizeof(struct fat_node), KM_KERNEL);
     if(node == NULL) {
 	return -ENOMEM;
     }
@@ -1107,11 +1107,10 @@ fat_mount_file(
 {
     int res;
 
-    struct fat_mount *mnt = kmalloc(sizeof(*mnt));
+    struct fat_mount *mnt = kzmalloc(sizeof(*mnt), KM_KERNEL);
     if(mnt == NULL) {
 	return -ENOMEM;
     }
-    memset(mnt, 0, sizeof(*mnt));
 
     init_fs_mount_struct(&mnt->fs_mount, &fat_mount_ops);
 
@@ -1134,7 +1133,7 @@ fat_mount_file(
     }
     }
 
-    void *buffer = kmalloc(512);
+    void *buffer = kmalloc(512, KM_KERNEL);
     if(buffer == NULL) {
         fs_node_put(fs_node);
 	kfree(mnt);

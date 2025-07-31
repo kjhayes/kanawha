@@ -35,12 +35,11 @@ pci_func_init_caps(
     dprintk("CAP_PTR=0x%x\n", cap_ptr);
 
     while(pci_cap_ptr_valid(cap_ptr)) {
-        struct pci_cap *cap = kmalloc(sizeof(struct pci_cap));
+        struct pci_cap *cap = kzmalloc(sizeof(struct pci_cap), KM_KERNEL);
         if(cap == NULL) {
             res = -ENOMEM;
             goto err_exit;
         }
-        memset(cap, 0, sizeof(struct pci_cap));
 
         ilist_push_tail(&func->cap_list, &cap->list_node);
 

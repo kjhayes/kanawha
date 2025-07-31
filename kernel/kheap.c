@@ -34,7 +34,7 @@ kheap_grow(
         struct kheap *heap)
 {
     int res;
-    dprintk("kheap_grow\n");
+    printk("kheap_grow\n");
 
     size_t page_size = (1ULL << CONFIG_HEAP_GROWTH_ORDER);
     if(heap->heap_size - heap->mapped < page_size) {

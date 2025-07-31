@@ -167,7 +167,7 @@ x64_register_ioapic(
 {
     int res;
 
-    struct ioapic *ioapic = kmalloc(sizeof(struct ioapic));
+    struct ioapic *ioapic = kmalloc(sizeof(struct ioapic), KM_KERNEL);
     if(ioapic == NULL) {
         return -ENOMEM;
     }

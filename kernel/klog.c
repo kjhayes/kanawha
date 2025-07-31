@@ -61,7 +61,7 @@ klog_frame_alloc(void)
         frame->data = ((void*)__klog_boot_frames) + (CONFIG_KLOG_FRAMESIZE * __klog_boot_frames_used);
         __klog_boot_frames_used++;
     } else {
-        frame->data = kmalloc(CONFIG_KLOG_FRAMESIZE);
+        frame->data = kmalloc(CONFIG_KLOG_FRAMESIZE, KM_KERNEL);
     }
 
     if(frame->data == NULL) {

@@ -12,11 +12,10 @@ struct virtio_request *
 virtio_request_create(
         struct virtio_queue *queue)
 {
-    struct virtio_request *request = kmalloc(sizeof(struct virtio_request));
+    struct virtio_request *request = kzmalloc(sizeof(struct virtio_request), KM_KERNEL);
     if(request == NULL) {
         return NULL;
     }
-    memset(request, 0, sizeof(struct virtio_request));
 
     request->queue = queue;
     request->num_buffers = 0;

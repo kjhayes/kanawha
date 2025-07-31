@@ -106,13 +106,12 @@ ext2_mount_load_node(
     }
     DEBUG_ASSERT(group->mnt == mnt);
 
-    struct ext2_fs_node *node = kmalloc(sizeof(struct ext2_fs_node));
+    struct ext2_fs_node *node = kzmalloc(sizeof(struct ext2_fs_node), KM_KERNEL);
     if(node == NULL) {
         wprintk("ext2_mount_load_node: Failed to allocate node!\n");
         ext2_put_group(mnt, group);
         return -ENOMEM;
     }
-    memset(node, 0, sizeof(struct ext2_fs_node));
 
     node->inode_index = node_index;
     node->mount = mnt;
@@ -338,12 +337,11 @@ ext2_mount_file(
         goto err2;
     }
 
-    struct ext2_mount *mnt = kmalloc(sizeof(struct ext2_mount));
+    struct ext2_mount *mnt = kzmalloc(sizeof(struct ext2_mount), KM_KERNEL);
     if(mnt == NULL) {
         res = -ENOMEM;
         goto err2;
     }
-    memset(mnt, 0, sizeof(struct ext2_mount));
 
     mnt->backing_node = fs_node;
     res = init_fs_mount_struct(
@@ -362,12 +360,11 @@ ext2_mount_file(
     mnt->first_data_block = superblock.superblock_index;
 
     mnt->num_groups = num_groups_from_blocks;
-    mnt->group_cache = kmalloc(sizeof(struct ext2_group*) * mnt->num_groups);
+    mnt->group_cache = kzmalloc(sizeof(struct ext2_group*) * mnt->num_groups, KM_KERNEL);
     if(mnt->group_cache == NULL) {
         res = -ENOMEM;
         goto err3;
     }
-    memset(mnt->group_cache, 0, sizeof(struct ext2_group*) * mnt->num_groups);
 
     spinlock_init(&mnt->group_cache_lock);
 

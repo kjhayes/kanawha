@@ -255,12 +255,10 @@ vfs_mount_create(void)
 {
     int res;
 
-    struct vfs_mount *mnt =
-        kmalloc(sizeof(struct vfs_mount));
+    struct vfs_mount *mnt = kzmalloc(sizeof(struct vfs_mount), KM_KERNEL);
     if(mnt == NULL) {
         return NULL;
     }
-    memset(mnt, 0, sizeof(struct vfs_mount));
 
     spinlock_init(&mnt->lock);
     ptree_init(&mnt->inode_tree);
@@ -374,12 +372,11 @@ vfs_node_link(
 
     spin_lock(&node->hierarchy_lock);
 
-    struct vfs_link *link = kmalloc(sizeof(struct vfs_link));
+    struct vfs_link *link = kzmalloc(sizeof(struct vfs_link), KM_KERNEL);
     if(link == NULL) {
         spin_unlock(&node->hierarchy_lock);
         return -ENOMEM;
     }
-    memset(link, 0, sizeof(struct vfs_link));
 
     link->name = kstrdup(name);
     link->inode = inode;

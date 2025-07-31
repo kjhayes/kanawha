@@ -190,7 +190,7 @@ init_cpu_percpu_data(struct cpu *cpu)
 {
     int res;
 
-    struct percpu_heap *heap = kmalloc(sizeof(struct percpu_heap));
+    struct percpu_heap *heap = kmalloc(sizeof(struct percpu_heap), KM_KERNEL);
     if(heap == NULL) {
         return -ENOMEM;
     }
@@ -375,7 +375,7 @@ percpu_alloc(size_t size)
         to_use->size = (uintptr_t)base - (uintptr_t)to_use_start;
         if(to_use_end != base + size) {
             // Split region into two pieces
-            struct percpu_heap_free_region *after_region = kmalloc(sizeof(struct percpu_heap_free_region));
+            struct percpu_heap_free_region *after_region = kmalloc(sizeof(struct percpu_heap_free_region), KM_KERNEL);
             if(after_region == NULL) {
                 return PERCPU_NULL;
             }
@@ -466,7 +466,7 @@ __percpu_free(void __percpu *ptr, size_t size)
         // before == NULL
         dprintk("Need to allocate a new free region\n");
         struct percpu_heap_free_region *region =
-            after != NULL ? after : kmalloc(sizeof(struct percpu_heap_free_region));
+            after != NULL ? after : kmalloc(sizeof(struct percpu_heap_free_region), KM_KERNEL);
 
         if(region == NULL) {
             return -ENOMEM;

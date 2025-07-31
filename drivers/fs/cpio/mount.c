@@ -115,11 +115,10 @@ cpio_mount_load_node(
         return -ENXIO;
     }
 
-    struct cpio_file_node *node = kmalloc(sizeof(struct cpio_file_node));
+    struct cpio_file_node *node = kzmalloc(sizeof(struct cpio_file_node), KM_KERNEL);
     if(node == NULL) {
         return -ENOMEM;
     }
-    memset(node, 0, sizeof(struct cpio_file_node));
 
     node->mnt = mnt;
     fs_node->backing.file_ops = &cpio_file_ops;
@@ -189,11 +188,10 @@ cpio_mount_file(
         struct fs_mount **out_ptr)
 {
     int res;
-    struct cpio_mount *mnt = kmalloc(sizeof(struct cpio_mount));
+    struct cpio_mount *mnt = kzmalloc(sizeof(struct cpio_mount), KM_KERNEL);
     if(mnt == NULL) {
         return -ENOMEM;
     }
-    memset(mnt, 0, sizeof(struct cpio_mount));
 
     res = init_fs_mount_struct(
             &mnt->fs_mount,

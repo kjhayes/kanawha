@@ -14,11 +14,10 @@ environment_create(
 {
     int res;
 
-    struct environment *environ = kmalloc(sizeof(struct environment));
+    struct environment *environ = kzmalloc(sizeof(struct environment), KM_KERNEL);
     if(environ == NULL) {
         return -ENOMEM;
     }
-    memset(environ, 0, sizeof(struct environment));
 
     spinlock_init(&environ->lock);
     stree_init(&environ->env_table);
@@ -55,12 +54,11 @@ environment_clone(
         struct envvar *var =
             container_of(node, struct envvar, node);
 
-        struct envvar *child_var = kmalloc(sizeof(struct envvar));
+        struct envvar *child_var = kzmalloc(sizeof(struct envvar), KM_KERNEL);
         if(child_var == NULL) {
             res = -ENOMEM;
             goto err2;
         }
-        memset(child_var, 0, sizeof(struct envvar));
 
         char *key_dup = kstrdup(var->node.key);
         if(key_dup == NULL) {
@@ -240,12 +238,11 @@ environment_set(
 
     if(node == NULL)
     {
-        struct envvar *var = kmalloc(sizeof(struct envvar));
+        struct envvar *var = kzmalloc(sizeof(struct envvar), KM_KERNEL);
         if(var == NULL) {
             spin_unlock(&environ->lock);
             return -ENOMEM;
         }
-        memset(var, 0, sizeof(struct envvar));
 
         char *key_dup = kstrdup(var_name);
         if(key_dup == NULL) {

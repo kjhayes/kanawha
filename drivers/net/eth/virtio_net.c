@@ -185,11 +185,10 @@ virtio_net_eth_alloc_frame(
     struct virtio_net *dev =
         container_of(eth_dev, struct virtio_net, eth_dev);
 
-    struct virtio_net_eth_frame *frame = kmalloc(sizeof(*frame));
+    struct virtio_net_eth_frame *frame = kzmalloc(sizeof(*frame), KM_KERNEL);
     if(frame == NULL) {
         return NULL;
     }
-    memset(frame, 0, sizeof(*frame));
 
     res = dma_alloc(
             virtio_net_hdr_len(dev),
@@ -402,8 +401,8 @@ virtio_net_eth_begin_recv(
     dev->num_recv_requests = dev->queue_pairs[0].recv->queue_size / 2;
     dev->recv_buffer_size = 1514;
 
-    dev->recv_buffers = kmalloc(sizeof(dma_addr_t) * dev->num_recv_requests);
-    dev->recv_requests = kmalloc(sizeof(struct virtio_request*) * dev->num_recv_requests);
+    dev->recv_buffers = kzmalloc(sizeof(dma_addr_t) * dev->num_recv_requests, KM_KERNEL);
+    dev->recv_requests = kzmalloc(sizeof(struct virtio_request*) * dev->num_recv_requests, KM_KERNEL);
 
     if(dev->recv_buffers == NULL || dev->recv_requests == NULL) {
         dma_free(dev->recv_header, virtio_net_hdr_len(dev));
@@ -553,11 +552,12 @@ virtio_net_init_device(
 
     size_t num_queue_pairs = 1;
 
-    struct virtio_net *net = kmalloc(sizeof(struct virtio_net) + (sizeof(struct virtio_net_queue_pair) * num_queue_pairs));
+    struct virtio_net *net = kzmalloc(
+	    sizeof(struct virtio_net) + (sizeof(struct virtio_net_queue_pair) * num_queue_pairs),
+	    KM_KERNEL);
     if(net == NULL) {
         return -ENOMEM;
     }
-    memset(net, 0, sizeof(struct virtio_net));
     net->virtio_dev = device;
 
     irq_lock_init(&net->recv_lock);

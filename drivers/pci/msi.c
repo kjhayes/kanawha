@@ -52,11 +52,10 @@ pci_func_init_msi_info(
         return 0;
     }
 
-    struct pci_msi_info *info = kmalloc(sizeof(struct pci_msi_info));
+    struct pci_msi_info *info = kzmalloc(sizeof(struct pci_msi_info), KM_KERNEL);
     if(info == NULL) {
         return -ENOMEM;
     }
-    memset(info, 0, sizeof(struct pci_msi_info));
 
     info->cap = cap;
 
@@ -97,11 +96,10 @@ pci_func_start_msi(
         return -ENXIO;
     }
 
-    struct msi_irq_dev *msi_dev = kmalloc(sizeof(struct msi_irq_dev));
+    struct msi_irq_dev *msi_dev = kzmalloc(sizeof(struct msi_irq_dev), KM_KERNEL);
     if(msi_dev == NULL) {
         return -ENOMEM;
     }
-    memset(msi_dev, 0, sizeof(struct msi_irq_dev));
 
     msi_dev->func = func;
 
@@ -123,12 +121,11 @@ pci_func_start_msi(
     pci_msi_write_msg_ctrl(func, info, msg_ctrl);
 
 
-    msi_dev->link_actions = kmalloc(sizeof(struct irq_action*) * msi_dev->num_irqs);
+    msi_dev->link_actions = kzmalloc(sizeof(struct irq_action*) * msi_dev->num_irqs, KM_KERNEL);
     if(msi_dev->link_actions == NULL) {
         kfree(msi_dev);
         return -ENOMEM;
     }
-    memset(msi_dev->link_actions, 0, sizeof(struct irq_action*) * msi_dev->num_irqs);
 
     struct irq_desc *descs[msi_dev->num_irqs];
     memset(descs, 0, sizeof(struct irq_desc*) * msi_dev->num_irqs);

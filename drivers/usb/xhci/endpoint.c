@@ -13,11 +13,10 @@ usb_xhci_create_endpoint(
     int res;
 
     struct usb_xhci_endpoint *ep;
-    ep = kmalloc(sizeof(*ep));
+    ep = kzmalloc(sizeof(*ep), KM_KERNEL);
     if(ep == NULL) {
         return NULL;
     }
-    memset(ep, 0, sizeof(*ep));
 
     ep->device = dev;
     ep->dci = dci;
@@ -63,6 +62,19 @@ usb_xhci_endpoint_notify_transfer_event(
 {
     void __phys *dequeued = (void __phys *)(uintptr_t)letoh64(trb->param);
     endp->ring.dequeue_phys = dequeued;
+
+    irq_lock_acquire(&endp->lock);
+    ilist_node_t *node = ilist_pop_head(&endp->transfer_queue);
+
+    struct usb_xhci_transfer *xfer = container_of(node, struct usb_xhci_transfer, endpoint_queue_node);
+
+    xfer->xfer.status = USB_TRANSFER_STATUS_COMPLETE;
+    if(xfer->xfer.callback != NULL) {
+        xfer->xfer.callback(&xfer->xfer);
+    }
+
+    irq_lock_release(&endp->lock);
+
     return 0;
 }
 
@@ -251,11 +263,10 @@ usb_xhci_alloc_transfer(
         usb_transfer_t type)
 {
     struct usb_xhci_transfer *xfer;
-    xfer = kmalloc(sizeof(*xfer));
+    xfer = kzmalloc(sizeof(*xfer), KM_KERNEL);
     if(xfer == NULL) {
         return NULL;
     }
-    memset(xfer, 0, sizeof(*xfer));
     xfer->endpoint = endp;
 
     struct usb_transfer_ops *ops;

@@ -87,7 +87,7 @@ acpi_create_op_region_term(
         struct acpi_term *length_term)
 {
     struct acpi_op_region_term *term =
-        kmalloc(sizeof(*term));
+        kmalloc(sizeof(*term), KM_KERNEL);
     if(term == NULL) {
         return NULL;
     }
@@ -182,7 +182,7 @@ acpi_create_op_region_fields_term(
         struct acpi_op_region_field_list *field_list)
 {
     struct acpi_op_region_fields_term *term;
-    term = kmalloc(sizeof(*term));
+    term = kmalloc(sizeof(*term), KM_KERNEL);
     if(term == NULL) {
         return NULL;
     }
@@ -201,7 +201,7 @@ struct acpi_op_region_field *
 acpi_create_blank_op_region_field(void)
 {
     struct acpi_op_region_field *field;
-    field = kmalloc(sizeof(*field));
+    field = kmalloc(sizeof(*field), KM_KERNEL);
     if(field == NULL) {
         return NULL;
     }
@@ -227,7 +227,7 @@ struct acpi_op_region_field_list *
 acpi_create_empty_op_region_field_list(void)
 {
     struct acpi_op_region_field_list *list;
-    list = kmalloc(sizeof(*list));
+    list = kmalloc(sizeof(*list), KM_KERNEL);
     if(list == NULL) {
         return NULL;
     }

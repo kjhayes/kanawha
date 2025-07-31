@@ -604,7 +604,7 @@ void cpu_start_threading(thread_f *func, void *state)
     }
 
     // Create the initial thread for this CPU
-    struct thread_state *current = kmalloc(sizeof(struct thread_state));
+    struct thread_state *current = kmalloc(sizeof(struct thread_state), KM_KERNEL);
     if(current == NULL) {
         panic("Ran out of memory during cpu_start_threading!\n");
     }

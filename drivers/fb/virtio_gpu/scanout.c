@@ -35,12 +35,10 @@ virtio_gpu_update_scanout_info(
         kfree(gpu->scanouts);
     }
 
-    gpu->scanouts = kmalloc(sizeof(struct virtio_gpu_scanout) * gpu->num_scanouts);
+    gpu->scanouts = kzmalloc(sizeof(struct virtio_gpu_scanout) * gpu->num_scanouts, KM_KERNEL);
     if(gpu->scanouts == NULL) {
         return -ENOMEM;
     }
-    memset(gpu->scanouts, 0, sizeof(struct virtio_gpu_scanout) * gpu->num_scanouts);
-
 
     for(size_t i = 0; i < gpu->num_scanouts; i++) {
         struct virtio_gpu_scanout *scanout = &gpu->scanouts[i];

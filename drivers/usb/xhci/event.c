@@ -356,7 +356,7 @@ usb_xhci_init_interruptor(
         return -EINVAL;
     }
 
-    intr->segments = kmalloc(sizeof(dma_addr_t) * intr->num_segments);
+    intr->segments = kmalloc(sizeof(dma_addr_t) * intr->num_segments, KM_KERNEL);
     if(intr->segments == NULL) {
         irq_uninstall_action(intr->action);
         wprintk("Failed to allocate segment pointers for USB XHCI interruptor event ring! (num_segments=%ld)\n",
@@ -487,14 +487,13 @@ usb_xhci_init_interruptors(
     }
 
     dev->num_interruptors = num_intr;
-    dev->interruptors = kmalloc(sizeof(struct usb_xhci_interruptor) * dev->num_interruptors);
+    dev->interruptors = kzmalloc(sizeof(struct usb_xhci_interruptor) * dev->num_interruptors, KM_KERNEL);
     if(dev->interruptors == NULL) {
         pci_func_stop_irqs(dev->func);
         wprintk("Failed to allocate interruptors for USB XHCI! (num_interruptors=%ld)\n",
                 (sl_t)dev->num_interruptors);
         return -ENOMEM;
     }
-    memset(dev->interruptors, 0, sizeof(struct usb_xhci_interruptor) * dev->num_interruptors);
 
     // Set up every interruptor's IRQ handler
     for(size_t i = 0; i < dev->num_interruptors; i++)

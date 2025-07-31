@@ -33,13 +33,11 @@ sysfs_register_mount(
         return -EEXIST;
     }
 
-    struct sysfs_mount *sysmnt = kmalloc(sizeof(struct sysfs_mount));
+    struct sysfs_mount *sysmnt = kzmalloc(sizeof(struct sysfs_mount), KM_KERNEL);
     if(sysmnt == NULL) {
         sysfs_mount_lock_release();
         return -ENOMEM;
     }
-    memset(sysmnt, 0, sizeof(struct sysfs_mount));
-
 
     sysmnt->mount = mnt;
     sysmnt->tree_node.key = kstrdup(id);

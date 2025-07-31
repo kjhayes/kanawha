@@ -45,11 +45,10 @@ fs_mount_get_node(
 
     if(node == NULL)
     {
-	fs_node = kmalloc(sizeof(*fs_node));
+	fs_node = kzmalloc(sizeof(*fs_node), KM_KERNEL);
 	if(fs_node == NULL) {
 	    return NULL;
 	}
-	memset(fs_node, 0, sizeof(*fs_node));
 
 	rlock_init(&fs_node->backing_lock);
 

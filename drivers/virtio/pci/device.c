@@ -141,11 +141,10 @@ virtio_pci_init_queues(
             vpci_dev->common_cfg_cap,
             VIRTIO_PCI_COMMON_CFG_NUM_QUEUES);
 
-    vdev->queues = kmalloc(sizeof(struct virtio_pci_queue*) * vdev->num_queues);
+    vdev->queues = kzmalloc(sizeof(struct virtio_pci_queue*) * vdev->num_queues, KM_KERNEL);
     if(vdev->queues == NULL) {
         return -ENOMEM;
     }
-    memset(vdev->queues, 0, sizeof(struct virtio_pci_queue*) * vdev->num_queues);
 
     for(size_t i = 0; i < vdev->num_queues; i++) {
         struct virtio_pci_queue *vqueue =

@@ -40,7 +40,7 @@ parse_madt_lapic(
         return 0;
     }
 
-    struct x64_cpu *cpu = kmalloc(sizeof(struct x64_cpu));
+    struct x64_cpu *cpu = kmalloc(sizeof(struct x64_cpu), KM_KERNEL);
     if(cpu == NULL) {
         return -ENOMEM;
     }
@@ -67,7 +67,7 @@ parse_madt_x2apic(
     struct acpi_madt_entry_x2apic *entry = (void*)hdr;
     printk("MADT X2APIC: id=0x%lx\n", (apic_id_t)entry->apic_id);
 
-    struct x64_cpu *cpu = kmalloc(sizeof(struct x64_cpu));
+    struct x64_cpu *cpu = kmalloc(sizeof(struct x64_cpu), KM_KERNEL);
     if(cpu == NULL) {
         return -ENOMEM;
     }

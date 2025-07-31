@@ -1,6 +1,5 @@
 
 #include <kanawha/module.h>
-#include <kanawha/kmalloc.h>
 #include <kanawha/stddef.h>
 #include <kanawha/stree.h>
 #include <kanawha/spinlock.h>
@@ -27,8 +26,7 @@ static struct module __core_kernel_module;
 static struct module *
 __alloc_module_struct(void)
 {
-    struct module *mod = (struct module*)kmalloc(sizeof(struct module));
-    memset(mod, 0, sizeof(struct module));
+    struct module *mod = kzmalloc(sizeof(struct module), KM_KERNEL);
     return mod;
 }
 
@@ -134,13 +132,12 @@ module_link_symbol(
         ksymbol_put(sym);
     } else {
         // We need to add the owning module to our dependency tree,
-        struct module_dependency *dep = kmalloc(sizeof(struct module_dependency));
+        struct module_dependency *dep = kzmalloc(sizeof(struct module_dependency), KM_KERNEL);
         if(dep == NULL) {
             eprintk("Failed to allocate module dependency struct during module_link_symbol!\n");
             ksymbol_put(sym);
             sym = NULL;
         } else {
-            memset(dep, 0, sizeof(struct module_dependency));
             dep->mod = owner;
             dep->tree_node.key = (uintptr_t)owner;
             ptree_insert(&mod->dependency_tree, &dep->tree_node, (uintptr_t)owner);
@@ -274,12 +271,11 @@ elf64_load_module_alloc_sections(
         return -EINVAL;
     }
 
-    mod->sections = kmalloc(sizeof(struct module_section) * mod->section_count);
+    mod->sections = kzmalloc(sizeof(struct module_section) * mod->section_count, KM_KERNEL);
     if(mod->sections == NULL && mod->section_count > 0) {
         eprintk("Failed to allocate module memory section table!\n");
         return -ENOMEM;
     }
-    memset(mod->sections, 0, sizeof(struct module_section) * mod->section_count);
 
     size_t sections_initialized = 0;
     for(size_t i = 0; i < state->hdr.e_shnum; i++) {
@@ -291,7 +287,7 @@ elf64_load_module_alloc_sections(
         sections_initialized++;
 
         sec->size = shdr->sh_size;
-        sec->data = kmalloc(sec->size);
+        sec->data = kmalloc(sec->size, KM_KERNEL);
         if(sec->data == NULL) {
             eprintk("Failed to allocate space for SHF_ALLOC section \"%s\", size=0x%lx\n",
                     (char*)(state->shstrtab + shdr->sh_name), sec->size);
@@ -389,7 +385,7 @@ elf64_handle_reloc_section(
     void *sec_data = (void*)target_hdr->sh_addr;
     size_t sec_size = target_hdr->sh_size;
 
-    void *rel_data = kmalloc(shdr->sh_size);
+    void *rel_data = kmalloc(shdr->sh_size, KM_KERNEL);
     if(rel_data == NULL) {
         res = -ENOMEM;
         goto exit0;
@@ -483,7 +479,7 @@ elf64_load_module_read_hdrs(
     size_t read;
 
     state->phdrs_size = state->hdr.e_phentsize * state->hdr.e_phnum;
-    state->phdrs = kmalloc(state->phdrs_size);
+    state->phdrs = kmalloc(state->phdrs_size, KM_KERNEL);
     if(state->phdrs == NULL && state->hdr.e_phnum > 0) {
         res = -ENOMEM;
         goto err0;
@@ -496,7 +492,7 @@ elf64_load_module_read_hdrs(
     }
 
     state->shdrs_size = state->hdr.e_shentsize * state->hdr.e_shnum;
-    state->shdrs = kmalloc(state->shdrs_size);
+    state->shdrs = kmalloc(state->shdrs_size, KM_KERNEL);
     if(state->shdrs == NULL && state->hdr.e_shnum > 0) {
         res = -ENOMEM;
         goto err1;
@@ -535,7 +531,7 @@ elf64_load_module_read_tables(
     // Read Section Header String Table
     Elf64_Shdr *shstrtab_hdr = &state->shdrs[state->hdr.e_shstrndx];
     state->shstrtab_size = shstrtab_hdr->sh_size;
-    state->shstrtab = kmalloc(state->shstrtab_size);
+    state->shstrtab = kmalloc(state->shstrtab_size, KM_KERNEL);
     if(state->shstrtab == NULL) {
         res = -ENOMEM;
         goto err0;
@@ -562,7 +558,7 @@ elf64_load_module_read_tables(
     }
 
     state->symtab_size = symtab_hdr->sh_size;
-    state->symtab = kmalloc(state->symtab_size);
+    state->symtab = kmalloc(state->symtab_size, KM_KERNEL);
     if(state->symtab == NULL) {
         res = -ENOMEM;
         goto err1;
@@ -582,7 +578,7 @@ elf64_load_module_read_tables(
             goto err2;
         }
         state->symstrtab_size = symstrtab_hdr->sh_size;
-        state->symstrtab = kmalloc(state->symstrtab_size);
+        state->symstrtab = kmalloc(state->symstrtab_size, KM_KERNEL);
         if(state->symstrtab == NULL) {
             res = -ENOMEM;
             goto err2;
@@ -796,11 +792,10 @@ load_module(struct fs_node *module_node,
 {
     int res;
 
-    struct module *mod = kmalloc(sizeof(struct module));
+    struct module *mod = kzmalloc(sizeof(struct module), KM_KERNEL);
     if(mod == NULL) {
         return mod;
     }
-    memset(mod, 0, sizeof(struct module));
 
     res = __init_module(mod, name, flags);
     if(res) {
