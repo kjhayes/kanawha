@@ -19,14 +19,13 @@ void * kmalloc(size_t size, unsigned long flags);
 void kfree(void * addr);
 
 // Same as kmalloc but zeros the memory on success
-static inline void *
-kzmalloc(size_t size, unsigned long flags)
-{
-    void *alloc = kmalloc(size, flags);
-    if(alloc != NULL) {
-	memset(alloc, 0, size);
-    }
-    return alloc;
-}
+#define kzmalloc(size, flags) \
+({\
+    void *alloc = kmalloc(size, flags);\
+    if(alloc != NULL) {\
+	memset(alloc, 0, size);\
+    }\
+    alloc;\
+})
 
 #endif

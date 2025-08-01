@@ -17,6 +17,11 @@
 #include <kanawha/fs/node.h>
 #include <kanawha/printk.h>
 
+static int
+mmap_unmap_region_lockless(
+	struct mmap *mmap,
+	struct mmap_region *region);
+
 int
 mmap_create(
         size_t size,
@@ -106,7 +111,22 @@ mmap_deattach(
     process->mmap = NULL;
 
     if(ilist_empty(&mmap->process_list)) {
-        // TODO Free the mmap_regions/pages
+
+	dprintk("Destroying MMAP\n");
+
+	while(1) {
+	    struct ptree_node *region_node = ptree_get_first(&mmap->region_tree);
+	    if(region_node == NULL) {
+		break;
+	    }
+	    res = mmap_unmap_region_lockless(
+		    mmap,
+		    container_of(region_node, struct mmap_region, tree_node));
+	    if(res) {
+		eprintk("Failed to unmap region on mmap destruction! (err=%s)\n",
+			errnostr(res));
+	    }
+	}
 
         // This was the last process to hold a reference to this mmap
         res = vmem_region_destroy(mmap->vmem_region);
@@ -114,6 +134,7 @@ mmap_deattach(
             wprintk("Failed to destroy mmap vmem_region! (err=%s)\n",
                     errnostr(res));
         }
+
         kfree(mmap);
         
         // Don't unlock the lock just to be extra safe,
@@ -636,6 +657,63 @@ err0:
     return res;
 }
 
+static int
+mmap_unmap_region_lockless(
+	struct mmap *mmap,
+	struct mmap_region *region)
+{
+    int res;
+
+    struct fs_node *fs_node = region->fs_node;
+
+    dprintk("mmap_unmap_region: removing region [%p-%p)\n",
+            region->tree_node.key, region->tree_node.key + region->size
+            );
+
+    struct ptree_node *removed = ptree_remove(&mmap->region_tree, region->tree_node.key);
+    DEBUG_ASSERT(removed == &region->tree_node);
+
+    spin_lock(&region->page_tree_lock);
+
+    size_t num_reclaimed = 0;
+
+    struct ptree_node *page_node = ptree_get_first(&region->page_tree);
+    while(page_node != NULL)
+    {
+        struct mmap_page *page =
+            container_of(page_node, struct mmap_page, tree_node);
+
+        res = mmap_region_reclaim_page(region, page);
+        if(res) {
+            spin_unlock(&region->page_tree_lock);
+            eprintk("mmap_unmap_region: mmap_region_reclaim_page returned %s\n",
+                    errnostr(res));
+            return res;
+        }
+
+        struct ptree_node *next = ptree_get_first(&region->page_tree);
+        if(next == page_node) {
+            spin_unlock(&region->page_tree_lock);
+            eprintk("mmap_unmap_region: Failed to reclaim mmap page\n");
+            return -EINVAL;
+        }
+        page_node = next;
+        num_reclaimed++;
+    }
+
+    dprintk("mmap_unmap_region: reclaimed %lld pages\n", (sll_t)num_reclaimed);
+   
+    if(fs_node) {
+        fs_node_put(fs_node);
+    }
+
+    spin_unlock(&region->page_tree_lock);
+
+    kfree(region);
+
+    return 0;
+}
+
 int
 mmap_unmap_region(
         struct process *process,
@@ -645,8 +723,6 @@ mmap_unmap_region(
 
     struct mmap *mmap = process->mmap;
     DEBUG_ASSERT(KERNEL_ADDR(mmap));
-
-    spin_lock(&mmap->lock);
 
     struct ptree_node *pnode =
         ptree_get_max_less_or_eq(
@@ -665,11 +741,6 @@ mmap_unmap_region(
         return -ENXIO;
     }
 
-    struct fs_node *fs_node = region->fs_node;
-
-    dprintk("mmap_unmap_region: removing region [%p-%p)\n",
-            region->tree_node.key, region->tree_node.key + region->size
-            );
 
     if(!((((uintptr_t)region->tree_node.key > (uintptr_t)process->user_ip)
       || ((uintptr_t)region->tree_node.key + region->size <= (uintptr_t)process->user_ip))))
@@ -677,49 +748,10 @@ mmap_unmap_region(
         return -EINVAL;
     }
 
-    struct ptree_node *removed =
-        ptree_remove(&mmap->region_tree, pnode->key);
-    DEBUG_ASSERT(removed == pnode);
-
-    spin_lock(&region->page_tree_lock);
-
-    size_t num_reclaimed = 0;
-
-    struct ptree_node *page_node = ptree_get_first(&region->page_tree);
-    while(page_node != NULL)
-    {
-        struct mmap_page *page =
-            container_of(page_node, struct mmap_page, tree_node);
-
-        res = mmap_region_reclaim_page(region, page);
-        if(res) {
-            spin_unlock(&region->page_tree_lock);
-            spin_unlock(&mmap->lock);
-            eprintk("mmap_unmap_region: mmap_region_reclaim_page returned %s\n",
-                    errnostr(res));
-            return res;
-        }
-
-        struct ptree_node *next = ptree_get_first(&region->page_tree);
-        if(next == page_node) {
-            spin_unlock(&region->page_tree_lock);
-            spin_unlock(&mmap->lock);
-            eprintk("mmap_unmap_region: Failed to reclaim mmap page\n");
-            return -EINVAL;
-        }
-        page_node = next;
-        num_reclaimed++;
-    }
-
-    dprintk("mmap_unmap_region: reclaimed %lld pages\n", (sll_t)num_reclaimed);
-   
-    if(fs_node) {
-        fs_node_put(fs_node);
-    }
-
-    spin_unlock(&region->page_tree_lock);
+    spin_lock(&mmap->lock);
+    res = mmap_unmap_region_lockless(mmap, region);
     spin_unlock(&mmap->lock);
-    return 0;
+    return res;
 }
 
 

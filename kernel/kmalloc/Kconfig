@@ -9,3 +9,22 @@ choice
 #        depends on DEBUGGING
 endchoice
 
+config KMALLOC_TRACK_CALLSITES
+    bool "Track Callsites"
+    default n
+
+config KMALLOC_TRACK_CALLSITES_LOG_AT_LAUNCH
+    bool "Log Tracked Callsites at Launch"
+    default n
+    depends on KMALLOC_TRACK_CALLSITES
+
+config KMALLOC_TRACK_CALLSITES_LOG_PERIODIC
+    bool "Log Tracked Callsites Periodically"
+    default n
+    depends on KMALLOC_TRACK_CALLSITES
+
+config KMALLOC_TRACK_CALLSITES_SEC_PERIOD
+    int "Log Tracked Callsites Period (sec)"
+    default 30
+    depends on KMALLOC_TRACK_CALLSITES_LOG_PERIODIC
+

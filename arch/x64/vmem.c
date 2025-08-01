@@ -17,6 +17,14 @@
 
 #include <arch/x64/mmu.h>
 
+static int
+dump_page_table(
+	printk_f *printer,
+	void __phys * table_phys_addr,
+	int level,
+	void * virt_base,
+	int is_root);
+
 static struct irq_action *x64_pf_action = NULL;
 
 static int
@@ -844,6 +852,8 @@ arch_vmem_region_init_paged(struct vmem_region *region)
       pt_level_entry_size = X64_PDPT_ENTRY_REGION_SIZE;
     }
 
+    region->arch_state.paged_max_entry_level = 1;
+
     if(region->arch_state.pt_level < 2 || region->arch_state.pt_level > 3) {
         eprintk("Could not find a page table level which would work for paged vmem_region [%p - %p)!\n",
                 (uintptr_t)0, (uintptr_t)region->size);
@@ -1132,6 +1142,7 @@ arch_vmem_map_map_region(
                 map_table = (void __phys *)(addr_mask & *map_entry);
             } else {
                 // the map entry points to some other region's page table
+
                 void __phys * shared_table;
                 res = page_alloc(ptr_orderof(next_table_size), &shared_table, 0);
                 if(res) {
@@ -1446,6 +1457,18 @@ arch_vmem_paged_region_map(
 {
     int res;
 
+    dprintk("arch_vmem_paged_region_map(\n"
+	    "\tregion=%p\n"
+	    "\toffset=%p\n"
+	    "\tphys_addr=%p\n"
+	    "\tsize=%p\n"
+	    "\tflags=%p\n",
+	    (uintptr_t)region,
+	    (uintptr_t)offset,
+	    (uintptr_t)phys_addr,
+	    (uintptr_t)size,
+	    (uintptr_t)flags);
+
     DEBUG_ASSERT(KERNEL_ADDR(region));
 
     if(offset % X64_PT_ENTRY_REGION_SIZE ||
@@ -1467,11 +1490,12 @@ arch_vmem_paged_region_map(
 
     while(size > 0)
     {
-        int max_entry_level = region->arch_state.pt_level-1;
+        int max_entry_level = region->arch_state.paged_max_entry_level;
 
         size_t entries_per_table;
         size_t page_size;
         int entry_level;
+
         if(size >= X64_PDPT_ENTRY_REGION_SIZE
            && ((uintptr_t)phys_addr % X64_PDPT_ENTRY_REGION_SIZE == 0)
            && ((uintptr_t)offset % X64_PDPT_ENTRY_REGION_SIZE == 0)
@@ -1569,8 +1593,14 @@ arch_vmem_paged_region_map(
         size_t index = (offset / page_size) % entries_per_table;
         uint64_t *entry = ((uint64_t*)__va(cur_table)) + index;
 
+	dprintk("Creating PT Leaf Entry at Level %d, Index %d [Region Level %d]\n",
+		(int)cur_level,
+		(int)index,
+		region->arch_state.pt_level);
+
         res = create_pt_leaf_entry(entry, entry_level, phys_addr, flags);
         if(res) {
+	    wprintk("Failed to create pt_leaf_entry!\n");
             return res;
         }
 
@@ -1578,7 +1608,6 @@ arch_vmem_paged_region_map(
         phys_addr += page_size;
         size -= page_size;
     }
-
     return 0;
 }
 
@@ -1654,6 +1683,7 @@ arch_vmem_paged_region_unmap(
                 // This must be a page table (TODO check this in an assertion)
                 uint64_t addr_mask = pt_level_addr_mask(cur_level);
                 cur_table = (void __phys *)(*cur_entry & addr_mask);
+		DEBUG_ASSERT(!pt_level_entry_is_leaf(cur_level, *cur_entry));
                 cur_level--;
             }
             else {
@@ -1707,7 +1737,7 @@ arch_vmem_map_activate(
 }
 
 static int
-dump_page_table(printk_f *printer, void __phys * table_phys_addr, int level, void * virt_base)
+dump_page_table(printk_f *printer, void __phys * table_phys_addr, int level, void * virt_base, int is_root)
 {
     int res = 0;
 
@@ -1735,16 +1765,35 @@ dump_page_table(printk_f *printer, void __phys * table_phys_addr, int level, voi
     void __phys * pending_paddr;
     void * pending_vaddr;
     size_t pending_size;
+    int pending_index;
+    int pending_final_index;
     uint64_t pending_flags;
 
 #define DUMP_PENDING_LEAF()\
     do {\
         PUT_TABS();\
+	(*printer)("[level(%d)", level);\
+	if(pending_index == pending_final_index) {\
+	    (*printer)(" index(%d)", pending_index);\
+	}\
+	else {\
+	    (*printer)(" indices(%d to %d)", pending_index, pending_final_index);\
+	}\
+	(*printer)("] ");\
         (*printer)("%p -> %p [size=0x%llx]\n", pending_vaddr, pending_paddr, (ull_t)pending_size);\
     } while(0)
 
     for(size_t entry_index = 0; entry_index < num_entries; entry_index++)
     {
+	if(is_root && (entry_index == (num_entries/2))) {
+	    uint64_t highmem_mask = ~((pt_level_entry_region_size(level) * num_entries)-1);
+	    virt_base = (void*)((uint64_t)virt_base | highmem_mask);
+	    if(leaf_pending) {
+		leaf_pending = 0;
+		DUMP_PENDING_LEAF();
+	    }
+	}
+
         uint64_t entry = table[entry_index];
         void __phys * addr = (void __phys *)(entry & addr_mask);
         uint64_t flags = entry & ~addr_mask;
@@ -1766,6 +1815,8 @@ dump_page_table(printk_f *printer, void __phys * table_phys_addr, int level, voi
                 // Dump the pending leaf because some flag or address changed
                 DUMP_PENDING_LEAF();
                 leaf_pending = 1;
+		pending_index = entry_index;
+		pending_final_index = entry_index;
                 pending_paddr = addr;
                 pending_next_paddr = addr + entry_region_size;
                 pending_vaddr = virt_base;
@@ -1776,18 +1827,30 @@ dump_page_table(printk_f *printer, void __phys * table_phys_addr, int level, voi
                 leaf_pending = 1;
                 pending_size += entry_region_size;
                 pending_next_paddr += entry_region_size;
+		pending_final_index = entry_index;
             }
-        } else if(is_leaf) {
-            leaf_pending = 1;
-            pending_paddr = addr;
-            pending_next_paddr = addr + entry_region_size;
-            pending_vaddr = virt_base;
-            pending_size = entry_region_size;
-            pending_flags = flags;
+        } else {
+	    if(is_leaf) {
+                leaf_pending = 1;
+		pending_index = entry_index;
+		pending_final_index = entry_index;
+                pending_paddr = addr;
+                pending_next_paddr = addr + entry_region_size;
+                pending_vaddr = virt_base;
+                pending_size = entry_region_size;
+                pending_flags = flags;
+	    }
         }
 
         if(!is_leaf) {
-            res = dump_page_table(printer, addr, level - 1, virt_base);
+	    PUT_TABS();
+	    (*printer)("[level(%d) index(%d)] ", level, entry_index);
+	    uint64_t shared_mask;
+	    pt_level_shared_mask(level, &shared_mask);
+	    (*printer)("Table %s\n",
+		    entry & shared_mask ? "[SHARED]" : ""
+		    );
+            res = dump_page_table(printer, addr, level - 1, virt_base, 0);
             if(res) {return res;}
         }
 
@@ -1875,7 +1938,7 @@ arch_dump_vmem_map(printk_f *printer, struct vmem_map *map)
 {
     void __phys * root = map->arch_state.pt_root;
     (*printer)("--- x64 Virtual Memory Mapping (Root Level = %d) ---\n", map->arch_state.pt_level);
-    int res = dump_page_table(printer, map->arch_state.pt_root, map->arch_state.pt_level, 0x0);
+    int res = dump_page_table(printer, map->arch_state.pt_root, map->arch_state.pt_level, 0x0, 1);
     if(res) {
         (*printer)("[[[ An Error Occurred When Printing Virtual Memory Mapping (err=%s)\n",
                 errnostr(res));

@@ -20,6 +20,8 @@ struct arch_vmem_region
 
     uint64_t pt_entry;
     int entry_only;
+
+    int paged_max_entry_level;
 };
 
 static inline void *

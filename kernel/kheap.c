@@ -44,11 +44,16 @@ kheap_grow(
     void __phys * page_phys;
     res = page_alloc(CONFIG_HEAP_GROWTH_ORDER, &page_phys, 0);
     if(res) {
-        eprintk("kheap_grow: failed to allocate heap page! (err=%s)\n", errnostr(res));
         return res;
     }
 
     void * page_virt = heap->vbase + heap->mapped;
+
+    printk("kheap_grow: page_phys=%p, page_virt=%p, page_size=%p, mapped=%p\n",
+	    (uintptr_t)page_phys,
+	    (uintptr_t)page_virt,
+	    (uintptr_t)page_size,
+	    (uintptr_t)heap->mapped);
 
     res = vmem_paged_region_map(
             heap->region,
@@ -336,8 +341,14 @@ kheap_page_fault(
 {
     struct kheap *heap = priv_state;
 
-    eprintk("kheap Page Fault! (heap=%p, offset=0x%llx)\n",
-            heap, (ull_t)offset);
+    eprintk("kheap Page Fault! (heap=%p, offset=0x%lx)\n",
+            heap, (ul_t)offset);
+
+    if(offset < heap->mapped) {
+	wprintk("kheap_page_fault: [UNEXPECTED] offset 0x%lx should be mapped (heap->mapped=0x%lx)!\n",
+		(ul_t)offset,
+		(ul_t)heap->mapped);
+    }
 
     return PAGE_FAULT_UNHANDLED;
 }
