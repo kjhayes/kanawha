@@ -2,6 +2,12 @@
 config VIRTIO_BLK
     tristate "Virtio Block Device Driver"
     default y
+    depends on VIRTIO
     help
       Include a driver for the virtio-blk device.
+
+config AHCI
+    tristate "AHCI Driver"
+    depends on PCI
+    default y
 
