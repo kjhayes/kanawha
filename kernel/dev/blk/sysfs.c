@@ -212,6 +212,9 @@ blk_dev_getattr(
         case FS_NODE_ATTR_PAGE_ORDER:
             *value = blk_dev_fs_node->page_order;
             break;
+	case FS_NODE_ATTR_SECTOR_ORDER:
+	    *value = blk_dev_fs_node->sector_order;
+	    break;
         default:
             return -EINVAL;
     }
