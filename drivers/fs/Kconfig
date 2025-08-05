@@ -1,4 +1,8 @@
 
+config MBR
+    tristate "MBR Partition Support"
+    default y
+
 config CPIO_FS
     tristate "CPIO"
     default y
