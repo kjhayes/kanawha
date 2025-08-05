@@ -392,7 +392,8 @@ handle_syscall(
             break;
         default:
             syscall_unknown(process, id);
-            ret_val = -EINVAL;
+            ret_val = -ENOSYS;
+	    break;
     }
 
     DEBUG_ASSERT_MSG(irqs_enabled(), "Returned from syscall (%s) with IRQ's disabled!", syscall_id_string(id));
