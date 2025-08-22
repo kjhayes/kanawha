@@ -4,4 +4,6 @@ obj-y += \
 	stat/ \
 	ioctl/ \
 	statfs/ \
+	resource/ \
+	time/ \
 

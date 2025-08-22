@@ -8,9 +8,12 @@ obj-y += \
 	pipe.o \
 	chdir.o \
 	chroot.o \
+	execv.o \
+	execl.o \
 	execve.o \
 	execvp.o \
 	sleep.o \
+	alarm.o \
 	usleep.o \
 	unlink.o \
 	getcwd.o \
@@ -36,6 +39,7 @@ obj-y += \
 	tcgetpgrp.o \
 	tcsetpgrp.o \
 	getgroups.o \
+	getlogin.o \
 
 obj-$(CONFIG_X64) += x64_fork_impl.o
 obj-$(CONFIG_RISCV64) += riscv64_fork_impl.o

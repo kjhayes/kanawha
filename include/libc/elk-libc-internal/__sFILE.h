@@ -7,6 +7,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <semaphore.h>
 #include <kanawha/file.h>
 #include <kanawha/sys-wrappers.h>
 
@@ -17,9 +18,14 @@ struct __sFILE
     int error;
     unsigned int eof : 1;
 
+    pid_t pfile_pid;
+
     size_t peek_datalen;
     size_t peek_buflen;
     char *peek_buffer;
+
+    sem_t owner_sem;
+    pid_t owner_pid;
 };
 
 static inline void
@@ -32,6 +38,10 @@ __elk_libc_internal__init_sFILE(
 
     file->eof = 0;
     file->error = 0;
+
+    file->pfile_pid = -1;
+    sem_init(&file->owner_sem, 0, 1);
+    file->owner_pid = -1;
 }
 
 static inline void
@@ -55,16 +65,23 @@ __elk_libc_internal__file_getc_direct(
 {
     ssize_t res;
     char c;
-    res = kanawha_sys_read(
-            file->__fd,
-            &c,
-            sizeof(char));
-    if(res != 1) {
-        // TODO set FILE error
-        return EOF;
+    while(1) {
+        res = kanawha_sys_read(
+                file->__fd,
+                &c,
+                sizeof(char));
+	switch(res) {
+	    case 1:
+		return c;
+	    case 0:
+		file->eof = 1;
+		return EOF;
+	    default:
+		file->error = 1;
+		errno = res;
+		return EOF;
+	}
     }
-
-    return c;
 }
 
 // Get a single character from the file (buffered and/or non-buffered)

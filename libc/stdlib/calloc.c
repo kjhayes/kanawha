@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+__attribute__((weak))
 void *calloc(size_t nmemb, size_t size)
 {
     size_t total_size = nmemb * size;

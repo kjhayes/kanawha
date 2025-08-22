@@ -215,6 +215,7 @@ __attribute__((weak))
 int
 kanawha_sys_pipe(
         unsigned long flags,
+	unsigned long mode_flags,
         fd_t *out);
 
 __attribute__((weak))
@@ -242,14 +243,16 @@ kanawha_sys_time(
         unsigned long flags);
 
 __attribute__((weak))
-__attribute__((noreturn))
 int
-kanawha_sys_sigret(void);
+kanawha_sys_siginfo(
+	unsigned long attr,
+	unsigned long *value);
 
 __attribute__((weak))
 int
-kanawha_sys_sigroute(
-        void *entry);
+kanawha_sys_sigmod(
+        unsigned long attr,
+	unsigned long value);
 
 __attribute__((weak))
 int

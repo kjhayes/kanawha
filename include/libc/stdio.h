@@ -28,7 +28,7 @@ typedef struct {
 
 #define FILENAME_MAX (128)
 
-#define L_tmpname (128)
+#define L_tmpnam (128)
 
 #define SEEK_SET 0
 #define SEEK_CUR 1
@@ -36,8 +36,8 @@ typedef struct {
 
 #define TMP_MAX (UINT_MAX)
 
-extern FILE *stdout;
 extern FILE *stdin;
+extern FILE *stdout;
 extern FILE *stderr;
 
 int fileno(FILE *stream);
@@ -52,6 +52,8 @@ FILE *freopen(const char * restrict filename, const char * restrict mode, FILE *
 FILE *fdopen(int fildes, const char *mode);
 void setbuf(FILE * restrict stream, char * restrict buf);
 int setvbuf(FILE * restrict stream, char * restrict buf, int mode, size_t size);
+void setbuffer(FILE *stream, char *buf, size_t size);
+void setlinebuf(FILE *stream);
 int fprintf(FILE * restrict stream, const char * restrict format, ...);
 int fscanf(FILE * restrict stream, const char * restrict format, ...);
 int printf(const char * restrict format, ...);
@@ -122,6 +124,10 @@ int ferror(FILE *stream);
 
 void perror(const char *s);
 
+void flockfile(FILE *filehandle);
+int ftrylockfile(FILE *filehandle);
+void funlockfile(FILE *filehandle);
+
 // Unlocked variants
 int getc_unlocked(FILE *stream);
 int getchar_unlocked(void);
@@ -140,5 +146,8 @@ size_t fwrite_unlocked(const void *ptr, size_t size, size_t n,
                       FILE *stream);
 char *fgets_unlocked(char *s, int n, FILE *stream);
 int fputs_unlocked(const char *s, FILE *stream);
+
+FILE *popen(const char *command, const char *mode);
+int   pclose(FILE *);
 
 #endif

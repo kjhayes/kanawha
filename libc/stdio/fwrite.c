@@ -6,8 +6,9 @@
 
 #include <stdio.h>
 
+#undef fwrite_unlocked
 size_t
-fwrite(
+fwrite_unlocked(
         const void * restrict ptr,
         size_t size,
         size_t nmemb,
@@ -38,5 +39,20 @@ fwrite(
     // Returns the number of whole items written, not the
     // number of bytes
     return total_written / size;
+}
+
+#undef fwrite
+size_t
+fwrite(
+        const void * restrict ptr,
+        size_t size,
+        size_t nmemb,
+        FILE * restrict stream)
+{
+    size_t ret;
+    flockfile(stream);
+    ret = fwrite_unlocked(ptr, size, nmemb, stream);
+    funlockfile(stream);
+    return ret;
 }
 

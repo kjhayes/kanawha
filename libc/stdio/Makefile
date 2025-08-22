@@ -71,5 +71,21 @@ obj-y += perror.o
 
 obj-y += rewind.o
 
-obj-y += tmpnam.o
+obj-y += \
+	tmpnam.o \
+	tmpfile.o \
+
+obj-y += \
+	setbuf.o \
+	setvbuf.o \
+	setlinebuf.o \
+
+obj-y += \
+	popen.o \
+	pclose.o \
+
+obj-y += \
+	flockfile.o \
+	funlockfile.o \
+	ftrylockfile.o \
 

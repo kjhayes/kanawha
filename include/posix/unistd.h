@@ -2,6 +2,7 @@
 #define __ELK_POSIX__UNISTD_H__
 
 #include <sys/types.h>
+#include <getopt.h>
 
 #ifndef NULL
 #define NULL ((void*)0)

@@ -1,8 +1,9 @@
 
 #include <stdio.h>
 
+#undef fgets_unlocked
 char *
-fgets(
+fgets_unlocked(
         char * restrict s,
         int n,
         FILE * restrict stream)
@@ -11,12 +12,11 @@ fgets(
     while(n>1) {
         char c = fgetc(stream);
         *s = c;
-        if(c != EOF) {
-            s++;
-            n--;
-        } else {
+        if(c == EOF) {
             break;
         }
+        s++;
+        n--;
         if(c == '\n') {
             break;
         }
@@ -25,5 +25,19 @@ fgets(
         *s = '\0';
     }
     return stashed_s;
+}
+
+#undef fgets
+char *
+fgets(
+        char * restrict s,
+        int n,
+        FILE * restrict stream)
+{
+    char *ret;
+    flockfile(stream);
+    ret = fgets_unlocked(s, n, stream);
+    funlockfile(stream);
+    return ret;
 }
 

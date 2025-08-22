@@ -1,6 +1,7 @@
 
 #include <unistd.h>
 #include <stdio.h>
+#include <errno.h>
 #include <kanawha/sys-wrappers.h>
 
 ssize_t
@@ -13,7 +14,7 @@ write(
 
     res = kanawha_sys_write(filedes, buf, nbyte);
     if(res < 0) {
-        // TODO set errno
+	errno = res;
         return -1;
     }
 
@@ -29,13 +30,14 @@ pwrite(
 {
     ssize_t cur_offset = kanawha_sys_seek(filedes, 0, SEEK_CUR);
     if(cur_offset < 0) {
-        // TODO set errno
+	errno = cur_offset;
         return -1;
     }
 
     ssize_t res = write(filedes, buf, nbyte);
     if(res < 0) {
         kanawha_sys_seek(filedes, cur_offset, SEEK_SET);
+	errno = res;
         return -1;
     }
 

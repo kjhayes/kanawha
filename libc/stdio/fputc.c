@@ -29,7 +29,10 @@ int fputc_unlocked(int i, FILE * restrict stream)
 #undef fputc
 int fputc(int i, FILE * restrict stream)
 {
-    // TODO: Locking
-    return fputc_unlocked(i, stream);
+    int res;
+    flockfile(stream);
+    res = fputc_unlocked(i, stream);
+    funlockfile(stream);
+    return res;
 }
 

@@ -147,42 +147,56 @@ __thread_start_stack_map_fail:
     movq $0, %rax
     syscall
 
-.global __elk_crt__default_signal_handler_entry
-.type __elk_crt__default_signal_handler_entry,@function
-__elk_crt__default_signal_handler_entry:
+.global __elk_crt__signal_handler_entry
+.type __elk_crt__signal_handler_entry,@function
+__elk_crt__signal_handler_entry:
+  
+    // Save flags before we do a subtraction (we will need to swap this later)
+    pushfq
+    subq $8, %rsp
 
-    // rax -> signal number
+    subq $64, %rsp
+    movq %rdi,  0(%rsp)
+    movq %rsi,  8(%rsp)
+    movq %rdx, 16(%rsp) 
+    movq %rcx, 24(%rsp)
+    movq %r8,  32(%rsp)
+    movq %r9,  40(%rsp)
+    movq %r10, 48(%rsp)
+    movq %r11, 56(%rsp)
 
-    pushq %rdi
-    pushq %rsi
-    pushq %rdx
-    pushq %rcx
-    pushq %r8
-    pushq %r9
-    pushq %r10
-    pushq %r11
+    // "swap" the saved flags and return address allocation
+    movq 72(%rsp), %rdi
+    movq %rdi, 64(%rsp)
 
-    // Pass signal no. as first argument
-    mov %rax, %rdi
-
-    movq %rsp, %rax
+    movq %rsp, %rdi
     andq $(~0xF), %rsp
-    pushq %rax
-    callq __elk_crt__default_signal_handler
-    popq %rax
-    movq %rax, %rsp
 
-    popq %r11
-    popq %r10
-    popq %r9
-    popq %r8
-    popq %rcx
-    popq %rdx
-    popq %rsi
-    popq %rdi
-    
-    movq $35, %rax // SIGRET syscall
-    syscall
+    subq $16, %rsp
+    movq %rdi, 0(%rsp)
+
+    addq $72, %rdi // Get a pointer to our return address on the stack
+
+
+    callq __elk_crt__handle_signal
+
+    movq 0(%rsp), %rdi
+
+    movq %rdi, %rsp
+
+    movq  0(%rsp), %rdi
+    movq  8(%rsp), %rsi
+    movq 16(%rsp), %rdx
+    movq 24(%rsp), %rcx
+    movq 32(%rsp), %r8
+    movq 40(%rsp), %r9
+    movq 48(%rsp), %r10
+    movq 56(%rsp), %r11
+    addq $64, %rsp
+
+    popfq
+
+    retq
 
 .section .data
 

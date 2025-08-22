@@ -19,8 +19,9 @@ execve(
     char **argv = (char **)__argv;
 
     int res;
+
     fd_t exec_file;
-    res = __elk_libc__exec_path_lookup(cmd, &exec_file);
+    res = __elk_libc__exec_path_open(cmd, &exec_file);
     if(res) {
         errno = res;
         return -1;

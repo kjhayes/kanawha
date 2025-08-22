@@ -11,4 +11,5 @@ obj-y += \
 	poll/ \
 	pwd/ \
 	glob/ \
+	semaphore/ \
 

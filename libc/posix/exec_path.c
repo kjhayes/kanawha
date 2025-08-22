@@ -7,11 +7,32 @@
 #include <kanawha/file.h>
 
 int
+__elk_libc__exec_path_open(
+        const char *file_name,
+        fd_t *file_out)
+{
+    return kanawha_sys_open(
+            file_name,
+            FILE_PERM_READ|FILE_PERM_EXEC,
+            0,
+            file_out);
+}
+
+int
 __elk_libc__exec_path_lookup(
         const char *file_name,
         fd_t *file_out)
 {
     int res;
+
+    if(strchr(file_name, '/') != NULL) {
+        return kanawha_sys_open(
+                file_name,
+                FILE_PERM_READ|FILE_PERM_EXEC,
+                0,
+                file_out);
+    }
+
     size_t filenamelen = strlen(file_name);
 
     char *path = getenv("PATH");

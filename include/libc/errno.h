@@ -78,7 +78,7 @@
 #define EOVERFLOW (75)
 #define ENOTUNIQ (76)
 #define EBADFD (77)
-#define EREMCHG  (78))
+#define EREMCHG  (78)
 #define ELIBACC (79)
 #define ELIBBAD (80)
 #define ELIBSCN (81)

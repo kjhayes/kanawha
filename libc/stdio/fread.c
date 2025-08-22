@@ -6,8 +6,9 @@
 
 #include <stdio.h>
 
+#undef fread_unlocked
 size_t
-fread(
+fread_unlocked(
         void * restrict ptr,
         size_t size,
         size_t nmemb,
@@ -47,5 +48,16 @@ fread(
     // Returns the number of whole items read, not the
     // number of bytes
     return total_read / size;
+}
+
+#undef fread
+size_t fread(void *ptr, size_t size, size_t n,
+                      FILE *stream)
+{
+    size_t ret;
+    flockfile(stream);
+    ret = fread_unlocked(ptr, size, n, stream);
+    funlockfile(stream);
+    return ret;
 }
 

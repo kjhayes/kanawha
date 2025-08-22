@@ -18,6 +18,7 @@ typedef double double_t;
 #define M_SQRT2    ((double)(1.41421356237))
 #define M_SQRT1_2  ((double)(0.707106781187))
 
+#define	HUGE_VAL	__builtin_huge_val()
 #define	HUGE_VALF	__builtin_huge_valf()
 #define	HUGE_VALL	__builtin_huge_vall()
 #define	INFINITY	__builtin_inff()

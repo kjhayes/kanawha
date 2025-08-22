@@ -323,7 +323,8 @@ kanawha_sys_chroot:
 kanawha_sys_pipe:
     li a7, KANAWHA_SYSCALL_ID_PIPE
     // a0 -> unsigned long flags
-    // a1 -> fd_t *out
+    // a1 -> unsigned long mode_flags
+    // a2 -> fd_t *out
     ecall
     ret
 

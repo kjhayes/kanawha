@@ -4,8 +4,9 @@
 
 #include <stdio.h>
 
+#undef fflush_unlocked
 int
-fflush(FILE *stream)
+fflush_unlocked(FILE *stream)
 {
     int res;
 
@@ -17,5 +18,32 @@ fflush(FILE *stream)
     }
 
     return 0;
+}
+
+#undef fflush
+int
+fflush(FILE *stream)
+{
+    int res;
+
+    if(stream == NULL) {
+	// TODO: Technically this should flush all files
+	//       But for now this seems to be good enough
+	if(stdin != NULL) {
+	    fflush(stdin);
+	}
+	if(stdout != NULL) {
+	    fflush(stdout);
+	}
+	if(stderr != NULL) {
+	    fflush(stderr);
+	}
+	return 0;
+    }
+
+    flockfile(stream);
+    res = fflush_unlocked(stream);
+    funlockfile(stream);
+    return res;
 }
 

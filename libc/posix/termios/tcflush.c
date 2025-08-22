@@ -1,5 +1,6 @@
 
 #include <termios.h>
+#include <errno.h>
 #include <kanawha/sys-wrappers.h>
 
 int
@@ -12,12 +13,12 @@ tcflush(int filedes, int selector)
         case TCIOFLUSH:
             res = kanawha_sys_flush(filedes, 0);
             if(res) {
-                // TODO set errno
+		errno = res;
                 return -1;
             }
             return 0;
         default:
-            // TODO set errno
+	    errno = -EINVAL;
             return -1;
     }
 }

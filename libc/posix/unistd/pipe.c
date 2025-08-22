@@ -11,7 +11,7 @@ pipe(int fd_out[2])
 
     int res;
 
-    res = kanawha_sys_pipe(0, &read_end);
+    res = kanawha_sys_pipe(0, 0, &read_end);
     if(res) {
         // TODO set errno
         return -1;

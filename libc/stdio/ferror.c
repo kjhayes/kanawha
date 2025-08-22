@@ -16,7 +16,10 @@ int ferror_unlocked(FILE *stream)
 #undef ferror
 int ferror(FILE *stream)
 {
-    // TODO: Locking
-    return ferror_unlocked(stream);
+    int res;
+    flockfile(stream);
+    res = ferror_unlocked(stream);
+    funlockfile(stream);
+    return res;
 }
 

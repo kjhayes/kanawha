@@ -5,14 +5,15 @@ ROOT_DIR := $(shell pwd)
 SCRIPTS_DIR := $(ROOT_DIR)/scripts
 MK_SCRIPTS_DIR := $(SCRIPTS_DIR)/make
 
-LIBKFB_SOURCE_DIR := $(ROOT_DIR)/libkfb
 LIBC_SOURCE_DIR := $(ROOT_DIR)/libc
 CRT_SOURCE_DIR := $(ROOT_DIR)/crt
-LIBM_SOURCE_DIR := $(ROOT_DIR)/libm
+DL_SOURCE_DIR := $(ROOT_DIR)/dl
+#LIBM_SOURCE_DIR := $(ROOT_DIR)/libm
 
 INCLUDE_DIR := $(ROOT_DIR)/include
 LIBC_INCLUDE_DIR := $(ROOT_DIR)/include/libc
-LIBM_INCLUDE_DIR := $(ROOT_DIR)/include/libm
+DL_INCLUDE_DIR := $(ROOT_DIR)/include/dl
+#LIBM_INCLUDE_DIR := $(ROOT_DIR)/include/libm
 
 OUTPUT_DIR := $(ROOT_DIR)/build/
 MODULE_OUTPUT_DIR := $(OUTPUT_DIR)/modules
@@ -77,7 +78,6 @@ COMMON_FLAGS += \
 				-D__ELK_LIBC__\
 				-I $(INCLUDE_DIR) \
 				-I $(LIBC_INCLUDE_DIR) \
-				-I $(LIBM_INCLUDE_DIR) \
 				-include $(AUTOCONF) \
 				$(subst ",,$(CONFIG_OPT_FLAGS)) \
 				-fno-pie \
@@ -92,14 +92,14 @@ ifdef CONFIG_DEBUG_SYMBOLS
 COMMON_FLAGS += -g
 endif
 
-$(OUTPUT_DIR)/libkfb/obj.o: $(AUTOCONF) FORCE
-	$(Q)$(MAKE) -C $(LIBKFB_SOURCE_DIR) -f $(MK_SCRIPTS_DIR)/build.mk obj
-
 $(OUTPUT_DIR)/libc/obj.o: $(AUTOCONF) FORCE
 	$(Q)$(MAKE) -C $(LIBC_SOURCE_DIR) -f $(MK_SCRIPTS_DIR)/build.mk obj
 
-$(OUTPUT_DIR)/libm/obj.o: $(AUTOCONF) FORCE
-	$(Q)$(MAKE) -C $(LIBM_SOURCE_DIR) -f $(MK_SCRIPTS_DIR)/build.mk obj
+$(OUTPUT_DIR)/dl/obj.o: $(AUTOCONF) FORCE
+	$(Q)$(MAKE) -C $(DL_SOURCE_DIR) -f $(MK_SCRIPTS_DIR)/build.mk obj
+
+#$(OUTPUT_DIR)/libm/obj.o: $(AUTOCONF) FORCE
+#	$(Q)$(MAKE) -C $(LIBM_SOURCE_DIR) -f $(MK_SCRIPTS_DIR)/build.mk obj
 
 $(OUTPUT_DIR)/crt/crt0-obj.o: $(AUTOCONF) FORCE
 	$(Q)$(MAKE) -C $(CRT_SOURCE_DIR) -f $(MK_SCRIPTS_DIR)/build.mk crt0-obj
@@ -110,20 +110,20 @@ $(OUTPUT_DIR)/crt/crti-obj.o: $(AUTOCONF) FORCE
 $(OUTPUT_DIR)/crt/crtn-obj.o: $(AUTOCONF) FORCE
 	$(Q)$(MAKE) -C $(CRT_SOURCE_DIR) -f $(MK_SCRIPTS_DIR)/build.mk crtn-obj
 
-libkfb: $(OUTPUT_DIR)/libkfb.a
-$(OUTPUT_DIR)/libkfb.a: $(OUTPUT_DIR)/libkfb/obj.o
-	$(Q)rm -f $@
-	$(Q)$(AR) -cru $@ $^
-
 libc: $(OUTPUT_DIR)/libc.a
 $(OUTPUT_DIR)/libc.a: $(OUTPUT_DIR)/libc/obj.o
 	$(Q)rm -f $@
 	$(Q)$(AR) -cru $@ $^
 
-libm: $(OUTPUT_DIR)/libm.a
-$(OUTPUT_DIR)/libm.a: $(OUTPUT_DIR)/libm/obj.o
+libdl: $(OUTPUT_DIR)/libdl.a
+$(OUTPUT_DIR)/libdl.a: $(OUTPUT_DIR)/dl/obj.o
 	$(Q)rm -f $@
 	$(Q)$(AR) -cru $@ $^
+
+#libm: $(OUTPUT_DIR)/libm.a
+#$(OUTPUT_DIR)/libm.a: $(OUTPUT_DIR)/libm/obj.o
+#	$(Q)rm -f $@
+#	$(Q)$(AR) -cru $@ $^
 
 crt0: $(OUTPUT_DIR)/crt0.o
 $(OUTPUT_DIR)/crt0.o: $(OUTPUT_DIR)/crt/crt0-obj.o
@@ -141,7 +141,7 @@ crtn: $(OUTPUT_DIR)/crtn.o
 $(OUTPUT_DIR)/crtn.o: $(OUTPUT_DIR)/crt/crtn-obj.o
 	$(Q)cp $< $@
 
-default: libkfb libc libm crt0 crt1 crti crtn 
+default: libc crt0 crt1 crti crtn libdl
 
 -include $(MK_SCRIPTS_DIR)/asm.mk
 -include $(MK_SCRIPTS_DIR)/initrd.mk

@@ -4,8 +4,13 @@ obj-y += \
 	tcsetattr.o \
 
 obj-y += \
-	cfgetospeed.o
+	cfgetospeed.o \
+	cfgetispeed.o \
+	cfsetospeed.o \
+	cfsetispeed.o \
+	cfsetspeed.o \
 
 obj-y += \
-	tcflush.o
+	tcflush.o \
+	tcdrain.o \
 

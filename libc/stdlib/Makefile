@@ -21,7 +21,14 @@ obj-y += \
 	putenv.o \
 	unsetenv.o \
 	qsort.o \
+	mktemp.o \
 
+obj-y += \
+	random/ \
+
+obj-y += \
+	calloc.o \
 
 obj-$(CONFIG_MMAP_ALLOC) += mmap_alloc/
+obj-$(CONFIG_FREELIST_ALLOC) += freelist_alloc/
 

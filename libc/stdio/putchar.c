@@ -12,6 +12,7 @@ int putchar_unlocked(int c)
 #undef putchar
 int putchar(int c)
 {
+    assert(stdout != NULL);
     return putc(c, stdout);
 }
 

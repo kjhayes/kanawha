@@ -33,6 +33,10 @@ int fputs_unlocked(const char * restrict s, FILE * restrict stream)
 #undef fputs
 int fputs(const char * restrict s, FILE * restrict stream)
 {
-    // TODO: Locking
-    return fputs_unlocked(s, stream);
+    int res;
+    flockfile(stream);
+    res = fputs_unlocked(s, stream);
+    funlockfile(stream);
+    return res;
 }
+

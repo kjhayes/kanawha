@@ -7,15 +7,8 @@ typedef int cc_t;
 typedef int speed_t;
 typedef int tcflag_t;
 
-#define NCCS 0
-
-struct termios {
-    tcflag_t  c_iflag;     // Input modes. 
-    tcflag_t  c_oflag;     // Output modes. 
-    tcflag_t  c_cflag;     // Control modes. 
-    tcflag_t  c_lflag;     // Local modes. 
-    cc_t      c_cc[NCCS];  // Control characters.
-};
+struct termios;
+struct winsize;
 
 // c_iflag Macros
 #define BRKINT (1ULL<<0) //Signal interrupt on break. 
@@ -77,16 +70,22 @@ struct termios {
 #define CLOCAL (1ULL<<7) //Ignore modem status lines. 
 
 // c_lflag Macros
-#define ECHO   (1ULL<<1)
-#define ECHOE  (1ULL<<2)
-#define ECHOK  (1ULL<<3)
-#define ECHONL (1ULL<<4)
-#define ICANON (1ULL<<5)
-#define IEXTEN (1ULL<<6)
-#define ISIG   (1ULL<<7)
-#define NOFLSH (1ULL<<8)
-#define TOSTOP (1ULL<<9)
-#define XCASE  (1ULL<<10)
+#define ECHO    (1ULL<<1)
+#define ECHOE   (1ULL<<2)
+#define ECHOK   (1ULL<<3)
+#define ECHONL  (1ULL<<4)
+#define ICANON  (1ULL<<5)
+#define IEXTEN  (1ULL<<6)
+#define ISIG    (1ULL<<7)
+#define NOFLSH  (1ULL<<8)
+#define TOSTOP  (1ULL<<9)
+#define XCASE   (1ULL<<10)
+#define FLUSHO  (1ULL<<11)
+#define PENDIN  (1ULL<<12)
+#define ECHOCTL (1ULL<<13)
+#define ECHOPRT (1ULL<<14)
+#define ECHOKE  (1ULL<<15)
+#define DEFECHO (1ULL<<16)
 
 // tcsetattr Macros
 #define TCSANOW   (1)
@@ -116,56 +115,69 @@ pid_t   tcgetsid(int);
 int     tcsendbreak(int, int);
 int     tcsetattr(int, int, const struct termios *);
 
-#define B0 (0ULL)
-#define B50 (50ULL)
-#define B75 (75ULL)
-#define B110 (110ULL)
-#define B134 (134ULL)
-#define B150 (150ULL)
-#define B200 (200ULL)
-#define B300 (300ULL)
-#define B600 (600ULL)
-#define B1200 (1200ULL)
-#define B1800 (1800ULL)
-#define B2400 (2400ULL)
-#define B4800 (4800ULL)
-#define B9600 (9600ULL)
-#define B19200 (19200ULL)
-#define B38400 (38400ULL)
-#define B57600 (57600ULL)
-#define B115200 (115200ULL)
-#define B230400 (230400ULL)
-#define B460800 (460800ULL)
-#define B500000 (500000ULL)
-#define B576000 (576000ULL)
-#define B921600 (921600ULL)
-#define B1000000 (1000000ULL)
-#define B1152000 (1152000ULL)
-#define B1500000 (1500000ULL)
-#define B2000000 (2000000ULL)
-#define B76800 (76800ULL)
-#define B153600 (153600ULL)
-#define B307200 (307200ULL)
-#define B614400 (614400ULL)
-#define B2500000 (2500000ULL)
-#define B3000000 (3000000ULL)
-#define B3500000 (3500000ULL)
-#define B4000000 (4000000ULL)
+#define B0 (0UL)
+#define B50 (50UL)
+#define B75 (75UL)
+#define B110 (110UL)
+#define B134 (134UL)
+#define B150 (150UL)
+#define B200 (200UL)
+#define B300 (300UL)
+#define B600 (600UL)
+#define B1200 (1200UL)
+#define B1800 (1800UL)
+#define B2400 (2400UL)
+#define B4800 (4800UL)
+#define B9600 (9600UL)
+#define B19200 (19200UL)
+#define B38400 (38400UL)
+#define B57600 (57600UL)
+#define B115200 (115200UL)
+#define B230400 (230400UL)
+#define B460800 (460800UL)
+#define B500000 (500000UL)
+#define B576000 (576000UL)
+#define B921600 (921600UL)
+#define B1000000 (1000000UL)
+#define B1152000 (1152000UL)
+#define B1500000 (1500000UL)
+#define B2000000 (2000000UL)
+#define B76800 (76800UL)
+#define B153600 (153600UL)
+#define B307200 (307200UL)
+#define B614400 (614400UL)
+#define B2500000 (2500000UL)
+#define B3000000 (3000000UL)
+#define B3500000 (3500000UL)
+#define B4000000 (4000000UL)
 
-#define VEOF   '\0' // EOF character
-#define VEOL   '\n' // EOL character
-#define VERASE '\b' // ERASE character
-#define VINTR  '\0' // INTR character
-#define VKILL  '\0' // KILL character
-#define VMIN   '\0' // MIN value
-#define VQUIT  '\0' // QUIT character
-#define VSTART '\0' // START character
-#define VSTOP  '\0' // STOP character
-#define VSUSP  '\0' // SUSP character
-#define VTIME  '\0' // TIME value
+#define VEOF   (0)  // EOF character
+#define VEOL   (1)  // EOL character
+#define VERASE (2)  // ERASE character
+#define VINTR  (3)  // INTR character (Ctrl-C)
+#define VKILL  (4)  // KILL character
+#define VMIN   (5)  // MIN value
+#define VQUIT  (6)  // QUIT character
+#define VSTART (7)  // START character
+#define VSTOP  (8)  // STOP character (Ctrl-S)
+#define VSUSP  (9)  // SUSP character (Ctrl-Z)
+#define VTIME  (10) // TIME value
+#define VSWTCH (11) // SWITCH character
+#define NCCS (12)
 
 #define TIOCGWINSZ (1)
 #define TIOCSWINSZ (2)
+
+struct termios {
+    unsigned long baudrate;
+
+    cc_t      c_cc[NCCS];  // Control characters.
+
+    tcflag_t  c_iflag;     // Input modes. 
+    tcflag_t  c_oflag;     // Output modes. 
+    tcflag_t  c_cflag;     // Control modes. 
+    tcflag_t  c_lflag;     // Local modes. 
+};
 
 struct winsize {
     unsigned short ws_row;

@@ -19,7 +19,10 @@ int fgetc_unlocked(FILE *stream)
 #undef fgetc
 int fgetc(FILE *stream)
 {
-    // TODO: Locking
-    return fgetc_unlocked(stream);
+    int res;
+    flockfile(stream);
+    res = fgetc_unlocked(stream);
+    funlockfile(stream);
+    return res;
 }
 

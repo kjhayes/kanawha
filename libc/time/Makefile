@@ -6,4 +6,7 @@ obj-y += \
 	localtime.o \
 	asctime.o \
 	strftime.o \
+	clock.o \
+	difftime.o \
+	mktime.o \
 

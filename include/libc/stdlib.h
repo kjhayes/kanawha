@@ -1,6 +1,8 @@
 #ifndef __ELK_LIBC__STDLIB_H__
 #define __ELK_LIBC__STDLIB_H__
 
+#define __STDLIB__
+
 #include "elk-libc-internal/size_t.h"
 #include "elk-libc-internal/wchar_t.h"
 
@@ -124,6 +126,7 @@ size_t wcstombs(
         const wchar_t * restrict pwcs,
         size_t n);
 
+char *mktemp(char *template);
 char *mkdtemp(char *template);
 int mkstemp(char *template);
 

@@ -1,6 +1,7 @@
 #ifndef __ELK_LIBC__TIME_H__
 #define __ELK_LIBC__TIME_H__
 
+#include <sys/types.h>
 #include <elk-libc-internal/timespec.h>
 #include <elk-libc-internal/sigevent.h>
 
@@ -15,6 +16,8 @@ struct tm {
     int    tm_yday;  // day of year [0,365]
     int    tm_isdst; // daylight savings flag
 };
+
+#define CLOCKS_PER_SEC (1000000UL)
 
 char      *asctime(const struct tm *);
 char      *asctime_r(const struct tm *, char *);
