@@ -19,8 +19,8 @@ menu "IRQ Devices"
 source "drivers/irq/Kconfig"
 endmenu
 
-menu "Serial Devices"
-source "drivers/serial/Kconfig"
+menu "Terminal Devices"
+source "drivers/term/Kconfig"
 endmenu
 
 menu "Framebuffer Devices"

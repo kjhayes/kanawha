@@ -34,7 +34,7 @@
  * hence why "offset" is 16-bit instead of 8-bit
  */
 
-#define PCI_CAM_READ8_SIG(RET,ARG)\
+#define PCI_CAM_READ8_SIG(RET,ARG,...)\
 RET(int)\
 ARG(uint16_t, seg)\
 ARG(uint8_t, bus)\
@@ -43,7 +43,7 @@ ARG(uint8_t, func)\
 ARG(uint16_t, offset)\
 ARG(uint8_t*, out)
 
-#define PCI_CAM_READ16_SIG(RET,ARG)\
+#define PCI_CAM_READ16_SIG(RET,ARG,...)\
 RET(int)\
 ARG(uint16_t, seg)\
 ARG(uint8_t, bus)\
@@ -52,7 +52,7 @@ ARG(uint8_t, func)\
 ARG(uint16_t, offset)\
 ARG(uint16_t*, out)
 
-#define PCI_CAM_READ32_SIG(RET,ARG)\
+#define PCI_CAM_READ32_SIG(RET,ARG,...)\
 RET(int)\
 ARG(uint16_t, seg)\
 ARG(uint8_t, bus)\
@@ -61,7 +61,7 @@ ARG(uint8_t, func)\
 ARG(uint16_t, offset)\
 ARG(uint32_t*, out)
 
-#define PCI_CAM_WRITE8_SIG(RET,ARG)\
+#define PCI_CAM_WRITE8_SIG(RET,ARG,...)\
 RET(int)\
 ARG(uint16_t, seg)\
 ARG(uint8_t, bus)\
@@ -70,7 +70,7 @@ ARG(uint8_t, func)\
 ARG(uint16_t, offset)\
 ARG(uint8_t, in)
 
-#define PCI_CAM_WRITE16_SIG(RET,ARG)\
+#define PCI_CAM_WRITE16_SIG(RET,ARG,...)\
 RET(int)\
 ARG(uint16_t, seg)\
 ARG(uint8_t, bus)\
@@ -79,7 +79,7 @@ ARG(uint8_t, func)\
 ARG(uint16_t, offset)\
 ARG(uint16_t, in)
 
-#define PCI_CAM_WRITE32_SIG(RET,ARG)\
+#define PCI_CAM_WRITE32_SIG(RET,ARG,...)\
 RET(int)\
 ARG(uint16_t, seg)\
 ARG(uint8_t, bus)\

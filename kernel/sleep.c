@@ -45,6 +45,8 @@ thread_sleep(
         return res;
     }
 
+    waitqueue_name(&queue, "priv-thread_sleep");
+
     //printk("Setting Sleep One-Shot Timer\n");
 
     struct periodic_event *evt =
@@ -61,6 +63,9 @@ thread_sleep(
     dprintk("thread_sleep: waiting on queue...\n");
     res = wait_on(&queue);
     if(res) {
+        destroy_periodic_event(evt);
+	mbarrier();
+	waitqueue_deinit(&queue);
         return res;
     }
 
@@ -68,6 +73,7 @@ thread_sleep(
 
     destroy_periodic_event(evt);
     mbarrier();
+    waitqueue_deinit(&queue);
 
     return 0;
 }

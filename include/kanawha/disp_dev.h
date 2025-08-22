@@ -10,12 +10,12 @@ struct disp_mode;
 struct disp_mode_info;
 
 
-#define DISP_DEV_MODE_INFO_SIG(RET,ARG)\
+#define DISP_DEV_MODE_INFO_SIG(RET,ARG,...)\
 RET(int)\
 ARG(size_t, mode)\
 ARG(struct disp_mode_info *, info)
 
-#define DISP_DEV_SET_MODE_SIG(RET,ARG)\
+#define DISP_DEV_SET_MODE_SIG(RET,ARG,...)\
 RET(int)\
 ARG(size_t, mode)
 

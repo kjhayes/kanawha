@@ -6,7 +6,7 @@
 
 struct refobj;
 
-#define REFOBJ_RELEASE_SIG(RET,ARG)\
+#define REFOBJ_RELEASE_SIG(RET,ARG,...)\
 RET(int)
 
 #define REFOBJ_OPS_LIST(OP, ...)\

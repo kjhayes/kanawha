@@ -299,18 +299,9 @@ static struct fs_node_ops fb_dev_buffer_fs_node_ops = {
 
     .flush = fs_node_flush_nop,
     .getattr = fb_dev_buffer_fs_node_getattr,
-    .setattr = fs_node_cannot_setattr,
- 
-    .read_page = fs_node_cannot_read_page,
-    .write_page = fs_node_cannot_write_page,
- 
-    .link = fs_node_cannot_link,
-    .unlink = fs_node_cannot_unlink,
-    .mkdir = fs_node_cannot_mkdir,
-    .mkfifo = fs_node_cannot_mkfifo,
-    .mkfile = fs_node_cannot_mkfile,
-    .symlink = fs_node_cannot_symlink,
 };
+FS_NODE_OPS_INIT_UNDEF(fb_dev_buffer_fs_node_ops);
+
 static struct fs_file_ops fb_dev_buffer_fs_file_ops =
 {
     .dir_begin = vfs_dir_begin,
@@ -322,8 +313,8 @@ static struct fs_file_ops fb_dev_buffer_fs_file_ops =
     .write = fs_file_paged_write,
     .flush = fb_dev_buffer_fs_file_flush,
     .seek = fs_file_paged_seek,
-    .poll = fs_file_cannot_poll,
 };
+FS_FILE_OPS_INIT_UNDEF(fb_dev_buffer_fs_file_ops);
 
 static ssize_t
 fb_dev_mode_set_fs_file_write(
@@ -425,36 +416,17 @@ fb_dev_mode_set_fs_node_setattr(
 static struct fs_node_ops fb_dev_mode_set_fs_node_ops =
 {
     .setattr = fb_dev_mode_set_fs_node_setattr,
-
     .flush = fs_node_flush_nop,
-
-    .lookup = fs_node_cannot_lookup, 
-    .link = fs_node_cannot_link,
-    .unlink = fs_node_cannot_unlink,
-    .mkdir = fs_node_cannot_mkdir,
-    .mkfifo = fs_node_cannot_mkfifo,
-    .mkfile = fs_node_cannot_mkfile,
-    .getattr = fs_node_cannot_getattr,
-    .symlink = fs_node_cannot_symlink,
-    .load_page = fs_node_cannot_load_page,
-    .unload_page = fs_node_cannot_unload_page,
-    .flush_page = fs_node_cannot_flush_page,
-    .read_page = fs_node_cannot_read_page,
-    .write_page = fs_node_cannot_write_page,
 };
+FS_NODE_OPS_INIT_UNDEF(fb_dev_mode_set_fs_node_ops);
+
 static struct fs_file_ops fb_dev_mode_set_fs_file_ops =
 {
     .read = fb_dev_mode_set_fs_file_read,
     .write = fb_dev_mode_set_fs_file_write,
     .seek = fs_file_seek_pinned_zero,
-
-    .dir_begin = fs_file_cannot_dir_begin,
-    .dir_next = fs_file_cannot_dir_next,
-    .dir_readattr = fs_file_cannot_dir_readattr,
-    .dir_readname = fs_file_cannot_dir_readname,
-    .flush = fs_file_cannot_flush,
-    .poll = fs_file_cannot_poll,
 };
+FS_FILE_OPS_INIT_UNDEF(fb_dev_mode_set_fs_file_ops);
 
 static int
 fb_dev_mode_info_fs_node_setattr(
@@ -593,35 +565,17 @@ static struct fs_node_ops fb_dev_mode_info_fs_node_ops =
 {
     .setattr = fb_dev_mode_info_fs_node_setattr,
     .getattr = fb_dev_mode_info_fs_node_getattr,
-
     .flush = fs_node_flush_nop,
-
-    .lookup = fs_node_cannot_lookup, 
-    .link = fs_node_cannot_link,
-    .unlink = fs_node_cannot_unlink,
-    .mkdir = fs_node_cannot_mkdir,
-    .mkfifo = fs_node_cannot_mkfifo,
-    .mkfile = fs_node_cannot_mkfile,
-    .symlink = fs_node_cannot_symlink,
-    .load_page = fs_node_cannot_load_page,
-    .unload_page = fs_node_cannot_unload_page,
-    .flush_page = fs_node_cannot_flush_page,
-    .read_page = fs_node_cannot_read_page,
-    .write_page = fs_node_cannot_write_page,
 };
+FS_NODE_OPS_INIT_UNDEF(fb_dev_mode_info_fs_node_ops);
+
 static struct fs_file_ops fb_dev_mode_info_fs_file_ops =
 {
     .read = fb_dev_mode_info_fs_file_read,
     .write = fb_dev_mode_info_fs_file_write,
     .seek = fs_file_paged_seek,
-    .flush = fs_file_cannot_flush,
-    .poll = fs_file_cannot_poll,
-
-    .dir_begin = fs_file_cannot_dir_begin,
-    .dir_next = fs_file_cannot_dir_next,
-    .dir_readattr = fs_file_cannot_dir_readattr,
-    .dir_readname = fs_file_cannot_dir_readname,
 };
+FS_FILE_OPS_INIT_UNDEF(fb_dev_mode_info_fs_file_ops);
 
 static void
 fb_dev_fs_on_register(

@@ -83,6 +83,8 @@ struct registry_node {
     {\
         int res;\
         \
+	member->REG_NODE_FIELD.snode.key = name;\
+	\
         res = INIT_FUNCTION(member);\
         if (res) {\
             return res;\
@@ -95,7 +97,7 @@ struct registry_node {
             SNAME ## _registry_lock_release();\
             return -EEXIST;\
         }\
-        member->REG_NODE_FIELD.snode.key = name;\
+	\
         stree_insert(\
                 & SNAME ## _registry_tree,\
                 &member->REG_NODE_FIELD.snode);\

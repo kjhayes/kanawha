@@ -43,6 +43,7 @@ kbd_init_struct(
             kbd->read_queue = NULL;
             return res;
         }
+	waitqueue_name(kbd->read_queue, "unnamed-kbd");
     }
 
     return 0;
@@ -75,6 +76,7 @@ register_kbd(
     if(res) {
         return res;
     }
+    waitqueue_name(kbd->read_queue, name);
 
     kbd->global_node.key = name;
 
@@ -125,7 +127,7 @@ kbd_enqueue_event(
         struct kbd_event lost;
         kbd_dequeue_event(kbd, &lost);
 
-        printk("Lost Key Event: (%s, %s)\n",
+        wprintk("Lost Key Event: (%s, %s)\n",
                 kbd_key_to_string(lost.key),
                 kbd_motion_to_string(lost.motion));
     }
@@ -232,25 +234,6 @@ kbd_init_fs_mount(void)
 }
 declare_init_desc(fs, kbd_init_fs_mount, "Registering kbd Sysfs Mount");
 
-static struct fs_node_ops
-kbd_fs_node_ops =
-{
-    .read_page = fs_node_cannot_read_page,
-    .write_page = fs_node_cannot_read_page,
-    .load_page = fs_node_cannot_load_page,
-    .unload_page = fs_node_cannot_unload_page,
-    .flush_page = fs_node_cannot_flush_page,
-    .flush = fs_node_cannot_flush,
-    .getattr = fs_node_cannot_getattr,
-    .setattr = fs_node_cannot_setattr,
-    .lookup = fs_node_cannot_lookup,
-    .mkfile = fs_node_cannot_mkfile,
-    .mkdir = fs_node_cannot_mkdir,
-    .link = fs_node_cannot_link,
-    .symlink = fs_node_cannot_symlink,
-    .unlink = fs_node_cannot_unlink,
-};
-
 static ssize_t 
 kbd_fs_file_read(
         struct file *file,
@@ -286,7 +269,10 @@ kbd_fs_file_read(
                 break;
             }
             dprintk("kbd_read: (SLEEPING)\n");
-            wait_on(kbd->read_queue);
+            res = wait_on(kbd->read_queue);
+	    if(res) {
+		return res;
+	    }
             continue;
         }
         else if(res) {
@@ -303,6 +289,12 @@ kbd_fs_file_read(
     return amount;
 }
 
+static struct fs_node_ops
+kbd_fs_node_ops =
+{
+    // ...
+};
+FS_NODE_OPS_INIT_UNDEF(kbd_fs_node_ops);
 
 static struct fs_file_ops
 kbd_fs_file_ops = {
@@ -310,10 +302,6 @@ kbd_fs_file_ops = {
     .write = fs_file_eof_write,
     .flush = fs_file_nop_flush,
     .seek = fs_file_seek_pinned_zero,
-    .poll = fs_file_cannot_poll,
-    .dir_begin = fs_file_cannot_dir_begin,
-    .dir_next = fs_file_cannot_dir_next,
-    .dir_readattr = fs_file_cannot_dir_readattr,
-    .dir_readname = fs_file_cannot_dir_readname,
 };
+FS_FILE_OPS_INIT_UNDEF(kbd_fs_file_ops);
 

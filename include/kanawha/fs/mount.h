@@ -13,25 +13,25 @@ struct fs_node;
 struct fs_node_backing;
 
 // Get the root fs_node of the mount
-#define FS_MOUNT_ROOT_INDEX_SIG(RET,ARG)\
+#define FS_MOUNT_ROOT_INDEX_SIG(RET,ARG,...)\
 RET(int)\
 ARG(size_t*, root_node_index)
 
 // Populate RAM-based data structures for the fs_node
-#define FS_MOUNT_LOAD_NODE_SIG(RET,ARG)\
+#define FS_MOUNT_LOAD_NODE_SIG(RET,ARG,...)\
 RET(int)\
 ARG(size_t, node_index)\
 ARG(struct fs_node *, fs_node)
 
 // Free any data allocated by fs_mount_load_node
-#define FS_MOUNT_UNLOAD_NODE_SIG(RET,ARG)\
+#define FS_MOUNT_UNLOAD_NODE_SIG(RET,ARG,...)\
 RET(int)\
 ARG(size_t, node_index)\
 ARG(struct fs_node *, fs_node)
 
 // Synchronize any mount global state with whatever backing store may exist
 // (usually flushes FS global state to disk)
-#define FS_MOUNT_SYNC_SIG(RET,ARG)\
+#define FS_MOUNT_SYNC_SIG(RET,ARG,...)\
 RET(int)
 
 #define FS_MOUNT_OP_LIST(OP, ...)\
@@ -58,7 +58,7 @@ fs_mount_get_node(
         size_t node_index);
 
 int
-fs_mount_put_node(
+fs_mount_on_node_unreferenced(
         struct fs_mount *mnt,
         struct fs_node *node);
 

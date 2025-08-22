@@ -16,9 +16,16 @@ int
 syscall_pipe(
         struct process *process,
         unsigned long flags,
+	unsigned long mode_flags,
         fd_t __user *out)
 {
     int res;
+
+    if((mode_flags & FILE_MODE_OPEN_TRUNC)
+     ||(mode_flags & FILE_MODE_WRITE_EXTEND))
+    {
+	return -EINVAL;
+    }
 
     struct fs_path *pipe;
 
@@ -30,7 +37,7 @@ syscall_pipe(
         LOG("Failed to create anonymous pipe: %s\n",
                 errnostr(res));
         return res;
-    }
+    }    
 
     fd_t fd;
     res = file_table_open_path(
@@ -38,7 +45,7 @@ syscall_pipe(
             process,
             pipe,
             FILE_PERM_READ|FILE_PERM_WRITE,
-            0,
+            mode_flags,
             &fd);
     if(res) {
         fs_path_put(pipe);

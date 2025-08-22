@@ -182,6 +182,7 @@ thread_init(
     state->status = THREAD_STATUS_PREPARING;
     state->pinned_to = NULL_CPU_ID;
     state->pin_refs = 0;
+    state->waitqueue = NULL;
 
     state->mem_map = vmem_map_create();
     if(state->mem_map == NULL) {
@@ -680,6 +681,13 @@ dump_threads(printk_f *printer)
         if(thread->pin_refs) {
             (*printer)(" PINNED(%ld) PIN-REFS(%ld)", (sl_t)thread->pinned_to, (sl_t)thread->pin_refs);
         }
+	if(thread->waitqueue != NULL) {
+	    // There is a race condition here, but this dump is for debugging
+	    // (usually during a panic) so we just want to get as much information as possible.
+	    DEBUG_ASSERT(KERNEL_ADDR(thread->waitqueue));
+	    DEBUG_ASSERT(KERNEL_ADDR(thread->waitqueue->name));
+	    (*printer)(" WAITING-ON(%s)", thread->waitqueue->name);
+	}
 
         (*printer)("\n");
     }

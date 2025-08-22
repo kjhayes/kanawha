@@ -6,7 +6,7 @@
 
 struct usb_device;
 
-#define USB_DEV_CREATE_NORMAL_TRANSFER_SIG(RET,ARG)\
+#define USB_DEV_CREATE_NORMAL_TRANSFER_SIG(RET,ARG,...)\
 RET(struct usb_transfer*)\
 ARG(int, dci)\
 ARG(void __phys *, buffer)\
@@ -16,7 +16,7 @@ ARG(size_t, buflen)
 #define USB_SETUP_STAGE_TRT_OUT     (2)
 #define USB_SETUP_STAGE_TRT_IN      (3)
 
-#define USB_DEV_CREATE_SETUP_STAGE_TRANSFER_SIG(RET,ARG)\
+#define USB_DEV_CREATE_SETUP_STAGE_TRANSFER_SIG(RET,ARG,...)\
 RET(struct usb_transfer*)\
 ARG(int, dci)\
 ARG(uint8_t, bmRequestType)\
@@ -29,7 +29,7 @@ ARG(int, trt)\
 #define USB_DATA_STAGE_DIR_OUT (0)
 #define USB_DATA_STAGE_DIR_IN  (1)
 
-#define USB_DEV_CREATE_DATA_STAGE_TRANSFER_SIG(RET,ARG)\
+#define USB_DEV_CREATE_DATA_STAGE_TRANSFER_SIG(RET,ARG,...)\
 RET(struct usb_transfer*)\
 ARG(int, dci)\
 ARG(void __phys *, buffer)\
@@ -39,16 +39,16 @@ ARG(int, dir)\
 #define USB_STATUS_STAGE_DIR_OUT (0)
 #define USB_STATUS_STAGE_DIR_IN  (1)
 
-#define USB_DEV_CREATE_STATUS_STAGE_TRANSFER_SIG(RET,ARG)\
+#define USB_DEV_CREATE_STATUS_STAGE_TRANSFER_SIG(RET,ARG,...)\
 RET(struct usb_transfer *)\
 ARG(int, dci)\
 ARG(int, dir)\
 
-#define USB_DEV_CREATE_ISOCH_TRANSFER_SIG(RET,ARG)\
+#define USB_DEV_CREATE_ISOCH_TRANSFER_SIG(RET,ARG,...)\
 RET(struct usb_transfer *)\
 ARG(int, dci)\
 
-#define USB_DEV_DESTROY_TRANSFER_SIG(RET,ARG)\
+#define USB_DEV_DESTROY_TRANSFER_SIG(RET,ARG,...)\
 RET(int)\
 ARG(struct usb_transfer *, xfer)
 

@@ -310,7 +310,9 @@ int
 ext2_dir_node_lookup(
         struct fs_node *fs_node,
         const char *name,
-        size_t *inode)
+        size_t *inode,
+	char *sym_buffer,
+	size_t sym_buflen)
 {
     int res;
     dprintk("ext2_dir_lookup \"%s\"\n", name);
@@ -352,7 +354,7 @@ ext2_dir_node_lookup(
                 // This is the node
                 *inode = entry.inode;
                 dprintk("ext2_dir_lookup \"%s\" FOUND inode=%p\n", name, entry.inode);
-                return 0;
+                return FS_NODE_LOOKUP_HARD;
             }
         }
         offset += entry.rec_len;
@@ -561,15 +563,6 @@ ext2_dir_unlink(
 
     struct ext2_fs_node *parent_node = parent_fs_node->backing.priv_state;
 
-    size_t child_inode;
-    res = ext2_dir_node_lookup(
-            parent_fs_node,
-            name,
-            &child_inode);
-    if(res) {
-        return res;
-    }
-
     return -EUNIMPL;
 }
 
@@ -633,13 +626,8 @@ ext2_dir_node_ops = {
     .mkfile = ext2_dir_mkfile,
     .mkdir = ext2_dir_mkdir,
     .unlink = ext2_dir_unlink,
-
-    .mkfifo = fs_node_cannot_mkfifo,
-    .link = fs_node_cannot_link,
-    .symlink = fs_node_cannot_symlink,
 };
-
-
+FS_NODE_OPS_INIT_UNDEF(ext2_dir_node_ops);
 
 struct fs_file_ops
 ext2_dir_file_ops = {
@@ -653,3 +641,5 @@ ext2_dir_file_ops = {
     .dir_readattr = ext2_dir_readattr,
     .dir_readname = ext2_dir_readname,
 };
+FS_FILE_OPS_INIT_UNDEF(ext2_dir_file_ops);
+

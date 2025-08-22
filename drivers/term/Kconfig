@@ -1,0 +1,19 @@
+
+config SERIAL_8250
+    tristate "8250 Based Serial UART(s)"
+    default y
+    help
+      Framework to support 8250-based serial UART devices
+
+config VIRTIO_CONSOLE
+    bool "Virtio Console"
+    default n
+    depends on VIRTIO && WIP
+
+config QEMU_SERIAL
+    bool "QEMU PCI Serial"
+    default n
+    depends on PCI
+
+source "drivers/term/8250/Kconfig"
+

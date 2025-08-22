@@ -33,7 +33,6 @@ acpi_parse_method_invocation_term(
         return res;
     }
 
-
     if(term_out != NULL) {
         struct acpi_term *term;
         term = acpi_create_method_invocation_term(

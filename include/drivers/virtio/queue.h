@@ -43,25 +43,25 @@ struct virtio_queue_used
     struct virtio_queue_used_elem ring[];
 };
 
-#define VIRTIO_QUEUE_NOTIFY_SIG(RET,ARG)\
+#define VIRTIO_QUEUE_NOTIFY_SIG(RET,ARG,...)\
 RET(int)
 
-#define VIRTIO_QUEUE_SET_DESC_TABLE_SIG(RET,ARG)\
+#define VIRTIO_QUEUE_SET_DESC_TABLE_SIG(RET,ARG,...)\
 RET(int)\
 ARG(void __phys *, desc_table_ptr)
 
-#define VIRTIO_QUEUE_SET_AVAIL_RING_SIG(RET,ARG)\
+#define VIRTIO_QUEUE_SET_AVAIL_RING_SIG(RET,ARG,...)\
 RET(int)\
 ARG(void __phys *, avail_ring_ptr)
 
-#define VIRTIO_QUEUE_SET_USED_RING_SIG(RET,ARG)\
+#define VIRTIO_QUEUE_SET_USED_RING_SIG(RET,ARG,...)\
 RET(int)\
 ARG(void __phys *, used_ring_ptr)
 
-#define VIRTIO_QUEUE_ENABLE_SIG(RET,ARG)\
+#define VIRTIO_QUEUE_ENABLE_SIG(RET,ARG,...)\
 RET(int)
 
-#define VIRTIO_QUEUE_DISABLE_SIG(RET,ARG)\
+#define VIRTIO_QUEUE_DISABLE_SIG(RET,ARG,...)\
 RET(int)
 
 #define VIRTIO_QUEUE_OP_LIST(OP, ...)\

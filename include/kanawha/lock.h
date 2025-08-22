@@ -32,7 +32,9 @@ thread_lock_init(thread_lock_t *lock)
 static inline int
 thread_lock_try_acquire(thread_lock_t *lock)
 {
-    return atomic_bool_test_and_set(&lock->locked);
+    int prev = atomic_bool_test_and_set(&lock->locked);
+    DEBUG_ASSERT_MSG(prev == 0 || prev == 1, "Corrupted thread_lock! (value other than 0 or 1)");
+    return prev;
 }
 
 // Blocks until the lock can be acquired
@@ -48,6 +50,25 @@ static inline void
 thread_lock_release(thread_lock_t *lock)
 {
     atomic_bool_clear(&lock->locked);
+}
+
+static inline void
+thread_lock_acquire_pair(
+	thread_lock_t *a,
+	thread_lock_t *b)
+{
+    if(a == b) {
+	thread_lock_acquire(a);
+	return;
+    }
+
+    thread_lock_t *lesser = (uintptr_t)a < (uintptr_t)b ? a : b;
+    thread_lock_t *greater = lesser == a ? b : a;
+
+    thread_lock_acquire(lesser);
+    thread_lock_acquire(greater);
+
+    return;
 }
 
 #define DECLARE_QUALIFIED_THREAD_LOCK(__name, __qual)\
@@ -76,6 +97,11 @@ thread_lock_release(thread_lock_t *lock)
 #define DECLARE_LOCAL_THREAD_LOCK(__name) DECLARE_QUALIFIED_THREAD_LOCK(__name,static)
 #define DEFINE_LOCAL_THREAD_LOCK(__name) DEFINE_QUALIFIED_THREAD_LOCK(__name,static)
 
+#define THREAD_LOCK_INITIALIZER \
+    {\
+	.locked = 0,\
+	.irq_flags = 0,\
+    }
 
 // "irq" lock
 //
@@ -104,6 +130,7 @@ irq_lock_try_acquire(irq_lock_t *lock)
 {
     int irq_flags = disable_save_irqs();
     int prev = atomic_bool_test_and_set(&lock->locked);
+    DEBUG_ASSERT_MSG(prev == 0 || prev == 1, "Corrupted irq_lock! (value other than 0 or 1)");
     if(prev == 0) {
         // We got the lock
         lock->irq_flags = irq_flags;
@@ -130,6 +157,39 @@ irq_lock_release(irq_lock_t *lock)
     mbarrier();
     atomic_bool_clear(&lock->locked);
     enable_restore_irqs(irq_flags);
+}
+
+static inline void
+irq_lock_acquire_pair(
+	irq_lock_t *a,
+	irq_lock_t *b)
+{
+    int res;
+
+    if(a == b) {
+	irq_lock_acquire(a);
+	return;
+    }
+
+    irq_lock_t *lesser = (uintptr_t)a < (uintptr_t)b ? a : b;
+    irq_lock_t *greater = lesser == a ? b : a;
+
+    do {
+
+	res = irq_lock_try_acquire(lesser);
+	if(res) {
+	    pause();
+	    continue;
+	}
+	res = irq_lock_try_acquire(greater);
+	if(res) {
+	    irq_lock_release(lesser);
+	    pause();
+	    continue;
+	}
+	break;
+
+    } while(1);
 }
 
 #define DECLARE_QUALIFIED_IRQ_LOCK(__name, __qual)\
@@ -159,5 +219,11 @@ irq_lock_release(irq_lock_t *lock)
 
 #define DECLARE_LOCAL_IRQ_LOCK(__name) DECLARE_QUALIFIED_IRQ_LOCK(__name,static)
 #define DEFINE_LOCAL_IRQ_LOCK(__name) DEFINE_QUALIFIED_IRQ_LOCK(__name,static)
+
+#define IRQ_LOCK_INITIALIZER \
+    {\
+	.locked = 0,\
+	.irq_flags = 0,\
+    }
 
 #endif

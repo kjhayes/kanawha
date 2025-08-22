@@ -669,7 +669,7 @@ vmem_map_unhandled_user_page_fault(
         }
     }
     arch_excp_dump_state(state, do_printk);
-    mmap_dump(do_printk, process->mmap);
+    //mmap_dump(do_printk, process->mmap);
 #else
     eprintk("Terminating PID(%ld) for Invalid Memory Access (user_ip=%p)!\n",
             (sl_t)process->id,

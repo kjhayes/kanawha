@@ -69,6 +69,8 @@ struct thread_state
 
     spinlock_t lock;
     struct ptree_node tree_node;
+
+    struct waitqueue *waitqueue;
     ilist_node_t waitqueue_node;
 
     thread_id_t id;

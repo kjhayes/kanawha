@@ -8,6 +8,7 @@
 #include <kanawha/spinlock.h>
 #include <kanawha/lock.h>
 #include <kanawha/rwlock.h>
+#include <kanawha/init.h>
 
 struct fs_type;
 struct fs_mount;
@@ -16,7 +17,7 @@ struct fs_node;
 
 #define FS_NODE_READ_PAGE_MAY_CREATE (1ULL<<0)
 
-#define FS_NODE_READ_PAGE_SIG(RET,ARG)\
+#define FS_NODE_READ_PAGE_SIG(RET,ARG,...)\
 RET(int)\
 ARG(void *, page)\
 ARG(uintptr_t, pfn)\
@@ -24,7 +25,7 @@ ARG(unsigned long, flags)
 
 #define FS_NODE_WRITE_PAGE_MAY_CREATE (1ULL<<0)
 
-#define FS_NODE_WRITE_PAGE_SIG(RET,ARG)\
+#define FS_NODE_WRITE_PAGE_SIG(RET,ARG,...)\
 RET(int)\
 ARG(void *, page)\
 ARG(uintptr_t, pfn)\
@@ -39,26 +40,26 @@ ARG(unsigned long, flags)
 
 #define FS_NODE_LOAD_PAGE_MAY_CREATE (1ULL<<0)
 
-#define FS_NODE_LOAD_PAGE_SIG(RET,ARG)\
+#define FS_NODE_LOAD_PAGE_SIG(RET,ARG,...)\
 RET(int)\
 ARG(uintptr_t, pfn)\
 ARG(unsigned long, flags)\
 ARG(void __phys **, addr_out)
 
-#define FS_NODE_UNLOAD_PAGE_SIG(RET,ARG)\
+#define FS_NODE_UNLOAD_PAGE_SIG(RET,ARG,...)\
 RET(int)\
 ARG(uintptr_t, pfn)\
 ARG(unsigned long, flags)\
 ARG(void __phys *, addr)
 
-#define FS_NODE_FLUSH_PAGE_SIG(RET,ARG)\
+#define FS_NODE_FLUSH_PAGE_SIG(RET,ARG,...)\
 RET(int)\
 ARG(uintptr_t, pfn)\
 ARG(unsigned long, flags)\
 ARG(void __phys *, addr)
 
 // Flush any node meta-data/directory info
-#define FS_NODE_FLUSH_SIG(RET,ARG)\
+#define FS_NODE_FLUSH_SIG(RET,ARG,...)\
 RET(int)\
 ARG(unsigned long, flags)
 
@@ -71,47 +72,54 @@ ARG(unsigned long, flags)
 #define FS_NODE_TYPE_DIRECTORY (1ULL<<1)
 #define FS_NODE_TYPE_FIFO      (1ULL<<2)
 
-#define FS_NODE_GETATTR_SIG(RET,ARG)\
+#define FS_NODE_GETATTR_SIG(RET,ARG,...)\
 RET(int)\
 ARG(int, attr)\
 ARG(size_t *, value)
 
-#define FS_NODE_SETATTR_SIG(RET,ARG)\
+#define FS_NODE_SETATTR_SIG(RET,ARG,...)\
 RET(int)\
 ARG(int, attr)\
 ARG(size_t, value)
 
-#define FS_NODE_LOOKUP_SIG(RET,ARG)\
+#define FS_NODE_LOOKUP_HARD     (0)
+#define FS_NODE_LOOKUP_SYMBOLIC (1)
+// <0 -> errno
+// FS_NODE_LOOKUP_HARD -> hardlink (inode is valid)
+// FS_NODE_LOOKUP_SYMBOLIC -> symlink (sym_buffer should be populated with C string)
+#define FS_NODE_LOOKUP_SIG(RET,ARG,...)\
 RET(int)\
 ARG(const char *, name)\
-ARG(size_t *, inode)
+ARG(size_t *, inode)\
+ARG(char *, sym_buffer)\
+ARG(size_t, sym_buflen)
 
-#define FS_NODE_MKFILE_SIG(RET,ARG)\
+#define FS_NODE_MKFILE_SIG(RET,ARG,...)\
 RET(int)\
 ARG(const char *, filename)\
 ARG(unsigned long, flags)
 
-#define FS_NODE_MKFIFO_SIG(RET,ARG)\
+#define FS_NODE_MKFIFO_SIG(RET,ARG,...)\
 RET(int)\
 ARG(const char *, filename)\
 ARG(unsigned long, flags)
 
-#define FS_NODE_MKDIR_SIG(RET,ARG)\
+#define FS_NODE_MKDIR_SIG(RET,ARG,...)\
 RET(int)\
 ARG(const char *, dirname)\
 ARG(unsigned long, flags)
 
-#define FS_NODE_LINK_SIG(RET,ARG)\
+#define FS_NODE_LINK_SIG(RET,ARG,...)\
 RET(int)\
 ARG(const char *, linkname)\
 ARG(size_t, inode)
 
-#define FS_NODE_SYMLINK_SIG(RET,ARG)\
+#define FS_NODE_SYMLINK_SIG(RET,ARG,...)\
 RET(int)\
 ARG(const char *, linkname)\
 ARG(const char *, path)
 
-#define FS_NODE_UNLINK_SIG(RET,ARG)\
+#define FS_NODE_UNLINK_SIG(RET,ARG,...)\
 RET(int)\
 ARG(const char *, name)
 
@@ -155,7 +163,8 @@ struct fs_node
     spinlock_t page_lock;
     struct ptree page_cache;
 
-    unsigned long refcount;
+    atomic_t refcount;
+
     struct ptree_node cache_node;
 };
 
@@ -180,19 +189,8 @@ DECLARE_OP_LIST_WRAPPERS(
         /* No Prefix */,
         fs_node)
 
-#ifndef KEEP_FS_NODE_OP_LIST
-#undef FS_NODE_READ_PAGE_SIG
-#undef FS_NODE_WRITE_PAGE_SIG
-#undef FS_NODE_GETATTR_SIG
-#undef FS_NODE_SETATTR_SIG
-#undef FS_NODE_LOOKUP_SIG
-#undef FS_NODE_MKFILE_SIG
-#undef FS_NODE_MKDIR_SIG
-#undef FS_NODE_LINK_SIG
-#undef FS_NODE_SYMLINK_SIG
-#undef FS_NODE_UNLINK_SIG
-#undef FS_NODE_OP_LIST
-#endif
+struct fs_node *
+fs_node_create(void);
 
 int
 fs_node_get(
@@ -262,6 +260,10 @@ fs_node_paged_write(
         size_t buflen,
         unsigned long flags);
 
+int
+fs_node_deattach_backing(
+	struct fs_node *node);
+
 /*
  * Error fs_node Method Implementations
  */
@@ -314,7 +316,9 @@ int
 fs_node_cannot_lookup(
         struct fs_node *node,
         const char *name,
-        size_t *inode);
+        size_t *inode,
+	char *sym_buffer,
+	size_t sym_buflen);
 int
 fs_node_cannot_mkfile(
         struct fs_node *node,
@@ -344,6 +348,24 @@ int
 fs_node_cannot_unlink(
         struct fs_node *node,
         const char *name);
+
+static inline void
+fs_node_ops_init_undef(struct fs_node_ops *ops)
+{
+#define FS_NODE_OP_DEFAULT_INIT(__OP_NAME, ...)\
+    ops->__OP_NAME = ops->__OP_NAME ? ops->__OP_NAME : fs_node_cannot_ ## __OP_NAME;
+    FS_NODE_OP_LIST(FS_NODE_OP_DEFAULT_INIT);
+#undef FS_NODE_OP_DEFAULT_INIT
+}
+
+#define FS_NODE_OPS_INIT_UNDEF(__ops)\
+    static int\
+    __fs_node_ops_ ## __ops ## _init(void) {\
+	fs_node_ops_init_undef(&__ops);\
+	return 0;\
+    }\
+    declare_init(static, __fs_node_ops_ ## __ops ## _init);
+
 
 /*
  * Default Implementations
@@ -379,4 +401,19 @@ fs_node_flush_page_nop(
         uintptr_t pfn,
         unsigned long flags,
         void __phys * addr);
+
+#ifndef KEEP_FS_NODE_OP_LIST
+#undef FS_NODE_READ_PAGE_SIG
+#undef FS_NODE_WRITE_PAGE_SIG
+#undef FS_NODE_GETATTR_SIG
+#undef FS_NODE_SETATTR_SIG
+#undef FS_NODE_LOOKUP_SIG
+#undef FS_NODE_MKFILE_SIG
+#undef FS_NODE_MKDIR_SIG
+#undef FS_NODE_LINK_SIG
+#undef FS_NODE_SYMLINK_SIG
+#undef FS_NODE_UNLINK_SIG
+#undef FS_NODE_OP_LIST
+#endif
+
 #endif

@@ -871,7 +871,9 @@ static int
 fat_dir_lookup(
 	struct fs_node *fs_node,
 	const char *name,
-	size_t *inode)
+	size_t *inode,
+	char *sym_buffer,
+	size_t sym_buflen)
 {
     int res;
 
@@ -902,7 +904,7 @@ fat_dir_lookup(
 		            + ((cluster-2) * cluster_size)
 			    + (index_within_cluster * 32);
 	    *inode = offset;
-	    return 0;
+	    return FS_NODE_LOOKUP_HARD;
 	}
 	index++;
     } while(1);
@@ -1338,41 +1340,22 @@ declare_init_desc(fs, register_fat_fs_type, "Registering FAT Filesystem");
 static struct fs_node_ops
 fat_dir_node_ops = {
     .lookup = fat_dir_lookup,
-
-    .link = fs_node_cannot_link,
-    .unlink = fs_node_cannot_unlink,
-    .symlink = fs_node_cannot_symlink,
-    .mkdir = fs_node_cannot_mkdir,
-    .mkfifo = fs_node_cannot_mkfifo,
-    .mkfile = fs_node_cannot_mkfile,
-    .getattr = fs_node_cannot_getattr,
-    .setattr = fs_node_cannot_setattr,
-    .load_page = fs_node_cannot_load_page,
-    .unload_page = fs_node_cannot_unload_page,
-    .read_page = fs_node_cannot_read_page,
-    .write_page = fs_node_cannot_write_page,
-    .flush = fs_node_cannot_flush,
-    .flush_page = fs_node_cannot_flush_page,
 };
+FS_NODE_OPS_INIT_UNDEF(fat_dir_node_ops);
+
 static struct fs_file_ops
 fat_dir_file_ops = {
     .dir_begin = fat_dir_dir_begin,
     .dir_next = fat_dir_dir_next,
     .dir_readattr = fat_dir_dir_readattr,
     .dir_readname = fat_dir_dir_readname,
-
-    .read = fs_file_cannot_read,
-    .write = fs_file_cannot_write,
-    .seek = fs_file_cannot_seek,
-    .flush = fs_file_cannot_flush,
-    .poll = fs_file_cannot_poll,
 };
+FS_FILE_OPS_INIT_UNDEF(fat_dir_file_ops);
 
 static struct fs_node_ops
 fat_file_node_ops =
 {
     .getattr = fat_file_getattr,
-    .setattr = fs_node_cannot_setattr,
 
     .read_page = fat_file_read_page,
     .write_page = fat_file_write_page,
@@ -1381,15 +1364,9 @@ fat_file_node_ops =
     .load_page = fs_node_load_page_read_alloc,
     .unload_page = fs_node_unload_page_free,
     .flush_page = fs_node_flush_page_write,
-
-    .link = fs_node_cannot_link,
-    .unlink = fs_node_cannot_unlink,
-    .symlink = fs_node_cannot_symlink,
-    .lookup = fs_node_cannot_lookup,
-    .mkdir = fs_node_cannot_mkdir,
-    .mkfifo = fs_node_cannot_mkfifo,
-    .mkfile = fs_node_cannot_mkfile,
 };
+FS_NODE_OPS_INIT_UNDEF(fat_file_node_ops);
+
 static struct fs_file_ops
 fat_file_file_ops =
 {
@@ -1397,11 +1374,6 @@ fat_file_file_ops =
     .write = fs_file_paged_write,
     .seek = fs_file_paged_seek,
     .flush = fs_file_paged_flush,
-
-    .dir_begin = fs_file_cannot_dir_begin,
-    .dir_next = fs_file_cannot_dir_next,
-    .dir_readattr = fs_file_cannot_dir_readattr,
-    .dir_readname = fs_file_cannot_dir_readname,
-
-    .poll = fs_file_cannot_poll,
 };
+FS_FILE_OPS_INIT_UNDEF(fat_file_file_ops);
+

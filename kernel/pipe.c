@@ -28,24 +28,15 @@
 
 #define DEFAULT_PIPE_BUFSIZE PAGE_SIZE_4KB
 
-static struct fs_node_ops
-pipe_fs_node_ops =
-{
-    .read_page = fs_node_cannot_read_page,
-    .write_page = fs_node_cannot_read_page,
-    .load_page = fs_node_cannot_load_page,
-    .unload_page = fs_node_cannot_unload_page,
-    .flush_page = fs_node_cannot_flush_page,
-    .flush = fs_node_flush_nop,
-    .getattr = fs_node_cannot_getattr,
-    .setattr = fs_node_cannot_setattr,
-    .lookup = fs_node_cannot_lookup,
-    .mkfile = fs_node_cannot_mkfile,
-    .mkdir = fs_node_cannot_mkdir,
-    .link = fs_node_cannot_link,
-    .symlink = fs_node_cannot_symlink,
-    .unlink = fs_node_cannot_unlink,
-};
+#define pipe_lock_acquire(__pipe_ptr)\
+do {\
+    irq_lock_acquire(&(__pipe_ptr)->lock);\
+} while(0)
+
+#define pipe_lock_release(__pipe_ptr)\
+do {\
+    irq_lock_release(&(__pipe_ptr)->lock);\
+} while(0)
 
 static inline int
 pipe_read_empty(struct pipe *pipe)
@@ -66,6 +57,8 @@ pipe_fs_file_read(
         ssize_t amount,
         unsigned long flags)
 {
+    int res;
+
     dprintk("pipefs read: amount=%p\n", amount);
     if(amount == 0) {
         return 0;
@@ -77,14 +70,14 @@ pipe_fs_file_read(
     }
     struct pipe *pipe = node->backing.priv_state;
 
+    ssize_t read = 0;
+    pipe_lock_acquire(pipe);
+
     DEBUG_ASSERT(KERNEL_ADDR(pipe));
     DEBUG_ASSERT(KERNEL_ADDR(pipe->buffer));
     DEBUG_ASSERT(KERNEL_ADDR(buffer));
     DEBUG_ASSERT(pipe->buflen > pipe->head);
     DEBUG_ASSERT(pipe->buflen > pipe->tail);
-
-    ssize_t read = 0;
-    spin_lock(&pipe->lock);
 
     while(read <= 0) {
         if(!pipe_read_empty(pipe)) {
@@ -100,10 +93,13 @@ pipe_fs_file_read(
         } else {
             int can_block = !(flags & FS_FILE_READ_NON_BLOCKING);
             if(can_block) {
-                spin_unlock(&pipe->lock);
+                pipe_lock_release(pipe);
                 dprintk("pipe_fs_read (SLEEPING)\n");
-                wait_on(&pipe->read_queue);
-                spin_lock(&pipe->lock);
+                res = wait_on(&pipe->read_queue);
+		if(res) {
+		    return res;
+		}
+                pipe_lock_acquire(pipe);
             } else {
                 if(read == 0) {
                     read = -EWOULDBLOCK;
@@ -113,7 +109,7 @@ pipe_fs_file_read(
         }
     }
 
-    spin_unlock(&pipe->lock);
+    pipe_lock_release(pipe);
     if(read > 0) {
         wake_all(&pipe->write_queue);
     }
@@ -127,6 +123,8 @@ pipe_fs_file_write(
         ssize_t amount,
         unsigned long flags)
 {
+    int res;
+
     if(amount == 0) {
         return 0;
     }
@@ -137,14 +135,14 @@ pipe_fs_file_write(
     }
     struct pipe *pipe = node->backing.priv_state;
 
+    ssize_t written = 0;
+    pipe_lock_acquire(pipe);
+
     DEBUG_ASSERT(KERNEL_ADDR(pipe));
     DEBUG_ASSERT(KERNEL_ADDR(pipe->buffer));
     DEBUG_ASSERT(KERNEL_ADDR(buffer));
     DEBUG_ASSERT(pipe->buflen > pipe->head);
     DEBUG_ASSERT(pipe->buflen > pipe->tail);
-
-    ssize_t written = 0;
-    spin_lock(&pipe->lock);
 
     // TODO: Allow writes of more than a byte at a time
     while(written <= 0) {
@@ -161,10 +159,13 @@ pipe_fs_file_write(
         } else {
             int can_block = !(flags & FS_FILE_WRITE_NON_BLOCKING);
             if(can_block) {
-                spin_unlock(&pipe->lock);
+                pipe_lock_release(pipe);
                 dprintk("pipe_fs_write (SLEEPING)\n");
-                wait_on(&pipe->write_queue);
-                spin_lock(&pipe->lock);
+                res = wait_on(&pipe->write_queue);
+		if(res) {
+		    return res;
+		}
+                pipe_lock_acquire(pipe);
             } else {
                 if(written == 0) {
                     written = -EWOULDBLOCK;
@@ -175,7 +176,7 @@ pipe_fs_file_write(
         }
     }
 
-    spin_unlock(&pipe->lock);
+    pipe_lock_release(pipe);
     if(written > 0) {
         wake_all(&pipe->read_queue);
     }
@@ -195,7 +196,7 @@ pipe_fs_file_poll(
     }
     struct pipe *pipe = node->backing.priv_state;
 
-    spin_lock(&pipe->lock);
+    pipe_lock_acquire(pipe);
 
     unsigned long triggered = 0;
 
@@ -210,12 +211,19 @@ pipe_fs_file_poll(
         }
     }
 
-    spin_unlock(&pipe->lock);
+    pipe_lock_release(pipe);
 
     *triggered_out = triggered;
 
     return 0;
 }
+
+static struct fs_node_ops
+pipe_fs_node_ops =
+{
+    .flush = fs_node_flush_nop,
+};
+FS_NODE_OPS_INIT_UNDEF(pipe_fs_node_ops);
 
 static struct fs_file_ops
 pipe_fs_file_ops =
@@ -226,12 +234,8 @@ pipe_fs_file_ops =
     .flush = fs_file_nop_flush,
     .seek = fs_file_seek_pinned_zero,
     .poll = pipe_fs_file_poll,
-
-    .dir_begin = fs_file_cannot_dir_begin,
-    .dir_next = fs_file_cannot_dir_next,
-    .dir_readattr = fs_file_cannot_dir_readattr,
-    .dir_readname = fs_file_cannot_dir_readname,
 };
+FS_FILE_OPS_INIT_UNDEF(pipe_fs_file_ops);
 
 static int
 pipe_fs_root_index(struct fs_mount *mnt, size_t *index)
@@ -270,7 +274,7 @@ pipe_fs_mount_load_node(
     }
     pipe->head = 0;
     pipe->tail = 0;
-    spinlock_init(&pipe->lock);
+    irq_lock_init(&pipe->lock);
 
     fs_node->backing.node_ops = &pipe_fs_node_ops;
     fs_node->backing.file_ops = &pipe_fs_file_ops;
@@ -293,6 +297,18 @@ pipe_fs_mount_load_node(
         waitqueue_deinit(&pipe->read_queue);
         kfree(pipe);
         return res;
+    }
+
+    {
+	char wq_namebuf[64];
+
+	snprintk(wq_namebuf, 64, "pipe-%lu-read", (ul_t)index);
+	wq_namebuf[63] = '\0';
+	waitqueue_name(&pipe->read_queue, wq_namebuf);
+
+	snprintk(wq_namebuf, 64, "pipe-%lu-write", (ul_t)index);
+	wq_namebuf[63] = '\0';
+	waitqueue_name(&pipe->write_queue, wq_namebuf);
     }
 
     return 0;

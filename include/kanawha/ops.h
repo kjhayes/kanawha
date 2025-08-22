@@ -14,16 +14,16 @@
 // A SIG Macro defines the signature of a single function.
 // They take the form:
 //
-// #define FILE_OPEN_SIG(RET,ARG)\
+// #define FILE_OPEN_SIG(RET,ARG,...)\
 // RET(int)
 //
-// #define FILE_READ_SIG(RET,ARG)\
+// #define FILE_READ_SIG(RET,ARG,...)\
 // RET(int)\
 // ARG(void *, dst)\
 // ARG(size_t, src_offset)\
 // ARG(size_t, size)
 //
-// #define FILE_WRITE_SIG(RET,ARG)\
+// #define FILE_WRITE_SIG(RET,ARG,...)\
 // RET(int)\
 // ARG(size_t, dst_offset)\
 // ARG(void *, src)\
@@ -110,11 +110,14 @@
 #define __ARG_DECL_COMMA(type, name) type name ,
 #define __ARG_COMMA_TYPE(type, name) , type
 #define __ARG_COMMA_NAME(type, name) , name
+#define __ARG_NAME_COMMA(type, name) name ,
 
-#define SIG_RETURN_TYPE(SIG) SIG(__RET_IDENTITY,__NOTHING)
-#define SIG_ARG_TYPE_LIST(SIG) SIG(__NOTHING,__ARG_COMMA_TYPE)
-#define SIG_ARG_DECLS(SIG) SIG(__NOTHING,__ARG_COMMA_DECL)
-#define SIG_ARG_NAMES(SIG) SIG(__NOTHING,__ARG_COMMA_NAME)
+#define SIG_RETURN_TYPE(SIG) SIG(__RET_IDENTITY,__NOTHING,__NOTHING)
+#define SIG_ARG_TYPE_LIST(SIG) SIG(__NOTHING,__ARG_COMMA_TYPE,__NOTHING)
+#define SIG_ARG_DECLS(SIG) SIG(__NOTHING,__ARG_COMMA_DECL,__NOTHING)
+#define SIG_ARG_NAMES(SIG) SIG(__NOTHING,__ARG_COMMA_NAME,__NOTHING)
+#define _SIG_ARG_NAMES(SIG) SIG(__NOTHING,__ARG_NAME_COMMA,__NOTHING)
+
 
 // Single Function Pointer Declaration
 #define DECLARE_OP_PTR(FUNC, SIG, THIS_TYPE, ...)\

@@ -10,15 +10,17 @@
 #include <drivers/vga/fb.h>
 
 extern struct vga_fb_mode vga_fb_mode_text_80_25;
+extern struct vga_fb_mode vga_fb_mode_text_80_50;
+extern struct vga_fb_mode vga_fb_mode_text_132_50;
 extern struct vga_fb_mode vga_fb_mode_graphics_320_200;
-extern struct vga_fb_mode vga_fb_mode_graphics_640_400;
-extern struct vga_fb_mode vga_fb_mode_osdev_320_200;
+extern struct vga_fb_mode vga_fb_mode_graphics_640_480;
 
 static struct vga_fb_mode *vga_fb_modes[] = {
     &vga_fb_mode_text_80_25,
+    &vga_fb_mode_text_80_50,
+    &vga_fb_mode_text_132_50,
     &vga_fb_mode_graphics_320_200,
-    &vga_fb_mode_graphics_640_400,
-    &vga_fb_mode_osdev_320_200,
+    &vga_fb_mode_graphics_640_480,
 };
 #define VGA_FB_NUM_MODES (sizeof(vga_fb_modes) / sizeof(*vga_fb_modes))
 
@@ -116,6 +118,22 @@ vga_fb_set_mode(
         return res;
     }
 
+    // Clear all of video memory
+    vga_write_field(&fb->vga_dev, WriteMode, 0);
+    vga_write_field(&fb->vga_dev, HostOddEvenMemoryWriteAddressingDisable, 1);
+    vga_write_field(&fb->vga_dev, ChainOddEvenEnable, 0);
+    vga_write_field(&fb->vga_dev, Chain4Enable, 0);
+    vga_write_field(&fb->vga_dev, MemoryPlaneWriteEnable, 0b1111);
+    vga_write_field(&fb->vga_dev, ExtendedMemory, 1);
+    vga_write_field(&fb->vga_dev, RAMEnable, 1);
+    vga_write_field(&fb->vga_dev, MemoryMapSelect, 1);
+    vga_write_field(&fb->vga_dev, BitMask, 0xFF);
+    vga_write_field(&fb->vga_dev, EnableSetReset, 0);
+    vga_write_field(&fb->vga_dev, SetReset, 0);
+    vga_write_field(&fb->vga_dev, LogicalOperation, 0);
+    vga_write_field(&fb->vga_dev, RotateCount, 0);
+    memset_p((void __phys *)0xA0000, 0x0, 0x10000);
+
     res = (mode->setup)(fb);
     if(res) {
         spin_unlock(&fb->mode_lock);
@@ -201,6 +219,16 @@ vga_fb_flush_buffer(
 
     struct vga_fb_mode *mode = vga_fb_modes[fb->current_mode];
 
+    // Wait for VSYNC for a maximum of 10ms
+    duration_t max_vsync_wait = msec_to_duration(10);
+    time_t start = current_timestamp();
+    while(!vga_read_field(&fb->vga_dev, VerticalRetrace)) {
+	duration_t elapsed = duration_between(start, current_timestamp());
+	if(elapsed < 0 || elapsed >= max_vsync_wait) {
+	    break;
+	}
+    }
+
     res = (*mode->flush)(fb);
 
     spin_unlock(&fb->mode_lock);
@@ -227,7 +255,12 @@ register_vga_fb_dev(void)
         return -ENOMEM;
     }
 
-    res = vga_dev_init(&fb->vga_dev);
+    unsigned long dac_order = VGA_DAC_ORDER_DEFAULT;
+
+    // QEMU VGA seems to use the DAC order to GRB for some reason?
+    dac_order = VGA_DAC_ORDER_RGB;
+
+    res = vga_dev_init(&fb->vga_dev, dac_order);
     if(res) {
         kfree(fb);
         return res;

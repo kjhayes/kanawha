@@ -2,6 +2,7 @@
 #include <kanawha/parse.h>
 #include <kanawha/errno.h>
 #include <kanawha/string.h>
+#include <kanawha/printk.h>
 
 static void
 determine_sign(
@@ -117,6 +118,8 @@ parse_unsigned_long(
     unsigned long value;
     res = kstrtoul(str, base, &value);
     if(res) {
+	wprintk("Failed to parse unsigned long \"%s\"\n",
+		str);
         return def;
     }
     return value;

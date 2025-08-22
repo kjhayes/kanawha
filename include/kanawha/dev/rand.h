@@ -7,11 +7,12 @@
 #include <kanawha/stree.h>
 #include <kanawha/ptree.h>
 #include <kanawha/sysfs/vfs.h>
+#include <kanawha/waitqueue.h>
 
 struct rand_dev;
 struct rand_driver;
 
-#define RAND_DEV_READ_SIG(RET,ARG)\
+#define RAND_DEV_READ_SIG(RET,ARG,...)\
 RET(ssize_t)\
 ARG(void *, buffer)\
 ARG(size_t, amount)
@@ -26,7 +27,16 @@ DECLARE_OP_LIST_PTRS(RAND_DEV_OP_LIST, struct rand_dev *);
 struct rand_dev {
     struct registry_node registry_node;
     struct rand_driver *driver;
+
+    struct waitqueue read_wq;
 };
+
+static inline void
+rand_dev_wake_readers(
+	struct rand_dev *dev)
+{
+    wake_all(&dev->read_wq);
+}
 
 DEFINE_OP_LIST_WRAPPERS(
         RAND_DEV_OP_LIST,

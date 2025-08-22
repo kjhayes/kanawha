@@ -3,13 +3,14 @@
 
 #include <kanawha/ptree.h>
 #include <kanawha/waitqueue.h>
-
+#include <kanawha/lock.h>
 
 #include <kanawha/fs/node.h>
 
 struct pipe
 {
-    spinlock_t lock;
+    // This can probably be a thread_lock but we'll be safe for now
+    irq_lock_t lock;
 
     size_t head;
     size_t tail;

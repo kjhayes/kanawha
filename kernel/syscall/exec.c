@@ -304,6 +304,12 @@ syscall_exec(
     dprintk("syscall_exec: desc->path->fs_node->index = %lld\n", (sll_t)desc->path->fs_node->cache_node.key);
     file_table_put_file(process->file_table, process, desc);
 
+    res = file_table_on_exec(process->file_table, process);
+    if(res) {
+	wprintk("syscall_exec: Failed to handle CLOSE_ON_EXEC files! (err=%s)\n",
+		errnostr(res));
+    }
+
     res = vmem_flush_region(process->mmap->vmem_region);
     if(res) {
         eprintk("syscall_exec: Failed to flush mmap region!\n");

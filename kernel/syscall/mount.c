@@ -113,9 +113,13 @@ syscall_mount(
           }
       } else {
           fd_t src_fd;
+	  struct fs_path *dir_path;
+	  dir_path = process->root_directory;
+	  fs_path_get(dir_path);
           res = file_table_open(
                   process->file_table,
                   process,
+		  dir_path,
                   src_buf,
                   FILE_PERM_READ|FILE_PERM_WRITE,
                   0,
@@ -127,6 +131,7 @@ syscall_mount(
               kfree(src_buf);
               return res;
           }
+	  fs_path_put(dir_path);
 
           struct file *src_desc =
               file_table_get_file(

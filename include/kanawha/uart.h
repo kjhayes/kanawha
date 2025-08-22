@@ -2,8 +2,7 @@
 #define __KANAWHA__UART_H__
 
 #include <kanawha/ops.h>
-
-typedef size_t baud_t;
+#include <kanawha/dev/term.h>
 
 typedef unsigned uart_databits_t;
 
@@ -21,35 +20,35 @@ typedef enum uart_parity {
     UART_PARITY_HIGH,
 } uart_parity_t;
 
-#define UART_SET_BAUDRATE_SIG(RET,ARG)\
+#define UART_SET_BAUDRATE_SIG(RET,ARG,...)\
 RET(int)\
 ARG(baud_t, rate)
 
-#define UART_GET_BAUDRATE_SIG(RET,ARG)\
+#define UART_GET_BAUDRATE_SIG(RET,ARG,...)\
 RET(int)\
 ARG(baud_t *, baud)
 
-#define UART_SET_DATABITS_SIG(RET,ARG)\
+#define UART_SET_DATABITS_SIG(RET,ARG,...)\
 RET(int)\
 ARG(uart_databits_t, bits)
 
-#define UART_GET_DATABITS_SIG(RET,ARG)\
+#define UART_GET_DATABITS_SIG(RET,ARG,...)\
 RET(int)\
 ARG(uart_databits_t *, bits)
 
-#define UART_SET_STOPBITS_SIG(RET,ARG)\
+#define UART_SET_STOPBITS_SIG(RET,ARG,...)\
 RET(int)\
 ARG(uart_stopbits_t, bits)
 
-#define UART_GET_STOPBITS_SIG(RET,ARG)\
+#define UART_GET_STOPBITS_SIG(RET,ARG,...)\
 RET(int)\
 ARG(uart_stopbits_t *, bits)
 
-#define UART_SET_PARITY_SIG(RET,ARG)\
+#define UART_SET_PARITY_SIG(RET,ARG,...)\
 RET(int)\
 ARG(uart_parity_t, parity)
 
-#define UART_GET_PARITY_SIG(RET,ARG)\
+#define UART_GET_PARITY_SIG(RET,ARG,...)\
 RET(int)\
 ARG(uart_parity_t *, parity)
 

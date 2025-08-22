@@ -168,13 +168,13 @@ process_get_parent_id(
 
     pid_t parent_id = proc->id;
 
-    int irq_flags = spin_lock_irq_save(&proc->hierarchy_lock);
+    irq_lock_acquire(&proc->hierarchy_lock);
 
     if(proc->parent != NULL) {
         parent_id = proc->parent->id;
     }
 
-    spin_unlock_irq_restore(&proc->hierarchy_lock, irq_flags);
+    irq_lock_release(&proc->hierarchy_lock);
 
     *pid_out = parent_id;
 
@@ -258,13 +258,17 @@ init_process_kernel_entry(void *in)
     }
 
     fd_t binary_fd;
+    struct fs_path *dir_path = process->root_directory;
+    fs_path_get(dir_path);
     res = file_table_open(
             process->file_table,
             process,
+	    dir_path,
             binary_path,
             FILE_PERM_READ|FILE_PERM_EXEC,
             0,
             &binary_fd); 
+    fs_path_put(dir_path);
     if(res) {
         panic("Failed to find init process binary with path \"%s\" (err=%s)\n",
                 binary_path, errnostr(res));
@@ -291,34 +295,20 @@ init_process_kernel_entry(void *in)
     panic("enter_usermode Returned!\n");
 }
 
-struct spawned_process_state {
-    void __user *entry;
-    void *arg;
-};
-
 static void
 spawned_process_kernel_entry(void *in)
 {
     int res;
-
-    struct spawned_process_state *state = in;
 
     struct process *process = current_process();
     DEBUG_ASSERT(process);
 
     arch_on_process_entry();
 
-    void __user *entry = state->entry;
-    void *arg = state->arg;
-
-    kfree(state);
-
     dprintk("spawned_process_kernel_entry(%p,%p)\n",
             entry, arg);
 
-    process->user_ip = entry;
-
-    enter_usermode(arg);
+    enter_usermode(in);
 }
 
 static struct process *
@@ -336,8 +326,8 @@ process_alloc(
         goto err0;
     }
 
-    spinlock_init(&process->status_lock);
-    spinlock_init(&process->hierarchy_lock);
+    irq_lock_init(&process->status_lock);
+    irq_lock_init(&process->hierarchy_lock);
     ilist_init(&process->children);
     waitqueue_init(&process->wait_queue);
     waitqueue_init(&process->child_wait_queue);
@@ -370,11 +360,11 @@ process_alloc(
 
     process->parent = parent;
     if(parent != NULL) {
-        spin_lock(&parent->hierarchy_lock);
+        irq_lock_acquire(&parent->hierarchy_lock);
         ilist_push_tail(&parent->children, &process->child_node);
         process->user_id = parent->user_id;
         process->group_id = parent->group_id;
-        spin_unlock(&parent->hierarchy_lock);
+        irq_lock_release(&parent->hierarchy_lock);
     } else {
         DEBUG_ASSERT(flags & PROCESS_FLAG_INIT);
         process->user_id = INIT_UID;
@@ -387,6 +377,17 @@ process_alloc(
                 errnostr(res));
         goto err2;
     } 
+
+    {
+	char wq_namebuf[64];
+
+	snprintk(wq_namebuf, 64, "proc-%lu", (ul_t)process->id);
+	wq_namebuf[63] = '\0';
+        waitqueue_name(&process->wait_queue, wq_namebuf);
+	snprintk(wq_namebuf, 64, "proc-%lu-children", (ul_t)process->id);
+	wq_namebuf[63] = '\0';
+        waitqueue_name(&process->child_wait_queue, wq_namebuf);
+    }
 
     process->flags = flags;
     process->status = PROCESS_STATUS_SUSPEND;
@@ -474,11 +475,14 @@ launch_init_process(void)
     }
 
     size_t sysfs_file_index;
-    res = fs_node_lookup(sysfs_root, CONFIG_INITIAL_FS_BACKEND_FILE_NAME, &sysfs_file_index);
-    fs_mount_put_node(sysfs_mount, sysfs_root);
-    if(res) {
-        eprintk("Failed to lookup initial filesystem backing file \"%s\"!\n",
-                CONFIG_INITIAL_FS_BACKEND_FILE_NAME);
+    res = fs_node_lookup(sysfs_root, CONFIG_INITIAL_FS_BACKEND_FILE_NAME, &sysfs_file_index, NULL, 0);
+    fs_node_put(sysfs_root);
+    if(res != FS_NODE_LOOKUP_HARD) {
+        eprintk("Failed to lookup initial filesystem backing file \"%s\" [%s]!\n",
+                CONFIG_INITIAL_FS_BACKEND_FILE_NAME,
+		res < 0 ? errnostr(res) :
+		res == FS_NODE_LOOKUP_SYMBOLIC ? "cannot use symbolic link" :
+		"invalid return code from fs_node_lookup");
         return res;
     }
 
@@ -589,14 +593,14 @@ process_schedule(
         struct process *process) 
 {
     int res;
-    int irq_flags = spin_lock_irq_save(&process->status_lock);
+    irq_lock_acquire(&process->status_lock);
 
     dprintk("scheduling process(%ld) thread(%ld)\n",
             process->id, process->thread.id);
 
     if(process->scheduler == NULL) {
         eprintk("process_schedule: process->scheduler == NULL!\n");
-        spin_unlock_irq_restore(&process->status_lock, irq_flags);
+        irq_lock_release(&process->status_lock);
         return -EINVAL;
     }
 
@@ -606,7 +610,7 @@ process_schedule(
                     process->scheduler,
                     &process->thread);
             if(res) {
-                spin_unlock_irq_restore(&process->status_lock, irq_flags);
+                irq_lock_release(&process->status_lock);
                 return res;
             }
             process->status = PROCESS_STATUS_SCHEDULED;
@@ -615,15 +619,15 @@ process_schedule(
             break;
         case PROCESS_STATUS_ZOMBIE:
             eprintk("process_schedule: Called on zombie thread!\n");
-            spin_unlock_irq_restore(&process->status_lock, irq_flags);
+            irq_lock_release(&process->status_lock);
             return -EINVAL;
         default:
-            spin_unlock_irq_restore(&process->status_lock, irq_flags);
+            irq_lock_release(&process->status_lock);
             panic("process_schedule: process has invalid status %ld\n",
                     (sl_t)process->status);
     }
 
-    spin_unlock_irq_restore(&process->status_lock, irq_flags);
+    irq_lock_release(&process->status_lock);
 
     return 0;
 }
@@ -665,9 +669,9 @@ process_suspend(
         struct process *process)
 {
     int res;
-    int irq_flags = spin_lock_irq_save(&process->status_lock);
+    irq_lock_acquire(&process->status_lock);
     res = __process_suspend_caller_lock(process);
-    spin_unlock_irq_restore(&process->status_lock, irq_flags);
+    irq_lock_release(&process->status_lock);
     return res;
 }
 
@@ -681,7 +685,7 @@ process_set_scheduler(
     DEBUG_ASSERT(KERNEL_ADDR(process));
     DEBUG_ASSERT(KERNEL_ADDR(sched));
 
-    int irq_flags = spin_lock_irq_save(&process->status_lock);
+    irq_lock_acquire(&process->status_lock);
 
     if(process->status == PROCESS_STATUS_ZOMBIE) {
         wprintk("process_set_scheduler called on zombie process!\n");
@@ -693,7 +697,7 @@ process_set_scheduler(
         if(res) {
             eprintk("process_set_scheduler: Failed to remove process from old scheduler! (err=%s)\n",
                     errnostr(res));
-            spin_unlock_irq_restore(&process->status_lock, irq_flags);
+            irq_lock_release(&process->status_lock);
             return res;
         }
     }
@@ -709,7 +713,7 @@ process_set_scheduler(
         }
     }
 
-    spin_unlock_irq_restore(&process->status_lock, irq_flags);
+    irq_lock_release(&process->status_lock);
     return 0;
 }
 
@@ -854,7 +858,7 @@ process_get_reapable_child(
         pid_t *out_child_id)
 {
     int res;
-    int irq_flags = spin_lock_irq_save(&parent->hierarchy_lock);
+    irq_lock_acquire(&parent->hierarchy_lock);
 
     while(1) {
         size_t child_count = 0;
@@ -864,7 +868,7 @@ process_get_reapable_child(
             struct process *child =
                 container_of(list_node, struct process, child_node);
             if(child->status == PROCESS_STATUS_ZOMBIE) {
-                spin_unlock_irq_restore(&parent->hierarchy_lock, irq_flags);
+                irq_lock_release(&parent->hierarchy_lock);
                 *out_child_id = child->id;
                 return 0;
             }
@@ -875,13 +879,16 @@ process_get_reapable_child(
         }
 
         if(nowait) {
-            spin_unlock_irq_restore(&parent->hierarchy_lock, irq_flags);
+            irq_lock_release(&parent->hierarchy_lock);
             return -EWOULDBLOCK;
         } else {
-            spin_unlock_irq_restore(&parent->hierarchy_lock, irq_flags);
+            irq_lock_release(&parent->hierarchy_lock);
             dprintk("PID(%ld) Sleeping on own child wait queue!\n", process->id);
-            wait_on(&parent->child_wait_queue);
-            irq_flags = spin_lock_irq_save(&parent->hierarchy_lock);
+            res = wait_on(&parent->child_wait_queue);
+	    if(res) {
+		return res;
+	    }
+            irq_lock_acquire(&parent->hierarchy_lock);
         }
     }
 }
@@ -954,9 +961,7 @@ process_terminate(
         return -EINVAL;
     }
 
-    int irq_flags;
-
-    irq_flags = spin_lock_irq_save(&process->status_lock);
+    irq_lock_acquire(&process->status_lock);
 
     DEBUG_ASSERT(KERNEL_ADDR(process->parent) || process->parent == NULL);
 
@@ -965,7 +970,7 @@ process_terminate(
         wprintk("process_terminate is changing ZOMBIE error code from %d to %d!\n",
                 process->exitcode, exitcode);
         process->exitcode = exitcode;
-        spin_unlock_irq_restore(&process->status_lock, irq_flags);
+        irq_lock_release(&process->status_lock);
         return 0;
     }
 
@@ -974,7 +979,7 @@ process_terminate(
     // Suspend the process (deregistering it with any schedulers)
     res = __process_suspend_caller_lock(process);
     if(res) {
-        spin_unlock_irq_restore(&process->status_lock, irq_flags);
+        irq_lock_release(&process->status_lock);
         eprintk("process_terminate: __process_suspend_caller_lock returned: %s\n",
                 errnostr(res));
         return res;
@@ -1027,7 +1032,7 @@ process_terminate(
 
     // Terminate and Reap all children of this thread
     // NOTE: We acquire status_lock before hierarchy_lock here
-    spin_lock(&process->hierarchy_lock);
+    irq_lock_acquire(&process->hierarchy_lock);
     ilist_node_t *child_node;
     while(!ilist_empty(&process->children))
     {
@@ -1084,10 +1089,10 @@ process_terminate(
         // IRQ's are left disabled because if we are running on the process' thread
         // (as is the case in an "exit" syscall) then once we suspend the process,
         // if we are preempted, then we will never be scheduled again to return.
-        spin_unlock(&process->status_lock);
+        irq_lock_release(&process->status_lock);
     } else {
         // This is some other process that we are forcing to terminate
-        spin_unlock_irq_restore(&process->status_lock, irq_flags);
+        irq_lock_release(&process->status_lock);
     } 
    
     return 0;
@@ -1119,19 +1124,22 @@ process_reap_child(
         return -ENXIO;
     }
 
-    spin_lock(&parent->hierarchy_lock);
+    irq_lock_acquire(&parent->hierarchy_lock);
 
     while(process->status != PROCESS_STATUS_ZOMBIE) {
         if(nowait) {
-            spin_unlock(&parent->hierarchy_lock);
+            irq_lock_release(&parent->hierarchy_lock);
             process_pid_lock_release();
             return -EWOULDBLOCK;
         } else {
-            spin_unlock(&process->parent->hierarchy_lock);
+            irq_lock_release(&process->parent->hierarchy_lock);
             process_pid_lock_release();
-            wait_on(&process->wait_queue);
+            res = wait_on(&process->wait_queue);
+	    if(res) {
+		return res;
+	    }
             process_pid_lock_acquire();
-            spin_lock(&process->parent->hierarchy_lock);
+            irq_lock_acquire(&process->parent->hierarchy_lock);
         }
     }
 
@@ -1141,13 +1149,13 @@ process_reap_child(
 
     res = __process_reap_parent_lock(process);
     if(res) {
-        spin_unlock(&parent->hierarchy_lock);
+        irq_lock_release(&parent->hierarchy_lock);
         process_pid_lock_release();
         wprintk("Leaving process in invalid state after attempted reap failed!\n");
         return res;
     }
 
-    spin_unlock(&parent->hierarchy_lock);
+    irq_lock_release(&parent->hierarchy_lock);
     process_pid_lock_release();
 
     return 0;
@@ -1165,29 +1173,28 @@ process_spawn_child(
     
     DEBUG_ASSERT(KERNEL_ADDR(parent));
 
-    struct spawned_process_state *state =
-        kzmalloc(sizeof(struct spawned_process_state), KM_KERNEL);
-    if(state == NULL) {
-        return NULL;
-    }
-
-    state->arg = arg;
-    state->entry = user_entry;
-
     struct process *process =
         process_alloc(
                 spawned_process_kernel_entry,
-                (void*)state,
+                (void*)arg,
                 0,
                 parent);
     if(process == NULL) {
-        kfree(state);
         return NULL;
     }
+
+    process->user_ip = user_entry;
 
     DEBUG_ASSERT(process->status == PROCESS_STATUS_SUSPEND);
 
     DEBUG_ASSERT(KERNEL_ADDR(parent->root_directory));
+
+    res = signal_state_init_on_spawn(&parent->signal_state, &process->signal_state);
+    if(res) {
+	eprintk("process_spawn_child: failed to setup child signal state! (err=%s)\n",
+		errnostr(res));
+	goto err1;
+    }
 
     res = process_set_root_directory(process, parent->root_directory);
     if(res) {
@@ -1204,7 +1211,6 @@ process_spawn_child(
     }
 
     if(spawn_flags & SPAWN_MMAP_CLONE) {
-//        panic("SPAWN_MMAP_CLONE is unimplemented!\n");
         res = mmap_clone(parent->mmap, process);
         if(res) {
             eprintk("Failed to clone mmap for spawned process! (err=%s)\n",
@@ -1325,7 +1331,7 @@ process_send_signal(
     process_pid_lock_acquire();
 
     struct ptree_node *node =
-        ptree_get(&process_pid_tree, id);
+        ptree_get(&process_pid_tree, proc_id);
     if(node == NULL) {
         process_pid_lock_release();
         return -ENXIO;
@@ -1340,6 +1346,38 @@ process_send_signal(
     if(res) {
         process_pid_lock_release();
         return res;
+    }
+
+    process_pid_lock_release();
+
+    process_force_awake(id);
+
+    return 0;
+}
+
+int
+process_force_awake(
+	pid_t proc_id)
+{
+    int res;
+    process_pid_lock_acquire();
+
+    struct ptree_node *node =
+        ptree_get(&process_pid_tree, proc_id);
+    if(node == NULL) {
+        process_pid_lock_release();
+        return -ENXIO;
+    }
+
+    struct process *proc =
+        container_of(node, struct process, pid_node);
+
+    DEBUG_ASSERT(KERNEL_ADDR(proc));
+
+    res = thread_wake(&proc->thread);
+    if(res) {
+        process_pid_lock_release();
+	return res;
     }
 
     process_pid_lock_release();

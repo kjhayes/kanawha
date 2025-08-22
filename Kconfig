@@ -138,6 +138,12 @@ menu "Drivers"
 source "drivers/Kconfig"
 endmenu
 
+config WIP
+  bool "WIP Features"
+  default n
+  help
+      Allow WIP drivers/features to be enabled in this configuration?
+
 # Used to check that a .config exists
 config KANAWHA
     def_bool y

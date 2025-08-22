@@ -2,11 +2,25 @@
 #include <kanawha/dev/rand.h>
 #include <kanawha/init.h>
 
+static int
+rand_dev_init(struct rand_dev *dev)
+{
+    waitqueue_init(&dev->read_wq);
+    return 0;
+}
+
+static int
+rand_dev_deinit(struct rand_dev *dev)
+{
+    waitqueue_deinit(&dev->read_wq);
+    return 0;
+}
+
 DEFINE_REGISTRY(
         rand_dev,
         registry_node,
-        REGISTRY_NO_INIT_FUNCTION,
-        REGISTRY_NO_DEINIT_FUNCTION
+        rand_dev_init,
+        rand_dev_deinit 
         );
 
 #ifdef CONFIG_LOG_RANDDEV_REGISTRY_ON_LAUNCH

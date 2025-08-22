@@ -7,10 +7,10 @@
 struct clk_dev;
 struct clk_driver;
 
-#define CLK_DEV_FREQ_SIG(RET,ARG)\
+#define CLK_DEV_FREQ_SIG(RET,ARG,...)\
 RET(freq_t)
 
-#define CLK_DEV_MONO_CYCLES_SIG(RET,ARG)\
+#define CLK_DEV_MONO_CYCLES_SIG(RET,ARG,...)\
 RET(cycles_t)
 
 #define CLK_DEV_OP_LIST(OP, ...)\

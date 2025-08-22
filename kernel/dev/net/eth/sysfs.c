@@ -159,35 +159,23 @@ static struct fs_node_ops
 eth_dev_fs_node_ops =
 {
     .lookup = vfs_dir_lookup,
-
-    .read_page = fs_node_cannot_read_page,
-    .write_page = fs_node_cannot_write_page,
-    .load_page = fs_node_cannot_load_page,
-    .unload_page = fs_node_cannot_unload_page,
-    .mkfile = fs_node_cannot_mkfile,
-    .mkdir = fs_node_cannot_mkdir,
-    .link = fs_node_cannot_link,
-    .symlink = fs_node_cannot_symlink,
-    .unlink = fs_node_cannot_unlink,
     .flush = fs_node_flush_nop,
-    .setattr = fs_node_cannot_setattr,
-    .getattr = fs_node_cannot_getattr,
 };
+FS_NODE_OPS_INIT_UNDEF(eth_dev_fs_node_ops);
 
 static struct fs_file_ops
 eth_dev_fs_file_ops =
 {
     .read = eth_dev_fs_file_read,
     .write = eth_dev_fs_file_write,
-    .flush = fs_file_cannot_flush,
     .seek = fs_file_seek_pinned_zero,
-    .poll = fs_file_cannot_poll,
 
     .dir_next = vfs_dir_next,
     .dir_begin = vfs_dir_begin,
     .dir_readattr = vfs_dir_readattr,
     .dir_readname = vfs_dir_readname,
 };
+FS_FILE_OPS_INIT_UNDEF(eth_dev_fs_file_ops);
 
 static int
 eth_dev_fs_recv_callback(

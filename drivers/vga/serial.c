@@ -1,5 +1,5 @@
 
-#include <kanawha/dev/char.h>
+#include <kanawha/dev/term.h>
 
 #include <kanawha/init.h>
 #include <kanawha/mmio.h>
@@ -20,7 +20,7 @@ struct vga_serial
 
     uint16_t default_attr;
 
-    struct char_dev char_dev;
+    struct term_dev term_dev;
 };
 
 static inline int
@@ -149,24 +149,24 @@ vga_serial_putchar(
     return 0;
 }
 
-static size_t
-vga_serial_char_dev_read(
-        struct char_dev *dev,
+static ssize_t
+vga_serial_term_dev_read(
+        struct term_dev *dev,
         void *buffer,
         size_t amount)
 {
     return 0;
 }
 
-static size_t
-vga_serial_char_dev_write(
-        struct char_dev *dev,
+static ssize_t
+vga_serial_term_dev_write(
+        struct term_dev *dev,
         void *buffer,
         size_t amount)
 {
     int res;
     struct vga_serial *serial =
-        container_of(dev, struct vga_serial, char_dev);
+        container_of(dev, struct vga_serial, term_dev);
 
     const char *data = buffer;
 
@@ -183,18 +183,20 @@ vga_serial_char_dev_write(
 }
 
 static int
-vga_serial_char_dev_flush(
-        struct char_dev *dev)
+vga_serial_term_dev_flush(
+        struct term_dev *dev)
 {
     // TODO: might not be needed but would be nice
     return 0;
 }
 
-static struct char_driver
+static struct term_driver
 vga_serial_driver = {
-    .read = vga_serial_char_dev_read,
-    .write = vga_serial_char_dev_write,
-    .flush = vga_serial_char_dev_flush,
+    .read = vga_serial_term_dev_read,
+    .write = vga_serial_term_dev_write,
+    .flush = vga_serial_term_dev_flush,
+    .get_baudrate = term_dev_cannot_get_baudrate,
+    .set_baudrate = term_dev_cannot_set_baudrate,
 };
 
 #ifdef CONFIG_X64
@@ -220,10 +222,10 @@ x64_platform_vga_serial_register(void)
     x64_platform_vga.framebuffer = mmio_map((void __phys *)0xB8000, 2 * 80 * 25);
     vga_serial_clear(&x64_platform_vga, ' ', x64_platform_vga.default_attr);
 
-    x64_platform_vga.char_dev.driver = &vga_serial_driver;
+    x64_platform_vga.term_dev.driver = &vga_serial_driver;
 
-    res = register_char_dev(
-            &x64_platform_vga.char_dev,
+    res = register_term_dev(
+            &x64_platform_vga.term_dev,
             "vga-serial");
     if(res) {
         return res;
@@ -233,5 +235,6 @@ x64_platform_vga_serial_register(void)
     return 0;
 }
 declare_init(device, x64_platform_vga_serial_register);
+
 #endif
 

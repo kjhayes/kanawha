@@ -12,22 +12,22 @@
 struct blk_dev;
 struct blk_driver;
 
-#define BLOCK_DEVICE_WRITE_SIG(RET,ARG)\
+#define BLOCK_DEVICE_WRITE_SIG(RET,ARG,...)\
 RET(int)\
 ARG(void *, data)\
 ARG(size_t, base_sector)\
 ARG(size_t, num_sectors)
 
-#define BLOCK_DEVICE_READ_SIG(RET,ARG)\
+#define BLOCK_DEVICE_READ_SIG(RET,ARG,...)\
 RET(int)\
 ARG(void *, data)\
 ARG(size_t, base_sector)\
 ARG(size_t, num_sectors)
 
-#define BLOCK_DEVICE_NUM_SECTORS_SIG(RET,ARG)\
+#define BLOCK_DEVICE_NUM_SECTORS_SIG(RET,ARG,...)\
 RET(ssize_t)
 
-#define BLOCK_DEVICE_SECTOR_ORDER_SIG(RET,ARG)\
+#define BLOCK_DEVICE_SECTOR_ORDER_SIG(RET,ARG,...)\
 RET(order_t)
 
 #define BLOCK_DEVICE_OP_LIST(OP, ...)\

@@ -4,8 +4,6 @@
 #include <kanawha/types.h>
 #include <kanawha/init.h>
 #include <kanawha/stddef.h>
-#include <kanawha/stree.h>
-#include <kanawha/ptree.h>
 #include <kanawha/page_alloc.h>
 #include <kanawha/string.h>
 #include <kanawha/lock.h>
@@ -244,15 +242,9 @@ static struct fs_node_ops blk_dev_fs_node_ops =
 
     .getattr = blk_dev_getattr,
     .setattr = blk_dev_setattr,
-
-    .link = fs_node_cannot_link,
-    .unlink = fs_node_cannot_unlink,
-    .mkdir = fs_node_cannot_mkdir,
-    .lookup = fs_node_cannot_lookup,
-    .mkfifo = fs_node_cannot_mkfifo,
-    .mkfile = fs_node_cannot_mkfile,
-    .symlink = fs_node_cannot_symlink,
 };
+FS_NODE_OPS_INIT_UNDEF(blk_dev_fs_node_ops);
+
 static struct fs_file_ops blk_dev_fs_file_ops =
 {
     .read = fs_file_paged_read,
@@ -260,11 +252,6 @@ static struct fs_file_ops blk_dev_fs_file_ops =
     .seek = fs_file_paged_seek,
 
     .flush = fs_file_paged_flush,
-    .poll = fs_file_cannot_poll,
-
-    .dir_next = fs_file_cannot_dir_next,
-    .dir_begin = fs_file_cannot_dir_begin,
-    .dir_readattr = fs_file_cannot_dir_readattr,
-    .dir_readname = fs_file_cannot_dir_readname, 
 };
+FS_FILE_OPS_INIT_UNDEF(blk_dev_fs_file_ops);
 

@@ -4,38 +4,38 @@
 #include <kanawha/ops.h>
 #include <kanawha/irq_domain.h>
 
-#define PCI_MAILBOX_MSI_REQ_32_SIG(RET,ARG)\
+#define PCI_MAILBOX_MSI_REQ_32_SIG(RET,ARG,...)\
 RET(int)\
 ARG(size_t, num_req)\
 ARG(uint32_t*, addr_out)\
 ARG(uint16_t*, data_out)
 
-#define PCI_MAILBOX_MSI_REQ_64_SIG(RET,ARG)\
+#define PCI_MAILBOX_MSI_REQ_64_SIG(RET,ARG,...)\
 RET(int)\
 ARG(size_t, num_req)\
 ARG(uint64_t*, addr_out)\
 ARG(uint16_t*, data_out)
 
-#define PCI_MAILBOX_MSIX_REQ_SIG(RET,ARG)\
+#define PCI_MAILBOX_MSIX_REQ_SIG(RET,ARG,...)\
 RET(int)\
 ARG(size_t, num_req)\
 ARG(uint64_t*, addr_out)\
 ARG(uint32_t*, data_out)
 
 
-#define PCI_MAILBOX_MSI_GET_DESC_32_SIG(RET,ARG)\
+#define PCI_MAILBOX_MSI_GET_DESC_32_SIG(RET,ARG,...)\
 RET(struct irq_desc *)\
 ARG(uint32_t, addr)\
 ARG(uint16_t, data)\
 ARG(size_t, index)
 
-#define PCI_MAILBOX_MSI_GET_DESC_64_SIG(RET,ARG)\
+#define PCI_MAILBOX_MSI_GET_DESC_64_SIG(RET,ARG,...)\
 RET(struct irq_desc *)\
 ARG(uint64_t, addr)\
 ARG(uint16_t, data)\
 ARG(size_t, index)
 
-#define PCI_MAILBOX_MSIX_GET_DESC_SIG(RET,ARG)\
+#define PCI_MAILBOX_MSIX_GET_DESC_SIG(RET,ARG,...)\
 RET(struct irq_desc *)\
 ARG(uint64_t, addr)\
 ARG(uint32_t, data)\

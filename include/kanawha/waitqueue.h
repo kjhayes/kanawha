@@ -14,12 +14,23 @@ struct waitqueue
     unsigned long flags;
     ilist_t waiting_threads;
     size_t num_threads;
+
+    unsigned dyn_name : 1;
+    char *name;
 };
 
 int
 waitqueue_init(
         struct waitqueue *queue);
 
+int
+waitqueue_name(
+	struct waitqueue *queue,
+	const char *to_copy);
+
+// Disables the waitqueue, wakes all threads,
+// and waits for all threads to have deattached
+// themselves from the queue.
 int
 waitqueue_deinit(
         struct waitqueue *queue);

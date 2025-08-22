@@ -78,33 +78,20 @@ acpi_fs_node_getattr(
 static struct fs_node_ops
 acpi_fs_node_ops = {
     .read_page = acpi_fs_node_read_page,
-    .write_page = fs_node_cannot_write_page,
     .load_page = fs_node_load_page_read_alloc,
     .unload_page = fs_node_unload_page_free,
-    .flush_page = fs_node_cannot_flush_page,
-    .flush = fs_node_cannot_flush,
     .getattr = acpi_fs_node_getattr,
-    .setattr = fs_node_cannot_setattr,
-    .lookup = fs_node_cannot_lookup,
-    .mkfile = fs_node_cannot_mkfile,
-    .mkdir = fs_node_cannot_mkdir,
-    .link = fs_node_cannot_link,
-    .symlink = fs_node_cannot_symlink,
-    .unlink = fs_node_cannot_unlink,
-
 };
+FS_NODE_OPS_INIT_UNDEF(acpi_fs_node_ops);
+
 static struct fs_file_ops
 acpi_fs_file_ops = {
     .read = fs_file_paged_read,
     .write = fs_file_eof_write,
     .flush = fs_file_nop_flush,
     .seek = fs_file_paged_seek,
-    .poll = fs_file_cannot_poll,
-    .dir_begin = fs_file_cannot_dir_begin,
-    .dir_next = fs_file_cannot_dir_next,
-    .dir_readattr = fs_file_cannot_dir_readattr,
-    .dir_readname = fs_file_cannot_dir_readname,
 };
+FS_FILE_OPS_INIT_UNDEF(acpi_fs_file_ops);
 
 // NOTE: Assumes that sysfs_lock is held
 static int

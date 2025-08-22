@@ -7,6 +7,14 @@
 
 struct vga_dev;
 
+#define VGA_DAC_ORDER_RGB (0)
+#define VGA_DAC_ORDER_RBG (1)
+#define VGA_DAC_ORDER_BGR (2)
+#define VGA_DAC_ORDER_BRG (3)
+#define VGA_DAC_ORDER_GRB (4)
+#define VGA_DAC_ORDER_GBR (5)
+#define VGA_DAC_ORDER_DEFAULT VGA_DAC_ORDER_RGB
+
 #define vga_read_register(vga_dev_ptr, __REG)\
     vga_read_ ## __REG ## _register(vga_dev_ptr)
 #define vga_write_register(vga_dev_ptr, __REG, value)\
@@ -236,10 +244,6 @@ X(DivideMemoryAddressClockby2,             CRTCModeControl,          3,  3)\
 X(AddressWrapSelect,                       CRTCModeControl,          5,  5)\
 X(WordByteModeSelect,                      CRTCModeControl,          6,  6)\
 X(SyncEnable,                              CRTCModeControl,          7,  7)\
-X(DACWriteAddress,                         DACAddressWriteMode,      7,  0)\
-X(DACReadAddress,                          DACAddressReadMode,       7,  0)\
-X(DACData,                                 DACData,                  5,  0)\
-X(DACState,                                DACState,                 1,  0)\
 X(InputOutputAddressSelect,                MiscellaneousOutput,      0,  0)\
 X(RAMEnable,                               MiscellaneousOutput,      1,  1)\
 X(ClockSelect,                             MiscellaneousOutput,      3,  2)\
@@ -280,13 +284,15 @@ struct vga_dev
     spinlock_t attribute_lock;
 
     spinlock_t dac_lock;
+    unsigned long dac_order;
 
     spinlock_t mode_lock;
 };
 
 int
 vga_dev_init(
-        struct vga_dev *dev);
+        struct vga_dev *dev,
+	unsigned long dac_order);
 
 #define VGA_READ_REGISTER_ATTRIBUTES_R \
     __attribute__((always_inline))

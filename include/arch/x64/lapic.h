@@ -97,19 +97,19 @@ typedef uint32_t apic_id_t;
  * of the current processor (and hence preemption is disabled somehow)
  */
 
-#define LAPIC_READ_REG_SIG(RET,ARG)\
+#define LAPIC_READ_REG_SIG(RET,ARG,...)\
 RET(uint64_t)\
 ARG(size_t, reg)
 
-#define LAPIC_WRITE_REG_SIG(RET,ARG)\
+#define LAPIC_WRITE_REG_SIG(RET,ARG,...)\
 RET(int)\
 ARG(size_t, reg)\
 ARG(uint64_t, val)
 
-#define LAPIC_READ_ID_SIG(RET,ARG)\
+#define LAPIC_READ_ID_SIG(RET,ARG,...)\
 RET(apic_id_t)
 
-#define LAPIC_SEND_IPI_SIG(RET,ARG)\
+#define LAPIC_SEND_IPI_SIG(RET,ARG,...)\
 RET(int)\
 ARG(apic_id_t, target)\
 ARG(uint8_t, vector)\

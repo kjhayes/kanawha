@@ -39,6 +39,9 @@ syscall_faccess(
     if(fields & FACCESS_NON_BLOCKING) {
         mode_flags |= FILE_MODE_NON_BLOCK;
     }
+    if(fields & FACCESS_CLOSE_ON_EXEC) {
+	mode_flags |= FILE_MODE_CLOSE_ON_EXEC;
+    }
 
     res = 0;
     if(mode == FACCESS_MODE_EXACT) {

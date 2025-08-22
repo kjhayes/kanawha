@@ -18,12 +18,8 @@ cpio_file_ops = {
     .write = fs_file_paged_write,
     .seek = fs_file_paged_seek,
     .flush = fs_file_paged_flush,
-
-    .dir_next = fs_file_cannot_dir_next,
-    .dir_begin = fs_file_cannot_dir_begin,
-    .dir_readattr = fs_file_cannot_dir_readattr,
-    .dir_readname = fs_file_cannot_dir_readname,
 };
+FS_FILE_OPS_INIT_UNDEF(cpio_file_ops);
 
 static int
 cpio_node_read_page(
@@ -151,12 +147,6 @@ cpio_node_ops = {
 
     .getattr = cpio_node_getattr,
     .setattr = cpio_node_setattr,
-
-    .lookup = fs_node_cannot_lookup,
-    .mkfile = fs_node_cannot_mkfile,
-    .mkdir = fs_node_cannot_mkdir,
-    .link = fs_node_cannot_link,
-    .symlink = fs_node_cannot_symlink,
-    .unlink = fs_node_cannot_unlink,
 };
+FS_NODE_OPS_INIT_UNDEF(cpio_node_ops);
 

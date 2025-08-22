@@ -8,11 +8,11 @@ struct ps2_port;
 struct ps2_driver;
 struct ps2_driver_ops;
 
-#define PS2_DRIVER_ATTACH_SIG(RET,ARG)\
+#define PS2_DRIVER_ATTACH_SIG(RET,ARG,...)\
 RET(int)\
 ARG(struct ps2_port *, port)
 
-#define PS2_DRIVER_DEATTACH_SIG(RET,ARG)\
+#define PS2_DRIVER_DEATTACH_SIG(RET,ARG,...)\
 RET(int)\
 ARG(struct ps2_port *, port)
 

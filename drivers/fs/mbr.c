@@ -310,7 +310,9 @@ static int
 mbr_root_dir_lookup(
 	struct fs_node *fs_node,
 	const char *name,
-	size_t *inode)
+	size_t *inode,
+	char *sym_buffer,
+	size_t sym_buflen)
 {
     int res;
     struct mbr_mount *mnt = fs_node->backing.priv_state;
@@ -328,7 +330,7 @@ mbr_root_dir_lookup(
     }
 
     *inode = index;
-    return 0;
+    return FS_NODE_LOOKUP_HARD;
 }
 
 static struct fs_node_ops
@@ -339,19 +341,8 @@ mbr_root_dir_node_ops =
     .setattr = mbr_root_dir_setattr,
 
     .flush = fs_node_flush_nop,
-
-    .read_page = fs_node_cannot_read_page,
-    .write_page = fs_node_cannot_write_page,
-    .link = fs_node_cannot_link,
-    .unlink = fs_node_cannot_unlink,
-    .symlink = fs_node_cannot_symlink,
-    .mkdir = fs_node_cannot_mkdir,
-    .mkfile = fs_node_cannot_mkfile,
-    .mkfifo = fs_node_cannot_mkfifo,
-    .load_page = fs_node_cannot_load_page,
-    .unload_page = fs_node_cannot_unload_page,
-    .flush_page = fs_node_cannot_flush_page,
 };
+FS_NODE_OPS_INIT_UNDEF(mbr_root_dir_node_ops);
 
 int
 mbr_root_dir_begin(
@@ -456,14 +447,8 @@ mbr_root_dir_file_ops =
     .dir_next = mbr_root_dir_next,
     .dir_readattr = mbr_root_dir_readattr,
     .dir_readname = mbr_root_dir_readname,
-
-    .poll = fs_file_cannot_poll,
-    .read = fs_file_cannot_read,
-    .write = fs_file_cannot_write,
-    .seek = fs_file_cannot_seek,
-    .flush = fs_file_cannot_flush,
 };
-
+FS_FILE_OPS_INIT_UNDEF(mbr_root_dir_file_ops);
 
 static int
 mbr_partition_getattr(
@@ -628,15 +613,9 @@ mbr_unaligned_partition_node_ops =
     .load_page = fs_node_load_page_read_alloc,
     .unload_page = fs_node_unload_page_free,
     .flush_page = fs_node_flush_page_write,
-
-    .link = fs_node_cannot_link,
-    .unlink = fs_node_cannot_unlink,
-    .symlink = fs_node_cannot_symlink,
-    .mkdir = fs_node_cannot_mkdir,
-    .mkfile = fs_node_cannot_mkfile,
-    .mkfifo = fs_node_cannot_mkfifo,
-    .lookup = fs_node_cannot_lookup,
 };
+FS_NODE_OPS_INIT_UNDEF(mbr_unaligned_partition_node_ops);
+
 static struct fs_file_ops
 mbr_unaligned_partition_file_ops =
 {
@@ -644,14 +623,8 @@ mbr_unaligned_partition_file_ops =
     .write = fs_file_paged_write,
     .flush = fs_file_paged_flush,
     .seek = fs_file_paged_seek,
-
-    .poll = fs_file_cannot_poll,
-
-    .dir_begin = fs_file_cannot_dir_begin,
-    .dir_next = fs_file_cannot_dir_next,
-    .dir_readattr = fs_file_cannot_dir_readattr,
-    .dir_readname = fs_file_cannot_dir_readname,
 };
+FS_FILE_OPS_INIT_UNDEF(mbr_unaligned_partition_file_ops);
 
 static struct fs_node_ops
 mbr_aligned_partition_node_ops =
@@ -664,17 +637,9 @@ mbr_aligned_partition_node_ops =
     .load_page = mbr_aligned_partition_load_page,
     .unload_page = mbr_aligned_partition_unload_page,
     .flush_page = mbr_aligned_partition_flush_page,
-
-    .read_page = fs_node_cannot_read_page,
-    .write_page = fs_node_cannot_write_page,
-    .link = fs_node_cannot_link,
-    .unlink = fs_node_cannot_unlink,
-    .symlink = fs_node_cannot_symlink,
-    .mkdir = fs_node_cannot_mkdir,
-    .mkfile = fs_node_cannot_mkfile,
-    .mkfifo = fs_node_cannot_mkfifo,
-    .lookup = fs_node_cannot_lookup,
 };
+FS_NODE_OPS_INIT_UNDEF(mbr_aligned_partition_node_ops);
+
 static struct fs_file_ops
 mbr_aligned_partition_file_ops =
 {
@@ -682,14 +647,8 @@ mbr_aligned_partition_file_ops =
     .write = fs_file_paged_write,
     .flush = fs_file_paged_flush,
     .seek = fs_file_paged_seek,
-
-    .poll = fs_file_cannot_poll,
-
-    .dir_begin = fs_file_cannot_dir_begin,
-    .dir_next = fs_file_cannot_dir_next,
-    .dir_readattr = fs_file_cannot_dir_readattr,
-    .dir_readname = fs_file_cannot_dir_readname,
 };
+FS_FILE_OPS_INIT_UNDEF(mbr_aligned_partition_file_ops);
 
 static int
 mbr_register(void) {

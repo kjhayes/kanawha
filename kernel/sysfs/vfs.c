@@ -21,34 +21,43 @@ vfs_mount_load_node(
 
     struct ptree_node *pnode;
 
-    spin_lock(&mnt->lock);
+    irq_lock_acquire(&mnt->lock);
     pnode = ptree_get(&mnt->inode_tree, inode);
     if(pnode == NULL) {
-        spin_unlock(&mnt->lock);
+        irq_lock_release(&mnt->lock);
         return -ENXIO;
     }
     struct vfs_node *node =
         container_of(pnode, struct vfs_node, inode_node);
 
+    node->fs_node = fs_node;
     fs_node->backing.node_ops = node->fs_node_ops;
     fs_node->backing.file_ops = node->fs_file_ops;
     fs_node->backing.priv_state = node;
 
-    spin_unlock(&mnt->lock);
+    irq_lock_release(&mnt->lock);
 
     return 0;
 }
 
 int
 vfs_mount_unload_node(
-        struct fs_mount *mnt,
+        struct fs_mount *fs_mount,
 	size_t index,
         struct fs_node *fs_node)
 {
     dprintk("vfs_mount_unload_node(fs_node=%p)\n",
             fs_node);
 
+    struct vfs_mount *mnt =
+        container_of(fs_mount, struct vfs_mount, fs_mount);
+
     struct vfs_node *node = fs_node->backing.priv_state;
+
+    irq_lock_acquire(&mnt->lock);
+    DEBUG_ASSERT(node->fs_node == fs_node);
+    node->fs_node = NULL;
+    irq_lock_release(&mnt->lock);
 
     return 0;
 }
@@ -88,7 +97,9 @@ int
 vfs_dir_lookup(
         struct fs_node *fs_node,
         const char *name,
-        size_t * inode)
+        size_t * inode,
+	char *sym_buffer,
+	size_t sym_buflen)
 {
     dprintk("vfs_dir_lookup(name=%s)\n",
             name);
@@ -100,14 +111,14 @@ vfs_dir_lookup(
 
     if(strcmp(name, ".") == 0) {
         *inode = fs_node->cache_node.key;
-        return 0;
+        return FS_NODE_LOOKUP_HARD;
     }
 
-    spin_lock(&node->hierarchy_lock);
+    irq_lock_acquire(&node->hierarchy_lock);
 
     struct stree_node *snode = stree_get(&node->children_tree, name);
     if(snode == NULL) {
-        spin_unlock(&node->hierarchy_lock);
+        irq_lock_release(&node->hierarchy_lock);
         return -ENXIO;
     }
 
@@ -121,9 +132,9 @@ vfs_dir_lookup(
         *inode = link->inode;
     }
 
-    spin_unlock(&node->hierarchy_lock);
+    irq_lock_release(&node->hierarchy_lock);
 
-    return 0;
+    return FS_NODE_LOOKUP_HARD;
 }
 
 int
@@ -186,9 +197,9 @@ vfs_dir_readname(
 
     struct vfs_node *node = fs_node->backing.priv_state;
 
-    spin_lock(&node->hierarchy_lock);
+    irq_lock_acquire(&node->hierarchy_lock);
     if(dir->dir_offset+1 > node->children_count) {
-        spin_unlock(&node->hierarchy_lock);
+        irq_lock_release(&node->hierarchy_lock);
         dprintk("Not searching (dir_offset=0x%lx, children_count=0x%lx)\n",
                 dir->dir_offset, node->children_count);
         return -ENXIO;
@@ -203,7 +214,7 @@ vfs_dir_readname(
     }
 
     if(snode == NULL) {
-        spin_unlock(&node->hierarchy_lock);
+        irq_lock_release(&node->hierarchy_lock);
         dprintk("Failed after search\n");
         return -ENXIO;
     }
@@ -214,41 +225,23 @@ vfs_dir_readname(
 
     dprintk("link=%s\n", link->name);
 
-    spin_unlock(&node->hierarchy_lock);
+    irq_lock_release(&node->hierarchy_lock);
     return 0;
 }
 
 static struct fs_node_ops vfs_root_node_ops =
 {
     .lookup = vfs_dir_lookup,
-
-    .link = fs_node_cannot_link,
-    .unlink = fs_node_cannot_unlink,
-    .mkdir = fs_node_cannot_mkdir,
-    .mkfile = fs_node_cannot_mkfile,
-    .symlink = fs_node_cannot_symlink,
-    .read_page = fs_node_cannot_read_page,
-    .write_page = fs_node_cannot_write_page,
-    .load_page = fs_node_cannot_load_page,
-    .unload_page = fs_node_cannot_unload_page,
-    .flush_page = fs_node_cannot_flush_page,
-    .flush = fs_node_cannot_flush,
-    .getattr = fs_node_cannot_getattr,
-    .setattr = fs_node_cannot_setattr,
 };
+FS_NODE_OPS_INIT_UNDEF(vfs_root_node_ops);
 static struct fs_file_ops vfs_root_file_ops =
 {
     .dir_begin = vfs_dir_begin,
     .dir_next = vfs_dir_next,
     .dir_readattr = vfs_dir_readattr,
     .dir_readname = vfs_dir_readname,
-
-    .read = fs_file_cannot_read,
-    .write = fs_file_cannot_write,
-    .flush = fs_file_cannot_flush,
-    .seek = fs_file_cannot_seek,
-    .poll = fs_file_cannot_poll,
 };
+FS_FILE_OPS_INIT_UNDEF(vfs_root_file_ops);
 
 struct vfs_mount *
 vfs_mount_create(void)
@@ -260,7 +253,7 @@ vfs_mount_create(void)
         return NULL;
     }
 
-    spinlock_init(&mnt->lock);
+    irq_lock_init(&mnt->lock);
     ptree_init(&mnt->inode_tree);
     mnt->num_nodes = 0;
 
@@ -294,19 +287,20 @@ vfs_mount_insert_node(
         size_t *inode_index_out)
 {
     int res;
-    spin_lock(&mnt->lock);
+    irq_lock_acquire(&mnt->lock);
 
     res = ptree_insert_any(&mnt->inode_tree, &node->inode_node);
     if(res) {
-        spin_unlock(&mnt->lock);
+        irq_lock_release(&mnt->lock);
         return res;
     }
     dprintk("vfs_mount_insert_node -> %p\n",
             node->inode_node.key);
 
-    spinlock_init(&node->hierarchy_lock);
+    irq_lock_init(&node->hierarchy_lock);
     stree_init(&node->children_tree);
     node->children_count = 0;
+    node->fs_node = NULL;
     mnt->num_nodes++;
 
     DEBUG_ASSERT(mnt->num_nodes > 0);
@@ -315,7 +309,7 @@ vfs_mount_insert_node(
         *inode_index_out = node->inode_node.key;
     }
 
-    spin_unlock(&mnt->lock);
+    irq_lock_release(&mnt->lock);
     return 0;
 }
 
@@ -325,7 +319,7 @@ vfs_mount_remove_node(
         struct vfs_node *node)
 {
     int res;
-    spin_lock(&mnt->lock);
+    irq_lock_acquire(&mnt->lock);
 
     struct ptree_node *rem = ptree_remove(&mnt->inode_tree, node->inode_node.key);
     mnt->num_nodes--;
@@ -333,7 +327,13 @@ vfs_mount_remove_node(
     res = vfs_node_unlink_all(node);
     DEBUG_ASSERT(res == 0); // We'd leak memory otherwise
 
-    spin_unlock(&mnt->lock);
+    if(node->fs_node != NULL) {
+	fs_node_deattach_backing(node->fs_node);
+	node->fs_node = NULL;
+    }
+
+    irq_lock_release(&mnt->lock);
+
     return 0;
 }
 
@@ -370,11 +370,11 @@ vfs_node_link(
     dprintk("vfs_node_link(%s, inode=0x%llx)\n",
             name, inode);
 
-    spin_lock(&node->hierarchy_lock);
+    irq_lock_acquire(&node->hierarchy_lock);
 
     struct vfs_link *link = kzmalloc(sizeof(struct vfs_link), KM_KERNEL);
     if(link == NULL) {
-        spin_unlock(&node->hierarchy_lock);
+        irq_lock_release(&node->hierarchy_lock);
         return -ENOMEM;
     }
 
@@ -386,13 +386,13 @@ vfs_node_link(
     if(res) {
         kfree(link->name);
         kfree(link);
-        spin_unlock(&node->hierarchy_lock);
+        irq_lock_release(&node->hierarchy_lock);
         return res;
     }
 
     node->children_count++;
 
-    spin_unlock(&node->hierarchy_lock);
+    irq_lock_release(&node->hierarchy_lock);
     return 0;
 }
 
@@ -401,7 +401,7 @@ vfs_node_unlink(
         struct vfs_node *node,
         const char *name)
 {
-    spin_lock(&node->hierarchy_lock);
+    irq_lock_acquire(&node->hierarchy_lock);
 
     DEBUG_ASSERT(node->children_count > 0);
 
@@ -416,7 +416,7 @@ vfs_node_unlink(
 
     node->children_count--;
 
-    spin_unlock(&node->hierarchy_lock);
+    irq_lock_release(&node->hierarchy_lock);
     return 0;
 }
 
@@ -425,7 +425,7 @@ int
 vfs_node_unlink_all(
         struct vfs_node *node)
 {
-    spin_lock(&node->hierarchy_lock);
+    irq_lock_acquire(&node->hierarchy_lock);
 
     struct stree_node *snode = stree_get_first(&node->children_tree);
     while(snode)
@@ -443,7 +443,7 @@ vfs_node_unlink_all(
 
     node->children_count = 0;
 
-    spin_unlock(&node->hierarchy_lock);
+    irq_lock_release(&node->hierarchy_lock);
     return 0;
 }
 

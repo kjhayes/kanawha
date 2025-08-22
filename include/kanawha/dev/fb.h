@@ -14,33 +14,33 @@ struct fb_driver;
 
 // Device Ops
 
-#define FB_DEV_GET_MODE_INFO_SIG(RET,ARG)\
+#define FB_DEV_GET_MODE_INFO_SIG(RET,ARG,...)\
 RET(struct fb_mode_info *)\
 ARG(size_t, index)
 
-#define FB_DEV_PUT_MODE_INFO_SIG(RET,ARG)\
+#define FB_DEV_PUT_MODE_INFO_SIG(RET,ARG,...)\
 RET(int)\
 ARG(size_t, index)
 
-#define FB_DEV_SET_MODE_SIG(RET,ARG)\
+#define FB_DEV_SET_MODE_SIG(RET,ARG,...)\
 RET(int)\
 ARG(size_t, index)
 
-#define FB_DEV_GET_MODE_SIG(RET,ARG)\
+#define FB_DEV_GET_MODE_SIG(RET,ARG,...)\
 RET(ssize_t)
 
 // The provided buffer should be accessible as if it were regular RAM
 // It should also be VMEM_MIN_PAGE_ORDER aligned, but does not need to
 // be a multiple of the page size
-#define FB_DEV_LOAD_BUFFER_SIG(RET,ARG)\
+#define FB_DEV_LOAD_BUFFER_SIG(RET,ARG,...)\
 RET(int)\
 ARG(void __phys **, base_out)
 
-#define FB_DEV_UNLOAD_BUFFER_SIG(RET,ARG)\
+#define FB_DEV_UNLOAD_BUFFER_SIG(RET,ARG,...)\
 RET(int)\
 ARG(void __phys *, base)
 
-#define FB_DEV_FLUSH_BUFFER_SIG(RET,ARG)\
+#define FB_DEV_FLUSH_BUFFER_SIG(RET,ARG,...)\
 RET(int)
 
 #define FB_DEV_OP_LIST(OP, ...)\

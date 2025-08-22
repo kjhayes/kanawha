@@ -113,19 +113,19 @@ struct pci_id
 
 // Returns zero if this driver can control the device
 // (Should assume pci_id(s) have been matched already)
-#define PCI_DRIVER_PROBE_SIG(RET,ARG)\
+#define PCI_DRIVER_PROBE_SIG(RET,ARG,...)\
 RET(int)\
 ARG(struct pci_func *, dev)
 
 // Called to initialize the device after a successful probe
 // Returns 0 on success
-#define PCI_DRIVER_INIT_DEVICE_SIG(RET,ARG)\
+#define PCI_DRIVER_INIT_DEVICE_SIG(RET,ARG,...)\
 RET(int)\
 ARG(struct pci_func *, dev)
 
 // Called after a successful "init" to deinitialize the device
 // Returns 0 on success
-#define PCI_DRIVER_DEINIT_DEVICE_SIG(RET,ARG)\
+#define PCI_DRIVER_DEINIT_DEVICE_SIG(RET,ARG,...)\
 RET(int)\
 ARG(struct pci_func *, dev)
 

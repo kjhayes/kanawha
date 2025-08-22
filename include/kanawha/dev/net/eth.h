@@ -18,28 +18,28 @@ struct eth_frame
     struct eth_raw_frame *data;
 };
 
-#define ETH_DEV_READ_MAC_SIG(RET,ARG)\
+#define ETH_DEV_READ_MAC_SIG(RET,ARG,...)\
 RET(int)\
 ARG(struct eth_mac_addr *, addr_out)
 
-#define ETH_DEV_ALLOC_FRAME_SIG(RET,ARG)\
+#define ETH_DEV_ALLOC_FRAME_SIG(RET,ARG,...)\
 RET(struct eth_frame *)\
 ARG(size_t, frame_size)\
 ARG(unsigned long, flags)
 
-#define ETH_DEV_SEND_FRAME_SIG(RET,ARG)\
+#define ETH_DEV_SEND_FRAME_SIG(RET,ARG,...)\
 RET(int)\
 ARG(struct eth_frame *, frame)
 
-#define ETH_DEV_DROP_FRAME_SIG(RET,ARG)\
+#define ETH_DEV_DROP_FRAME_SIG(RET,ARG,...)\
 RET(int)\
 ARG(struct eth_frame *, frame)
 
-#define ETH_DEV_BEGIN_RECV_SIG(RET,ARG)\
+#define ETH_DEV_BEGIN_RECV_SIG(RET,ARG,...)\
 RET(int)\
 ARG(unsigned long, flags)
 
-#define ETH_DEV_END_RECV_SIG(RET,ARG)\
+#define ETH_DEV_END_RECV_SIG(RET,ARG,...)\
 RET(int)\
 ARG(unsigned long, flags)
 

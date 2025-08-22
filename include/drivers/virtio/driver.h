@@ -6,19 +6,19 @@
 
 struct virtio_device;
 
-#define VIRTIO_DRIVER_PROBE_SIG(RET,ARG)\
+#define VIRTIO_DRIVER_PROBE_SIG(RET,ARG,...)\
 RET(int)\
 ARG(struct virtio_device *, dev)
 
-#define VIRTIO_DRIVER_NEGOTIATE_SIG(RET,ARG)\
+#define VIRTIO_DRIVER_NEGOTIATE_SIG(RET,ARG,...)\
 RET(int)\
 ARG(struct virtio_device *, dev)
 
-#define VIRTIO_DRIVER_INIT_SIG(RET,ARG)\
+#define VIRTIO_DRIVER_INIT_SIG(RET,ARG,...)\
 RET(int)\
 ARG(struct virtio_device *, dev)
 
-#define VIRTIO_DRIVER_DEINIT_SIG(RET,ARG)\
+#define VIRTIO_DRIVER_DEINIT_SIG(RET,ARG,...)\
 RET(int)\
 ARG(struct virtio_device *, dev)
 

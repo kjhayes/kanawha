@@ -12,17 +12,18 @@ struct vfs_node
 {
     struct ptree_node inode_node;
 
-    spinlock_t hierarchy_lock;
+    irq_lock_t hierarchy_lock;
     size_t children_count;
     struct stree children_tree;
 
+    struct fs_node *fs_node;
     struct fs_node_ops *fs_node_ops;
     struct fs_file_ops *fs_file_ops;
 };
 
 struct vfs_mount
 {
-    spinlock_t lock;
+    irq_lock_t lock;
     struct ptree inode_tree;
     size_t num_nodes;
 
@@ -93,7 +94,9 @@ int
 vfs_dir_lookup(
         struct fs_node *fs_node,
         const char *name,
-        size_t * inode);
+        size_t * inode,
+	char *sym_buffer,
+	size_t sym_buflen);
 int
 vfs_dir_begin(
         struct file *dir);

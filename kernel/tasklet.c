@@ -154,9 +154,13 @@ tasklet_handle_all_pending(void)
 static struct thread_state tasklet_thread_state;
 static void
 tasklet_thread(void *__in) {
+    int res;
     while(1) {
         tasklet_handle_all_pending();
-        wait_on(&tasklet_waitqueue);
+        res = wait_on(&tasklet_waitqueue);
+	if(res) {
+	    // Weird (but ignore it)
+	}
     }
 }
 

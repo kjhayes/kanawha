@@ -207,34 +207,16 @@ static struct fs_node_ops vfs_field_node_ops =
 {
 
     .flush = fs_node_flush_nop,
-
-    .setattr = fs_node_cannot_setattr,
-    .getattr = fs_node_cannot_getattr,
-    .lookup = fs_node_cannot_lookup, 
-    .link = fs_node_cannot_link,
-    .unlink = fs_node_cannot_unlink,
-    .mkdir = fs_node_cannot_mkdir,
-    .mkfifo = fs_node_cannot_mkfifo,
-    .mkfile = fs_node_cannot_mkfile,
-    .symlink = fs_node_cannot_symlink,
-    .load_page = fs_node_cannot_load_page,
-    .unload_page = fs_node_cannot_unload_page,
-    .flush_page = fs_node_cannot_flush_page,
-    .read_page = fs_node_cannot_read_page,
-    .write_page = fs_node_cannot_write_page,
 };
+FS_NODE_OPS_INIT_UNDEF(vfs_field_node_ops);
+
 static struct fs_file_ops vfs_field_file_ops =
 {
     .read = vfs_field_fs_file_read,
     .write = vfs_field_fs_file_write,
     .seek = fs_file_paged_seek,
-    .flush = fs_file_cannot_flush,
-    .poll = fs_file_cannot_poll,
-    .dir_begin = fs_file_cannot_dir_begin,
-    .dir_next = fs_file_cannot_dir_next,
-    .dir_readattr = fs_file_cannot_dir_readattr,
-    .dir_readname = fs_file_cannot_dir_readname,
 };
+FS_FILE_OPS_INIT_UNDEF(vfs_field_file_ops);
 
 struct vfs_struct_node *
 vfs_create_struct_node(
@@ -315,35 +297,17 @@ static struct fs_node_ops vfs_struct_node_node_ops =
 {
     .flush = fs_node_flush_nop,
     .lookup = vfs_dir_lookup,
-
-    .setattr = fs_node_cannot_setattr,
-    .getattr = fs_node_cannot_getattr,
-    .link = fs_node_cannot_link,
-    .unlink = fs_node_cannot_unlink,
-    .mkdir = fs_node_cannot_mkdir,
-    .mkfifo = fs_node_cannot_mkfifo,
-    .mkfile = fs_node_cannot_mkfile,
-    .symlink = fs_node_cannot_symlink,
-    .load_page = fs_node_cannot_load_page,
-    .unload_page = fs_node_cannot_unload_page,
-    .flush_page = fs_node_cannot_flush_page,
-    .read_page = fs_node_cannot_read_page,
-    .write_page = fs_node_cannot_write_page,
 };
+FS_NODE_OPS_INIT_UNDEF(vfs_struct_node_node_ops);
+
 static struct fs_file_ops vfs_struct_node_file_ops =
 {
     .dir_begin = vfs_dir_begin,
     .dir_next = vfs_dir_next,
     .dir_readattr = vfs_dir_readattr,
     .dir_readname = vfs_dir_readname,
-
-    .read = fs_file_cannot_read,
-    .write = fs_file_cannot_write,
-    .seek = fs_file_cannot_seek,
-    .flush = fs_file_cannot_flush,
-    .poll = fs_file_cannot_poll,
 };
-
+FS_FILE_OPS_INIT_UNDEF(vfs_struct_node_file_ops);
 
 struct vfs_struct_unsigned_long_field
 {

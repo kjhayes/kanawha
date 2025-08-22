@@ -113,6 +113,16 @@ config DEBUG_SYSCALL_POLL
     depends on DEBUGGING
     default n
 
+config DEBUG_SYSCALL_SIGMOD
+    bool "Debug sigmod"
+    depends on DEBUGGING
+    default n
+
+config DEBUG_SYSCALL_SIGINFO
+    bool "Debug siginfo"
+    depends on DEBUGGING
+    default n
+
 config DEBUG_SYSCALL_SIGSEND
     bool "Debug sigsend"
     depends on DEBUGGING

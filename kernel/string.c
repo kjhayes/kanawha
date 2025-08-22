@@ -71,6 +71,22 @@ void *memmove(void *dest_ptr, const void *src_ptr, size_t count)
     return dest_ptr;
 }
 
+int
+memcmp(
+	const void *lhs,
+	const void *rhs,
+	size_t n)
+{
+    for(size_t i = 0; i < n; i++) {
+	char l = *(char*)lhs;
+	char r = *(char*)rhs;
+	if(l != r) {
+	    return l - r;
+	}
+    }
+    return 0;
+}
+
 size_t strlen(const char *str)
 {
     const char *term = str;

@@ -35,11 +35,16 @@ int
 usb_transfer_await(
         struct usb_transfer *xfer)
 {
+    int res;
+
     while(xfer->status != USB_TRANSFER_STATUS_COMPLETE) {
         if(xfer->status < 0) {
             return xfer->status;
         }
-        wait_on(&xfer->status_waitqueue);
+        res = wait_on(&xfer->status_waitqueue);
+	if(res) {
+	    // Weird but ignore it
+	}
     }
     return 0;
 }

@@ -5,66 +5,66 @@
 #include <kanawha/types.h>
 #include <kanawha/list.h>
 
-#define VIRTIO_DEVICE_READ_STATUS_SIG(RET,ARG)\
+#define VIRTIO_DEVICE_READ_STATUS_SIG(RET,ARG,...)\
 RET(uint8_t)
 
-#define VIRTIO_DEVICE_SET_STATUS_SIG(RET,ARG)\
+#define VIRTIO_DEVICE_SET_STATUS_SIG(RET,ARG,...)\
 RET(int)\
 ARG(uint8_t, mask_to_set)
 
-#define VIRTIO_DEVICE_RESET_SIG(RET,ARG)\
+#define VIRTIO_DEVICE_RESET_SIG(RET,ARG,...)\
 RET(int)
 
-#define VIRTIO_DEVICE_CFG_WRITEB(RET,ARG)\
+#define VIRTIO_DEVICE_CFG_WRITEB(RET,ARG,...)\
 RET(int)\
 ARG(size_t, offset)\
 ARG(uint8_t, value)
-#define VIRTIO_DEVICE_CFG_WRITEW(RET,ARG)\
+#define VIRTIO_DEVICE_CFG_WRITEW(RET,ARG,...)\
 RET(int)\
 ARG(size_t, offset)\
 ARG(uint16_t, value)
-#define VIRTIO_DEVICE_CFG_WRITEL(RET,ARG)\
+#define VIRTIO_DEVICE_CFG_WRITEL(RET,ARG,...)\
 RET(int)\
 ARG(size_t, offset)\
 ARG(uint32_t, value)
-#define VIRTIO_DEVICE_CFG_WRITEQ(RET,ARG)\
+#define VIRTIO_DEVICE_CFG_WRITEQ(RET,ARG,...)\
 RET(int)\
 ARG(size_t, offset)\
 ARG(uint64_t, value)
 
-#define VIRTIO_DEVICE_CFG_READB(RET,ARG)\
+#define VIRTIO_DEVICE_CFG_READB(RET,ARG,...)\
 RET(int)\
 ARG(size_t, offset)\
 ARG(uint8_t *, out)
-#define VIRTIO_DEVICE_CFG_READW(RET,ARG)\
+#define VIRTIO_DEVICE_CFG_READW(RET,ARG,...)\
 RET(int)\
 ARG(size_t, offset)\
 ARG(uint16_t *, out)
-#define VIRTIO_DEVICE_CFG_READL(RET,ARG)\
+#define VIRTIO_DEVICE_CFG_READL(RET,ARG,...)\
 RET(int)\
 ARG(size_t, offset)\
 ARG(uint32_t *, out)
-#define VIRTIO_DEVICE_CFG_READQ(RET,ARG)\
+#define VIRTIO_DEVICE_CFG_READQ(RET,ARG,...)\
 RET(int)\
 ARG(size_t, offset)\
 ARG(uint64_t *, out)
 
 // 1 -> Supports Feature, 0 -> Does Not Support Feature, <0 -> ERROR
-#define VIRTIO_DEVICE_CHECK_FEATURE_SIG(RET,ARG)\
+#define VIRTIO_DEVICE_CHECK_FEATURE_SIG(RET,ARG,...)\
 RET(int)\
 ARG(size_t, feat_bit)
 
-#define VIRTIO_DEVICE_ACCEPT_FEATURE_SIG(RET,ARG)\
+#define VIRTIO_DEVICE_ACCEPT_FEATURE_SIG(RET,ARG,...)\
 RET(int)\
 ARG(size_t, feat_bit)
 
-#define VIRTIO_DEVICE_NOTIFY_SIG(RET,ARG)\
+#define VIRTIO_DEVICE_NOTIFY_SIG(RET,ARG,...)\
 RET(int)\
 ARG(size_t, queue)
 
-#define VIRTIO_DEVICE_INIT_QUEUES_SIG(RET,ARG)\
+#define VIRTIO_DEVICE_INIT_QUEUES_SIG(RET,ARG,...)\
 RET(int)
-#define VIRTIO_DEVICE_DEINIT_QUEUES_SIG(RET,ARG)\
+#define VIRTIO_DEVICE_DEINIT_QUEUES_SIG(RET,ARG,...)\
 RET(int)
 
 #define VIRTIO_DEVICE_OP_LIST(OP, ...)\

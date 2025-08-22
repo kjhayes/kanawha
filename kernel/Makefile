@@ -1,11 +1,12 @@
 
+obj-y += idt_test.o 
+
 obj-y += \
 	ptree.o \
 	stree.o \
 	ref.o \
 	buddy.o \
 	kheap.o \
-	kmalloc/ \
 	printk.o \
 	klog.o \
 	mem_flags.o \
@@ -42,10 +43,12 @@ obj-y += \
 	spinlock.o \
 	clk.o \
 	kbd.o \
-	strace.o
+	strace.o \
+	udrv.o \
 
 obj-y += stack.o
 
+obj-y += kmalloc/
 obj-y += dev/
 obj-y += fs/
 obj-y += syscall/
@@ -56,6 +59,7 @@ obj-y += proc/
 obj-y += net/
 obj-y += linux/
 obj-y += sysfs/
+obj-y += gfx/
 
 obj-y += memdump.o
 

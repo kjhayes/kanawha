@@ -45,18 +45,9 @@ fs_mount_get_node(
 
     if(node == NULL)
     {
-	fs_node = kzmalloc(sizeof(*fs_node), KM_KERNEL);
-	if(fs_node == NULL) {
-	    return NULL;
-	}
-
-	rlock_init(&fs_node->backing_lock);
-
-        spinlock_init(&fs_node->page_lock);
-        ptree_init(&fs_node->page_cache);
+	fs_node = fs_node_create();
 
         fs_node->mount = mnt;
-        fs_node->refcount = 1;
 
         res = fs_mount_load_node(mnt, node_index, fs_node);
         if(res) {
@@ -76,7 +67,7 @@ fs_mount_get_node(
     } else {
         DEBUG_ASSERT(KERNEL_ADDR(node));
         fs_node = container_of(node, struct fs_node, cache_node);
-        fs_node->refcount++;
+        fs_node_get(fs_node);
     }
 
     spin_unlock(&mnt->cache_lock);
@@ -85,50 +76,43 @@ fs_mount_get_node(
 }
 
 int
-fs_mount_put_node(
+fs_mount_on_node_unreferenced(
         struct fs_mount *mnt,
         struct fs_node *node)
 {
     int res;
     size_t index = node->cache_node.key;
     spin_lock(&mnt->cache_lock);
-    if(node->refcount <= 0) {
-        res = -EINVAL;
+
+    // We're removing the last reference
+
+    res = fs_node_flush_all_fs_pages(node);
+    if(res) {
         goto err;
     }
-    else if(node->refcount == 1) {
-        // We're removing the last reference
 
-        res = fs_node_flush_all_fs_pages(node);
-        if(res) {
+    // TODO
+    // Add this node to a list of reclaimable nodes
+    // (For now we'll just free it, so our "cache" doesn't do much caching)
+    struct ptree_node *removed = ptree_remove(&mnt->node_cache, index);
+    if(removed != &node->cache_node) {
+        if(removed != NULL) {
+            // ERROR
+            // Try to re-insert the incorrectly removed node
+            ptree_insert(&mnt->node_cache, removed, removed->key);
+            res = -EINVAL;
             goto err;
         }
-
-        // TODO
-        // Add this node to a list of reclaimable nodes
-        // (For now we'll just free it, so our "cache" doesn't do much caching)
-        struct ptree_node *removed = ptree_remove(&mnt->node_cache, index);
-        if(removed != &node->cache_node) {
-            if(removed != NULL) {
-                // ERROR
-                // Try to re-insert the incorrectly removed node
-                ptree_insert(&mnt->node_cache, removed, removed->key);
-                res = -EINVAL;
-                goto err;
-            }
-        }
-
-        node->refcount = 0;
-
-        res = fs_unload_node(node);
-        if(res) {
-            eprintk("Filesystem failed to unload fs_node!\n");
-            goto err;
-        }
-
-    } else {
-        node->refcount--;
     }
+
+    node->refcount = 0;
+
+    res = fs_unload_node(node);
+    if(res) {
+        eprintk("Filesystem failed to unload fs_node!\n");
+        goto err;
+    }
+
     spin_unlock(&mnt->cache_lock);
     return 0;
 

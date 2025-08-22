@@ -42,7 +42,7 @@ file_table_create(
     }
 
     table->num_open_files = 0;
-    spinlock_init(&table->lock);
+    thread_lock_init(&table->lock);
     ptree_init(&table->descriptor_tree);
     ilist_init(&table->process_list);
 
@@ -68,10 +68,10 @@ file_table_clone(
         return -ENOMEM;
     }
 
-    spin_lock(&parent->lock);
+    thread_lock_acquire(&parent->lock);
 
     child->num_open_files = parent->num_open_files;
-    spinlock_init(&child->lock);
+    thread_lock_init(&child->lock);
     ptree_init(&child->descriptor_tree);
     ilist_init(&child->process_list);
 
@@ -105,7 +105,7 @@ file_table_clone(
         node = ptree_get_next(node);
     }
 
-    spin_unlock(&parent->lock);
+    thread_lock_release(&parent->lock);
 
     res = file_table_attach(child, process);
     if(res) {
@@ -125,10 +125,10 @@ file_table_attach(
         struct file_table *table,
         struct process *process)
 {
-    spin_lock(&table->lock);
+    thread_lock_acquire(&table->lock);
     ilist_push_tail(&table->process_list, &process->file_table_node);
     process->file_table = table;
-    spin_unlock(&table->lock);
+    thread_lock_release(&table->lock);
     return 0;
 }
 
@@ -168,7 +168,7 @@ file_table_deattach(
         struct file_table *table,
         struct process *process)
 {
-    spin_lock(&table->lock);
+    thread_lock_acquire(&table->lock);
 
     ilist_remove(&table->process_list, &process->file_table_node);
     process->file_table = NULL;
@@ -197,7 +197,7 @@ file_table_deattach(
 
     } else {
         // Some other process is still using the table
-        spin_unlock(&table->lock);    
+        thread_lock_release(&table->lock);    
     }
 
     return 0;
@@ -231,13 +231,13 @@ file_table_open_path(
     desc->mode_flags = mode_flags;
     desc->access_flags = access_flags;
 
-    spin_lock(&table->lock);
+    thread_lock_acquire(&table->lock);
 
     res = ptree_insert_any(
             &table->descriptor_tree,
             &desc->table_node);
     if(res) {
-        spin_unlock(&table->lock);
+        thread_lock_release(&table->lock);
         fs_path_put(desc->path);
         kfree(desc);
         return res;
@@ -245,7 +245,7 @@ file_table_open_path(
 
     table->num_open_files++;
 
-    spin_unlock(&table->lock);
+    thread_lock_release(&table->lock);
 
     *fd = desc->table_node.key;
 
@@ -256,6 +256,7 @@ int
 file_table_open(
         struct file_table *table,
         struct process *process,
+	struct fs_path *dir,
         const char *path_str,
         unsigned long access_flags,
         unsigned long mode_flags,
@@ -267,6 +268,7 @@ file_table_open(
 
     res = fs_path_lookup_for_process(
             process,
+	    dir,
             path_str,
             access_flags,
             mode_flags,
@@ -289,26 +291,13 @@ file_table_open(
     return res;
 }
 
-int
-file_table_close(
-        struct file_table *table,
-        struct process *process,
-        fd_t fd)
+static int
+__file_table_close_lockless(
+	struct file_table *table,
+	struct process *process,
+	struct file *desc)
 {
     int res;
-
-    spin_lock(&table->lock);
-
-    struct ptree_node *table_node =
-        ptree_get(&table->descriptor_tree, (uintptr_t)fd);
-
-    if(table_node == NULL) {
-        spin_unlock(&table->lock);
-        return -ENXIO;
-    }
-
-    struct file *desc =
-        container_of(table_node, struct file, table_node);
 
     DEBUG_ASSERT(desc->refs > 0);
     desc->refs--;
@@ -319,12 +308,41 @@ file_table_close(
         if(res) {
             eprintk("file_table_close_file: Failed to free descriptor with refs==0! (err=%s)\n",
                     errnostr(res));
-            spin_unlock(&table->lock);
             return res;
         }
     }
 
-    spin_unlock(&table->lock);
+    return 0;
+}
+
+int
+file_table_close(
+        struct file_table *table,
+        struct process *process,
+        fd_t fd)
+{
+    int res;
+
+    thread_lock_acquire(&table->lock);
+
+    struct ptree_node *table_node =
+        ptree_get(&table->descriptor_tree, (uintptr_t)fd);
+
+    if(table_node == NULL) {
+	thread_lock_release(&table->lock);
+        return -ENXIO;
+    }
+
+    struct file *desc =
+        container_of(table_node, struct file, table_node);
+
+    res = __file_table_close_lockless(table, process, desc);
+    if(res) {
+        thread_lock_release(&table->lock);
+	return res;
+    }
+
+    thread_lock_release(&table->lock);
     return 0;
 }
 
@@ -335,7 +353,7 @@ file_table_get_file(
         fd_t fd)
 {
     struct file *desc;
-    spin_lock(&table->lock);
+    thread_lock_acquire(&table->lock);
 
     struct ptree_node *node =
         ptree_get(&table->descriptor_tree, (uintptr_t)fd);
@@ -355,7 +373,7 @@ file_table_get_file(
         }
     }
 
-    spin_unlock(&table->lock);
+    thread_lock_release(&table->lock);
     return desc;
 }
 
@@ -366,7 +384,7 @@ file_table_put_file(
         struct file *desc)
 {
     int res;
-    spin_lock(&table->lock);
+    thread_lock_acquire(&table->lock);
 
     DEBUG_ASSERT(desc->refs > 0);
     desc->refs--;
@@ -376,7 +394,7 @@ file_table_put_file(
         res = 0;
     }
 
-    spin_unlock(&table->lock);
+    thread_lock_release(&table->lock);
 
     return res;
 }
@@ -393,7 +411,7 @@ file_table_swap(
         return 0;
     }
 
-    spin_lock(&table->lock);
+    thread_lock_acquire(&table->lock);
 
     struct ptree_node *rem;
 
@@ -429,7 +447,7 @@ file_table_swap(
 
     res = 0;
 exit:
-    spin_unlock(&table->lock);
+    thread_lock_release(&table->lock);
     return res;
 }
 
@@ -442,7 +460,7 @@ file_table_dup_into(
 {
     int res;
 
-    spin_lock(&table->lock);
+    thread_lock_acquire(&table->lock);
 
     struct ptree_node *open_node = ptree_get(&table->descriptor_tree, open_src);
     if(open_node == NULL) {
@@ -487,7 +505,40 @@ file_table_dup_into(
     res = 0;
     *out = dst;
 exit:
-    spin_unlock(&table->lock);
+    thread_lock_release(&table->lock);
     return res;
+}
+
+int
+file_table_on_exec(
+	struct file_table *table,
+	struct process *process)
+{
+    int res;
+
+    thread_lock_acquire(&table->lock);
+
+    struct ptree_node *pnode = ptree_get_first(&table->descriptor_tree);
+    while(pnode != NULL) {
+
+	struct file *desc = container_of(pnode, struct file, table_node);
+	
+	if(desc->mode_flags & FILE_MODE_CLOSE_ON_EXEC) {
+	    res = __file_table_close_lockless(
+		    table,
+		    process,
+		    desc);
+	    if(res) {
+		wprintk("Failed to close CLOSE_ON_EXEC file during exec! (err=%s)\n",
+			errnostr(res));
+	    }
+	}
+
+	pnode = ptree_get_next(pnode);
+    }
+
+    thread_lock_release(&table->lock);
+
+    return 0;
 }
 

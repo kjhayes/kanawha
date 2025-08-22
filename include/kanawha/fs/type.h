@@ -11,17 +11,17 @@ struct fs_type;
 struct fs_mount;
 struct fs_node;
 
-#define FS_TYPE_MOUNT_FILE_SIG(RET,ARG)\
+#define FS_TYPE_MOUNT_FILE_SIG(RET,ARG,...)\
 RET(int)\
 ARG(struct fs_node *, node)\
 ARG(struct fs_mount **, out_mnt)\
 
-#define FS_TYPE_MOUNT_SPECIAL_SIG(RET,ARG)\
+#define FS_TYPE_MOUNT_SPECIAL_SIG(RET,ARG,...)\
 RET(int)\
 ARG(const char *, id)\
 ARG(struct fs_mount **, out_mnt)
 
-#define FS_TYPE_UNMOUNT_SIG(RET,ARG)\
+#define FS_TYPE_UNMOUNT_SIG(RET,ARG,...)\
 RET(int)\
 ARG(struct fs_mount *, mnt)
 

@@ -60,8 +60,8 @@ config LOG_INIT_STAGES
       Print out a message with the start and end of each init function.
 
 menu "Log Devices on Launch"
-config LOG_CHARDEV_REGISTRY_ON_LAUNCH
-    bool "Log chardev Registry"
+config LOG_TERMDEV_REGISTRY_ON_LAUNCH
+    bool "Log termdev Registry"
     default n
 config LOG_BLKDEV_REGISTRY_ON_LAUNCH
     bool "Log blkdev Registry"

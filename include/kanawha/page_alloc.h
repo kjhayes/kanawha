@@ -15,20 +15,20 @@
 
 // Allocate some memory
 // Returns 0 on success, -ENOMEM on failure
-#define PAGE_ALLOCATOR_ALLOC_SIG(RET,ARG)\
+#define PAGE_ALLOCATOR_ALLOC_SIG(RET,ARG,...)\
 RET(int)\
 ARG(order_t, order)\
 ARG(void __phys **, out)
 
 // Must have previously called "alloc" and recevied addr the from this region
-#define PAGE_ALLOCATOR_FREE_SIG(RET,ARG)\
+#define PAGE_ALLOCATOR_FREE_SIG(RET,ARG,...)\
 RET(int)\
 ARG(order_t, order)\
 ARG(void __phys *, addr)
 
 // Returns the total number of bytes which are free in this page allocator
 // (This could take some time depending on the type of allocator)
-#define PAGE_ALLOCATOR_AMOUNT_FREE_SIG(RET,ARG)\
+#define PAGE_ALLOCATOR_AMOUNT_FREE_SIG(RET,ARG,...)\
 RET(size_t)
 
 #define PAGE_ALLOCATOR_OP_LIST(OP, ...)\

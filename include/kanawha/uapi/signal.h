@@ -3,7 +3,14 @@
 
 typedef unsigned long signal_id_t;
 
+#define SIGMOD_ENTRY  (1)
+#define SIGMOD_ACK    (2)
+
+#define SIGINFO_RETURN  (1)
+#define SIGINFO_CURRENT (2)
+
 #define SIGNAL_XLIST(X)\
+X(0, NONE)\
 X(1, MEMFAULT)\
 X(2, PROTFAULT)\
 X(3, DECODEFAULT)\

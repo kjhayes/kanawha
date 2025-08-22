@@ -37,31 +37,30 @@ rand_dev_fs_file_read(
         return -EINVAL;
     }
 
-    res = rand_dev_read(
-            rdfs->dev,
-            buf,
-            buflen);
+    ssize_t amt_read;
+    while(1) {
+        amt_read = rand_dev_read(
+		rdfs->dev,
+            	buf,
+            	buflen);
+	if(amt_read < 0) {
+	    if(amt_read == -EWOULDBLOCK && !(flags & FS_FILE_READ_NON_BLOCKING)) {
+		wait_on(&rdfs->dev->read_wq);
+		continue;
+	    } else {
+		return amt_read;
+	    }
+	}
+	break;
+    }
 
-    return res;
+    return amt_read;
 }
 
 static struct fs_node_ops rand_dev_fs_node_ops = {
     .lookup = vfs_dir_lookup,
-    .load_page = fs_node_cannot_load_page,
-    .unload_page = fs_node_cannot_unload_page,
-    .flush_page = fs_node_cannot_flush_page,
-    .flush = fs_node_cannot_flush,
-    .getattr = fs_node_cannot_getattr,
-    .setattr = fs_node_cannot_setattr, 
-    .read_page = fs_node_cannot_read_page,
-    .write_page = fs_node_cannot_write_page, 
-    .link = fs_node_cannot_link,
-    .unlink = fs_node_cannot_unlink,
-    .mkdir = fs_node_cannot_mkdir,
-    .mkfifo = fs_node_cannot_mkfifo,
-    .mkfile = fs_node_cannot_mkfile,
-    .symlink = fs_node_cannot_symlink,
 };
+FS_NODE_OPS_INIT_UNDEF(rand_dev_fs_node_ops);
 
 static struct fs_file_ops rand_dev_fs_file_ops =
 {
@@ -71,12 +70,8 @@ static struct fs_file_ops rand_dev_fs_file_ops =
     .dir_readname = vfs_dir_readname,
 
     .read = rand_dev_fs_file_read,
-    .write = fs_file_cannot_read,
-    .flush = fs_file_cannot_flush,
-    .seek = fs_file_seek_pinned_zero,
-    .poll = fs_file_cannot_poll,
 };
-
+FS_FILE_OPS_INIT_UNDEF(rand_dev_fs_file_ops);
 
 static void
 rand_dev_fs_on_register(

@@ -56,10 +56,57 @@ syscall_open(
     LOG("PID(%ld) syscall_open(path=%s, path_len=0x%llx, access_flags=0x%llx, mode_flags=0x%llx)\n",
             process->id, path_buf, path_len, (ull_t)access_flags, (ull_t)mode_flags);
 
+    struct fs_path *dir_path;
+    if(mode_flags & FILE_MODE_OPEN_RELATIVE) {
+	fd_t dir_fd;
+	res = process_read_usermem(
+		process,
+		&dir_fd,
+		fd,
+		sizeof(dir_fd));
+	if(res) {
+	    return res;
+	}
+	struct file *dir_file;
+	dir_file = file_table_get_file(
+		process->file_table,
+		process,
+		dir_fd);
+
+	dir_path = dir_file->path;
+	fs_path_get(dir_path);
+
+	file_table_put_file(
+		process->file_table,
+		process,
+		dir_file);
+    } else {
+	int is_rel;
+	char *iter = path_buf;
+	while(*iter) {
+	    if(*iter == '/') {
+		is_rel = 0;
+		break;
+	    } else if(*iter == ' ') {
+		iter++;
+	    } else {
+		is_rel = 1;
+		break;
+	    }
+	}
+	if(is_rel) {
+	    dir_path = process->working_directory;
+	} else {
+	    dir_path = process->root_directory;
+	}
+	fs_path_get(dir_path);
+    }
+
     fd_t kernel_fd;
     res = file_table_open(
             process->file_table,
             process,
+	    dir_path,
             path_buf,
             access_flags,
             mode_flags,
@@ -69,6 +116,8 @@ syscall_open(
                 (sl_t)process->id, path_buf, errnostr(res));
         return res;
     }
+
+    fs_path_put(dir_path);
 
     res = process_write_usermem(
             process,

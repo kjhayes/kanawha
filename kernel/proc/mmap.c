@@ -1638,6 +1638,9 @@ mmap_region_clone(
     region->file_offset = from->file_offset;
     region->mmap_flags = from->mmap_flags;
     region->fs_node = from->fs_node;
+    if(region->fs_node) {
+        fs_node_get(region->fs_node);
+    }
     spinlock_init(&region->page_tree_lock);
     ptree_init(&region->page_tree);
 
@@ -1646,6 +1649,9 @@ mmap_region_clone(
     res = ptree_insert(&to->region_tree, &region->tree_node, region_offset);
     if(res) {
         spin_unlock_irq_restore(&from->page_tree_lock, irq_flags);
+	if(region->fs_node) {
+	    fs_node_put(region->fs_node);
+	}
         kfree(region);
         return res;
     }

@@ -3,6 +3,7 @@
 
 #include <kanawha/fs/node.h>
 
+#include <kanawha/fs/file.h>
 #include <kanawha/fs/mount.h>
 #include <kanawha/assert.h>
 #include <kanawha/stddef.h>
@@ -31,25 +32,64 @@ DEFINE_OP_LIST_WRAPPERS_WITH_PRE_POST(
 	FS_NODE_OP_ACQUIRE_LOCK,
 	FS_NODE_OP_RELEASE_LOCK)
 
+struct fs_node *
+fs_node_create(void)
+{
+    struct fs_node *fs_node;
+
+    fs_node = kzmalloc(sizeof(*fs_node), KM_KERNEL);
+    if(fs_node == NULL) {
+        return NULL;
+    }
+    
+    rlock_init(&fs_node->backing_lock);
+    
+    spinlock_init(&fs_node->page_lock);
+    ptree_init(&fs_node->page_cache);
+    
+    atomic_set_relaxed(&fs_node->refcount, 1);
+
+    return fs_node;
+}
+
 int
 fs_node_get(struct fs_node *node)
 {
     DEBUG_ASSERT(KERNEL_ADDR(node));
-    DEBUG_ASSERT(KERNEL_ADDR(node->mount));
 
     dprintk("fs_node_get: inode = %p\n",
             node->cache_node.key);
 
-    struct fs_node *again
-        = fs_mount_get_node(node->mount, node->cache_node.key);
-    DEBUG_ASSERT(again == node);
+    atomic_fetch_inc(&node->refcount);
+
     return 0;
 }
 
 int
 fs_node_put(struct fs_node *node)
 {
-    return fs_mount_put_node(node->mount, node);
+    int res;
+    atomic_val_t val;
+
+    val = atomic_fetch_dec(&node->refcount);
+
+    if(val <= 0) {
+	panic("Invalid fs_node_put!\n");
+    }
+    if(val == 1) {
+	rlock_read_lock(&node->backing_lock);
+	if(node->mount != NULL) {
+	    res = fs_mount_on_node_unreferenced(node->mount, node);
+	    if(res) {
+	        wprintk("Failed to unload fs_node (potentially leaking memory)!\n");
+	        rlock_read_unlock(&node->backing_lock);
+	        return res;
+	    }
+	}
+	rlock_read_unlock(&node->backing_lock);
+	kfree(node);
+    }
+    return 0;
 }
 
 struct fs_node_ops *
@@ -149,6 +189,7 @@ fs_node_get_page(
 
     } else {
         page = container_of(pnode, struct fs_page, tree_node);
+	page->pins++;
     }
 
     spin_unlock_irq_restore(&node->page_lock, irq_flags);
@@ -457,6 +498,250 @@ fs_node_paged_write(
 }
 
 /*
+ * Deattached fs_node Methods
+ */
+
+int
+fs_node_deattached_read_page(
+        struct fs_node *node,
+        void *page,
+        uintptr_t pfn,
+        unsigned long flags)
+{
+    return -ENODEV;
+}
+int
+fs_node_deattached_write_page(
+        struct fs_node *node,
+        void *page,
+        uintptr_t pfn,
+        unsigned long flags)
+{
+    return -ENODEV;
+}
+int
+fs_node_deattached_load_page(
+        struct fs_node *node,
+        uintptr_t pfn,
+        unsigned long flags,
+        void __phys ** addr_out)
+{
+    return -ENODEV;
+}
+int
+fs_node_deattached_unload_page(
+        struct fs_node *node,
+        uintptr_t pfn,
+        unsigned long flags,
+        void __phys *addr)
+{
+    return -ENODEV;
+}
+int
+fs_node_deattached_flush_page(
+        struct fs_node *node,
+        uintptr_t pfn,
+        unsigned long flags,
+        void __phys *addr)
+{
+    return -ENODEV;
+}
+int
+fs_node_deattached_flush(
+        struct fs_node *node,
+        unsigned long flags)
+{
+    return -ENODEV;
+}
+int
+fs_node_deattached_getattr(
+        struct fs_node *node,
+        int attr,
+        size_t *value)
+{
+    return -ENODEV;
+}
+int
+fs_node_deattached_setattr(
+        struct fs_node *node,
+        int attr,
+        size_t value)
+{
+    return -ENODEV;
+}
+int
+fs_node_deattached_lookup(
+        struct fs_node *node,
+        const char *name,
+        size_t *inode,
+	char *sym_buffer,
+	size_t sym_link)
+{
+    return -ENODEV;
+}
+int
+fs_node_deattached_mkfile(
+        struct fs_node *node,
+        const char *name,
+        unsigned long flags)
+{
+    return -ENODEV;
+}
+int
+fs_node_deattached_mkfifo(
+        struct fs_node *node,
+        const char *name,
+        unsigned long flags)
+{
+    return -ENODEV;
+}
+int
+fs_node_deattached_mkdir(
+        struct fs_node *node,
+        const char *name,
+        unsigned long flags)
+{
+    return -ENODEV;
+}
+int
+fs_node_deattached_link(
+        struct fs_node *node,
+        const char *name,
+        size_t inode)
+{
+    return -ENODEV;
+}
+int
+fs_node_deattached_symlink(
+        struct fs_node *node,
+        const char *name,
+        const char *path)
+{
+    return -ENODEV;
+}
+int
+fs_node_deattached_unlink(
+        struct fs_node *node,
+        const char *name)
+{
+    return -ENODEV;
+}
+
+ssize_t
+fs_file_deattached_read(
+        struct file *file,
+        void *buf,
+        ssize_t buflen,
+        unsigned long flags)
+{
+    return -ENODEV;
+}
+ssize_t
+fs_file_deattached_write(
+        struct file *file,
+        void *buf,
+        ssize_t buflen,
+        unsigned long flags)
+{
+    return -ENODEV;
+}
+ssize_t
+fs_file_deattached_seek(
+        struct file *file,
+        ssize_t offset,
+        int whence)
+{
+    return -ENODEV;
+}
+int
+fs_file_deattached_flush(
+        struct file *file,
+        unsigned long flags)
+{
+    return -ENODEV;
+}
+int
+fs_file_deattached_dir_begin(
+        struct file *file)
+{
+    return -ENODEV;
+}
+int
+fs_file_deattached_dir_next(
+        struct file *file)
+{
+    return -ENODEV;
+}
+int
+fs_file_deattached_dir_readattr(
+        struct file *file,
+        int attr,
+        size_t *value)
+{
+    return -ENODEV;
+}
+int
+fs_file_deattached_dir_readname(
+        struct file *file,
+        char *buf,
+        size_t buflen)
+{
+    return -ENODEV;
+}
+int
+fs_file_deattached_poll(
+        struct file *file,
+        unsigned long watching,
+        unsigned long *triggered)
+{
+    return -ENODEV;
+}
+
+static struct fs_node_ops
+fs_node_deattached_node_ops = {
+    .read_page = fs_node_deattached_read_page,
+    .write_page = fs_node_deattached_write_page,
+    .load_page = fs_node_deattached_load_page,
+    .unload_page = fs_node_deattached_unload_page,
+    .flush_page = fs_node_deattached_flush_page,
+    .flush = fs_node_deattached_flush,
+    .getattr = fs_node_deattached_getattr,
+    .setattr = fs_node_deattached_setattr,
+    .lookup = fs_node_deattached_lookup,
+    .mkfile = fs_node_deattached_mkfile,
+    .mkfifo = fs_node_deattached_mkfifo,
+    .mkdir = fs_node_deattached_mkdir,
+    .link = fs_node_deattached_link,
+    .symlink = fs_node_deattached_symlink,
+    .unlink = fs_node_deattached_unlink,
+};
+
+static struct fs_file_ops
+fs_node_deattached_file_ops = {
+    .read = fs_file_deattached_read,
+    .write = fs_file_deattached_write,
+    .seek = fs_file_deattached_seek,
+    .flush = fs_file_deattached_flush,
+    .dir_begin = fs_file_deattached_dir_begin,
+    .dir_next = fs_file_deattached_dir_next,
+    .dir_readattr = fs_file_deattached_dir_readattr,
+    .dir_readname = fs_file_deattached_dir_readname,
+};
+
+int
+fs_node_deattach_backing(
+	struct fs_node *node)
+{
+    rlock_write_lock(&node->backing_lock);
+    node->backing.node_ops = &fs_node_deattached_node_ops;
+    node->backing.file_ops = &fs_node_deattached_file_ops;
+    node->backing.priv_state = NULL;
+    // We are still associated with the mount (TODO)
+    rlock_write_unlock(&node->backing_lock);
+    return 0;
+}
+
+/*
  * Error fs_node Method Implementations
  */
 
@@ -532,7 +817,9 @@ int
 fs_node_cannot_lookup(
         struct fs_node *node,
         const char *name,
-        size_t *inode)
+        size_t *inode,
+	char *sym_buffer,
+	size_t sym_link)
 {
     return -EINVAL;
 }

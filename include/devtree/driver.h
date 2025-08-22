@@ -12,20 +12,20 @@ struct dt_node;
 
 // Returns 0 if this driver can control the node
 // (Assumes some ID has matched from the driver's ID list)
-#define DT_DRIVER_PROBE_SIG(RET,ARG)\
+#define DT_DRIVER_PROBE_SIG(RET,ARG,...)\
 RET(int)\
 ARG(struct dt_node *, node)
 
 // Returns 0 on success
-#define DT_DRIVER_INIT_NODE_SIG(RET,ARG)\
+#define DT_DRIVER_INIT_NODE_SIG(RET,ARG,...)\
 RET(int)\
 ARG(struct dt_node *, node)
 
-#define DT_DRIVER_DEINIT_NODE_SIG(RET,ARG)\
+#define DT_DRIVER_DEINIT_NODE_SIG(RET,ARG,...)\
 RET(int)\
 ARG(struct dt_node *, node)
 
-#define DT_DRIVER_XLATE_IRQ(RET,ARG)\
+#define DT_DRIVER_XLATE_IRQ(RET,ARG,...)\
 RET(irq_t)\
 ARG(struct dt_node *, node)\
 ARG(const fdt32_t *, cells)\

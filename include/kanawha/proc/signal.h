@@ -4,25 +4,39 @@
 #include <kanawha/uapi/signal.h>
 #include <kanawha/uapi/process.h>
 #include <kanawha/usermode.h>
-#include <kanawha/spinlock.h>
+#include <kanawha/bitmap.h>
+#include <kanawha/lock.h>
+
+#define NUM_SIGNALS (256)
 
 struct process;
 
-struct signal_state {
-    spinlock_t lock;
+struct signal_state
+{
+    irq_lock_t lock;
 
-    void __user *signal_return_ip;
-    signal_id_t current_signal;
-    unsigned int in_signal : 1;
-    unsigned int signal_delivered : 1;
-
+    // Where user-space has asked us to set IP
+    // on signal delivery
     void __user *signal_entry;
-    unsigned int signal_entry_set : 1;
+    int signal_entry_set;
+
+    // Pending Information
+    unsigned long num_pending; // Number of bits set in the pending bitmap
+    DECLARE_BITMAP(pending_bitmap, NUM_SIGNALS);
+
+    // Are we currently running a signal handler?
+    int interrupted;
+    void __user *interrupted_user_ip;
 };
 
 int
 signal_state_init(struct signal_state *state);
+int
+signal_state_init_on_spawn(
+	struct signal_state *parent,
+	struct signal_state *child);
 
+#define SIGNAL_FLAG_COALESCE (1ULL<<0) // Make assertion of this signal idempotent
 int
 signal_deliver(
         struct process *process,
@@ -30,14 +44,26 @@ signal_deliver(
         unsigned long flags);
 
 int
-signal_complete(
-        struct process *process
-        );
+signal_ack(
+	struct process *process,
+	signal_id_t id);
 
 int
 signal_set_entry(
         struct process *process,
         void __user *entry);
+
+int
+signal_on_return_to_userspace(
+	struct process *process);
+
+signal_id_t
+process_current_signal(
+	struct process *process);
+
+void __user *
+process_signal_return_addr(
+	struct process *process);
 
 const char *
 signal_id_string(signal_id_t id);

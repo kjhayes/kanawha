@@ -4,9 +4,11 @@
 
 int
 vga_dev_init(
-        struct vga_dev *dev)
+        struct vga_dev *dev,
+	unsigned long dac_order)
 {
     spinlock_init(&dev->dac_lock);
+    dev->dac_order = dac_order;
 
     spinlock_init(&dev->graphics_lock);
     dev->graphics_index = vga_read_register(dev, GraphicsControllerAddress);
@@ -454,10 +456,43 @@ vga_dac_set_color(
 {
     spin_lock(&dev->dac_lock);
 
-    vga_write_field(dev, DACWriteAddress, index);
-    vga_write_field(dev, DACData, g);
-    vga_write_field(dev, DACData, r);
-    vga_write_field(dev, DACData, b);
+    vga_write_register(dev, DACAddressWriteMode, index);
+
+    // Officially this should always be RGB
+    switch(dev->dac_order) {
+      case VGA_DAC_ORDER_RGB:
+        vga_write_register(dev, DACData, r);
+        vga_write_register(dev, DACData, g);
+        vga_write_register(dev, DACData, b);
+	break;
+      case VGA_DAC_ORDER_RBG:
+        vga_write_register(dev, DACData, r);
+        vga_write_register(dev, DACData, b);
+        vga_write_register(dev, DACData, g);
+	break;
+      case VGA_DAC_ORDER_BGR:
+        vga_write_register(dev, DACData, b);
+        vga_write_register(dev, DACData, g);
+        vga_write_register(dev, DACData, r);
+	break;
+      case VGA_DAC_ORDER_BRG:
+        vga_write_register(dev, DACData, b);
+        vga_write_register(dev, DACData, r);
+        vga_write_register(dev, DACData, g);
+	break;
+      case VGA_DAC_ORDER_GRB:
+        vga_write_register(dev, DACData, g);
+        vga_write_register(dev, DACData, r);
+        vga_write_register(dev, DACData, b);
+	break;
+      case VGA_DAC_ORDER_GBR:
+        vga_write_register(dev, DACData, g);
+        vga_write_register(dev, DACData, b);
+        vga_write_register(dev, DACData, r);
+	break;
+      default:
+	break;
+    }
 
     spin_unlock(&dev->dac_lock);
 }

@@ -190,7 +190,9 @@ int
 cpio_dir_node_lookup(
         struct fs_node *fs_node,
         const char *name,
-        size_t *inode)
+        size_t *inode,
+	char *sym_buffer,
+	size_t sym_buflen)
 {
     int res;
 
@@ -255,36 +257,18 @@ cpio_dir_node_lookup(
 
 struct fs_file_ops
 cpio_dir_file_ops = {
-    .read = fs_file_cannot_read,
-    .write = fs_file_cannot_write,
-    .seek = fs_file_cannot_seek,
-    .flush = fs_file_cannot_flush,
-
     .dir_next = cpio_dir_next,
     .dir_begin = cpio_dir_begin,
     .dir_readattr = cpio_dir_readattr,
     .dir_readname = cpio_dir_readname,
 };
+FS_FILE_OPS_INIT_UNDEF(cpio_dir_file_ops);
 
 struct fs_node_ops
 cpio_dir_node_ops =
 {
-    .read_page = fs_node_cannot_read_page,
-    .write_page = fs_node_cannot_write_page,
-
-    .load_page = fs_node_cannot_load_page,
-    .unload_page = fs_node_cannot_unload_page,
-    .flush_page = fs_node_cannot_flush_page,
-
     .flush = fs_node_flush_nop,
-    .getattr = fs_node_cannot_getattr,
-    .setattr = fs_node_cannot_setattr,
-
     .lookup = cpio_dir_node_lookup,
-    .mkfile = fs_node_cannot_mkfile,
-    .mkdir = fs_node_cannot_mkdir,
-    .link = fs_node_cannot_link,
-    .symlink = fs_node_cannot_symlink,
-    .unlink = fs_node_cannot_unlink,
 };
+FS_NODE_OPS_INIT_UNDEF(cpio_dir_node_ops);
 

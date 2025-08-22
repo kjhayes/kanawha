@@ -70,20 +70,11 @@ static struct fs_node_ops
 pci_fs_node_ops =
 {
     .read_page = pci_cfg_fs_node_read_page,
-    .write_page = fs_node_cannot_write_page,
     .load_page = fs_node_load_page_read_alloc,
     .unload_page = fs_node_unload_page_free,
-    .flush_page = fs_node_cannot_flush_page,
-    .flush = fs_node_cannot_flush,
     .getattr = pci_cfg_fs_node_getattr,
-    .setattr = fs_node_cannot_setattr,
-    .lookup = fs_node_cannot_lookup,
-    .mkfile = fs_node_cannot_mkfile,
-    .mkdir = fs_node_cannot_mkdir,
-    .link = fs_node_cannot_link,
-    .symlink = fs_node_cannot_symlink,
-    .unlink = fs_node_cannot_unlink,
 };
+FS_NODE_OPS_INIT_UNDEF(pci_fs_node_ops);
 
 static struct fs_file_ops
 pci_fs_file_ops = {
@@ -91,12 +82,8 @@ pci_fs_file_ops = {
     .write = fs_file_eof_write,
     .flush = fs_file_nop_flush,
     .seek = fs_file_seek_pinned_zero,
-    .poll = fs_file_cannot_poll,
-    .dir_begin = fs_file_cannot_dir_begin,
-    .dir_next = fs_file_cannot_dir_next,
-    .dir_readattr = fs_file_cannot_dir_readattr,
-    .dir_readname = fs_file_cannot_dir_readname,
 };
+FS_FILE_OPS_INIT_UNDEF(pci_fs_file_ops);
 
 static int
 insert_func_with_match_lock(

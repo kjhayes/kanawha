@@ -15,7 +15,7 @@ typedef void(ps2_recv_callback_f)(
         uint8_t data);
 
 // Should be non-blocking
-#define PS2_PORT_SEND_SIG(RET,ARG)\
+#define PS2_PORT_SEND_SIG(RET,ARG,...)\
 RET(int)\
 ARG(uint8_t, data)
 

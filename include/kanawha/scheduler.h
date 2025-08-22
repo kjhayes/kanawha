@@ -7,22 +7,22 @@
 #include <kanawha/printk.h>
 
 // Asking if we should resched
-#define SCHED_QUERY_RESCHED_SIG(RET,ARG)\
+#define SCHED_QUERY_RESCHED_SIG(RET,ARG,...)\
 RET(struct thread_state *)
 
 // Telling we need to be resched (sleeping, waiting, exiting, etc.)
-#define SCHED_FORCE_RESCHED_SIG(RET,ARG)\
+#define SCHED_FORCE_RESCHED_SIG(RET,ARG,...)\
 RET(struct thread_state *)
 
-#define SCHED_ADD_THREAD_SIG(RET,ARG)\
+#define SCHED_ADD_THREAD_SIG(RET,ARG,...)\
 RET(int)\
 ARG(struct thread_state *, thread)
 
-#define SCHED_REMOVE_THREAD_SIG(RET,ARG)\
+#define SCHED_REMOVE_THREAD_SIG(RET,ARG,...)\
 RET(int)\
 ARG(struct thread_state *, thread)
 
-#define SCHED_DEBUG_DUMP_SIG(RET,ARG)\
+#define SCHED_DEBUG_DUMP_SIG(RET,ARG,...)\
 RET(int)\
 ARG(printk_f *, printer)
 
@@ -33,10 +33,10 @@ OP(add_thread, SCHED_ADD_THREAD_SIG, ##__VA_ARGS__)\
 OP(remove_thread, SCHED_REMOVE_THREAD_SIG, ##__VA_ARGS__)\
 OP(debug_dump, SCHED_DEBUG_DUMP_SIG, ##__VA_ARGS__)\
 
-#define SCHED_TYPE_ALLOC_INSTANCE_SIG(RET,ARG)\
+#define SCHED_TYPE_ALLOC_INSTANCE_SIG(RET,ARG,...)\
 RET(struct scheduler *)
 
-#define SCHED_TYPE_FREE_INSTANCE_SIG(RET,ARG)\
+#define SCHED_TYPE_FREE_INSTANCE_SIG(RET,ARG,...)\
 RET(int)\
 ARG(struct scheduler *, instance)
 

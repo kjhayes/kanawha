@@ -5,6 +5,7 @@
 #include <kanawha/types.h>
 #include <kanawha/vmem.h>
 #include <kanawha/time.h>
+#include <kanawha/lock.h>
 #include <kanawha/scheduler.h>
 #include <kanawha/proc/env.h>
 #include <kanawha/usermode.h>
@@ -42,7 +43,7 @@ struct process
     struct scheduler *scheduler;
 
     // Status
-    spinlock_t status_lock;
+    irq_lock_t status_lock;
     unsigned long flags;
     int exitcode;
     int status;
@@ -56,7 +57,7 @@ struct process
     struct waitqueue child_wait_queue;
 
     // Process Hierarchy
-    spinlock_t hierarchy_lock;
+    irq_lock_t hierarchy_lock;
     struct process *parent;
     ilist_node_t child_node;
     ilist_t children;
@@ -244,6 +245,10 @@ process_send_signal(
         pid_t proc_id,
         signal_id_t id,
         unsigned long flags);
+
+int
+process_force_awake(
+	pid_t proc_id);
 
 // Debugging "Dump" Processes
 void

@@ -7,45 +7,45 @@
 
 typedef int syscall_id_t;
 
-#define SYSCALL_SIG_EXIT(RET,ARG)\
+#define SYSCALL_SIG_EXIT(RET,ARG,...)\
 RET(int)\
 ARG(int, exitcode)
 
-#define SYSCALL_SIG_OPEN(RET,ARG)\
+#define SYSCALL_SIG_OPEN(RET,ARG,...)\
 RET(int)\
 ARG(const char __user *, path)\
 ARG(unsigned long, access_flags)\
 ARG(unsigned long, mode_flags)\
 ARG(fd_t __user *, fd)
 
-#define SYSCALL_SIG_CLOSE(RET,ARG)\
+#define SYSCALL_SIG_CLOSE(RET,ARG,...)\
 RET(int)\
 ARG(fd_t, file)
 
-#define SYSCALL_SIG_READ(RET,ARG)\
+#define SYSCALL_SIG_READ(RET,ARG,...)\
 RET(ssize_t)\
 ARG(fd_t, file)\
 ARG(void __user *, dest)\
 ARG(size_t, size)
 
-#define SYSCALL_SIG_WRITE(RET,ARG)\
+#define SYSCALL_SIG_WRITE(RET,ARG,...)\
 RET(ssize_t)\
 ARG(fd_t, file)\
 ARG(void __user *, src)\
 ARG(size_t, size)
 
-#define SYSCALL_SIG_FLUSH(RET,ARG)\
+#define SYSCALL_SIG_FLUSH(RET,ARG,...)\
 RET(int)\
 ARG(fd_t, file)\
 ARG(unsigned long, flags)
 
-#define SYSCALL_SIG_SEEK(RET,ARG)\
+#define SYSCALL_SIG_SEEK(RET,ARG,...)\
 RET(ssize_t)\
 ARG(fd_t, file)\
 ARG(ssize_t, offset)\
 ARG(int, whence)
 
-#define SYSCALL_SIG_MMAP(RET,ARG)\
+#define SYSCALL_SIG_MMAP(RET,ARG,...)\
 RET(int)\
 ARG(fd_t, file)\
 ARG(size_t, file_offset)\
@@ -53,36 +53,36 @@ ARG(void __user * __user*, where)\
 ARG(size_t, size)\
 ARG(unsigned long, flags)
 
-#define SYSCALL_SIG_MUNMAP(RET,ARG)\
+#define SYSCALL_SIG_MUNMAP(RET,ARG,...)\
 RET(int)\
 ARG(void __user *, mapping)
 
-#define SYSCALL_SIG_EXEC(RET,ARG)\
+#define SYSCALL_SIG_EXEC(RET,ARG,...)\
 RET(int)\
 ARG(fd_t, file)\
 ARG(unsigned long, exec_flags)
 
-#define SYSCALL_SIG_ENVIRON(RET,ARG)\
+#define SYSCALL_SIG_ENVIRON(RET,ARG,...)\
 RET(int)\
 ARG(const char __user *, key)\
 ARG(char __user *, value)\
 ARG(size_t, len)\
 ARG(int, operation)
 
-#define SYSCALL_SIG_SPAWN(RET,ARG)\
+#define SYSCALL_SIG_SPAWN(RET,ARG,...)\
 RET(int)\
 ARG(void __user *, func)\
 ARG(void *, arg)\
 ARG(unsigned long, flags)\
 ARG(pid_t __user *, child)
 
-#define SYSCALL_SIG_REAP(RET,ARG)\
+#define SYSCALL_SIG_REAP(RET,ARG,...)\
 RET(int)\
 ARG(unsigned long, flags)\
 ARG(pid_t __user *, pid_inout)\
 ARG(int __user *, exitcode)
 
-#define SYSCALL_SIG_MOUNT(RET,ARG)\
+#define SYSCALL_SIG_MOUNT(RET,ARG,...)\
 RET(int)\
 ARG(const char __user *, source)\
 ARG(fd_t, dest_dir)\
@@ -90,150 +90,154 @@ ARG(const char __user *, dest_name)\
 ARG(const char __user *, fs_type)\
 ARG(unsigned long, flags)
 
-#define SYSCALL_SIG_UNMOUNT(RET,ARG)\
+#define SYSCALL_SIG_UNMOUNT(RET,ARG,...)\
 RET(int)\
 ARG(fd_t, mntpoint)
 
-#define SYSCALL_SIG_DIRBEGIN(RET,ARG)\
+#define SYSCALL_SIG_DIRBEGIN(RET,ARG,...)\
 RET(int)\
 ARG(fd_t, dir)
 
-#define SYSCALL_SIG_DIRNEXT(RET,ARG)\
+#define SYSCALL_SIG_DIRNEXT(RET,ARG,...)\
 RET(int)\
 ARG(fd_t, dir)
 
-#define SYSCALL_SIG_DIRATTR(RET,ARG)\
+#define SYSCALL_SIG_DIRATTR(RET,ARG,...)\
 RET(int)\
 ARG(fd_t, dir)\
 ARG(int, attr)\
 ARG(size_t __user *, value)
 
-#define SYSCALL_SIG_DIRNAME(RET,ARG)\
+#define SYSCALL_SIG_DIRNAME(RET,ARG,...)\
 RET(int)\
 ARG(fd_t, dir)\
 ARG(char __user *, namebuf)\
 ARG(size_t, buflen)
 
-#define SYSCALL_SIG_FMOVE(RET,ARG)\
+#define SYSCALL_SIG_FMOVE(RET,ARG,...)\
 RET(int)\
 ARG(fd_t, dst)\
 ARG(fd_t, src)\
 ARG(unsigned long, flags)\
 ARG(fd_t __user *, out)\
 
-#define SYSCALL_SIG_FATTR(RET,ARG)\
+#define SYSCALL_SIG_FATTR(RET,ARG,...)\
 RET(int)\
 ARG(fd_t, file)\
 ARG(int, attr)\
 ARG(size_t __user *, value)\
 
-#define SYSCALL_SIG_FACCESS(RET,ARG)\
+#define SYSCALL_SIG_FACCESS(RET,ARG,...)\
 RET(int)\
 ARG(fd_t, file)\
 ARG(unsigned long, fields)\
 ARG(unsigned long, mode)\
 
-#define SYSCALL_SIG_MKFILE(RET,ARG)\
+#define SYSCALL_SIG_MKFILE(RET,ARG,...)\
 RET(int)\
 ARG(fd_t, dir)\
 ARG(const char __user *, name)\
 ARG(unsigned long, flags)
 
-#define SYSCALL_SIG_MKDIR(RET,ARG)\
+#define SYSCALL_SIG_MKDIR(RET,ARG,...)\
 RET(int)\
 ARG(fd_t, dir)\
 ARG(const char __user *, name)\
 ARG(unsigned long, flags)
 
-#define SYSCALL_SIG_LINK(RET,ARG)\
+#define SYSCALL_SIG_LINK(RET,ARG,...)\
 RET(int)\
 ARG(fd_t, from)\
 ARG(fd_t, dir)\
 ARG(const char __user *, link_name)\
 ARG(unsigned long, flags)
 
-#define SYSCALL_SIG_SYMLINK(RET,ARG)\
+#define SYSCALL_SIG_SYMLINK(RET,ARG,...)\
 RET(int)\
 ARG(const char __user *, sym_path)\
 ARG(fd_t, dir)\
 ARG(const char __user *, link_name)\
 ARG(unsigned long, flags)
 
-#define SYSCALL_SIG_UNLINK(RET,ARG)\
+#define SYSCALL_SIG_UNLINK(RET,ARG,...)\
 RET(int)\
 ARG(fd_t, dir)\
 ARG(const char __user *, name)
 
-#define SYSCALL_SIG_CHROOT(RET,ARG)\
+#define SYSCALL_SIG_CHROOT(RET,ARG,...)\
 RET(int)\
 ARG(fd_t, root)
 
-#define SYSCALL_SIG_PIPE(RET,ARG)\
+#define SYSCALL_SIG_PIPE(RET,ARG,...)\
 RET(int)\
 ARG(unsigned long, flags)\
+ARG(unsigned long, mode_flags)\
 ARG(fd_t __user *, out)
 
-#define SYSCALL_SIG_INSMOD(RET,ARG)\
+#define SYSCALL_SIG_INSMOD(RET,ARG,...)\
 RET(int)\
 ARG(fd_t, modfile)\
 ARG(const char __user *, modname)\
 ARG(unsigned long, flags)
 
-#define SYSCALL_SIG_RMMOD(RET,ARG)\
+#define SYSCALL_SIG_RMMOD(RET,ARG,...)\
 RET(int)\
 ARG(const char __user *, modname)\
 ARG(unsigned long, flags)
 
-#define SYSCALL_SIG_CHWDIR(RET,ARG)\
+#define SYSCALL_SIG_CHWDIR(RET,ARG,...)\
 RET(int)\
 ARG(fd_t, dir)
 
-#define SYSCALL_SIG_SLEEP(RET,ARG)\
+#define SYSCALL_SIG_SLEEP(RET,ARG,...)\
 RET(int)\
 ARG(size_t, duration)\
 ARG(unsigned long, flags)
 
-#define SYSCALL_SIG_TIME(RET,ARG)\
+#define SYSCALL_SIG_TIME(RET,ARG,...)\
 RET(ssize_t)\
 ARG(unsigned long, flags)
 
-#define SYSCALL_SIG_SIGRET(RET,ARG)\
-RET(int)
-
-#define SYSCALL_SIG_SIGROUTE(RET,ARG)\
+#define SYSCALL_SIG_SIGINFO(RET,ARG,...)\
 RET(int)\
-ARG(void __user *, entry)
+ARG(unsigned long, attr)\
+ARG(unsigned long __user *, value)
 
-#define SYSCALL_SIG_GETCWD(RET,ARG)\
+#define SYSCALL_SIG_SIGMOD(RET,ARG,...)\
+RET(int)\
+ARG(unsigned long, attr)\
+ARG(unsigned long, value)
+
+#define SYSCALL_SIG_GETCWD(RET,ARG,...)\
 RET(int)\
 ARG(char __user *, buffer)\
 ARG(size_t, buflen)
 
-#define SYSCALL_SIG_RID(RET,ARG)\
+#define SYSCALL_SIG_RID(RET,ARG,...)\
 RET(int)\
 ARG(pid_t, target)\
 ARG(unsigned long, flags)\
 ARG(id_t __user *, id_out)\
 
-#define SYSCALL_SIG_WID(RET,ARG)\
+#define SYSCALL_SIG_WID(RET,ARG,...)\
 RET(int)\
 ARG(pid_t, target)\
 ARG(unsigned long, flags)\
 ARG(id_t, id)\
 
-#define SYSCALL_SIG_RESIZE(RET,ARG)\
+#define SYSCALL_SIG_RESIZE(RET,ARG,...)\
 RET(int)\
 ARG(fd_t, file)\
 ARG(size_t, size)\
 ARG(unsigned long, flags)\
 
-#define SYSCALL_SIG_POLL(RET,ARG)\
+#define SYSCALL_SIG_POLL(RET,ARG,...)\
 RET(int)\
 ARG(fd_t, file)\
 ARG(unsigned long, watch)\
 ARG(unsigned long __user *, triggered)\
 
-#define SYSCALL_SIG_SIGSEND(RET,ARG)\
+#define SYSCALL_SIG_SIGSEND(RET,ARG,...)\
 RET(int)\
 ARG(pid_t, target)\
 ARG(int, signal)\
@@ -275,13 +279,13 @@ X(rmmod,     31, RMMOD,      SYSCALL_SIG_RMMOD)\
 X(chwdir,    32, CHWDIR,     SYSCALL_SIG_CHWDIR)\
 X(sleep,     33, SLEEP,      SYSCALL_SIG_SLEEP)\
 X(time,      34, TIME,       SYSCALL_SIG_TIME)\
-X(sigret,    35, SIGRET,     SYSCALL_SIG_SIGRET)\
-X(sigroute,  36, SIGROUTE,   SYSCALL_SIG_SIGROUTE)\
 X(rid,       37, RID,        SYSCALL_SIG_RID)\
 X(wid,       38, WID,        SYSCALL_SIG_WID)\
 X(resize,    39, RESIZE,     SYSCALL_SIG_RESIZE)\
 X(poll,      40, POLL,       SYSCALL_SIG_POLL)\
 X(sigsend,   41, SIGSEND,    SYSCALL_SIG_SIGSEND)\
+X(siginfo,   42, SIGINFO,    SYSCALL_SIG_SIGINFO)\
+X(sigmod,    43, SIGMOD,     SYSCALL_SIG_SIGMOD)\
 
 #define DECLARE_SYSCALL_ID_CONSTANTS(__name, __id, __NAME, ...)\
 const static syscall_id_t SYSCALL_ID_ ## __NAME = __id;

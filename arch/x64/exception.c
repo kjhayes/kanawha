@@ -28,6 +28,11 @@ x64_alloc_vector_irq_domain(void)
         return -ENOMEM;
     }
 
+    printk("x86 Vector Domain Mapped to IRQ Range [%lu-%lu]\n",
+	    (unsigned long)irq_domain_revmap(x64_vector_irq_domain, 0),
+	    (unsigned long)irq_domain_revmap(x64_vector_irq_domain, 255)
+	  );
+
     return 0;
 }
 
@@ -122,6 +127,8 @@ x64_unhandled_exception(struct x64_excp_state *state)
     int errcode_valid = 0;
     int type = X64_EXCP_TYPE_UNDEF;
 
+    int ring_from = state->cs & 0b11;
+
     switch(state->vector) {
 #define UNHANDLED_EXCEPTION_CASE(VECTOR,MNEMONIC,DESC_STR,ERRCODE_VALID,TYPE)\
         case VECTOR:\
@@ -142,7 +149,12 @@ X64_EXCP_XLIST(UNHANDLED_EXCEPTION_CASE)
     printk("\n");
     printk("\tRFLAGS=%p\n", (uintptr_t)state->rflags);
     printk("\tRIP=%p\n", (uintptr_t)state->rip);
-    printk("\tCS=%p\n", (uintptr_t)state->cs);
+    printk("\tCS=%p [%s]\n", (uintptr_t)state->cs,
+	    ring_from == 0 ? "KERNEL" :
+	    ring_from == 1 ? "RING-1" :
+	    ring_from == 2 ? "RING-2" :
+	                     "USERMODE"
+	    );
     printk("\tCR2 = %p\n", (void *)read_cr2());
 
     arch_excp_dump_state((struct excp_state*)state, do_printk);
@@ -258,11 +270,8 @@ exit:
             cur_thread->arch_state.stack.stack_base;
         struct process *process = current_process();
         if(process != NULL) {
+	    signal_on_return_to_userspace(process);
             state->rip = (uint64_t)process->user_ip;
-            if(process->signal_state.in_signal && !process->signal_state.signal_delivered)
-            {
-                state->caller_regs[PUSHED_CALLER_REGS_INDEX_RAX] = process->signal_state.current_signal;
-            }
         }
     }
     return;

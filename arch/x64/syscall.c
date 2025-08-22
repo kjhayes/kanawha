@@ -81,6 +81,8 @@ x64_route_syscall(struct x64_syscall_state *state)
 
     disable_irqs();
 
+    signal_on_return_to_userspace(process);
+
     state->caller_regs[PUSHED_CALLER_REGS_INDEX_RCX] =
         (uint64_t)process->user_ip;
 

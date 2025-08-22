@@ -232,18 +232,8 @@ ramfs_file_node_ops =
 
     .flush = fs_node_flush_nop,
     .flush_page = fs_node_flush_page_nop,
-
-    .read_page = fs_node_cannot_read_page,
-    .write_page = fs_node_cannot_write_page,
-
-    .link = fs_node_cannot_link,
-    .unlink = fs_node_cannot_unlink,
-    .symlink = fs_node_cannot_symlink,
-    .lookup = fs_node_cannot_lookup,
-    .mkdir = fs_node_cannot_mkdir,
-    .mkfifo = fs_node_cannot_mkfifo,
-    .mkfile = fs_node_cannot_mkfile,
 };
+FS_NODE_OPS_INIT_UNDEF(ramfs_file_node_ops);
 
 static struct fs_file_ops
 ramfs_file_file_ops =
@@ -252,14 +242,8 @@ ramfs_file_file_ops =
     .write = fs_file_paged_write,
     .seek = fs_file_paged_seek,
     .flush = fs_file_paged_flush,
-
-    .poll = fs_file_cannot_poll,
-
-    .dir_next = fs_file_cannot_dir_next,
-    .dir_begin = fs_file_cannot_dir_begin,
-    .dir_readattr = fs_file_cannot_dir_readattr,
-    .dir_readname = fs_file_cannot_dir_readname,
 };
+FS_FILE_OPS_INIT_UNDEF(ramfs_file_file_ops);
 
 static int
 ramfs_dir_getattr(
@@ -311,7 +295,9 @@ static int
 ramfs_dir_lookup(
 	struct fs_node *fs_node,
 	const char *name,
-	size_t *inode)
+	size_t *inode,
+	char *sym_buffer,
+	size_t sym_buflen)
 {
     struct ramfs_node *node = fs_node->backing.priv_state;
 
@@ -322,7 +308,7 @@ ramfs_dir_lookup(
 	    container_of(iter, struct ramfs_dirent, list_node);
 	if(strcmp(dirent->name, name) == 0) {
 	    *inode = dirent->inode;
-	    return 0;
+	    return FS_NODE_LOOKUP_HARD;
 	}
     }
 
@@ -587,15 +573,8 @@ ramfs_dir_node_ops =
     .flush_page = fs_node_flush_page_nop,
 
     .unlink = ramfs_dir_unlink,
-
-    .link = fs_node_cannot_link,
-    .symlink = fs_node_cannot_symlink, 
-    .mkfifo = fs_node_cannot_mkfifo,
-    .load_page = fs_node_cannot_load_page,
-    .unload_page = fs_node_cannot_unload_page,
-    .read_page = fs_node_cannot_read_page,
-    .write_page = fs_node_cannot_write_page,
 };
+FS_NODE_OPS_INIT_UNDEF(ramfs_dir_node_ops);
 
 static struct fs_file_ops
 ramfs_dir_file_ops =
@@ -606,12 +585,8 @@ ramfs_dir_file_ops =
     .dir_readname = ramfs_dir_dir_readname,
 
     .flush = fs_file_nop_flush,
-
-    .read = fs_file_cannot_read,
-    .write = fs_file_cannot_write,
-    .poll = fs_file_cannot_poll,
-    .seek = fs_file_cannot_seek,
 };
+FS_FILE_OPS_INIT_UNDEF(ramfs_dir_file_ops);
 
 
 // Mount

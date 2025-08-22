@@ -1,7 +1,7 @@
 
 obj-y += \
 	blk/ \
-	serial/ \
+	term/ \
 	rand/ \
 	net/ \
 	clk/ \

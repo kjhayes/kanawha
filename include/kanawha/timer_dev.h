@@ -9,17 +9,17 @@ struct timer_driver;
 
 typedef void(alarm_f)(void);
 
-#define TIMER_DEV_CLEAR_ALARM_SIG(RET,ARG)\
+#define TIMER_DEV_CLEAR_ALARM_SIG(RET,ARG,...)\
 RET(int)\
 ARG(size_t, alarm)
 
-#define TIMER_DEV_SET_ALARM_ONESHOT_SIG(RET,ARG)\
+#define TIMER_DEV_SET_ALARM_ONESHOT_SIG(RET,ARG,...)\
 RET(int)\
 ARG(size_t, alarm)\
 ARG(duration_t, wait_for)\
 ARG(alarm_f *, func)
 
-#define TIMER_DEV_SET_ALARM_PERIODIC_SIG(RET,ARG)\
+#define TIMER_DEV_SET_ALARM_PERIODIC_SIG(RET,ARG,...)\
 RET(int)\
 ARG(size_t, alarm)\
 ARG(duration_t, period)\

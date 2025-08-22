@@ -19,14 +19,16 @@ virtio_gpu_mode_0_info = {
     .buffer_size = 640 * 480 * 4,
     .layer_count = 1,
     .layer_infos = {
-    {
-        .format = FB_LAYER_FORMAT_RGBA32,
-        .order = FB_LAYER_ORDER_ROW_MAJOR,
-        .width = 640,
-        .height = 480,
-        .offset = 0,
-        .stride = 4,
-    },
+	{
+        .layout = {
+            .format = GFX_FORMAT_RGBA32,
+            .order = GFX_ORDER_ROW_MAJOR,
+            .width = 640,
+            .height = 480,
+            .offset = 0,
+            .stride = 4,
+	},
+        },
     },
 };
 
@@ -109,8 +111,8 @@ virtio_gpu_fb_load_buffer(
     }
 
     enum virtio_gpu_formats gpu_format;
-    switch(mode_info->layer_infos[0].format) {
-        case FB_LAYER_FORMAT_RGBA32: gpu_format = VIRTIO_GPU_FORMAT_R8G8B8A8_UNORM; break;
+    switch(mode_info->layer_infos[0].layout.format) {
+        case GFX_FORMAT_RGBA32: gpu_format = VIRTIO_GPU_FORMAT_R8G8B8A8_UNORM; break;
         // TODO other cases
         default:
             eprintk("virtio_gpu_fb_load_buffer: called with invalid mode!\n");
@@ -137,8 +139,8 @@ virtio_gpu_fb_load_buffer(
     gpu->current_res =
         virtio_gpu_create_resource_2d(
             gpu,
-            mode_info->layer_infos[0].width,
-            mode_info->layer_infos[0].height,
+            mode_info->layer_infos[0].layout.width,
+            mode_info->layer_infos[0].layout.height,
             gpu_format);
     if(gpu->current_res == NULL) {
         dma_free(gpu->current_buffer, buffer_size);
@@ -166,8 +168,8 @@ virtio_gpu_fb_load_buffer(
             res = virtio_gpu_set_scanout(
                     gpu,
                     i,
-                    mode_info->layer_infos[0].width,
-                    mode_info->layer_infos[0].height,
+                    mode_info->layer_infos[0].layout.width,
+                    mode_info->layer_infos[0].layout.height,
                     gpu->current_res);
             if(res) {
                 wprintk("virtio_gpu_fb_load_buffer: failed to set scanout!\n");

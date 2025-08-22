@@ -289,8 +289,9 @@ handle_syscall(
             ret_val = (uint64_t)(int)
                 syscall_pipe(
                         process,
-                        (unsigned long)args->args[0],
-                        (fd_t __user *)args->args[1]
+                        (unsigned long)args->args[0], // flags
+                        (unsigned long)args->args[1], // mode_flags
+                        (fd_t __user *)args->args[2]
                         );
             break;
         case SYSCALL_ID_INSMOD:
@@ -330,19 +331,6 @@ handle_syscall(
                 syscall_time(
                         process,
                         (unsigned long)args->args[0]
-                        );
-            break;
-        case SYSCALL_ID_SIGRET:
-            ret_val = (uint64_t)(int)
-                syscall_sigret(
-                        process
-                        );
-            break;
-        case SYSCALL_ID_SIGROUTE:
-            ret_val = (uint64_t)(int)
-                syscall_sigroute(
-                        process,
-                        (void __user *)args->args[0]
                         );
             break;
         case SYSCALL_ID_RID:
@@ -388,6 +376,22 @@ handle_syscall(
                         (pid_t)args->args[0], // target
                         (int)args->args[1], // signal
                         (unsigned long)args->args[2] // flags
+                        );
+            break;
+        case SYSCALL_ID_SIGINFO:
+            ret_val = (uint64_t)(int)
+                syscall_siginfo(
+                        process,
+                        (unsigned long)args->args[0],
+                        (unsigned long __user *)args->args[1]
+                        );
+            break;
+        case SYSCALL_ID_SIGMOD:
+            ret_val = (uint64_t)(int)
+                syscall_sigmod(
+                        process,
+                        (unsigned long)args->args[0],
+                        (unsigned long)args->args[1]
                         );
             break;
         default:

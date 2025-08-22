@@ -11,7 +11,7 @@
 
 struct file_table
 {
-    spinlock_t lock;
+    thread_lock_t lock;
 
     struct ptree descriptor_tree;
 
@@ -52,6 +52,7 @@ int
 file_table_open(
         struct file_table *table,
         struct process *process,
+	struct fs_path *dir,
         const char *path,
         unsigned long access_flags,
         unsigned long mode_flags,
@@ -90,5 +91,11 @@ file_table_dup_into(
         fd_t lowest_dst,
         fd_t src,
         fd_t *out);
+
+// Closes all CLOSE_ON_EXEC files
+int
+file_table_on_exec(
+	struct file_table *table,
+	struct process *process);
 
 #endif

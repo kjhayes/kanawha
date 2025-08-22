@@ -345,14 +345,8 @@ ramfile_fs_node_ops =
 
     .getattr = ramfile_node_getattr,
     .setattr = ramfile_node_setattr,
-
-    .lookup = fs_node_cannot_lookup,
-    .mkfile = fs_node_cannot_mkfile,
-    .mkdir = fs_node_cannot_mkdir,
-    .link = fs_node_cannot_link,
-    .symlink = fs_node_cannot_symlink,
-    .unlink = fs_node_cannot_unlink,
 };
+FS_NODE_OPS_INIT_UNDEF(ramfile_fs_node_ops);
 
 struct fs_file_ops
 ramfile_fs_file_ops =
@@ -362,12 +356,8 @@ ramfile_fs_file_ops =
     .seek = fs_file_paged_seek,
 
     .flush = fs_file_paged_flush,
-
-    .dir_begin = fs_file_cannot_dir_begin,
-    .dir_next = fs_file_cannot_dir_next,
-    .dir_readattr = fs_file_cannot_dir_readattr,
-    .dir_readname = fs_file_cannot_dir_readname,
 };
+FS_FILE_OPS_INIT_UNDEF(ramfile_fs_file_ops);
 
 int
 create_ramfile(
@@ -417,63 +407,5 @@ destroy_ramfile(
         const char *ramfile_name)
 {
     return -EUNIMPL;
-}
-
-struct fs_node *
-ramfile_get(const char *name)
-{
-    int res;
-
-    if(ramfile_fs_mount == NULL) {
-        return NULL;
-    }
-
-    size_t root_index;
-    res = fs_mount_root_index(
-            &ramfile_fs_mount->fs_mount,
-            &root_index);
-    if(res) {
-        return NULL;
-    }
-
-    struct fs_node *root_node =
-        fs_mount_get_node(
-                &ramfile_fs_mount->fs_mount,
-                root_index);
-    if(root_node == NULL) {
-        return NULL;
-    }
-
-    size_t inode;
-    res = fs_node_lookup(
-            root_node,
-            name,
-            &inode);
-    if(res) {
-        fs_node_put(root_node);
-        return NULL;
-    }
-
-    struct fs_node *ramfile_node;
-    ramfile_node = fs_mount_get_node(
-            &ramfile_fs_mount->fs_mount,
-            inode);
-    if(ramfile_node == NULL) {
-        fs_node_put(root_node);
-        return NULL;
-    }
-
-    fs_node_put(root_node);
-    return ramfile_node;
-}
-
-int
-ramfile_put(
-        struct fs_node *node)
-{
-    if(ramfile_fs_mount == NULL) {
-        return -EINVAL;
-    }
-    return fs_node_put(node);
 }
 

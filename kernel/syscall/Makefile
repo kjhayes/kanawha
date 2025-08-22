@@ -32,11 +32,12 @@ obj-y += \
 	mod.o \
 	sleep.o \
 	time.o \
-	sigret.o \
-	sigroute.o \
+	siginfo.o \
+	sigmod.o \
 	rid.o \
 	wid.o \
 	resize.o \
 	poll.o \
 	sigsend.o \
+	openat.o \
 

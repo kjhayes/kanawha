@@ -17,24 +17,24 @@ struct ipv4_packet
     struct ipv4_raw_packet *data;
 };
 
-#define IPV4_DEV_ALLOC_PACKET_SIG(RET,ARG)\
+#define IPV4_DEV_ALLOC_PACKET_SIG(RET,ARG,...)\
 RET(struct ipv4_packet *)\
 ARG(size_t, packet_size)\
 ARG(unsigned long, flags)
 
-#define IPV4_DEV_SEND_PACKET_SIG(RET,ARG)\
+#define IPV4_DEV_SEND_PACKET_SIG(RET,ARG,...)\
 RET(int)\
 ARG(struct ipv4_packet *, pkt)
 
-#define IPV4_DEV_DROP_PACKET_SIG(RET,ARG)\
+#define IPV4_DEV_DROP_PACKET_SIG(RET,ARG,...)\
 RET(int)\
 ARG(struct ipv4_packet *, pkt)
 
-#define IPV4_DEV_BEGIN_RECV_SIG(RET,ARG)\
+#define IPV4_DEV_BEGIN_RECV_SIG(RET,ARG,...)\
 RET(int)\
 ARG(unsigned long, flags)
 
-#define IPV4_DEV_END_RECV_SIG(RET,ARG)\
+#define IPV4_DEV_END_RECV_SIG(RET,ARG,...)\
 RET(int)\
 ARG(unsigned long, flags)
 

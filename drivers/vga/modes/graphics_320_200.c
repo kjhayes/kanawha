@@ -13,11 +13,9 @@ static int
 vga_fb_flush_mode_graphics_320_200(
         struct vga_fb *fb)
 {
-    void *vga_mem = __va((void __phys *)0xA0000);
-    void *buffer = __va(fb->buffer);
-    vga_screen_disable(&fb->vga_dev);
-    memcpy(vga_mem, buffer, 320 * 200);
-    vga_screen_enable(&fb->vga_dev);
+//    vga_screen_disable(&fb->vga_dev);
+    memcpy_pp((void __phys *)0xA0000, fb->buffer, 320 * 200);
+//    vga_screen_enable(&fb->vga_dev);
     return 0;
 }
 
@@ -29,63 +27,88 @@ vga_fb_setup_mode_graphics_320_200(
     struct vga_dev *vga = &fb->vga_dev;
 
     vga_screen_disable(vga);
+//text  12h     13h     X
+//0x0C 	0x01 	0x41 	0x41
+//0x00 	0x00 	0x00 	0x00
+//0x0F 	0x0F 	0x0F 	0x0F
+//0x08 	0x00 	0x00 	0x00
+//0x00 	0x00 	0x00 	0x00
+//0x67 	0xE3 	0x63 	0xE3
+//0x00 	0x01 	0x01 	0x01
+//0x00 	0x00 	0x00 	0x00
+//0x07 	0x02 	0x0E 	0x06
+//0x10 	0x00 	0x40 	0x40
+//0x0E 	0x05 	0x05 	0x05
+//0x5F 	0x5F 	0x5F 	0x5F
+//0x4F 	0x4F 	0x4F 	0x4F
+//0x50 	0x50 	0x50 	0x50
+//0x82 	0x82 	0x82 	0x82
+//0x55 	0x54 	0x54 	0x54
+//0x81 	0x80 	0x80 	0x80
+//0xBF 	0x0B 	0xBF 	0x0D
+//0x1F 	0x3E 	0x1F 	0x3E
+//0x00 	0x00 	0x00 	0x00
+//0x4F 	0x40 	0x41 	0x41
+//0x9C 	0xEA 	0x9C 	0xEA
+//0x8E 	0x8C 	0x8E 	0xAC
+//0x8F 	0xDF 	0x8F 	0xDF
+//0x28 	0x28 	0x28 	0x28
+//0x1F 	0x00 	0x40 	0x00
+//0x96 	0xE7 	0x96 	0xE7
+//0xB9 	0x04 	0xB9 	0x06
+//0xA3 	0xE3 	0xA3 	0xE3 
 
-    vga_enable_linear(vga);
-    vga_disable_even_odd(vga);
-    vga_write_field(vga, WriteMode, 0);
-    vga_set_write_planes(vga, 0b1111);
-    vga_set_color_planes(vga, 0b1111);
-    vga_write_field(vga, ReadMode, 0);
-    vga_write_field(vga, AlphanumericModeDisable, 1);
-    vga_set_color_mode_pop_4(vga);
-    vga_enable_8_bit_color(vga);
-    vga_set_horizontal_panning(vga, 0);
-    vga_disable_half_rate_dot_clock(vga);
-    vga_enable_8_dot_mode(vga);
+    vga_write_field(vga, CRTCRegistersProtectEnable, 0);
 
-    vga_unlock_crt_reg(vga);
+    vga_write_register(vga,  AttributeModeControl,     0x41);
+    vga_write_register(vga,  OverscanColor,            0x00);
+    vga_write_register(vga,  ColorPlaneEnable,         0x0F);
+    vga_write_register(vga,  HorizontalPixelPanning,   0x00);
+    vga_write_register(vga,  ColorSelect,              0x00);
+    vga_write_register(vga,  MiscellaneousOutput,      0x63);
+    vga_write_register(vga,  ClockingMode,             0x01);
+    vga_write_register(vga,  CharacterMapSelect,       0x00);
+    vga_write_register(vga,  SequencerMemoryMode,      0x0C);
+    vga_write_register(vga,  GraphicsMode,             0x40);
+    vga_write_register(vga,  MiscellaneousGraphics,    0x05);
+    vga_write_register(vga,  HorizontalTotal,          0x5F);
+    vga_write_register(vga,  EndHorizontalDisplay,     0x4F);
+    vga_write_register(vga,  StartHorizontalBlanking,  0x50);
+    vga_write_register(vga,  EndHorizontalBlanking,    0x82);
+    vga_write_register(vga,  StartHorizontalRetrace,   0x54);
+    vga_write_register(vga,  EndHorizontalRetrace,     0x80);
+    vga_write_register(vga,  VerticalTotal,            0xBF);
+    vga_write_register(vga,  Overflow,                 0x1F);
+    vga_write_register(vga,  PresetRowScan,            0x00);
+    vga_write_register(vga,  MaximumScanLine,          0x41);
+    vga_write_register(vga,  VerticalRetraceStart,     0x9C);
+    vga_write_register(vga,  VerticalRetraceEnd,       0x8E & ~(0x80));
+    vga_write_register(vga,  VerticalDisplayEnd,       0x8F);
+    vga_write_register(vga,  Offset,                   0x28);
+    vga_write_register(vga,  UnderlineLocation,        0x40);
+    vga_write_register(vga,  StartVerticalBlanking,    0x96);
+    vga_write_register(vga,  EndVerticalBlanking,      0xB9);
+    vga_write_register(vga,  CRTCModeControl,          0xA3);
 
-    vga_crt_disable_retrace(vga);
-
-    // Because we are using 256 color mode, we need to double the "horizontal resolution" our timings are targeting
-    static const uint16_t effective_hres = 320;
-    static const uint16_t effective_vres = 200;
-    static const uint16_t hblank = 32;
-    static const uint16_t vblank = 32;
-    vga_crt_set_horizontal_total(vga, ((effective_hres + hblank) * 2) / vga_get_dots_per_character(vga));
-    vga_crt_set_vertical_total(vga, (effective_vres + vblank));
-
-    vga_crt_set_horizontal_display_end(vga, (effective_hres * 2) / vga_get_dots_per_character(vga));
-    vga_crt_set_vertical_display_end(vga, effective_vres);
-
-    vga_crt_set_horizontal_blanking_start(vga, (effective_hres * 2) / vga_get_dots_per_character(vga));
-    vga_crt_set_horizontal_blanking_end(vga, (hblank * 2) / vga_get_dots_per_character(vga));
-
-    vga_crt_set_vertical_blanking_start(vga, effective_vres);
-    vga_crt_set_vertical_blanking_end(vga, vblank);
-   
-    vga_crt_disable_scan_doubling(vga);
-    vga_crt_set_maximum_scanline(vga, 0);
-    vga_crt_set_address_size(vga, 4);
-    vga_crt_set_scanline_offset(
-            vga,
-            (320*2)/8 // "address" length of a scanline
-            );
-    vga_lock_crt_reg(vga);
-
-    // TODO Remove this (it's just here for debugging)
-    uint8_t *mem = __va(fb->buffer);
-    for(size_t y = 0; y < 200; y++) {
-        memset(mem + (y * 320), (uint8_t)y, 320);
-    }
+    vga_write_register(vga,  MapMask,                  0x0F); // Added
+    vga_write_register(vga,  EnableSetReset,           0x00); // Added
+    vga_write_register(vga,  SetReset,                 0x00); // Added
+    vga_write_register(vga,  DataRotate,               0x00); // Added
+    vga_write_register(vga,  ReadMapSelect,            0x00); // Added
+    vga_write_register(vga,  ColorDontCare,            0x00); // Added
+    vga_write_register(vga,  BitMask,                  0xFF); // Added
+    vga_write_register(vga,  DACMask,                  0xFF); // Added
 
     for(int i = 0; i < 256; i++) {
         uint8_t value = i;
         uint8_t r = ((value >> 0) & 0b111) << 3;
         uint8_t g = ((value >> 3) & 0b111) << 3;
         uint8_t b = ((value >> 6) & 0b11) << 4;
+	// For some reason this mode flips R and G with QEMU
         vga_dac_set_color(vga, i, r, g, b);
     }
+
+    vga_write_field(vga, CRTCRegistersProtectEnable, 1);
 
     vga_fb_flush_mode_graphics_320_200(fb);
 
@@ -99,12 +122,14 @@ static struct fb_mode_info mode_info = {
     .layer_count = 1,
     .layer_infos = {
     {
-        .format = FB_LAYER_FORMAT_BYTE_R3G3B2,
-        .order = FB_LAYER_ORDER_ROW_MAJOR,
-        .width = 320,
-        .height = 200,
-        .offset = 0,
-        .stride = 1,
+	.layout = {
+            .format = GFX_FORMAT_BYTE_R3G3B2,
+            .order = GFX_ORDER_ROW_MAJOR,
+            .width = 320,
+            .height = 200,
+            .offset = 0,
+            .stride = 1,
+	},
     },
     },
 };

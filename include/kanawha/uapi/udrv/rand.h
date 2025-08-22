@@ -1,0 +1,6 @@
+#ifndef __KANAWHA__UAPI_UDRV_RAND_H__
+#define __KANAWHA__UAPI_UDRV_RAND_H__
+
+#define UDRV_RAND_PKT_PROVIDE_ENTROPY (0)
+
+#endif

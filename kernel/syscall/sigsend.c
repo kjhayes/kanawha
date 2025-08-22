@@ -25,6 +25,10 @@ syscall_sigsend(
 
     res = process_send_signal(procid, signal, 0);
     if(res) {
+	LOG("failed to send signal %d to process %ld (err=%s)\n",
+		(s_t)signal,
+		(sl_t)procid,
+		errnostr(res));
         return res;
     }
     

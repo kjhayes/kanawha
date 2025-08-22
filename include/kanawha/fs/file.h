@@ -24,7 +24,7 @@ struct file
 
 #define FS_FILE_READ_NON_BLOCKING (1ULL<<0)
 
-#define FS_FILE_READ_SIG(RET,ARG)\
+#define FS_FILE_READ_SIG(RET,ARG,...)\
 RET(ssize_t)\
 ARG(void *, buf)\
 ARG(ssize_t, buflen)\
@@ -32,7 +32,7 @@ ARG(unsigned long, flags)
 
 #define FS_FILE_WRITE_NON_BLOCKING (1ULL<<0)
 
-#define FS_FILE_WRITE_SIG(RET,ARG)\
+#define FS_FILE_WRITE_SIG(RET,ARG,...)\
 RET(ssize_t)\
 ARG(void *, buf)\
 ARG(ssize_t, buflen)\
@@ -42,34 +42,34 @@ ARG(unsigned long, flags)
 #define FS_FILE_SEEK_SET 1
 #define FS_FILE_SEEK_END 2
 
-#define FS_FILE_SEEK_SIG(RET,ARG)\
+#define FS_FILE_SEEK_SIG(RET,ARG,...)\
 RET(ssize_t)\
 ARG(ssize_t, offset)\
 ARG(int, whence)
 
 #define FS_FILE_FLUSH_ASYNC (1ULL<<0)
 
-#define FS_FILE_FLUSH_SIG(RET,ARG)\
+#define FS_FILE_FLUSH_SIG(RET,ARG,...)\
 RET(int)\
 ARG(unsigned long, flags)
 
-#define FS_FILE_DIR_BEGIN_SIG(RET,ARG)\
+#define FS_FILE_DIR_BEGIN_SIG(RET,ARG,...)\
 RET(int)
 
-#define FS_FILE_DIR_NEXT_SIG(RET,ARG)\
+#define FS_FILE_DIR_NEXT_SIG(RET,ARG,...)\
 RET(int)
 
-#define FS_FILE_DIR_READATTR_SIG(RET,ARG)\
+#define FS_FILE_DIR_READATTR_SIG(RET,ARG,...)\
 RET(int)\
 ARG(int, attr)\
 ARG(size_t *, value)
 
-#define FS_FILE_DIR_READNAME_SIG(RET,ARG)\
+#define FS_FILE_DIR_READNAME_SIG(RET,ARG,...)\
 RET(int)\
 ARG(char *, buffer)\
 ARG(size_t, buflen)
 
-#define FS_FILE_POLL_SIG(RET,ARG)\
+#define FS_FILE_POLL_SIG(RET,ARG,...)\
 RET(int)\
 ARG(unsigned long, watch)\
 ARG(unsigned long *, triggered)
@@ -104,17 +104,6 @@ DEFINE_OP_LIST_WRAPPERS(
         file,
         FILE_FILE_OPS_ACCESSOR,
         SELF_ACCESSOR);
-
-#undef FS_FILE_READ_SIG
-#undef FS_FILE_WRITE_SIG
-#undef FS_FILE_SEEK_SIG
-#undef FS_FILE_FLUSH_SIG
-#undef FS_FILE_DIR_BEGIN_SIG
-#undef FS_FILE_DIR_NEXT_SIG
-#undef FS_FILE_DIR_READATTR_SIG
-#undef FS_FILE_DIR_READNAME_SIG
-#undef FS_FILE_POLL_SIG
-#undef FS_FILE_OP_LIST
 
 /*
  * Default Error-Throwing Implementations
@@ -161,6 +150,24 @@ fs_file_cannot_poll(
         struct file *file,
         unsigned long watching,
         unsigned long *triggered);
+
+static inline void
+fs_file_ops_init_undef(struct fs_file_ops *ops)
+{
+#define FS_FILE_OP_DEFAULT_INIT(__OP_NAME, ...)\
+    ops->__OP_NAME = ops->__OP_NAME ? ops->__OP_NAME : fs_file_cannot_ ## __OP_NAME;
+    FS_FILE_OP_LIST(FS_FILE_OP_DEFAULT_INIT);
+#undef FS_FILE_OP_DEFAULT_INIT
+}
+
+#define FS_FILE_OPS_INIT_UNDEF(__ops)\
+    static int\
+    __fs_file_ops_ ## __ops ## _init(void) {\
+	fs_file_ops_init_undef(&__ops);\
+	return 0;\
+    }\
+    declare_init(static, __fs_file_ops_ ## __ops ## _init);
+
 
 /*
  * Default No-Op (always "succeed") Implementations
@@ -222,5 +229,16 @@ int
 fs_file_paged_flush(
         struct file *file,
         unsigned long flags);
+
+#undef FS_FILE_READ_SIG
+#undef FS_FILE_WRITE_SIG
+#undef FS_FILE_SEEK_SIG
+#undef FS_FILE_FLUSH_SIG
+#undef FS_FILE_DIR_BEGIN_SIG
+#undef FS_FILE_DIR_NEXT_SIG
+#undef FS_FILE_DIR_READATTR_SIG
+#undef FS_FILE_DIR_READNAME_SIG
+#undef FS_FILE_POLL_SIG
+#undef FS_FILE_OP_LIST
 
 #endif

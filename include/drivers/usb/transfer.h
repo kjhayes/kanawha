@@ -14,7 +14,7 @@ typedef enum {
     USB_TRANSFER_ISOCH,
 } usb_transfer_t;
 
-#define USB_TRANSFER_LAUNCH_SIG(RET,ARG)\
+#define USB_TRANSFER_LAUNCH_SIG(RET,ARG,...)\
 RET(int)
 
 #define USB_TRANSFER_OP_LIST(OP, ...)\

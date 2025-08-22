@@ -14,6 +14,8 @@
 #include <kanawha/lock.h>
 
 #define FS_PATH_MAX_NAMELEN 256
+#define SYMLINK_BUFLEN    128
+#define MAX_SYMLINK_DEPTH 8
 
 // Global Lock (Not ideal but removing this will probably require RCU)
 static DECLARE_ILIST(root_fs_path_list);
@@ -92,17 +94,33 @@ static int
 __fs_path_get(struct fs_path *path);
 
 static int
+__fs_path_lookup_for_process(
+        struct process *process,
+	struct fs_path *dir_path,
+        const char *path_str,
+        unsigned long access_flags,
+        unsigned long mode_flags,
+        struct fs_path **out,
+	int symlink_depth);
+
+static int
 __fs_path_traverse(
         struct process *process,
         struct fs_path *dir,
         const char *child_name,
-        struct fs_path **out)
+	unsigned long access_flags,
+	unsigned long mode_flags,
+        struct fs_path **out,
+	int symlink_depth)
 {
     int res;
 
+    char symlink_buffer[SYMLINK_BUFLEN+1];
+    symlink_buffer[SYMLINK_BUFLEN] = '\0';
+
     fs_path_global_lock_acquire();
 
-    dprintk("fs_path_traverse(%s -> %s)\n",
+    dprintk("__fs_path_traverse(%s -> %s)\n",
             dir->name != NULL ? dir->name : "NULL",
             child_name != NULL ? child_name : "NULL");
 
@@ -146,8 +164,10 @@ __fs_path_traverse(
     res = fs_node_lookup(
             dir_fs_node,
             child_name,
-            &mount_index);
-    if(res) {
+            &mount_index,
+	    symlink_buffer,
+	    SYMLINK_BUFLEN);
+    if(res < 0) {
         // Not a special case, the file just doesn't exist or an error occurred
         dprintk("fs_node_lookup: %s returned (%s)\n",
                 child_name, errnostr(res));
@@ -155,60 +175,79 @@ __fs_path_traverse(
         return res;
     }
 
-    DEBUG_ASSERT(KERNEL_ADDR(dir_fs_node->mount));
-    dprintk("fs_node_lookup -> %p\n", mount_index);
+    if(res == FS_NODE_LOOKUP_HARD) {
+        DEBUG_ASSERT(KERNEL_ADDR(dir_fs_node->mount));
+        dprintk("fs_node_lookup -> %p\n", mount_index);
 
-    struct fs_node *child_fs_node =
-        fs_mount_get_node(
-                dir_fs_node->mount,
-                mount_index);
-    if(child_fs_node == NULL) {
-        fs_path_global_lock_release();
-        eprintk("fs_mount_get_node(0x%llx) returned NULL!\n",
-                (ull_t)mount_index);
-        return -EINVAL;
-    }
+        struct fs_node *child_fs_node =
+            fs_mount_get_node(
+                    dir_fs_node->mount,
+                    mount_index);
+        if(child_fs_node == NULL) {
+            fs_path_global_lock_release();
+            eprintk("fs_mount_get_node(0x%llx) returned NULL!\n",
+                    (ull_t)mount_index);
+            return -EINVAL;
+        }
 
-    struct fs_path *child = kzmalloc(sizeof(struct fs_path), KM_KERNEL);
-    if(child == NULL) {
-        fs_node_put(child_fs_node);
-        fs_path_global_lock_release();
-        return -ENOMEM;
-    }
+        struct fs_path *child = kzmalloc(sizeof(struct fs_path), KM_KERNEL);
+        if(child == NULL) {
+            fs_node_put(child_fs_node);
+            fs_path_global_lock_release();
+            return -ENOMEM;
+        }
 
 #ifdef CONFIG_DEBUG_CHECKSUM_FS_PATH
-    child->__checksum = FS_PATH_CHECKSUM;
+        child->__checksum = FS_PATH_CHECKSUM;
 #endif
 
-    child->refs = 1;
-    child->name = kstrdup(child_name);
-    if(child->name == NULL) {
-        kfree(child);
-        fs_path_global_lock_release();
-        return -ENOMEM;
-    }
+        child->refs = 1;
+        child->name = kstrdup(child_name);
+        if(child->name == NULL) {
+            kfree(child);
+            fs_path_global_lock_release();
+            return -ENOMEM;
+        }
 
-    res = assign_fs_node_to_fs_path(child_fs_node, child);
-    if(res) {
-        wprintk("assign_fs_node_to_fs_path returned %s during __fs_path_traverse!\n",
-                errnostr(res));
+        res = assign_fs_node_to_fs_path(child_fs_node, child);
+        if(res) {
+            wprintk("assign_fs_node_to_fs_path returned %s during __fs_path_traverse!\n",
+                    errnostr(res));
+            fs_node_put(child_fs_node);
+            kfree(child->name);
+            kfree(child);
+            fs_path_global_lock_release();
+            return res;
+        }
+
+        // assign_fs_node_to_fs_path should have gotten a reference to the node
         fs_node_put(child_fs_node);
-        kfree(child->name);
-        kfree(child);
-        fs_path_global_lock_release();
-        return res;
+
+        res = __fs_path_get(dir);
+        DEBUG_ASSERT(res == 0);
+        child->parent = dir;
+        ilist_push_tail(&dir->children, &child->child_node);
+        ilist_init(&child->children);
+
+        *out = child;
+    } else if(res == FS_NODE_LOOKUP_SYMBOLIC) {
+	struct fs_path *root = process->root_directory;
+	fs_path_get(root);
+	res = __fs_path_lookup_for_process(
+		process,
+		root,
+		symlink_buffer,
+		access_flags,
+		mode_flags,
+		out,
+		symlink_depth+1);
+	fs_path_put(root);
+	if(res) {
+	    fs_path_global_lock_release();
+	    return res;
+	}
     }
 
-    // assign_fs_node_to_fs_path should have gotten a reference to the node
-    fs_node_put(child_fs_node);
-
-    res = __fs_path_get(dir);
-    DEBUG_ASSERT(res == 0);
-    child->parent = dir;
-    ilist_push_tail(&dir->children, &child->child_node);
-    ilist_init(&child->children);
-
-    *out = child;
     fs_path_global_lock_release();
     return 0;
 }
@@ -489,15 +528,21 @@ fs_path_unmount(
     return -EUNIMPL;
 }
 
-int
-fs_path_lookup_for_process(
+static int
+__fs_path_lookup_for_process(
         struct process *process,
+	struct fs_path *dir_path,
         const char *path_str,
         unsigned long access_flags,
         unsigned long mode_flags,
-        struct fs_path **out)
+        struct fs_path **out,
+	int symlink_depth)
 {
     int res;
+
+    if(symlink_depth > MAX_SYMLINK_DEPTH) {
+	return -ELOOP;
+    }
 
     dprintk("fs_path_lookup_for_process(pid=%ld, %s, root=%p, pwd=%p)\n",
             (sl_t)process->id,
@@ -513,84 +558,71 @@ fs_path_lookup_for_process(
     size_t pathlen = strlen(dup);
 
     // Treat "" as the current directory
-    struct fs_path *cur;
-    if(pathlen == 0) {
-        cur = process->working_directory;
+    struct fs_path *cur = dir_path;
+
+    for(size_t i = 0; i < pathlen; i++) {
+        if(dup[i] == '/') {
+            dup[i] = '\0';
+        }
     }
-    else {
-      for(size_t i = 0; i < pathlen; i++) {
-          if(dup[i] == '/') {
-              dup[i] = '\0';
-          }
-      }
 
-      if(strlen(dup) == 0) {
-          // "/..."
-          dprintk("fs_path_lookup_for_process(pid=%ld, %s) Starting from root directory (%s)\n",
-                  (sl_t)process->id,
-                  path_str,
-                  process->root_directory->name != NULL ? process->root_directory->name : "NULL");
-          cur = process->root_directory;
-      } else {
-          // "..."
-          dprintk("fs_path_lookup_for_process(pid=%ld, %s) Starting from working directory (%s)\n",
-                  (sl_t)process->id,
-                  path_str,
-                  process->root_directory->name != NULL ? process->root_directory->name : "NULL");
-          cur = process->working_directory;
-      }
+    DEBUG_ASSERT(KERNEL_ADDR(cur));
 
-      DEBUG_ASSERT(KERNEL_ADDR(cur));
+    res = fs_path_get(cur);
+    if(res) {
+        eprintk("fs_path_lookup_for_process: fs_path_get failed for initial directory! (err=%s)\n",
+                errnostr(res));
+        goto exit;
+    }
 
-      res = fs_path_get(cur);
-      if(res) {
-          eprintk("fs_path_lookup_for_process: fs_path_get failed for initial directory! (err=%s)\n",
-                  errnostr(res));
-          goto exit;
-      }
+    char *dup_end = dup + pathlen;
 
-      char *dup_end = dup + pathlen;
+    char *iter = dup;
+    while(iter < dup_end) {
 
-      char *iter = dup;
-      while(iter < dup_end) {
+        // TODO: Check process directory permissions on cur here
 
-          // TODO: Check process directory permissions on cur here
+        size_t curlen = strlen(iter);
 
-          size_t curlen = strlen(iter);
+        if(curlen == 0) {
+            iter += 1;
+            continue;
+        }
 
-          if(curlen == 0) {
-              iter += 1;
-              continue;
-          }
+        struct fs_path *next;
 
-          struct fs_path *next;
+        res = __fs_path_traverse(
+      	  process,
+      	  cur,
+      	  iter,
+      	  access_flags,
+      	  mode_flags,
+      	  &next,
+      	  symlink_depth); 
+        if(res) {
+            fs_path_put(cur);
+            dprintk("fs_path_lookup_for_process(pid=%ld, %s) __fs_path_traverse(%p, %s) returned %s\n",
+                (sl_t)process->id,
+                path_str,
+                cur,
+                iter,
+                errnostr(res));
+            goto exit;
+        }
+        
+        if(next == NULL) {
+            fs_path_put(cur);
+            dprintk("fs_path_lookup_for_process(pid=%ld, %s) next node after traversal is NULL!\n",
+                (sl_t)process->id,
+                path_str);
+            res = -ENXIO;
+            goto exit;
+        }
 
-          res = __fs_path_traverse(process, cur, iter, &next); 
-          if(res) {
-              fs_path_put(cur);
-              dprintk("fs_path_lookup_for_process(pid=%ld, %s) __fs_path_traverse(%p, %s) returned %s\n",
-                  (sl_t)process->id,
-                  path_str,
-                  cur,
-                  iter,
-                  errnostr(res));
-              goto exit;
-          }
-          
-          if(next == NULL) {
-              fs_path_put(cur);
-              dprintk("fs_path_lookup_for_process(pid=%ld, %s) next node after traversal is NULL!\n",
-                  (sl_t)process->id,
-                  path_str);
-              res = -ENXIO;
-              goto exit;
-          }
+        cur = next;
 
-          cur = next;
-
-          // Go to the next path_str
-          iter += (curlen+1);
-      }
+        // Go to the next path_str
+        iter += (curlen+1);
     }
 
     // TODO: Check process file access permissions here
@@ -607,6 +639,25 @@ exit:
                 errnostr(res));
     }
     return res;
+}
+
+int
+fs_path_lookup_for_process(
+        struct process *process,
+	struct fs_path *dir_path,
+        const char *path_str,
+        unsigned long access_flags,
+        unsigned long mode_flags,
+        struct fs_path **out)
+{
+    return __fs_path_lookup_for_process(
+	    process,
+	    dir_path,
+	    path_str,
+	    access_flags,
+	    mode_flags,
+	    out,
+	    0);
 }
 
 int

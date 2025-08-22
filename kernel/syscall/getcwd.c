@@ -49,7 +49,7 @@ syscall_getcwd(
 
         const char *name = fs_path_get_name(cwd);
         if(cwd == process->root_directory) {
-            name = "/";
+            name = "";
         }
         else if(name == NULL) {
             name = "";
