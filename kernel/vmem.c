@@ -632,8 +632,6 @@ vmem_map_unhandled_user_page_fault(
     }
 
     // We need to terminate the process
-    // TODO: Signal something like SIGSEGV once we have
-    // signalling implemented
 
 #ifdef CONFIG_DEBUG_TRACK_PROCESS_EXEC
     eprintk("Terminating PID(%ld) [EXEC(%s)] for Invalid Memory Access (user_ip=%p) (addr=%p)!\n"
@@ -675,6 +673,10 @@ vmem_map_unhandled_user_page_fault(
             (sl_t)process->id,
             process->user_ip);
 #endif
+
+    printk("Sending MEMFAULT to process %ld for unhandled page fault!\n",
+	    (sl_t)process->id);
+    arch_excp_dump_state(state, do_printk);
 
     res = signal_deliver(process, SIGNAL_ID_MEMFAULT, 0);
     if(res) {
