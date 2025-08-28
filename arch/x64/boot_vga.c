@@ -115,6 +115,15 @@ int x64_boot_vga_init(void)
     res = printk_add_handler(x64_boot_vga_printk_handler);
     return res;
 }
-
 declare_init_desc(boot, x64_boot_vga_init, "Registering Boot VGA");
+
+#ifndef CONFIG_X64_BOOT_VGA_POST_LAUNCH
+int x64_boot_vga_deinit(void) 
+{
+    int res;
+    res = printk_remove_handler(x64_boot_vga_printk_handler);
+    return res;
+}
+declare_init_desc(platform, x64_boot_vga_deinit, "Deregistering Boot VGA");
+#endif
 

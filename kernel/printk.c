@@ -551,22 +551,39 @@ int vprintk(struct vprintk_state *state, const char *fmt, va_list *args)
  * Early Printk
  */
 
+DEFINE_LOCAL_IRQ_LOCK(printk_handlers_lock);
 static printk_handler_f *(printk_handlers [CONFIG_PRINTK_MAX_HANDLERS]) = { NULL };
 
 int printk_add_handler(printk_handler_f *handler) 
 {
+    printk_handlers_lock_acquire();
     for(size_t i = 0; i < CONFIG_PRINTK_MAX_HANDLERS; i++) {
         if(printk_handlers[i] == NULL) {
             printk_handlers[i] = handler;
+            printk_handlers_lock_release();
             return 0;
         }
     }
+    printk_handlers_lock_release();
     return -ENOMEM;
+}
+
+int printk_remove_handler(printk_handler_f *handler)
+{
+    printk_handlers_lock_acquire();
+    for(size_t i = 0; i < CONFIG_PRINTK_MAX_HANDLERS; i++) {
+	if(printk_handlers[i] == handler) {
+	    printk_handlers[i] = NULL;
+	}
+    }
+    printk_handlers_lock_release();
+    return 0;
 }
 
 static int
 printk_print_buffer(void *state, size_t len, char *buffer) 
 {
+    printk_handlers_lock_acquire();
     for(size_t i = 0; i < len; i++) 
     {
         char c = buffer[i];
@@ -579,6 +596,7 @@ printk_print_buffer(void *state, size_t len, char *buffer)
             }
         }
     }
+    printk_handlers_lock_release();
 
     return 0;
 }

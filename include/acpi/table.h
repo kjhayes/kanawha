@@ -46,9 +46,14 @@ struct __packed acpi_table_data {
 
 ASSERT_TYPE_SIZE(struct acpi_table_data, sizeof(struct acpi_table_hdr));
 
+#define ACPI_TABLE_SIGNATURE_BUFLEN 16
+
 struct acpi_table {
+    char signature_str[ACPI_TABLE_SIGNATURE_BUFLEN];
+
+    unsigned int is_ssdt;
     struct stree_node tree_node;
-    char signature_str[5];
+    ilist_node_t ssdt_node;
 
 #ifdef CONFIG_ACPI_SYSFS
     ilist_node_t sysfs_temp_list_node; // This is an ugly HACK

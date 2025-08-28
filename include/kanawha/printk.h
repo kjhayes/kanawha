@@ -72,6 +72,7 @@ void do_panic(void);
 
 int printk_init(void);
 int printk_add_handler(printk_handler_f *handler);
+int printk_remove_handler(printk_handler_f *handler);
 
 int snprintk(char *buf, size_t buf_size, const char *fmt, ...);
 

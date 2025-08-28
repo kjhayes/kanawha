@@ -45,45 +45,56 @@ acpi_register_raw_table(struct acpi_table_data *table)
 {
     int res;
 
+    acpi_table_lock_acquire();
+
+    struct acpi_table *ptr;
+
     // Special Cases
     if(table->hdr.signature[0] == 'S'
     &&(table->hdr.signature[1] == 'S')
     &&(table->hdr.signature[2] == 'D')
     &&(table->hdr.signature[3] == 'T'))
     {
-        struct acpi_table *ptr;
-
         ptr = slab_alloc(acpi_table_slab_allocator);
         if(ptr == NULL) {
+            acpi_table_lock_release();
             return -ENOMEM;
         }
         ptr->table = table;
-        wprintk("Ignoring ACPI SSDT Table!\n");
-        return 0;
+	ptr->is_ssdt = 1;
+
+	size_t index = ilist_count(&acpi_ssdt_list);
+	snprintk(ptr->signature_str, ACPI_TABLE_SIGNATURE_BUFLEN, "SSDT%lu", (ul_t)index);
+
+	ilist_push_tail(&acpi_ssdt_list, &ptr->ssdt_node);
     }
+    else {
 
-    struct stree_node *node;
-    char buf[5];
-    memcpy(buf, table->hdr.signature, 4);
-    buf[4] = '\0';
-    node = stree_get(&acpi_table_tree, buf);
-    if(node != NULL) {
-        wprintk("Trying to register multiple versions of the ACPI \"%s\" Table! (ignoring)\n", buf);
-        return 0;
+        struct stree_node *node;
+        char buf[5];
+        memcpy(buf, table->hdr.signature, 4);
+        buf[4] = '\0';
+        node = stree_get(&acpi_table_tree, buf);
+        if(node != NULL) {
+            wprintk("Trying to register multiple versions of the ACPI \"%s\" Table! (ignoring)\n", buf);
+            acpi_table_lock_release();
+            return 0;
+        }
+
+        ptr = slab_alloc(acpi_table_slab_allocator);
+        if(ptr == NULL) {
+            eprintk("Failed to allocate ACPI table node!\n");
+            acpi_table_lock_release();
+            return -ENOMEM;
+        }
+
+        ptr->table = table;
+	ptr->is_ssdt = 0;
+        strncpy(ptr->signature_str, buf, ACPI_TABLE_SIGNATURE_BUFLEN);
+        ptr->tree_node.key = ptr->signature_str;
+
+        stree_insert(&acpi_table_tree, &ptr->tree_node);
     }
-
-    struct acpi_table *ptr;
-    ptr = slab_alloc(acpi_table_slab_allocator);
-    if(ptr == NULL) {
-        eprintk("Failed to allocate ACPI table node!\n");
-        return -ENOMEM;
-    }
-
-    ptr->table = table;
-    memcpy(ptr->signature_str, buf, 5);
-    ptr->tree_node.key = ptr->signature_str;
-
-    stree_insert(&acpi_table_tree, &ptr->tree_node);
 
 #ifdef CONFIG_ACPI_SYSFS
     res = acpi_sysfs_on_register_table(ptr);
@@ -94,6 +105,7 @@ acpi_register_raw_table(struct acpi_table_data *table)
 
     printk("Registered ACPI Table: %s\n", ptr->signature_str);
 
+    acpi_table_lock_release();
     return 0;
 }
 

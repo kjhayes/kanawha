@@ -4,12 +4,19 @@
 #include <kanawha/types.h>
 #include <kanawha/list.h>
 
+struct acpi_node;
+
 struct acpi_name {
     union {
         uint8_t raw[4];
         uint32_t value;
     };
 };
+
+#define ACPI_PATH_PREFIX_ROOT (-1)
+#define ACPI_PATH_PREFIX_NONE (0)
+#define ACPI_PATH_PREFIX_PARENT (1)
+#define ACPI_PATH_PREFIX_ANCESTOR(N) (N)
 
 struct acpi_path {
     // -1  => Root Prefix
@@ -27,7 +34,6 @@ struct acpi_path {
 //     >0 => Number of Parent Prefixes (Think: how many ".." to prefix)
 //
 // Returns NULL on failure
-#define ACPI_PATH_PARENT_PREFIX_ABSOLUTE (-1)
 struct acpi_path *
 acpi_path_create(
         size_t length,
@@ -36,6 +42,15 @@ acpi_path_create(
 void
 acpi_path_destroy(
         struct acpi_path *);
+
+struct acpi_path *
+acpi_path_clone(
+	struct acpi_path *path);
+
+struct acpi_path *
+acpi_path_create_absolute(
+	struct acpi_node *scope,
+	struct acpi_path *relpath);
 
 // Returns 0 on success
 int

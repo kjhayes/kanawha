@@ -1,5 +1,6 @@
 
 #include <acpi/name.h>
+#include <acpi/namespace.h>
 #include <kanawha/string.h>
 #include <kanawha/kmalloc.h>
 #include <kanawha/errno.h>
@@ -28,6 +29,87 @@ acpi_path_destroy(
         struct acpi_path *path)
 {
     kfree(path);
+}
+
+struct acpi_path *
+acpi_path_clone(
+	struct acpi_path *path)
+{
+    struct acpi_path *clone = acpi_path_create(
+	    path->pathlen,
+	    path->prefixes);
+    if(clone == NULL) {
+	return NULL;
+    }
+    memcpy(clone->names, path->names, sizeof(struct acpi_name) * clone->pathlen);
+    return clone;
+}
+
+struct acpi_path *
+acpi_path_create_absolute(
+	struct acpi_node *scope,
+	struct acpi_path *relpath)
+{
+    if(relpath->prefixes == ACPI_PATH_PREFIX_ROOT) {
+	return acpi_path_clone(relpath);
+    }
+
+    acpi_node_get(scope);
+    for(size_t i = 0; i < relpath->prefixes; i++) {
+	struct acpi_node *old = scope;
+	scope = acpi_node_get_parent(scope);
+	acpi_node_put(old);
+	if(scope == NULL) {
+	    wprintk("acpi_path_create_absolute: Failed to create path from relative path with invalid number of prefixes!\n");
+	    return NULL;
+	}
+    }
+
+    size_t num_ancestors = 0;
+    struct acpi_node *ancestor = scope;
+    acpi_node_get(ancestor);
+    while(1) {
+	struct acpi_node *old = ancestor;
+	ancestor = acpi_node_get_parent(ancestor);
+	acpi_node_put(old);
+
+	if(ancestor == NULL) {
+	    break;
+	}
+
+	num_ancestors++;
+    }
+
+    size_t pathlen = relpath->pathlen + num_ancestors;
+    struct acpi_path *abs_path = acpi_path_create(pathlen, ACPI_PATH_PREFIX_ROOT);
+    if(abs_path == NULL) {
+	acpi_node_put(scope);
+	wprintk("acpi_path_create_absolute: Failed to allocate path!\n");
+	return NULL;
+    }
+
+    ancestor = scope;
+    acpi_node_get(ancestor);
+    for(size_t i = 0; i < num_ancestors; i++)
+    {
+	if(ancestor == NULL) {
+	    // Unexpected
+	    acpi_node_put(scope);
+	    acpi_path_destroy(abs_path);
+	    wprintk("acpi_path_create_absolute: Failed to get path ancestor (Unexpected)!\n");
+	    return NULL;
+	}
+
+	abs_path->names[(num_ancestors-1)-i] = acpi_node_get_name(ancestor);
+
+	struct acpi_node *old = ancestor;
+	ancestor = acpi_node_get_parent(ancestor);
+	acpi_node_put(old);
+    }
+
+    memcpy(&abs_path->names[num_ancestors], relpath->names, relpath->pathlen * sizeof(struct acpi_name));
+
+    return abs_path;
 }
 
 // Returns 0 on success
@@ -78,17 +160,33 @@ acpi_verify_path(
     return 0;
 }
 
+static inline int
+acpi_isgraph(char c)
+{
+    return ((c > 0x20) && (c < 0x7F));
+}
+
 int
 acpi_dump_name(
         printk_f *printer,
         struct acpi_name *name)
 {
-    (*printer)("%c%c%c%c",
-            name->raw[0],
-            name->raw[1],
-            name->raw[2],
-            name->raw[3]
-            );
+    {
+	char c = name->raw[0];
+	if(c == '_' || (c >= 'A' && c <= 'Z')) {
+	    (*printer)("%c", c);
+	} else {
+	    (*printer)("{Invalid-Char-0x%x}", (unsigned int)c);
+	}
+    }
+    for(size_t i = 1; i < 4; i++) {
+	char c = name->raw[i];
+	if(c == '_' || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')) {
+	    (*printer)("%c", c);
+	} else {
+	    (*printer)("{Invalid-Char-0x%x}", (unsigned int)c);
+	}
+    }
     return 0;
 }
 

@@ -743,7 +743,7 @@ vmem_map_handle_page_fault(
                 return res; // res should be zero assuming there are no kernel errors,
                             // even if we end up killing the user-process
             } else {
-		arch_dump_vmem_map(do_printk, map);
+		//arch_dump_vmem_map(do_printk, map);
                 eprintk("Unhandled Kernel Page Fault! (addr=%p) %s%s%s%s%s\n",
                     faulting_address,
                     (access_flags & PF_FLAG_NOT_PRESENT ? "[NOT_PRESENT]" : ""),

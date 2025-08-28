@@ -21,3 +21,12 @@ int x64_boot_serial_init(void)
 
 declare_init_desc(boot, x64_boot_serial_init, "Registering Boot Serial Port");
 
+#ifndef CONFIG_X64_BOOT_SERIAL_POST_LAUNCH
+int x64_boot_serial_deinit(void) 
+{
+    int res;
+    res = printk_remove_handler(x64_boot_serial_printk_handler);
+    return res;
+}
+declare_init_desc(platform, x64_boot_serial_deinit, "Deregistering Boot Serial");
+#endif

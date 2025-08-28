@@ -7,9 +7,9 @@
 static int
 mess_with_the_idt(void) {
 
-    void __user *entry_addr = (void __user *)0xCAFEBABE;
+    void __user *entry_addr = (void __user *)0x00000000004008d0; // trap_entry
 
-    struct idt64_entry *desc = &x64_idt64.exception_descriptors[0];
+    struct idt64_entry *desc = &x64_idt64.exception_descriptors[3];
 
     desc->offset_0_15 = ((uintptr_t)entry_addr) & 0xFFFF;
     desc->offset_16_31 = (((uintptr_t)entry_addr) >> 16) & 0xFFFF;
@@ -34,5 +34,5 @@ mess_with_the_idt(void) {
 
     return 0;
 }
-declare_init_desc(launch, mess_with_the_idt, "Messing with the IDT");
+//declare_init_desc(launch, mess_with_the_idt, "Messing with the IDT");
 
