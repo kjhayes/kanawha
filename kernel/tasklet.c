@@ -16,7 +16,13 @@ static struct waitqueue tasklet_waitqueue;
 static int
 init_tasklet_waitqueue(void)
 {
-    return waitqueue_init(&tasklet_waitqueue);
+    int res;
+    res = waitqueue_init(&tasklet_waitqueue);
+    if(res) {
+	return res;
+    }
+    waitqueue_name(&tasklet_waitqueue, "tasklet");
+    return 0;
 }
 declare_init(dynamic, init_tasklet_waitqueue);
 

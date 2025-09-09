@@ -4,6 +4,8 @@
 #include <elf/reloc.h>
 #include <kanawha/symbol.h>
 #include <kanawha/init.h>
+#include <kanawha/proc/process.h>
+#include <arch/x64/sysreg.h>
 
 static
 const char *
@@ -194,4 +196,13 @@ x86_64_register_elf_relocs(void)
     return elf64_register_machine_reloc(&x86_64_elf64_relocs);
 }
 declare_init_desc(fs, x86_64_register_elf_relocs, "Registering x64 Elf Relocation Information");
+
+int
+arch_exec_elf64_setup_tls(
+	struct process *process,
+	void __user *tls_base)
+{
+    process->thread.arch_state.fsbase = (uint64_t)tls_base;
+    return 0;
+}
 

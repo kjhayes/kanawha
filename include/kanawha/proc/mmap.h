@@ -95,6 +95,12 @@ mmap_map_region_exact(
         unsigned long mmap_flags);
 
 int
+mmap_find_free_region(
+	struct process *process,
+	uintptr_t *hint_offset,
+	size_t size);
+
+int
 mmap_unmap_region(
         struct process *process,
         uintptr_t mmap_offset);

@@ -52,7 +52,7 @@ mb2_init_modules_as_ramfile(void)
 
     dprintk("info=%p\n", __pa((vaddr_t)info));
 
-    mb2_info_for_each_tag((struct mb2_info*)__va((void __phys *)*(struct mb2_info**)__va((void __phys *)&boot_mb2_info_ptr)), mb2_module_handler, &res); 
+    mb2_info_for_each_tag(info, mb2_module_handler, &res); 
     return res;
 }
 

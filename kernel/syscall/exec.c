@@ -8,11 +8,10 @@
 #include <kanawha/string.h>
 #include <kanawha/assert.h>
 #include <kanawha/uapi/mmap.h>
+#include <kanawha/uapi/exec.h>
 #include <kanawha/proc/mmap.h>
 #include <kanawha/fs/node.h>
-
-#include <elf/elf.h>
-#include <elf/elf_string.h>
+#include <kanawha/exec_type.h>
 
 #ifdef CONFIG_DEBUG_SYSCALL_EXEC
 #define LOG(fmt, ...) printk("PID(%ld) syscall_exec: " fmt, process->id, ##__VA_ARGS__)
@@ -20,226 +19,46 @@
 #define LOG(...)
 #endif
 
-static int
-exec_elf64_check_header(
-        Elf64_Ehdr *hdr)
+struct exec_probe_state
 {
-    if(hdr->e_ident[EI_MAG0] != EI_MAG0_VALID) {
-        eprintk("ELF64 File has invalid EI_MAG0!\n");
-        return -EINVAL;
-    }
-    if(hdr->e_ident[EI_MAG1] != EI_MAG1_VALID) {
-        eprintk("ELF64 File has invalid EI_MAG1!\n");
-        return -EINVAL;
-    }
-    if(hdr->e_ident[EI_MAG2] != EI_MAG2_VALID) {
-        eprintk("ELF64 File has invalid EI_MAG2!\n");
-        return -EINVAL;
-    }
-    if(hdr->e_ident[EI_MAG3] != EI_MAG3_VALID) {
-        eprintk("ELF64 File has invalid EI_MAG3!\n");
-        return -EINVAL;
-    }
+    int status;
+    struct exec_type *type;
 
-    if(hdr->e_ident[EI_CLASS] != ELFCLASS64) {
-        eprintk("ELF File is not 64-bit!\n");
-        return -EINVAL;
-    }
+    // Used for probing different executable formats
+    struct process *process;
+    struct file *file;
+};
 
-    if(hdr->e_type != ET_EXEC) {
-        eprintk("ELF64 File has type = \"%s\"!\n", elf_get_type_string(hdr->e_type));
-        return -EINVAL;
-    }
-
-    return 0;
-}
-
-static int
-exec_elf64_load_segment(
-        struct process *process,
-        fd_t file,
-        Elf64_Phdr *phdr)
+static void
+exec_syscall_exec_type_probe_callback(
+	struct exec_type *exec_type,
+	void *state_opaque_ptr)
 {
+    struct exec_probe_state *state = state_opaque_ptr;
+
+    if(state->status == EXEC_TYPE_PROBE_CLAIM || state->status < 0) {
+	// Some other exec_type claimed this file or threw an error
+	return;
+    }
+
     int res;
-
-    unsigned long mmap_flags = 0;
-
-    if(phdr->p_memsz == 0) {
-        wprintk("exec_elf64_load_segment: PT_LOAD segment with mem_size=0!\n");
-        return -EINVAL;
+    res = exec_type_probe(exec_type, state->process, state->file);
+    if(res < 0) {
+	state->status = res;
+	return;
     }
 
-    uintptr_t offset = phdr->p_offset;
-    uintptr_t vaddr = phdr->p_vaddr;
-    size_t memsz = phdr->p_memsz;
-    size_t filesz = phdr->p_filesz;
-
-    if((offset & ((1ULL<<VMEM_MIN_PAGE_ORDER)-1)) != (vaddr & ((1ULL<<VMEM_MIN_PAGE_ORDER)-1))) {
-        wprintk("exec_elf64_load_segment: PT_LOAD segment with file_offset=%p, vaddr=%p with different page offsets!\n",
-                (uintptr_t)offset, (uintptr_t)vaddr);
-        return -EINVAL;
+    if(res == EXEC_TYPE_PROBE_MAYBE && state->status == EXEC_TYPE_PROBE_REJECT) {
+	state->type = exec_type;
+	state->status = EXEC_TYPE_PROBE_MAYBE;
     }
-
-    if(ptr_orderof(vaddr) < VMEM_MIN_PAGE_ORDER) {
-        // Need to align both the file_offset and vaddr down to the nearest page
-        size_t page_offset = (vaddr & ((1ULL<<VMEM_MIN_PAGE_ORDER)-1));
-        vaddr -= page_offset;
-        offset -= page_offset;
-
-        // Increase the file size to compensate
-        filesz += page_offset;
+    else if(res == EXEC_TYPE_PROBE_CLAIM) {
+	state->type = exec_type;
+	state->status = EXEC_TYPE_PROBE_CLAIM;
     }
-
-    if(ptr_orderof(filesz) < VMEM_MIN_PAGE_ORDER) {
-        dprintk("exec_elf64_load_segment: PT_LOAD segment with file_size=%p not a multiple of the minimum page size: rounding up\n",
-                (uintptr_t)filesz);
-        filesz += ((1ULL<<VMEM_MIN_PAGE_ORDER)-1);
-        filesz &= ~((1ULL<<VMEM_MIN_PAGE_ORDER)-1);
+    else {
+        DEBUG_ASSERT(res == EXEC_TYPE_PROBE_REJECT);
     }
-
-    size_t bsssz = 0;
-    if(memsz > filesz) {
-        bsssz = memsz - filesz;
-    }
-
-    if(ptr_orderof(bsssz) < VMEM_MIN_PAGE_ORDER) {
-        dprintk("exec_elf64_load_segment: PT_LOAD segment with bss_size=%p not a multiple of the minimum page size: rounding up\n",
-                (uintptr_t)bsssz);
-        bsssz += ((1ULL<<VMEM_MIN_PAGE_ORDER)-1);
-        bsssz &= ~((1ULL<<VMEM_MIN_PAGE_ORDER)-1);
-    }
-
-    if(phdr->p_flags & PF_R) {
-        mmap_flags |= MMAP_PROT_READ;
-    }
-    if(phdr->p_flags & PF_W) {
-        mmap_flags |= MMAP_PROT_WRITE;
-    }
-    if(phdr->p_flags & PF_X) {
-        mmap_flags |= MMAP_PROT_EXEC;
-    }
-
-    if(filesz > 0) {
-        dprintk("PID(%ld) syscall_exec: Mapping File Segment [%p-%p) size=0x%lx\n",
-                process->id,
-                phdr->p_vaddr,
-                phdr->p_vaddr + bsssz,
-                bsssz);
-        res = mmap_map_region_exact(
-                process,
-                file,
-                offset,
-                vaddr,
-                filesz,
-                mmap_flags | (mmap_flags & MMAP_PROT_WRITE ? MMAP_PRIVATE : MMAP_SHARED));
-        if(res) {
-            return res;
-        }
-    } 
-
-    if(bsssz > 0) {
-        dprintk("PID(%ld) syscall_exec: Mapping .bss Segment [%p-%p) size=0x%lx\n",
-                process->id,
-                phdr->p_vaddr,
-                phdr->p_vaddr + bsssz,
-                bsssz);
-        res = mmap_map_region_exact(
-                process,
-                0,
-                0,
-                vaddr + filesz,
-                bsssz,
-                mmap_flags | MMAP_ANON);
-        if(res) {
-            return res;
-        }
-    }
-
-
-    return 0;
-}
-
-static int
-exec_elf64_handle_segment(
-        struct process *process,
-        fd_t file,
-        Elf64_Phdr *phdr)
-{
-    switch(phdr->p_type) {
-        case PT_LOAD:
-            return exec_elf64_load_segment(
-                    process,
-                    file,
-                    phdr);
-        case PT_NULL:
-            return 0;
-        default:
-            dprintk("Ignoring Unsupported ELF Segment \"%s\" offset=%p, memsz=%p\n",
-                    elf_get_phdr_type_string(phdr->p_type), phdr->p_offset, phdr->p_memsz);
-            break;
-    }
-
-
-
-    return 0;
-}
-
-static int
-process_exec_elf64(
-        struct process *process,
-        fd_t file,
-        struct file *desc)
-{
-    int res;
-
-    if((desc->access_flags & FILE_PERM_READ) == 0) {
-        eprintk("process_exec_elf64: file does not have READ permissions!\n");
-        return -EPERM;
-    }
-
-    struct fs_node *elf_node = fs_path_get_fs_node(desc->path);
-    if(elf_node == NULL) {
-        return -EINVAL;
-    }
-
-    Elf64_Ehdr elf_hdr;
-    size_t amount = sizeof(Elf64_Ehdr);
-
-    res = fs_node_paged_read(elf_node, 0, &elf_hdr, amount, 0);
-    if(res) {
-        return res;
-    }
-
-    res = exec_elf64_check_header(&elf_hdr);
-    if(res) {
-        return res;
-    }
-
-    DEBUG_ASSERT(sizeof(Elf64_Phdr) == elf_hdr.e_phentsize);
-
-    Elf64_Phdr phdr;
-    for(size_t i = 0; i < elf_hdr.e_phnum; i++)
-    {
-        amount = elf_hdr.e_phentsize;
-        res = fs_node_paged_read(elf_node, elf_hdr.e_phoff + (i * elf_hdr.e_phentsize), &phdr, amount, 0);
-        if(res) {
-            return res;
-        }
-
-        if(amount != elf_hdr.e_phentsize) {
-            return -EINVAL;
-        }
-
-        res = exec_elf64_handle_segment(process, file, &phdr);
-
-        if(res) {
-            return res;
-        }
-    }
-
-    process->user_ip = (void __user*)elf_hdr.e_entry;
-
-    return 0;
 }
 
 int
@@ -270,6 +89,33 @@ syscall_exec(
         return -EPERM;
     }
 
+    struct exec_probe_state probe_state = {
+	.status = EXEC_TYPE_PROBE_REJECT,
+	.type = NULL,
+
+	.process = process,
+	.file = desc,
+    };
+ 
+    for_each_exec_type(
+	    exec_syscall_exec_type_probe_callback,
+	    &probe_state);
+
+    if(probe_state.status < 0) {
+	file_table_put_file(process->file_table, process, desc);
+	return probe_state.status;
+    }
+    else if(probe_state.status == EXEC_TYPE_PROBE_REJECT) {
+	file_table_put_file(process->file_table, process, desc);
+	return -EINVAL;
+    }
+    else if((probe_state.status == EXEC_TYPE_PROBE_MAYBE) && !(exec_flags & EXEC_PERMISSIVE)) {
+	file_table_put_file(process->file_table, process, desc);
+	return -EINVAL;
+    }
+
+    DEBUG_ASSERT(KERNEL_ADDR(probe_state.type));
+
     res = mmap_deattach(process->mmap, process);
     if(res) {
         file_table_put_file(process->file_table, process, desc);
@@ -286,7 +132,7 @@ syscall_exec(
         return res;
     }
 
-    res = process_exec_elf64(process, file, desc);
+    res = exec_type_load(probe_state.type, process, desc);
     if(res) {
         file_table_put_file(process->file_table, process, desc);
         return res;

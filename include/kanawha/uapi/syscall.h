@@ -243,6 +243,18 @@ ARG(pid_t, target)\
 ARG(int, signal)\
 ARG(unsigned long, flags)\
 
+#define SYSCALL_SIG_PRGET(RET,ARG,...)\
+RET(int)\
+ARG(unsigned long, type)\
+ARG(long, field)\
+ARG(unsigned long __user *, value)
+
+#define SYSCALL_SIG_PRSET(RET,ARG,...)\
+RET(int)\
+ARG(unsigned long, type)\
+ARG(long, field)\
+ARG(unsigned long, value)
+
 #define SYSCALL_XLIST(X)\
 X(exit,      0,  EXIT,       SYSCALL_SIG_EXIT)\
 X(open,      1,  OPEN,       SYSCALL_SIG_OPEN)\
@@ -286,6 +298,8 @@ X(poll,      40, POLL,       SYSCALL_SIG_POLL)\
 X(sigsend,   41, SIGSEND,    SYSCALL_SIG_SIGSEND)\
 X(siginfo,   42, SIGINFO,    SYSCALL_SIG_SIGINFO)\
 X(sigmod,    43, SIGMOD,     SYSCALL_SIG_SIGMOD)\
+X(prget,     44, PRGET,      SYSCALL_SIG_PRGET)\
+X(prset,     45, PRSET,      SYSCALL_SIG_PRSET)\
 
 #define DECLARE_SYSCALL_ID_CONSTANTS(__name, __id, __NAME, ...)\
 const static syscall_id_t SYSCALL_ID_ ## __NAME = __id;

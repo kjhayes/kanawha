@@ -20,3 +20,11 @@ config MULTIBOOT2_ACPI
     help
       Look for ACPI information in Mutliboot2 structures
 
+config MULTIBOOT2_FRAMEBUFFER
+    bool "Multiboot2 framebuffer Support (WIP)"
+    default n
+    depends on MULTIBOOT2
+    help
+      Look for and initialize Multiboot2 framebuffers as fbdev 
+
+

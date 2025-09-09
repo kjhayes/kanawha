@@ -1,8 +1,20 @@
 
 #include <mb2/header.h>
+#include <kanawha/attribute.h>
 
-struct mb2_header_data {
+struct __packed mb2_header_data
+{
     struct mb2_header header;
+
+#ifdef CONFIG_MULTIBOOT2_FRAMEBUFFER
+    struct __packed {
+	struct mb2_tag_header hdr;
+	uint32_t width;
+	uint32_t height;
+	uint32_t depth;
+	uint32_t __padding;
+    } framebuffer;
+#endif
 
     struct mb2_tag_header terminator_tag;
 }; 
@@ -19,6 +31,19 @@ static struct mb2_header_data mb2_header_data = {
                 MB2_HEADER_ARCH_PROT_I386 +
                 sizeof(struct mb2_header_data)),
     },
+
+#ifdef CONFIG_MULTIBOOT2_FRAMEBUFFER
+    .framebuffer = {
+	.hdr = {
+	    .type = 5,
+	    .flags = 0,
+	    .size = 20,
+	},
+	.width = 0,
+	.height = 0,
+	.depth = 0,
+    },
+#endif
 
     .terminator_tag = {
         .type = 0,

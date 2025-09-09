@@ -23,6 +23,7 @@ struct __packed mb2_info_tag_header {
 #define MB2_INFO_TAG_TYPE_MODULE 3
 #define MB2_INFO_TAG_TYPE_BASIC_MEM_INFO 4
 #define MB2_INFO_TAG_TYPE_MEM_MAP 6
+#define MB2_INFO_TAG_TYPE_FRAMEBUFFER_INFO 8
 
 struct __packed mb2_info_tag {
     struct mb2_info_tag_header hdr;
@@ -46,6 +47,16 @@ struct __packed mb2_info_tag {
             uint32_t mod_end;
             uint8_t utf8_str[];
         } module;
+	struct __packed {
+            uint64_t phys_addr;
+            uint32_t pitch;
+            uint32_t width;
+            uint32_t height;
+            uint8_t bpp;
+            uint8_t type;
+            uint8_t __resv;
+            uint8_t color_data[];
+	} fb_info;
     };
 };
 

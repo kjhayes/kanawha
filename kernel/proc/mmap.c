@@ -356,8 +356,7 @@ mmap_file_prot_check(
 static int
 __mmap_locked_hint_offset(
         struct mmap *mmap,
-        struct mmap_region *region,
-        uintptr_t hint_offset,
+        uintptr_t *hint_offset,
         size_t size)
 {
     // TODO: Actually take the hint into account
@@ -404,7 +403,7 @@ __mmap_locked_hint_offset(
         }
 
         // We can fit between the two regions
-        region->tree_node.key = cur_offset;
+        *hint_offset = cur_offset;
         return 0;
     }
 
@@ -414,7 +413,7 @@ __mmap_locked_hint_offset(
         return -ENOMEM;
     }
 
-    region->tree_node.key = cur_offset;
+    *hint_offset = cur_offset;
     return 0;
 }
 
@@ -493,14 +492,13 @@ mmap_map_region(
     // This will find us a valid offset
     res = __mmap_locked_hint_offset(
             mmap,
-            region,
-            *hint_offset,
+            hint_offset,
             size);
     if(res) {
         goto err3;
     }
 
-    *hint_offset = region->tree_node.key;
+    region->tree_node.key = *hint_offset;
 
     res = ptree_insert(
             &mmap->region_tree,
@@ -657,6 +655,42 @@ err0:
     return res;
 }
 
+int
+mmap_find_free_region(
+        struct process *process,
+        uintptr_t *hint_offset,
+        size_t size)
+{
+    int res;
+
+    // syscall_mmap should check these assumptions for user requests,
+    // but the kernel might be invoking this function incorrectly
+    DEBUG_ASSERT(size > 0);
+    DEBUG_ASSERT(ptr_orderof(size) >= VMEM_MIN_PAGE_ORDER);
+
+    struct fs_node *fs_node;
+
+    struct mmap *mmap = process->mmap;
+    DEBUG_ASSERT(KERNEL_ADDR(mmap));
+
+    spin_lock(&mmap->lock);
+
+    // This will find us a valid offset
+    res = __mmap_locked_hint_offset(
+            mmap,
+            hint_offset,
+            size);
+    if(res) {
+        goto err;
+    }
+
+    spin_unlock(&mmap->lock);
+    return 0;
+
+err:
+    spin_unlock(&mmap->lock);
+    return res;
+}
 static int
 mmap_unmap_region_lockless(
 	struct mmap *mmap,

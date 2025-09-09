@@ -394,6 +394,24 @@ handle_syscall(
                         (unsigned long)args->args[1]
                         );
             break;
+	case SYSCALL_ID_PRGET:
+	    ret_val = (uint64_t)(int)
+		syscall_prget(
+			process,
+			(unsigned long)args->args[0],
+			(long)args->args[1],
+                        (unsigned long __user *)args->args[2]
+			);
+	    break;
+	case SYSCALL_ID_PRSET:
+	    ret_val = (uint64_t)(int)
+		syscall_prset(
+			process,
+			(unsigned long)args->args[0],
+			(long)args->args[1],
+                        (unsigned long)args->args[2]
+			);
+	    break;
         default:
             syscall_unknown(process, id);
             ret_val = -ENOSYS;

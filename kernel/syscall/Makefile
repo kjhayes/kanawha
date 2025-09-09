@@ -40,4 +40,6 @@ obj-y += \
 	poll.o \
 	sigsend.o \
 	openat.o \
+	prget.o \
+	prset.o \
 

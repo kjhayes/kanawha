@@ -7,4 +7,5 @@ mb2-y += \
 
 mb2-$(CONFIG_MULTIBOOT2_ACPI) += acpi.o
 mb2-$(CONFIG_MULTIBOOT2_RAMFILE) += ramfile.o
+mb2-$(CONFIG_MULTIBOOT2_FRAMEBUFFER) += framebuffer.o
 

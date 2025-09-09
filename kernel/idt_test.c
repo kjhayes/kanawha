@@ -2,14 +2,24 @@
 #include <kanawha/init.h>
 #include <arch/x64/idt.h>
 #include <arch/x64/gdt.h>
+#include <arch/x64/pic.h>
 #include <arch/x64/exception.h>
+
+#define USER_ADDR 0x00000000004008d0
 
 static int
 mess_with_the_idt(void) {
 
-    void __user *entry_addr = (void __user *)0x00000000004008d0; // trap_entry
+    irq_t vector_irq = x64_pic_irq(4); // COM0
+    DEBUG_ASSERT(vector_irq != NULL_IRQ);
 
-    struct idt64_entry *desc = &x64_idt64.exception_descriptors[3];
+    hwirq_t vector = irq_to_desc(vector_irq)->hwirq;
+    printk("Mapping Vector %d to Userspace!\n", (int)vector);
+    DEBUG_ASSERT(vector >= 32 && vector < 256);
+
+    void __user *entry_addr = (void __user *)(USER_ADDR); // trap_entry
+
+    struct idt64_entry *desc = &x64_idt64.exception_descriptors[vector];
 
     desc->offset_0_15 = ((uintptr_t)entry_addr) & 0xFFFF;
     desc->offset_16_31 = (((uintptr_t)entry_addr) >> 16) & 0xFFFF;
@@ -34,5 +44,5 @@ mess_with_the_idt(void) {
 
     return 0;
 }
-//declare_init_desc(launch, mess_with_the_idt, "Messing with the IDT");
+declare_init_desc(launch, mess_with_the_idt, "Messing with the IDT");
 

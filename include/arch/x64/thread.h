@@ -10,6 +10,9 @@
 struct arch_thread_state
 {
     struct thread_stack stack;
+
+    uint64_t fsbase;
+
     __attribute__((aligned(16)))
     uint8_t xsave_buffer[X64_XSAVE_BUFLEN];
 };

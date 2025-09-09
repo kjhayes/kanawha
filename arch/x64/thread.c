@@ -1,5 +1,6 @@
 
 #include <arch/x64/asm/regs.S>
+#include <arch/x64/msr.h>
 #include <kanawha/stack.h>
 #include <kanawha/thread.h>
 #include <kanawha/errno.h>
@@ -30,11 +31,14 @@ arch_thread_run_threadless(
         void *in)
 {
     struct thread_state *cur = current_thread();
+    struct arch_thread_state *arch = &cur->arch_state;
+
+    arch->fsbase = read_msr(X64_MSR_FSBASE);
 
     __x64_thread_run_threadless(
             in, func,
-            &cur->arch_state.stack.stack_pointer,
-            cur->arch_state.xsave_buffer
+            &arch->stack.stack_pointer,
+            arch->xsave_buffer
             );
 }
 
@@ -43,6 +47,11 @@ arch_thread_run_thread(struct thread_state *to_run)
 {
     dprintk("running thread %p with rsp=%p\n",
             to_run, to_run->arch_state.stack.stack_pointer);
+
+    struct arch_thread_state *arch = &to_run->arch_state;
+
+    write_msr(X64_MSR_FSBASE, arch->fsbase);
+
     __x64_thread_run_thread(
             (void*)to_run->arch_state.stack.stack_pointer,
             to_run->arch_state.xsave_buffer

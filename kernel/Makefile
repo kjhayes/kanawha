@@ -1,5 +1,5 @@
 
-obj-y += idt_test.o 
+#obj-y += idt_test.o 
 
 obj-y += \
 	ptree.o \
@@ -25,6 +25,7 @@ obj-y += \
 	tasklet.o \
 	usermode.o \
 	syscall.o \
+	exec_type.o \
 	cpu.o \
 	percpu.o \
 	mmio.o \

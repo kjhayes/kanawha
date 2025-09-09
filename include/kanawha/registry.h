@@ -17,6 +17,9 @@ struct registry_node {
     struct stree_node snode;
 };
 
+#define __DECLARE_REGISTRY_PUBLIC_DATA(SNAME)\
+    DECLARE_GLOBAL_IRQ_LOCK(SNAME ## _registry_lock)
+
 #define __DECLARE_REGISTRY_REGISTER_FUNC(SNAME)\
     int \
     register_ ## SNAME(\
@@ -52,12 +55,19 @@ struct registry_node {
             struct SNAME ## _registry_hook *hook\
             );
 
+#define __DECLARE_REGISTRY_FOR_EACH_FUNC(SNAME)\
+    int \
+    for_each_ ## SNAME (\
+            void(*callback)(struct SNAME *, void*),\
+	    void *state);
+
 #define __DECLARE_REGISTRY_DUMP_FUNC(SNAME)\
     int \
     dump_ ## SNAME ## _registry(\
             printk_f *printer);
  
 #define DECLARE_REGISTRY(SNAME)\
+    __DECLARE_REGISTRY_PUBLIC_DATA(SNAME);\
     __DECLARE_REGISTRY_REGISTER_FUNC(SNAME);\
     __DECLARE_REGISTRY_UNREGISTER_FUNC(SNAME);\
     __DECLARE_REGISTRY_GET_NAME_FUNC(SNAME);\
@@ -65,15 +75,18 @@ struct registry_node {
     __DECLARE_REGISTRY_HOOK_FUNC(SNAME);\
     __DECLARE_REGISTRY_UNHOOK_FUNC(SNAME);\
     __DECLARE_REGISTRY_DUMP_FUNC(SNAME);\
+    __DECLARE_REGISTRY_FOR_EACH_FUNC(SNAME);\
 
 /*
  * Definitions
  */
 
+#define __DEFINE_REGISTRY_PUBLIC_DATA(SNAME)\
+    DEFINE_GLOBAL_IRQ_LOCK(SNAME ## _registry_lock);
+
 #define __DEFINE_REGISTRY_PRIVATE_DATA(SNAME)\
     static DECLARE_STREE(SNAME ## _registry_tree);\
-    static DECLARE_ILIST(SNAME ## _registry_hook_list);\
-    DEFINE_LOCAL_THREAD_LOCK(SNAME ## _registry_lock);\
+    static DECLARE_ILIST(SNAME ## _registry_hook_list);
 
 #define __DEFINE_REGISTRY_REGISTER_FUNC(SNAME, REG_NODE_FIELD, INIT_FUNCTION)\
     int \
@@ -174,6 +187,24 @@ struct registry_node {
         return -EUNIMPL;\
     }
 
+#define __DEFINE_REGISTRY_FOR_EACH_FUNC(SNAME, REG_NODE_FIELD)\
+    int \
+    for_each_ ## SNAME (\
+            void(*callback)(struct SNAME *, void*),\
+	    void *state)\
+    {\
+        SNAME ## _registry_lock_acquire();\
+        \
+        struct stree_node *iter = stree_get_first(&SNAME ## _registry_tree);\
+        while(iter) {\
+	    (*callback)(container_of(iter, struct SNAME, REG_NODE_FIELD . snode), state);\
+            iter = stree_get_next(iter);\
+        }\
+        \
+        SNAME ## _registry_lock_release();\
+        return 0;\
+    }
+
 #define __DEFINE_REGISTRY_DUMP_FUNC(SNAME)\
     int \
     dump_ ## SNAME ## _registry(\
@@ -204,6 +235,7 @@ struct registry_node {
 #define REGISTRY_NO_DEINIT_FUNCTION(ptr) (0)
 
 #define DEFINE_REGISTRY(SNAME, REG_NODE_FIELD, INIT_FUNCTION, DEINIT_FUNCTION)\
+    __DEFINE_REGISTRY_PUBLIC_DATA(SNAME);\
     __DEFINE_REGISTRY_PRIVATE_DATA(SNAME);\
     __DEFINE_REGISTRY_REGISTER_FUNC(SNAME, REG_NODE_FIELD, INIT_FUNCTION);\
     __DEFINE_REGISTRY_UNREGISTER_FUNC(SNAME, REG_NODE_FIELD, DEINIT_FUNCTION);\
@@ -211,5 +243,6 @@ struct registry_node {
     __DEFINE_REGISTRY_HOOK_FUNC(SNAME, REG_NODE_FIELD);\
     __DEFINE_REGISTRY_UNHOOK_FUNC(SNAME, REG_NODE_FIELD);\
     __DEFINE_REGISTRY_DUMP_FUNC(SNAME);\
+    __DEFINE_REGISTRY_FOR_EACH_FUNC(SNAME, REG_NODE_FIELD);\
 
 #endif
