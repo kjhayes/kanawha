@@ -242,7 +242,6 @@ ramfile_flush_page(
     uintptr_t offset = pfn << order;
     uintptr_t page_end_offset = offset + (1ULL<<order);
 
-    void __phys *page; 
     if(page_end_offset > ramfile->size) {
         // This page must have been allocated in ramfile_load_page
 
@@ -264,8 +263,6 @@ ramfile_node_getattr(
         int attr,
         size_t *value)
 {
-    int res;
-
     struct ramfile *ramfile =
         RAMFILE_FROM_FS_NODE(fs_node);
 
@@ -294,8 +291,6 @@ ramfile_node_setattr(
 static int
 ramfile_mount_init(void)
 {
-    int res;
-
     ramfile_fs_mount = vfs_mount_create();
     if(ramfile_fs_mount == NULL) {
         return -ENOMEM;

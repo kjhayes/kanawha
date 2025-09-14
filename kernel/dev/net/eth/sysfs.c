@@ -177,21 +177,21 @@ eth_dev_fs_file_ops =
 };
 FS_FILE_OPS_INIT_UNDEF(eth_dev_fs_file_ops);
 
-static int
-eth_dev_fs_recv_callback(
-        struct eth_dev *dev,
-        struct eth_frame *buffer,
-        size_t buflen,
-        void *priv_state)
-{
-    struct edfs *edfs = priv_state;
-
-    printk("Ethernet Device (%s) Received Packet of Length 0x%lx\n",
-            eth_dev_get_name(dev),
-            buflen);
-
-    return 0;
-}
+//static int
+//eth_dev_fs_recv_callback(
+//        struct eth_dev *dev,
+//        struct eth_frame *buffer,
+//        size_t buflen,
+//        void *priv_state)
+//{
+//    struct edfs *edfs = priv_state;
+//
+//    printk("Ethernet Device (%s) Received Packet of Length 0x%lx\n",
+//            eth_dev_get_name(dev),
+//            buflen);
+//
+//    return 0;
+//}
 
 static int
 eth_dev_init_fs_mount(void)

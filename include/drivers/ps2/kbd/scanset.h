@@ -1,7 +1,7 @@
 #ifndef __KANAWHA_DRIVERS__PS2_KBD_SCANSET_H__
 #define __KANAWHA_DRIVERS__PS2_KBD_SCANSET_H__
 
-#include <kanawha/kbd.h>
+#include <kanawha/dev/kbd.h>
 #include <drivers/ps2/port.h>
 
 struct ps2_kbd_scanset {

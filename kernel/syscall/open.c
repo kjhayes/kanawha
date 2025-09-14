@@ -81,7 +81,7 @@ syscall_open(
 		process,
 		dir_file);
     } else {
-	int is_rel;
+	int is_rel = 1;
 	char *iter = path_buf;
 	while(*iter) {
 	    if(*iter == '/') {

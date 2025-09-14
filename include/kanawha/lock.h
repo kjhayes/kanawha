@@ -5,6 +5,7 @@
 #include <kanawha/common.h>
 #include <kanawha/irq.h>
 #include <kanawha/mbarrier.h>
+#include <kanawha/attribute.h>
 
 // "thread" lock
 //
@@ -81,7 +82,7 @@ thread_lock_acquire_pair(
     __qual thread_lock_t __lock_##__name = {\
         .locked = 0,\
     };\
-    __qual void __name##_try_acquire(void) {\
+    __maybe_unused __qual void __name##_try_acquire(void) {\
         thread_lock_try_acquire(&__lock_##__name);\
     }\
     __qual void __name##_acquire(void) {\
@@ -204,7 +205,7 @@ irq_lock_acquire_pair(
         .locked = 0,\
         .irq_flags = 0,\
     };\
-    __qual void __name##_try_acquire(void) {\
+    __maybe_unused __qual void __name##_try_acquire(void) {\
         irq_lock_try_acquire(&__lock_##__name);\
     }\
     __qual void __name##_acquire(void) {\

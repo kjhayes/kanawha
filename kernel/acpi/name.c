@@ -160,12 +160,6 @@ acpi_verify_path(
     return 0;
 }
 
-static inline int
-acpi_isgraph(char c)
-{
-    return ((c > 0x20) && (c < 0x7F));
-}
-
 int
 acpi_dump_name(
         printk_f *printer,

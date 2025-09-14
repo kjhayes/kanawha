@@ -87,6 +87,7 @@ __acpi_node_destroy_lockless(
     acpi_node_put(node);
     return 0;
 }
+__maybe_unused
 static inline int
 acpi_node_destroy(
 	struct acpi_node *node)
@@ -95,7 +96,7 @@ acpi_node_destroy(
     rlock_write_lock(&node->ns->lock);
     res = __acpi_node_destroy_lockless(node);
     rlock_write_unlock(&node->ns->lock);
-    return 0;
+    return res;
 }
 
 static inline void

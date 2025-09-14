@@ -1,5 +1,5 @@
 
-#include <kanawha/kbd.h>
+#include <kanawha/dev/kbd.h>
 #include <kanawha/errno.h>
 #include <drivers/ps2/kbd/scanset.h>
 

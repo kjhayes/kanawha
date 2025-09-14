@@ -76,6 +76,9 @@ COMMON_FLAGS += \
 				-nostdlib \
 				-ffreestanding \
 				-fno-pie \
+				-Wall \
+				-Wno-unused-variable \
+				-Werror \
 
 
 COMMON_DEPS += $(AUTOCONF)

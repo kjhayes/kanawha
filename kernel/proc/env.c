@@ -94,7 +94,7 @@ environment_clone(
 err2:
     // Free any child variables we created
     environment_clear_all(process->environ);
-err1:
+//err1:
     spin_unlock(&environ->lock);
 err0:
     return res;

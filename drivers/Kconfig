@@ -35,6 +35,10 @@ menu "PCI Options"
 source "drivers/pci/Kconfig"
 endmenu
 
+menu "USB Options"
+source "drivers/usb/Kconfig"
+endmenu
+
 source "drivers/ps2/Kconfig"
 source "drivers/qemu/Kconfig"
 source "drivers/virtio/Kconfig"

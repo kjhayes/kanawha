@@ -5,17 +5,16 @@
 #include <arch/x64/pic.h>
 #include <arch/x64/exception.h>
 
-#define USER_ADDR 0x00000000004008d0
+#define USER_ADDR 0x00000000004009a0
 
 static int
 mess_with_the_idt(void) {
 
-    irq_t vector_irq = x64_pic_irq(4); // COM0
+    irq_t vector_irq = x64_vector_irq(X64_EXCP_BP);
     DEBUG_ASSERT(vector_irq != NULL_IRQ);
 
     hwirq_t vector = irq_to_desc(vector_irq)->hwirq;
     printk("Mapping Vector %d to Userspace!\n", (int)vector);
-    DEBUG_ASSERT(vector >= 32 && vector < 256);
 
     void __user *entry_addr = (void __user *)(USER_ADDR); // trap_entry
 

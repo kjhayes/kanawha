@@ -97,21 +97,21 @@ term_dev_fs_node_link_nodes(
     return 0;
 }
 
-static int
-term_dev_fs_node_unlink_nodes(
-	struct term_dev_fs_node *node)
-{
-    vfs_mount_unlink_root(
-	    term_dev_fs_mount,
-	    term_dev_get_name(node->dev));
-    vfs_node_unlink(
-    	    &node->stream_vfs_node,
-    	    "baud");
-    vfs_node_unlink(
-    	    &node->stream_vfs_node,
-    	    "raw");
-    return 0;
-}
+//static int
+//term_dev_fs_node_unlink_nodes(
+//	struct term_dev_fs_node *node)
+//{
+//    vfs_mount_unlink_root(
+//	    term_dev_fs_mount,
+//	    term_dev_get_name(node->dev));
+//    vfs_node_unlink(
+//    	    &node->stream_vfs_node,
+//    	    "baud");
+//    vfs_node_unlink(
+//    	    &node->stream_vfs_node,
+//    	    "raw");
+//    return 0;
+//}
 
 static void
 term_dev_fs_on_register(

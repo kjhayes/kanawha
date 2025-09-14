@@ -318,7 +318,7 @@ ext2_fs_node_set_inode_size(
     spin_lock(&node->lock);
     res = __ext2_fs_node_set_inode_size_lockless(node, size);
     spin_unlock(&node->lock);
-    return 0;
+    return res;
 }
 
 int

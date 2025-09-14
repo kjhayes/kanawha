@@ -149,6 +149,7 @@ ps2_8042_cmd_resp(
     return 0;
 }
 
+__maybe_unused
 static int
 ps2_8042_cmd_data_resp(
         struct ps2_8042 *ps2,

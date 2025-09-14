@@ -41,8 +41,6 @@ static struct slab_allocator *page_allocator_slab_allocator;
 static int
 page_alloc_static_init(void)
 {
-    int res;
-
     page_allocator_slab_allocator = create_static_slab_allocator(
             page_allocator_slab_buffer,
             PAGE_ALLOCATOR_SLAB_BUFFER_SIZE,

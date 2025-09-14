@@ -14,6 +14,7 @@
 #include <kanawha/types.h>
 #include <kanawha/errno.h>
 #include <kanawha/string.h>
+#include <kanawha/arch.h>
 #include <elf/elf.h>
 #include <elf/module.h>
 #include <elf/reloc.h>
@@ -702,11 +703,17 @@ elf64_load_module(
         case EM_X86_64: arch = ARCH_X64; break;
         case EM_386:    arch = ARCH_X86; break;
     }
+    if(arch != kernel_arch) {
+	goto exit0;
+    }
 
     endian_t endian = ENDIAN_UNKNOWN;
     switch(state.hdr.e_ident[EI_DATA]) {
         case ELFDATA2LSB: endian = ENDIAN_LITTLE; break;
         case ELFDATA2MSB: endian = ENDIAN_BIG; break;
+    }
+    if(endian != kernel_endian) {
+	goto exit0;
     }
 
     res = elf64_load_module_read_hdrs(
@@ -792,7 +799,7 @@ load_module(struct fs_node *module_node,
 {
     int res;
 
-    struct module *mod = kzmalloc(sizeof(struct module), KM_KERNEL);
+    struct module *mod = __alloc_module_struct();
     if(mod == NULL) {
         return mod;
     }

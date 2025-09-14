@@ -20,6 +20,7 @@ typedef enum fat_type {
     FAT_TYPE_EXFAT,
 } fat_type_t;
 
+__maybe_unused
 static inline const char *
 fat_type_to_string(fat_type_t type) {
     switch(type) {
@@ -527,6 +528,7 @@ write_exfat(struct fat_mount *mnt, size_t index, size_t value)
     return -EUNIMPL;
 }
 
+__maybe_unused
 static inline int
 write_fat(struct fat_mount *mnt, size_t index, size_t value)
 {
@@ -545,6 +547,7 @@ write_fat(struct fat_mount *mnt, size_t index, size_t value)
     }
 }
 
+__maybe_unused
 static inline int
 fat_mount_find_free_cluster(
 	struct fat_mount *mnt,
@@ -1038,6 +1041,10 @@ fat_mount_load_node(
 		index, 
 		&node->dirent,
 		sizeof(struct fat_dirent));
+    if(res) {
+	kfree(node);
+	return res;
+    }
 
     node->fs_node->backing.priv_state = node;
 

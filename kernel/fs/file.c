@@ -256,6 +256,9 @@ fs_file_paged_seek(
             fs_node,
             FS_NODE_ATTR_DATA_SIZE,
             &data_size);
+    if(res) {
+	return res;
+    }
 
     switch(whence) {
         case FS_FILE_SEEK_CUR:

@@ -217,8 +217,8 @@ cpio_mount_file(
 
     return 0;
 
-err1:
-    fs_node_put(mnt->backing_file);
+//err1:
+//    fs_node_put(mnt->backing_file);
 err0:
     kfree(mnt);
     return res;

@@ -125,8 +125,8 @@ thread_stack_init(
 
     return 0;
 
-err4:
-    vmem_relax_mapping((void*)stack->virt_base);
+//err4:
+//    vmem_relax_mapping((void*)stack->virt_base);
 err3:
     mem_flags_set_flags(
         get_virt_mem_flags(),

@@ -12,6 +12,8 @@ static struct term_driver udrv_term_driver;
 struct udrv_term_dev {
     struct udrv_dev udrv_dev;
     struct term_dev term_dev;
+
+    char *name;
 };
 
 static struct udrv_dev *
@@ -19,10 +21,26 @@ term_dev_udrv_create(
 	struct udrv_mount *mnt,
 	const char *name)
 {
+    int res;
+
     struct udrv_term_dev *dev = kmalloc(sizeof(*dev), KM_KERNEL);
+    if(dev == NULL) {
+	return NULL;
+    }
+
+    dev->name = kstrdup(name);
+    if(dev->name == NULL) {
+	kfree(dev);
+	return NULL;
+    }
 
     dev->term_dev.driver = &udrv_term_driver;
-    register_term_dev(&dev->term_dev, name);
+    res = register_term_dev(&dev->term_dev, dev->name);
+    if(res) {
+	kfree(dev->name);
+	kfree(dev);
+	return NULL;
+    }
 
     return &dev->udrv_dev;
 }
@@ -41,6 +59,7 @@ term_dev_udrv_destroy(
 	return res;
     }
 
+    kfree(dev->name);
     kfree(dev);
 
     return 0;

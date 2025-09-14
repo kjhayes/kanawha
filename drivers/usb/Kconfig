@@ -1,0 +1,10 @@
+
+config USB
+    bool "USB Support"
+    default y
+
+config USB_XHCI
+    bool "USB XHCI Support"
+    default y
+    depends on PCI && USB
+

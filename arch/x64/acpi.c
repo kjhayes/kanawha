@@ -40,6 +40,15 @@ parse_madt_lapic(
         return 0;
     }
 
+    int is_bsp = entry->apic_id == bsp_apic_id;
+
+#ifdef CONFIG_X64_IGNORE_MADT_LAPIC
+    if(!is_bsp) {
+	printk("Ignoring extra LAPIC entry found in MADT...\n");
+	return 0;
+    }
+#endif
+
     struct x64_cpu *cpu = kmalloc(sizeof(struct x64_cpu), KM_KERNEL);
     if(cpu == NULL) {
         return -ENOMEM;
@@ -49,7 +58,7 @@ parse_madt_lapic(
     int res = x64_bsp_register_smp_cpu(
             cpu,
             entry->apic_id,
-            entry->apic_id == bsp_apic_id);
+            is_bsp);
 
     if(res) {
         kfree(cpu);
@@ -67,6 +76,15 @@ parse_madt_x2apic(
     struct acpi_madt_entry_x2apic *entry = (void*)hdr;
     printk("MADT X2APIC: id=0x%lx\n", (apic_id_t)entry->apic_id);
 
+    int is_bsp = entry->apic_id == bsp_apic_id;
+
+#ifdef CONFIG_X64_IGNORE_MADT_X2APIC
+    if(!is_bsp) {
+	printk("Ignoring extra x2APIC entry found in MADT...\n");
+	return 0;
+    }
+#endif
+
     struct x64_cpu *cpu = kmalloc(sizeof(struct x64_cpu), KM_KERNEL);
     if(cpu == NULL) {
         return -ENOMEM;
@@ -75,7 +93,7 @@ parse_madt_x2apic(
     int res = x64_bsp_register_smp_cpu(
             cpu,
             entry->apic_id,
-            entry->apic_id == bsp_apic_id);
+            is_bsp);
 
     if(res) {
         kfree(cpu);

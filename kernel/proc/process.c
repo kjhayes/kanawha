@@ -396,7 +396,7 @@ process_alloc(
 
     return process;
 
-err3:
+//err3:
     __process_remove_pid(process);
 err2:
     thread_deinit(&process->thread);
@@ -1316,7 +1316,7 @@ err1:
     process_terminate(process, 1);
     process_reap_child(parent, process->id, &exitcode, 0);
     DEBUG_ASSERT(exitcode == 1);
-err0:
+//err0:
     return NULL;
 }
 

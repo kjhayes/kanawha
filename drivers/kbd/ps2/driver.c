@@ -1,19 +1,15 @@
 
 #include <kanawha/init.h>
 #include <kanawha/ptree.h>
-#include <kanawha/spinlock.h>
 #include <kanawha/errno.h>
 #include <kanawha/kmalloc.h>
 #include <kanawha/string.h>
 #include <kanawha/assert.h>
 #include <kanawha/vmem.h>
-#include <kanawha/kbd.h>
+#include <kanawha/dev/kbd.h>
 #include <drivers/ps2/port.h>
 #include <drivers/ps2/driver.h>
 #include <drivers/ps2/kbd/scanset.h>
-
-static DECLARE_SPINLOCK(ps2_kbd_tree_lock);
-static DECLARE_PTREE(ps2_kbd_tree);
 
 #define PS2_KBD_NAME_BUFLEN 16
 #define PS2_KBD_KEYPRESS_BUFLEN 64
@@ -22,12 +18,14 @@ struct ps2_kbd
     struct ps2_port *port;
     struct ptree_node tree_node;
 
-    struct kbd kbd;
+    struct kbd_dev kbd;
 
     unsigned long scanset_state;
     struct ps2_kbd_scanset *scanset;
 
     char name_buf[PS2_KBD_NAME_BUFLEN];
+
+    unsigned int registered : 1;
 };
 
 static int
@@ -46,7 +44,7 @@ ps2_kbd_handle_scancode(
         return 0;
     }
 
-    kbd_enqueue_event(&kbd->kbd, &event);
+    kbd_driver_enqueue_event(&kbd->kbd, &event);
     return 0;
 }
 
@@ -56,11 +54,15 @@ ps2_kbd_recv_callback(
         void *priv_data,
         uint8_t recv)
 {
+    int res;
+
     struct ps2_kbd *kbd = (struct ps2_kbd*)priv_data;
-    int res = ps2_kbd_handle_scancode(kbd, recv);
-    if(res) {
-        dprintk("ps2_kbd_enqueue_scancode Failed! (lost a key event) (err=%s)\n",
-                errnostr(res));
+    if(kbd->registered) {
+        res = ps2_kbd_handle_scancode(kbd, recv);
+        if(res) {
+            dprintk("ps2_kbd_enqueue_scancode Failed! (lost a key event) (err=%s)\n",
+                    errnostr(res));
+        }
     }
 }
 
@@ -70,8 +72,6 @@ ps2_kbd_attach(
         struct ps2_port *port)
 {
     int res;
-
-    dprintk("ps2_kbd_attach\n");
     
     DEBUG_ASSERT(KERNEL_ADDR(port));
     DEBUG_ASSERT(KERNEL_ADDR(port->ops));
@@ -85,51 +85,31 @@ ps2_kbd_attach(
 
     kbd->port = port;
     kbd->scanset = &qwerty_scanset_2;
-
-    res = kbd_init_struct(&kbd->kbd);
-    if(res) {
-        kfree(kbd);
-        return res;
-    }
+    kbd->registered = 0;
 
     ps2_port_set_callback(
             port,
             ps2_kbd_recv_callback,
             (void*)kbd);
 
-    spin_lock(&ps2_kbd_tree_lock);
-
-    res = ptree_insert_any(&ps2_kbd_tree, &kbd->tree_node);
-    if(res) {
-        kbd_deinit_struct(&kbd->kbd);
-        kfree(kbd);
-        spin_unlock(&ps2_kbd_tree_lock);
-        return res;
-    }
-
     uintptr_t id = kbd->tree_node.key;
     snprintk(kbd->name_buf, PS2_KBD_NAME_BUFLEN, "ps2-kbd-%llu", (ull_t)id);
     kbd->name_buf[PS2_KBD_NAME_BUFLEN-1] = '\0';
 
-    res = register_kbd(&kbd->kbd, kbd->name_buf);
+    res = register_kbd_dev(&kbd->kbd, kbd->name_buf);
     if(res) {
-        ptree_remove(&ps2_kbd_tree, kbd->tree_node.key);
-        kbd_deinit_struct(&kbd->kbd);
         kfree(kbd);
-        spin_unlock(&ps2_kbd_tree_lock);
         return res;
     }
 
     res = ps2_port_enable_scanning(port);
     if(res) {
-        ptree_remove(&ps2_kbd_tree, kbd->tree_node.key);
-        unregister_kbd(&kbd->kbd);
+        unregister_kbd_dev(&kbd->kbd);
         kfree(kbd);
-        spin_unlock(&ps2_kbd_tree_lock);
         return res;
     }
 
-    spin_unlock(&ps2_kbd_tree_lock);
+    kbd->registered = 1;
 
     return 0;
 }

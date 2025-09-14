@@ -81,7 +81,7 @@ x86_64_elf64_apply(
     }
 
     Elf64_Addr symbol_value;
-    uint64_t symbol_size;
+    //uint64_t symbol_size;
     if(need_symbol) {
         Elf64_Sym *symbol = NULL;
         size_t num_symbols = state->symtab_size / sizeof(Elf64_Sym);
@@ -92,7 +92,7 @@ x86_64_elf64_apply(
         }
         symbol = &state->symtab[symbol_index];
 
-        symbol_size = symbol->st_size;
+        //symbol_size = symbol->st_size;
 
         struct ksymbol *ksymbol;
         switch(symbol->st_shndx) {

@@ -116,11 +116,11 @@ udrv_mount_mkfile(
 
     struct udrv_dev *dev;
 
-    printk("udrv_mount_mkfile\n");
+    dprintk("udrv_mount_mkfile\n");
 
     dev = udrv_mount_create(mnt, name);
     if(dev == NULL) {
-        printk("udrv_mount_mkfile: udrv_mount_create returned NULL!\n");
+        eprintk("udrv_mount_mkfile: udrv_mount_create returned NULL!\n");
 	return -EINVAL;
     }
 
@@ -136,7 +136,7 @@ udrv_mount_mkfile(
     size_t inode;
     res = vfs_mount_insert_node(udrv_fs_mount, &dev->vfs_node, &inode);
     if(res) {
-        printk("udrv_mount_mkfile: vfs_mount_insert_node returned %s!\n", errnostr(res));
+        eprintk("udrv_mount_mkfile: vfs_mount_insert_node returned %s!\n", errnostr(res));
 	udrv_mount_destroy(mnt, dev);
 	return res;
     }
@@ -146,7 +146,7 @@ udrv_mount_mkfile(
 	    name,
 	    inode);
     if(res) {
-        printk("udrv_mount_mkfile: vfs_node_link returned %s!\n", errnostr(res));
+        eprintk("udrv_mount_mkfile: vfs_node_link returned %s!\n", errnostr(res));
 	vfs_mount_remove_node(udrv_fs_mount, &dev->vfs_node);
 	udrv_mount_destroy(mnt, dev);
 	return res;
@@ -231,7 +231,11 @@ udrv_dev_fs_file_write(
 {
     int res;
 
+    dprintk("udrv_dev received packet of size 0x%lx!\n", amount);
+
     if(amount < sizeof(struct udrv_pkt)) {
+	wprintk("udrv_dev received packet of size 0x%lx! (too small to contain struct udrv_pkt header!)\n",
+		amount);
 	return -EINVAL;
     }
 
@@ -252,6 +256,7 @@ udrv_dev_fs_file_write(
 	    } else {
                 return res;
 	    }
+	    continue;
         } else {
 	    // Successfully received packet
 	    break;

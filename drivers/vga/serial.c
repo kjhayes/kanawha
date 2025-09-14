@@ -149,37 +149,21 @@ vga_serial_putchar(
     return 0;
 }
 
-static ssize_t
-vga_serial_term_dev_read(
+static int 
+vga_serial_term_dev_putc(
         struct term_dev *dev,
-        void *buffer,
-        size_t amount)
-{
-    return 0;
-}
-
-static ssize_t
-vga_serial_term_dev_write(
-        struct term_dev *dev,
-        void *buffer,
-        size_t amount)
+        char c)
 {
     int res;
     struct vga_serial *serial =
         container_of(dev, struct vga_serial, term_dev);
 
-    const char *data = buffer;
-
-    size_t written = 0;
-    while(written < amount) {
-        res = vga_serial_putchar(serial, data[written], serial->default_attr);
-        if(res) {
-            break;
-        }
-        written++;
+    res = vga_serial_putchar(serial, c, serial->default_attr);
+    if(res) {
+	return res;
     }
 
-    return written;
+    return 0;
 }
 
 static int
@@ -192,8 +176,7 @@ vga_serial_term_dev_flush(
 
 static struct term_driver
 vga_serial_driver = {
-    .read = vga_serial_term_dev_read,
-    .write = vga_serial_term_dev_write,
+    .putc = vga_serial_term_dev_putc,
     .flush = vga_serial_term_dev_flush,
     .get_baudrate = term_dev_cannot_get_baudrate,
     .set_baudrate = term_dev_cannot_set_baudrate,

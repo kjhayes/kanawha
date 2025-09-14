@@ -269,6 +269,7 @@ pt_level_entry_is_leaf(int level, uint64_t entry)
     }
 }
 
+__maybe_unused
 static inline int
 __x64_verify_page_table(
         void __phys * table,
@@ -290,7 +291,7 @@ __x64_verify_page_table(
 
     uint64_t *entries = vaddr;
 
-    size_t num_not_present;
+    size_t num_not_present = 0;
 
     for(size_t i = 0; i < num_entries; i++) {
         uint64_t entry = entries[i];
@@ -574,13 +575,11 @@ create_paged_pt_table(
     int res;
 
     size_t entry_region_size;
-    size_t num_possible_entries;
 
     if(table_level <= 1) {
         return -EINVAL;
     }
 
-    num_possible_entries = pt_level_num_table_entries(table_level);
     entry_region_size = pt_level_entry_region_size(table_level);
   
     // If we fail later we don't actually free this (TODO)
@@ -646,10 +645,8 @@ create_direct_pt_table(
     int res;
 
     size_t entry_region_size;
-    size_t num_possible_entries;
     int entry_can_be_leaf;
 
-    num_possible_entries = pt_level_num_table_entries(table_level);
     entry_region_size = pt_level_entry_region_size(table_level);
     entry_can_be_leaf = pt_level_entry_can_be_leaf(table_level);
   
@@ -834,14 +831,12 @@ arch_vmem_region_init_paged(struct vmem_region *region)
     uintptr_t end = (region->size-1);
 
     region->arch_state.pt_level = -1;
-    size_t pt_level_entry_size = -1;
 
     if((region->size <= X64_PDPT_ENTRY_REGION_SIZE)
      &&(base / X64_PDPT_ENTRY_REGION_SIZE == end / X64_PDPT_ENTRY_REGION_SIZE))
     {
       // We can fit inside a single PD
       region->arch_state.pt_level = 2;
-      pt_level_entry_size = X64_PD_ENTRY_REGION_SIZE;
     }
 
     if((region->size <= X64_PML4_ENTRY_REGION_SIZE) 
@@ -849,7 +844,6 @@ arch_vmem_region_init_paged(struct vmem_region *region)
     {
       // We can fit inside a single PDPT
       region->arch_state.pt_level = 3;
-      pt_level_entry_size = X64_PDPT_ENTRY_REGION_SIZE;
     }
 
     region->arch_state.paged_max_entry_level = 1;
@@ -914,11 +908,9 @@ map_region_tables(
 {
     int res;
 
-    size_t table_size;
     size_t level_below_size;
     size_t entry_region_size;
     size_t num_possible_entries;
-    size_t level_below_num_possible_entries;
     int entry_must_be_leaf;
     int entry_can_be_leaf;
     size_t vindex;
@@ -928,7 +920,6 @@ map_region_tables(
     uint64_t next_table_addr_mask;
     uint64_t shared_table_mask;
 
-    table_size = pt_level_table_size(table_level);
     entry_region_size = pt_level_entry_region_size(table_level);
     num_possible_entries = pt_level_num_table_entries(table_level);
     vindex = pt_level_table_index(table_level, vbase);
@@ -938,13 +929,11 @@ map_region_tables(
 
     if(table_level > 1) {
         level_below_size = pt_level_table_size(table_level-1);
-        level_below_num_possible_entries = pt_level_num_table_entries(table_level-1);
         next_table_addr_mask = pt_level_addr_mask(table_level);
         res = pt_level_shared_mask(table_level, &shared_table_mask);
         if(res) {return res;}
     } else {
         level_below_size = 0;
-        level_below_num_possible_entries = 0;
         next_table_addr_mask = 0;
         shared_table_mask = 0;
     }
@@ -1233,7 +1222,6 @@ unmap_region_tables(
 {
     int res;
 
-    size_t table_size;
     size_t level_below_size;
     size_t entry_region_size;
     size_t num_possible_entries;
@@ -1248,7 +1236,6 @@ unmap_region_tables(
 
     switch(table_level) {
         case 1:
-            table_size = X64_PT_SIZE;
             level_below_size = 0;
             entry_region_size = X64_PT_ENTRY_REGION_SIZE;
             num_possible_entries = X64_PT_ENTRIES;
@@ -1259,7 +1246,6 @@ unmap_region_tables(
             present_mask = X64_PT_LEAF_PRESENT;
             break;
         case 2:
-            table_size = X64_PD_SIZE;
             level_below_size = X64_PT_SIZE;
             entry_region_size = X64_PD_ENTRY_REGION_SIZE;
             num_possible_entries = X64_PD_ENTRIES;
@@ -1271,7 +1257,6 @@ unmap_region_tables(
             next_table_addr_mask = X64_PD_ENTRY_ADDR_MASK;
             break;
         case 3:
-            table_size = X64_PDPT_SIZE;
             level_below_size = X64_PD_SIZE;
             entry_region_size = X64_PDPT_ENTRY_REGION_SIZE;
             num_possible_entries = X64_PDPT_ENTRIES;
@@ -1283,7 +1268,6 @@ unmap_region_tables(
             next_table_addr_mask = X64_PDPT_ENTRY_ADDR_MASK;
             break;
         case 4:
-            table_size = X64_PML4_SIZE;
             level_below_size = X64_PDPT_SIZE;
             entry_region_size = X64_PML4_ENTRY_REGION_SIZE;
             num_possible_entries = X64_PML4_ENTRIES;

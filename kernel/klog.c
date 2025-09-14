@@ -197,7 +197,7 @@ klog_fs_file_read(
         return res;
     }
 
-    struct fs_node *fs_node = fs_path_get_fs_node(path);
+    //struct fs_node *fs_node = fs_path_get_fs_node(path);
 
     size_t offset = file->seek_offset;
 

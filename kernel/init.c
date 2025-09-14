@@ -27,7 +27,7 @@ handle_init_stage_generic(
     dprintk("Running Init Stage \"%s\" with %d init events...\n", stage_name, (int)num_events);
     size_t total_complete = 0;
     size_t total_failed = 0;
-    size_t total_deferrals = 0;
+    __maybe_unused size_t total_deferrals = 0;
     size_t num_complete;
     size_t num_failed;
     size_t num_deferred;

@@ -370,33 +370,33 @@ ext2_flush_group(
 }
 
 // blk Bitmap
-static int
-ext2_group_blk_bitmap_check(
-        struct ext2_group *group,
-        size_t rel_index,
-        int *value)
-{
-    int res;
-
-    DEBUG_ASSERT(KERNEL_ADDR(group));
-    DEBUG_ASSERT(KERNEL_ADDR(group->mnt));
-
-    if(rel_index > group->mnt->blks_per_group) {
-        return -EINVAL;
-    }
-
-    res = ext2_group_populate_blk_bitmap(group);
-    if(res) {
-        return res;
-    }
-
-    spin_lock(&group->blk_lock);
-    DEBUG_ASSERT(KERNEL_ADDR(group->blk_bitmap));
-    *value = bitmap_check(group->blk_bitmap, rel_index);
-    spin_unlock(&group->blk_lock);
-
-    return 0;
-}
+//static int
+//ext2_group_blk_bitmap_check(
+//        struct ext2_group *group,
+//        size_t rel_index,
+//        int *value)
+//{
+//    int res;
+//
+//    DEBUG_ASSERT(KERNEL_ADDR(group));
+//    DEBUG_ASSERT(KERNEL_ADDR(group->mnt));
+//
+//    if(rel_index > group->mnt->blks_per_group) {
+//        return -EINVAL;
+//    }
+//
+//    res = ext2_group_populate_blk_bitmap(group);
+//    if(res) {
+//        return res;
+//    }
+//
+//    spin_lock(&group->blk_lock);
+//    DEBUG_ASSERT(KERNEL_ADDR(group->blk_bitmap));
+//    *value = bitmap_check(group->blk_bitmap, rel_index);
+//    spin_unlock(&group->blk_lock);
+//
+//    return 0;
+//}
 
 // inode Bitmap
 static int

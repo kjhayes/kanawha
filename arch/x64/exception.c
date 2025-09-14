@@ -125,7 +125,7 @@ x64_unhandled_exception(struct x64_excp_state *state)
     const char *mnemonic = "UNKNOWN";
     const char *desc_str = "Unknown-Vector";
     int errcode_valid = 0;
-    int type = X64_EXCP_TYPE_UNDEF;
+    __maybe_unused int type = X64_EXCP_TYPE_UNDEF;
 
     int ring_from = state->cs & 0b11;
 

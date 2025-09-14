@@ -262,7 +262,7 @@ pipe_fs_mount_load_node(
     struct pipe *pipe = kmalloc(sizeof(struct pipe), KM_KERNEL);
     if(pipe == NULL) {
         wprintk("Failed to allocate pipefs node: Out of Memory\n");
-        return res;
+        return -ENOMEM;
     }
 
     pipe->buflen = DEFAULT_PIPE_BUFSIZE;
@@ -270,7 +270,7 @@ pipe_fs_mount_load_node(
     if(pipe->buffer == NULL) {
         wprintk("Failed to allocate pipefs node buffer: Out of Memory\n");
         kfree(pipe);
-        return res;
+        return -ENOMEM;
     }
     pipe->head = 0;
     pipe->tail = 0;

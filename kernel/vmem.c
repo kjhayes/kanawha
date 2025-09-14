@@ -326,6 +326,7 @@ vmem_map_map_region(
     struct vmem_region_ref *ref = alloc_vmem_region_ref();
     if(ref == NULL) {
         eprintk("Failed to allocate vmem_region_ref!\n");
+	res = -ENOMEM;
         goto err1;
     }
 
@@ -765,8 +766,6 @@ vmem_map_handle_page_fault(
 static int
 vmem_create_default_kernel_map(void)
 {
-    int res;
-
     default_map = vmem_map_create();
     if(default_map == NULL) {
         eprintk("OOM Error when initializing default kernel vmem_map!\n");

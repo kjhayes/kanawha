@@ -342,29 +342,30 @@ __thread_switch_threadless(void *in)
     panic("Returned from arch_thread_run_thread!\n");
 }
 
-static __noreturn void 
-__thread_sleep_threadless(void *in)
-{
-    // We should be running with IRQ(s) disabled, and thus pinned to the current CPU
-    struct thread_state *sleeping = current_thread();
-    struct thread_state *switching_to = (struct thread_state *)in;
+//static __noreturn void 
+//__thread_sleep_threadless(void *in)
+//{
+//    // We should be running with IRQ(s) disabled, and thus pinned to the current CPU
+//    struct thread_state *sleeping = current_thread();
+//    struct thread_state *switching_to = (struct thread_state *)in;
+//
+//    sleeping->status = THREAD_STATUS_SLEEPING;
+//    switching_to->status = THREAD_STATUS_RUNNING;
+//    switching_to->running_on = current_cpu_id();
+//    dprintk("setting current_thread=%p\n", switching_to);
+//    *(struct thread_state **)percpu_ptr(percpu_addr(__current_thread)) = switching_to;
+//    DEBUG_ASSERT(current_thread() == switching_to);
+//
+//    vmem_map_activate(switching_to->mem_map);
+//
+//    spin_unlock(&sleeping->lock);
+//    spin_unlock(&switching_to->lock);
+//
+//    arch_thread_run_thread(switching_to);
+//    
+//    panic("Returned from arch_thread_run_thread!\n");
+//}
 
-    sleeping->status = THREAD_STATUS_SLEEPING;
-    switching_to->status = THREAD_STATUS_RUNNING;
-    switching_to->running_on = current_cpu_id();
-    dprintk("setting current_thread=%p\n", switching_to);
-    *(struct thread_state **)percpu_ptr(percpu_addr(__current_thread)) = switching_to;
-    DEBUG_ASSERT(current_thread() == switching_to);
-
-    vmem_map_activate(switching_to->mem_map);
-
-    spin_unlock(&sleeping->lock);
-    spin_unlock(&switching_to->lock);
-
-    arch_thread_run_thread(switching_to);
-    
-    panic("Returned from arch_thread_run_thread!\n");
-}
 int
 thread_switch(struct thread_state *state)
 {
@@ -560,7 +561,7 @@ void thread_abandon(struct thread_state *scheduled)
             scheduled->status = THREAD_STATUS_RUNNING;
             scheduled->running_on = current_cpu_id();
             break;
-        defualt:
+        default:
             spin_unlock(&scheduled->lock);
             panic("CPU (%ld) new thread %p was not SCHEDULED during thread_abandon!\n",
                     (sl_t)current_cpu_id(), scheduled);
@@ -724,11 +725,11 @@ alloc_thread_global_vmem_region(void) {
     return region;
 }
 
-static void
-free_thread_global_vmem_region(struct thread_global_vmem_region *region) {
-    dprintk("free_thread_global_vmem_region() -> %p (list_node=%p)\n", &region, &region->list_node);
-    slab_free(global_vmem_region_slab_allocator, region);
-}
+//static void
+//free_thread_global_vmem_region(struct thread_global_vmem_region *region) {
+//    dprintk("free_thread_global_vmem_region() -> %p (list_node=%p)\n", &region, &region->list_node);
+//    slab_free(global_vmem_region_slab_allocator, region);
+//}
 
 static void
 thread_force_mapping_visitor(struct ptree_node *node, void *state)

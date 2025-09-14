@@ -13,6 +13,8 @@ struct udrv_rand_dev {
     struct udrv_dev udrv_dev;
     struct rand_dev rand_dev;
 
+    char *name;
+
     irq_lock_t buflock;
     size_t bufindex;
     size_t datalen;
@@ -24,7 +26,18 @@ rand_dev_udrv_create(
 	struct udrv_mount *mnt,
 	const char *name)
 {
+    int res;
+
     struct udrv_rand_dev *dev = kmalloc(sizeof(*dev), KM_KERNEL);
+    if(dev == NULL) {
+	return NULL;
+    }
+
+    dev->name = kstrdup(name);
+    if(dev->name == NULL) {
+	kfree(dev);
+	return NULL;
+    }
 
     dev->bufindex = 0;
     dev->datalen = 0;
@@ -32,7 +45,13 @@ rand_dev_udrv_create(
     irq_lock_init(&dev->buflock);
 
     dev->rand_dev.driver = &udrv_rand_driver;
-    register_rand_dev(&dev->rand_dev, name);
+
+    res = register_rand_dev(&dev->rand_dev, dev->name);
+    if(res) {
+	kfree(dev->name);
+	kfree(dev);
+	return NULL;
+    }
 
     return &dev->udrv_dev;
 }
@@ -51,6 +70,7 @@ rand_dev_udrv_destroy(
 	return res;
     }
 
+    kfree(dev->name);
     kfree(dev);
 
     return 0;

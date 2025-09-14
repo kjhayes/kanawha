@@ -160,7 +160,7 @@ kstrtoull(
         str_end--;
 
         char c = *str_end;
-        unsigned long long digit;
+        unsigned long long digit = -1;
         if('0' <= c && c <= '9') {
             digit = c - '0';
         } else if('a' <= c && c <= 'z') {

@@ -212,15 +212,6 @@ ramfs_file_setattr(
     return -EINVAL;
 }
 
-static int
-ramfs_file_flush_page(
-	struct fs_node *node,
-	uintptr_t pfn,
-	unsigned long flags)
-{
-    return 0;
-}
-
 static struct fs_node_ops
 ramfs_file_node_ops =
 {

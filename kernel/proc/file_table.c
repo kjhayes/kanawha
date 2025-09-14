@@ -9,6 +9,12 @@
 #include <kanawha/fs/path.h>
 #include <kanawha/fs/node.h>
 
+#ifdef CONFIG_DEBUG
+/*
+ * Handy to keep this function compiled in if we are debugging with GDB
+ */
+
+__maybe_unused
 static void
 file_table_dump_lockless(
         struct file_table *table)
@@ -29,6 +35,7 @@ file_table_dump_lockless(
     }
 
 }
+#endif
 
 int
 file_table_create(

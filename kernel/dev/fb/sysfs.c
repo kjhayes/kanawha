@@ -64,7 +64,7 @@ fb_dev_buffer_fs_node_load_page(
         fbfs->buffer_info = fb_dev_get_mode_info(fbfs->dev, fbfs->buffer_mode);
         if(fbfs->buffer_info == NULL) {
             spin_unlock(&fbfs->buffer_lock);
-            return res;
+            return -ENXIO;
         }
 
         if(fbfs->buffer_info->buffer_size & ((1ULL<<VMEM_MIN_PAGE_ORDER)-1)) {
@@ -235,7 +235,8 @@ fb_dev_buffer_fs_node_getattr(
 
     if(info == NULL) {
         spin_unlock(&fbfs->buffer_lock);
-        return -EINVAL;
+	res = -EINVAL;
+	goto exit;
     }
 
     res = 0; // Default to zero (success)
@@ -667,7 +668,7 @@ err2:
         fb_dev_fs_mount,
         fb_dev_get_name(dev));
     vfs_node_unlink_all(&fbfs->buffer_vfs_node);
-err1:
+//err1:
     vfs_mount_remove_node(
         fb_dev_fs_mount,
         &fbfs->buffer_vfs_node);

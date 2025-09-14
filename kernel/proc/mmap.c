@@ -230,23 +230,23 @@ mmap_region_unmap_page(
     return 0;
 }
 
-static int
-mmap_region_flush_page(
-        struct mmap_region *region,
-        struct mmap_page *page)
-{
-    unsigned long mmap_type = page->flags & 0b11;
-    if(mmap_type == MMAP_PAGE_ANON) {
-        return 0;
-    }
-
-    struct fs_node *node = region->fs_node; 
-    return fs_node_flush_page(
-            node,
-            page->tree_node.key,
-            0,
-            page->phys_addr);
-}
+//static int
+//mmap_region_flush_page(
+//        struct mmap_region *region,
+//        struct mmap_page *page)
+//{
+//    unsigned long mmap_type = page->flags & 0b11;
+//    if(mmap_type == MMAP_PAGE_ANON) {
+//        return 0;
+//    }
+//
+//    struct fs_node *node = region->fs_node; 
+//    return fs_node_flush_page(
+//            node,
+//            page->tree_node.key,
+//            0,
+//            page->phys_addr);
+//}
 
 // Unmap, and unload the page
 static int
@@ -519,7 +519,7 @@ mmap_map_region(
 
 err3:
     spin_unlock(&mmap->lock);
-err2:
+//err2:
     kfree(region);
 err1:
     if(fs_node) {
@@ -645,7 +645,7 @@ mmap_map_region_exact(
 
 err3:
     spin_unlock(&mmap->lock);
-err2:
+//err2:
     kfree(region);
 err1:
     if(fs_node) {
@@ -709,7 +709,7 @@ mmap_unmap_region_lockless(
 
     spin_lock(&region->page_tree_lock);
 
-    size_t num_reclaimed = 0;
+    __maybe_unused size_t num_reclaimed = 0;
 
     struct ptree_node *page_node = ptree_get_first(&region->page_tree);
     while(page_node != NULL)

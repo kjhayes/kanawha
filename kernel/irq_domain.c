@@ -220,7 +220,7 @@ run_irq_actions(struct irq_desc *desc, struct excp_state *excp_state)
 
     rlock_read_lock(&desc->lock);
 
-    size_t action_num = 0;
+    __maybe_unused size_t action_num = 0;
     ilist_node_t *node;
     ilist_for_each(node, &desc->actions) {
         struct irq_action *action =

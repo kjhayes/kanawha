@@ -5,53 +5,39 @@
 #include <kanawha/stree.h>
 #include <kanawha/waitqueue.h>
 #include <kanawha/sysfs/vfs.h>
+#include <kanawha/registry.h>
 
 #include <kanawha/uapi/kbd.h>
 
 #define KBD_EVENT_BUFLEN 64
-struct kbd
+struct kbd_dev
 {
-    struct stree_node global_node;
-    struct vfs_node vfs_node;
-
     DECLARE_BITMAP(pressed_bitmap, KBD_NUM_KEYS);
+
     size_t buf_head;
     size_t buf_tail;
     struct kbd_event buffer[KBD_EVENT_BUFLEN];
 
     struct waitqueue *read_queue;
+
+    struct registry_node registry_node;
 };
 
-// Initialize the internal buffer of the kbd,
-// in-case events occur before the keyboard
-// can safely be fully registered
-int
-kbd_init_struct(
-        struct kbd *kbd);
+DECLARE_REGISTRY(kbd_dev);
 
 int
-kbd_deinit_struct(
-        struct kbd *kbd);
-
-// Keeps a reference to "name"
-int
-register_kbd(
-        struct kbd *kbd,
-        const char *name);
-
-int
-unregister_kbd(
-        struct kbd *kbd);
-
-int
-kbd_enqueue_event(
-        struct kbd *kbd,
+kbd_driver_enqueue_event(
+        struct kbd_dev *kbd,
         struct kbd_event *event);
 
 int
-kbd_dequeue_event(
-        struct kbd *kbd,
+kbd_driver_dequeue_event(
+        struct kbd_dev *kbd,
         struct kbd_event *event);
+
+int
+kbd_driver_wait_for_event(
+	struct kbd_dev *kbd);
 
 const char *kbd_key_to_string(
         kbd_key_t key);

@@ -150,7 +150,7 @@ pc_com_8250_register(
     com->base_port = platform_pc_com_ports_base[index];
     com->uart_8250.irq = x64_pic_irq(platform_pc_com_pic_irq[index]);
 
-    snprintk(com->name, PC_COM_MAX_NAMELEN, "COM%ld", (sl_t)index);
+    snprintk(com->name, PC_COM_MAX_NAMELEN, "COM%ld", (sl_t)index+1);
     com->name[PC_COM_MAX_NAMELEN] = '\0';
 
     res = register_uart_8250(
