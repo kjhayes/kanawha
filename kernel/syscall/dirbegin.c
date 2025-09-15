@@ -12,10 +12,10 @@
 
 int
 syscall_dirbegin(
-        struct process *process,
         fd_t dir_fd)
 {
     int res;
+    struct process *process = current_process();
     struct file *file =
         file_table_get_file(
                 process->file_table,

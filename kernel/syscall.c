@@ -7,11 +7,11 @@
 #define __KANAWHA_SYSCALL_KEEP_XLIST
 #include <kanawha/uapi/syscall.h>
 
-int
+static int
 syscall_unknown(
-        struct process *process,
         syscall_id_t id)
 {
+    struct process *process = current_process();
     eprintk("process(%ld) Unknown syscall (%ld)\n",
             (sl_t)process->id,
             (sl_t)id);
@@ -38,12 +38,11 @@ handle_syscall(
 
     switch(id) {
         case SYSCALL_ID_EXIT:
-            syscall_exit(process, args->args[0]);
+            syscall_exit(args->args[0]);
             break;
         case SYSCALL_ID_OPEN:
             ret_val = (uint64_t)(fd_t)
                 syscall_open(
-                        process,
                         (const char __user *)args->args[0], // path
                         (unsigned long)args->args[1], // access_flags
                         (unsigned long)args->args[2], // mode_flags
@@ -53,13 +52,11 @@ handle_syscall(
         case SYSCALL_ID_CLOSE:
             ret_val = (int)
                 syscall_close(
-                        process,
                         (fd_t)args->args[0]);
             break;
         case SYSCALL_ID_READ:
             ret_val = (uint64_t)(ssize_t)
                 syscall_read(
-                        process,
                         (fd_t)args->args[0], // file
                         (void __user *)args->args[1], // dst
                         (size_t)args->args[2] // size
@@ -68,7 +65,6 @@ handle_syscall(
         case SYSCALL_ID_WRITE:
             ret_val = (uint64_t)(ssize_t)
                 syscall_write(
-                        process,
                         (fd_t)args->args[0], // file
                         (void __user *)args->args[1], // src
                         (size_t)args->args[2] // size
@@ -77,7 +73,6 @@ handle_syscall(
         case SYSCALL_ID_FLUSH:
             ret_val = (uint64_t)(int)
                 syscall_flush(
-                        process,
                         (fd_t)args->args[0], // file
                         (unsigned long)args->args[1] // flags
                         );
@@ -85,7 +80,6 @@ handle_syscall(
         case SYSCALL_ID_SEEK:
             ret_val = (uint64_t)(ssize_t)
                 syscall_seek(
-                        process,
                         (fd_t)args->args[0], // file
                         (ssize_t)args->args[1], // offset
                         (int)args->args[2] // whence
@@ -94,7 +88,6 @@ handle_syscall(
         case SYSCALL_ID_MMAP:
             ret_val = (uint64_t)(int)
                 syscall_mmap(
-                        process,
                         (fd_t)args->args[0], // file
                         (size_t)args->args[1], // file offset
                         (void __user * __user *)args->args[2], // where
@@ -105,14 +98,12 @@ handle_syscall(
         case SYSCALL_ID_MUNMAP:
             ret_val = (uint64_t)(int)
                 syscall_munmap(
-                        process,
                         (void __user *)args->args[0] // mapping
                         );
             break;
         case SYSCALL_ID_EXEC:
             ret_val = (uint64_t)(int)
                 syscall_exec(
-                        process,
                         (fd_t)args->args[0], // file
                         (unsigned long)args->args[1] // exec_flags
                         );
@@ -120,7 +111,6 @@ handle_syscall(
         case SYSCALL_ID_GETCWD:
             ret_val = (uint64_t)(int)
                 syscall_getcwd(
-                        process,
                         (char __user *)args->args[0], // buffer
                         (size_t)args->args[1] // buflen
                         );
@@ -128,7 +118,6 @@ handle_syscall(
         case SYSCALL_ID_ENVIRON:
             ret_val = (uint64_t)(int)
                 syscall_environ(
-                        process,
                         (const char __user *)args->args[0], // key
                         (char __user *)args->args[1], // value
                         (size_t)args->args[2], // len
@@ -138,7 +127,6 @@ handle_syscall(
         case SYSCALL_ID_SPAWN:
             ret_val = (uint64_t)(int)
                 syscall_spawn(
-                        process,
                         (void __user *)args->args[0], // entry
                         (void *)args->args[1], // arg
                         (unsigned long)args->args[2], // flags
@@ -148,7 +136,6 @@ handle_syscall(
         case SYSCALL_ID_REAP:
             ret_val = (uint64_t)(int)
                 syscall_reap(
-                        process,
                         (unsigned long)args->args[0], // flags
                         (pid_t __user *)args->args[1], // pid_inout
                         (int __user *)args->args[2] // exitcode
@@ -157,7 +144,6 @@ handle_syscall(
         case SYSCALL_ID_FACCESS:
             ret_val = (uint64_t)(int)
                 syscall_faccess(
-                        process,
                         (fd_t)args->args[0], // file
                         (unsigned long)args->args[1], // fields
                         (unsigned long)args->args[2] // mode
@@ -166,7 +152,6 @@ handle_syscall(
         case SYSCALL_ID_MOUNT:
             ret_val = (uint64_t)(int)
                 syscall_mount(
-                        process,
                         (const char __user *)args->args[0], // source
                         (fd_t)args->args[1], // dst_dir
                         (const char __user *)args->args[2], // dst_name
@@ -177,28 +162,24 @@ handle_syscall(
         case SYSCALL_ID_UNMOUNT:
             ret_val = (uint64_t)(int)
                 syscall_unmount(
-                        process,
                         (fd_t)args->args[0] // mount point
                         );
             break;
        case SYSCALL_ID_DIRBEGIN:
             ret_val = (uint64_t)(int)
                 syscall_dirbegin(
-                        process,
                         (fd_t)args->args[0] // dir
                         );
             break;
        case SYSCALL_ID_DIRNEXT:
             ret_val = (uint64_t)(int)
                 syscall_dirnext(
-                        process,
                         (fd_t)args->args[0] // dir
                         );
             break;
        case SYSCALL_ID_DIRATTR:
             ret_val = (uint64_t)(int)
                 syscall_dirattr(
-                        process,
                         (fd_t)args->args[0], // mount point
                         (int)args->args[1], // attr
                         (size_t __user *)args->args[2] // value
@@ -207,7 +188,6 @@ handle_syscall(
        case SYSCALL_ID_DIRNAME:
             ret_val = (uint64_t)(int)
                 syscall_dirname(
-                        process,
                         (fd_t)args->args[0], // mount point
                         (char __user *)args->args[1], // buffer
                         (size_t)args->args[2] // buflen
@@ -216,7 +196,6 @@ handle_syscall(
         case SYSCALL_ID_FMOVE:
             ret_val = (uint64_t)(int)
                 syscall_fmove(
-                        process,
                         (fd_t)args->args[0], // fd0
                         (fd_t)args->args[1],  // fd1
                         (unsigned long)args->args[2], // flags
@@ -226,7 +205,6 @@ handle_syscall(
         case SYSCALL_ID_FATTR:
             ret_val = (uint64_t)(int)
                 syscall_fattr(
-                        process,
                         (fd_t)args->args[0],
                         (int)args->args[1],
                         (size_t __user *)args->args[2]
@@ -235,7 +213,6 @@ handle_syscall(
         case SYSCALL_ID_MKFILE:
             ret_val = (uint64_t)(int)
                 syscall_mkfile(
-                        process,
                         (fd_t)args->args[0], // dir
                         (const char __user *)args->args[1], // file_name
                         (unsigned long)args->args[2] 
@@ -244,7 +221,6 @@ handle_syscall(
         case SYSCALL_ID_MKDIR:
             ret_val = (uint64_t)(int)
                 syscall_mkdir(
-                        process,
                         (fd_t)args->args[0], // dir
                         (const char __user *)args->args[1], // name
                         (unsigned long)args->args[2] // flags
@@ -253,7 +229,6 @@ handle_syscall(
         case SYSCALL_ID_LINK:
             ret_val = (uint64_t)(int)
                 syscall_link(
-                        process,
                         (fd_t)args->args[0], // from
                         (fd_t)args->args[1], // dir
                         (const char __user *)args->args[2], // link_name
@@ -263,7 +238,6 @@ handle_syscall(
         case SYSCALL_ID_SYMLINK:
             ret_val = (uint64_t)(int)
                 syscall_symlink(
-                        process,
                         (const char __user *)args->args[0], // path
                         (fd_t)args->args[1], // dir
                         (const char __user *)args->args[2], // link_name
@@ -273,7 +247,6 @@ handle_syscall(
         case SYSCALL_ID_UNLINK:
             ret_val = (uint64_t)(int)
                 syscall_unlink(
-                        process,
                         (fd_t)args->args[0], // dir
                         (const char __user *)args->args[1] // name
                         );
@@ -281,14 +254,12 @@ handle_syscall(
         case SYSCALL_ID_CHROOT:
             ret_val = (uint64_t)(int)
                 syscall_chroot(
-                        process,
                         (fd_t)args->args[0]
                         );
             break;
         case SYSCALL_ID_PIPE:
             ret_val = (uint64_t)(int)
                 syscall_pipe(
-                        process,
                         (unsigned long)args->args[0], // flags
                         (unsigned long)args->args[1], // mode_flags
                         (fd_t __user *)args->args[2]
@@ -297,7 +268,6 @@ handle_syscall(
         case SYSCALL_ID_INSMOD:
             ret_val = (uint64_t)(int)
                 syscall_insmod(
-                        process,
                         (fd_t)args->args[0],
                         (const char __user *)args->args[1],
                         (unsigned long)args->args[2]
@@ -306,7 +276,6 @@ handle_syscall(
         case SYSCALL_ID_RMMOD:
             ret_val = (uint64_t)(int)
                 syscall_rmmod(
-                        process,
                         (const char __user *)args->args[0],
                         (unsigned long)args->args[1]
                         );
@@ -314,14 +283,12 @@ handle_syscall(
         case SYSCALL_ID_CHWDIR:
             ret_val = (uint64_t)(int)
                 syscall_chwdir(
-                        process,
                         (fd_t)args->args[0]
                         );
             break;
         case SYSCALL_ID_SLEEP:
             ret_val = (uint64_t)(int)
                 syscall_sleep(
-                        process,
                         (size_t)args->args[0],
                         (unsigned long)args->args[1]
                         );
@@ -329,14 +296,12 @@ handle_syscall(
         case SYSCALL_ID_TIME:
             ret_val = (uint64_t)(ssize_t)
                 syscall_time(
-                        process,
                         (unsigned long)args->args[0]
                         );
             break;
         case SYSCALL_ID_RID:
             ret_val = (uint64_t)(int)
                 syscall_rid(
-                        process,
                         (pid_t)args->args[0], // target
                         (unsigned long)args->args[1], // flags
                         (id_t __user *)args->args[2] // id_out
@@ -345,7 +310,6 @@ handle_syscall(
         case SYSCALL_ID_WID:
             ret_val = (uint64_t)(int)
                 syscall_wid(
-                        process,
                         (pid_t)args->args[0], // target
                         (unsigned long)args->args[1], // flags
                         (id_t)args->args[2] // id
@@ -354,7 +318,6 @@ handle_syscall(
         case SYSCALL_ID_RESIZE:
             ret_val = (uint64_t)(int)
                 syscall_resize(
-                        process,
                         (fd_t)args->args[0], // file
                         (size_t)args->args[1], // size 
                         (unsigned long)args->args[2] // flags
@@ -363,7 +326,6 @@ handle_syscall(
         case SYSCALL_ID_POLL:
             ret_val = (uint64_t)(int)
                 syscall_poll(
-                        process,
                         (fd_t)args->args[0], // file
                         (unsigned long)args->args[1], // watching
                         (unsigned long __user *)args->args[2] // triggered
@@ -372,7 +334,6 @@ handle_syscall(
         case SYSCALL_ID_SIGSEND:
             ret_val = (uint64_t)(int)
                 syscall_sigsend(
-                        process,
                         (pid_t)args->args[0], // target
                         (int)args->args[1], // signal
                         (unsigned long)args->args[2] // flags
@@ -381,7 +342,6 @@ handle_syscall(
         case SYSCALL_ID_SIGINFO:
             ret_val = (uint64_t)(int)
                 syscall_siginfo(
-                        process,
                         (unsigned long)args->args[0],
                         (unsigned long __user *)args->args[1]
                         );
@@ -389,7 +349,6 @@ handle_syscall(
         case SYSCALL_ID_SIGMOD:
             ret_val = (uint64_t)(int)
                 syscall_sigmod(
-                        process,
                         (unsigned long)args->args[0],
                         (unsigned long)args->args[1]
                         );
@@ -397,7 +356,6 @@ handle_syscall(
 	case SYSCALL_ID_PRGET:
 	    ret_val = (uint64_t)(int)
 		syscall_prget(
-			process,
 			(unsigned long)args->args[0],
 			(long)args->args[1],
                         (unsigned long __user *)args->args[2]
@@ -406,14 +364,13 @@ handle_syscall(
 	case SYSCALL_ID_PRSET:
 	    ret_val = (uint64_t)(int)
 		syscall_prset(
-			process,
 			(unsigned long)args->args[0],
 			(long)args->args[1],
                         (unsigned long)args->args[2]
 			);
 	    break;
         default:
-            syscall_unknown(process, id);
+            syscall_unknown(id);
             ret_val = -ENOSYS;
 	    break;
     }

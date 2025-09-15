@@ -24,7 +24,6 @@
 
 int
 syscall_mmap(
-        struct process *process,
         fd_t file,
         size_t file_offset,
         void __user * __user* where,
@@ -32,6 +31,8 @@ syscall_mmap(
         unsigned long mmap_flags)
 {
     int res;
+
+    struct process *process = current_process();
 
     void __user *requested;
     res = process_read_usermem(
@@ -139,10 +140,10 @@ syscall_mmap(
 
 int
 syscall_munmap(
-        struct process *process,
         void __user *mapping) 
 {
     int res;
+    struct process *process = current_process();
     struct mmap *mmap = process->mmap;
 
     LOG("unmapping %p\n", mapping);

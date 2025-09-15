@@ -14,12 +14,12 @@
 
 int
 syscall_dirname(
-        struct process *process,
         fd_t dir_fd,
         char __user *user_namebuf,
         size_t user_namebuflen)
 {
     int res;
+    struct process *process = current_process();
     struct file *file =
         file_table_get_file(
                 process->file_table,

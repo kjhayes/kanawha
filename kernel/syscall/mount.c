@@ -12,7 +12,6 @@
 
 int
 syscall_mount(
-        struct process *process,
         const char __user *src,
         fd_t dst_dir,
         const char __user *dst_name,
@@ -20,6 +19,8 @@ syscall_mount(
         unsigned long flags)
 {
     int res;
+
+    struct process *process = current_process();
 
     // Get the FS type
     struct fs_type *type = NULL;
@@ -268,9 +269,9 @@ syscall_mount(
 
 int
 syscall_unmount(
-        struct process *process,
         fd_t mntpoint_fd)
 {
+    struct process *process = current_process();
     return -EUNIMPL;
 }
 

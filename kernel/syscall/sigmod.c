@@ -13,11 +13,12 @@
 
 int
 syscall_sigmod(
-        struct process *process,
 	unsigned long attr,
         unsigned long value)
 {
     int res;
+
+    struct process *process = current_process();
 
     switch(attr) {
 	case SIGMOD_ENTRY:

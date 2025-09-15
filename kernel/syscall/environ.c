@@ -248,12 +248,13 @@ env_wipe(struct process *process)
 
 int
 syscall_environ(
-        struct process *process,
         const char __user *key,
         char __user *value,
         size_t len,
         int opcode)
 {
+    struct process *process = current_process();
+
     switch(opcode) {
         case ENV_GET:
             return env_get(process, key, value, len);

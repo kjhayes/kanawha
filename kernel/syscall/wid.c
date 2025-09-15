@@ -5,11 +5,12 @@
 
 int
 syscall_wid(
-        struct process *process,
         pid_t target_pid,
         unsigned long flags,
         id_t id)
 { 
+    struct process *process = current_process();
+
     struct process *target;
     if(flags & WID_SELF) {
         target = process;

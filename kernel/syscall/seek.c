@@ -8,12 +8,13 @@
 
 ssize_t
 syscall_seek(
-        struct process *process,
         fd_t file,
         ssize_t offset,
         int whence)
 {
     int res;
+
+    struct process *process = current_process();
 
     int fs_whence;
     switch(whence) {

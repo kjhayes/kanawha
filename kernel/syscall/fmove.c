@@ -7,13 +7,14 @@
 
 int
 syscall_fmove(
-        struct process *process,
         fd_t dst,
         fd_t src,
         unsigned long flags,
         fd_t __user *user_out)
 {
     int res;
+
+    struct process *process = current_process();
 
     DEBUG_ASSERT(KERNEL_ADDR(process));
     DEBUG_ASSERT(KERNEL_ADDR(process->file_table));

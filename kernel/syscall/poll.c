@@ -12,13 +12,14 @@
 
 int
 syscall_poll(
-        struct process *process,
         fd_t file_desc,
         unsigned long watching,
         unsigned long __user *triggered_out)
 {
     int res;
     struct file *file;
+
+    struct process *process = current_process();
 
     LOG("watching=0x%lx\n");
 

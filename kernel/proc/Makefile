@@ -5,6 +5,7 @@ obj-y += \
 	file_table.o \
 	env.o \
 	signal.o \
+	exec.o \
 
 obj-$(CONFIG_PROCFS) += procfs.o
 

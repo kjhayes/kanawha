@@ -9,10 +9,11 @@
 __noreturn
 int
 syscall_exit(
-        struct process *process,
         int exitcode)
 {
     int res;
+
+    struct process *process = current_process();
 
     res = process_terminate(process, exitcode);
     if(res) {

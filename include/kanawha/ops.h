@@ -4,6 +4,7 @@
 #include <kanawha/printk.h>
 #include <kanawha/assert.h>
 #include <kanawha/vmem.h>
+#include <kanawha/signature.h>
 
 /*
  * API Overview
@@ -103,25 +104,9 @@
 #define SELF_ACCESSOR
 #define STATE_ACCESSOR ->state
 
-// Helper Macros
-#define __NOTHING(...) 
-#define __RET_IDENTITY(x) x
-#define __ARG_COMMA_DECL(type, name) , type name
-#define __ARG_DECL_COMMA(type, name) type name ,
-#define __ARG_COMMA_TYPE(type, name) , type
-#define __ARG_COMMA_NAME(type, name) , name
-#define __ARG_NAME_COMMA(type, name) name ,
-
-#define SIG_RETURN_TYPE(SIG) SIG(__RET_IDENTITY,__NOTHING,__NOTHING)
-#define SIG_ARG_TYPE_LIST(SIG) SIG(__NOTHING,__ARG_COMMA_TYPE,__NOTHING)
-#define SIG_ARG_DECLS(SIG) SIG(__NOTHING,__ARG_COMMA_DECL,__NOTHING)
-#define SIG_ARG_NAMES(SIG) SIG(__NOTHING,__ARG_COMMA_NAME,__NOTHING)
-#define _SIG_ARG_NAMES(SIG) SIG(__NOTHING,__ARG_NAME_COMMA,__NOTHING)
-
-
 // Single Function Pointer Declaration
 #define DECLARE_OP_PTR(FUNC, SIG, THIS_TYPE, ...)\
-    SIG_RETURN_TYPE(SIG) (*FUNC) (THIS_TYPE SIG_ARG_DECLS(SIG));
+    SIG_RETURN_TYPE(SIG) (*FUNC) (THIS_TYPE SIG_ARG_DECLS_LEADING_COMMA(SIG));
 
 // Declare Function Pointers from an OP_LIST
 #define DECLARE_OP_LIST_PTRS(OP_LIST, THIS_TYPE)\
@@ -129,7 +114,7 @@
 
 // Single Wrapper Function Declaration
 #define DECLARE_OP_WRAPPER(FUNC, SIG, STRUCT_NAME, PREFIX, QUALIFIERS)\
-    QUALIFIERS SIG_RETURN_TYPE(SIG) PREFIX ## STRUCT_NAME ## _ ## FUNC (struct STRUCT_NAME* SIG_ARG_DECLS(SIG));
+    QUALIFIERS SIG_RETURN_TYPE(SIG) PREFIX ## STRUCT_NAME ## _ ## FUNC (struct STRUCT_NAME* SIG_ARG_DECLS_LEADING_COMMA(SIG));
 
 // Declare Wrapper Functions for an OP_LIST on struct STRUCT_NAME
 #define DECLARE_OP_LIST_WRAPPERS(OP_LIST, QUALIFIERS, NAMESPACE, STRUCT_NAME)\
@@ -141,7 +126,7 @@
 #define DEFINE_OP_WRAPPER(FUNC, SIG, QUALIFIERS, NAMESPACE, STRUCT_NAME, OP_FIELD_ACCESSOR, THIS_FIELD_ACCESSOR, PRE_STATEMENT, POST_STATEMENT)\
     QUALIFIERS \
     SIG_RETURN_TYPE(SIG) \
-    NAMESPACE ## STRUCT_NAME ## _ ## FUNC(struct STRUCT_NAME * __ ## STRUCT_NAME SIG_ARG_DECLS(SIG)) \
+    NAMESPACE ## STRUCT_NAME ## _ ## FUNC(struct STRUCT_NAME * __ ## STRUCT_NAME SIG_ARG_DECLS_LEADING_COMMA(SIG)) \
     {\
         DEBUG_ASSERT(KERNEL_ADDR(__ ## STRUCT_NAME));\
 	PRE_STATEMENT((__ ## STRUCT_NAME));\
@@ -149,7 +134,7 @@
 	SIG_RETURN_TYPE(SIG) __ret;\
         __ret = (*(OP_FIELD_ACCESSOR(__ ## STRUCT_NAME, FUNC)))(\
                 __ ## STRUCT_NAME THIS_FIELD_ACCESSOR\
-                SIG_ARG_NAMES(SIG));\
+                SIG_ARG_NAMES_LEADING_COMMA(SIG));\
 	POST_STATEMENT((__ ## STRUCT_NAME));\
 	return __ret;\
     }

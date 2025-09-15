@@ -13,12 +13,13 @@ arch_prget(
 
 int
 syscall_prget(
-	struct process *process,
 	unsigned long type,
 	long field,
 	unsigned long __user *user_value_ptr)
 {
     int res;
+
+    struct process *process = current_process();
 
     unsigned long value;
     switch(type) {

@@ -4,12 +4,13 @@
 
 int
 syscall_resize(
-        struct process *process,
         fd_t file,
         size_t size,
         unsigned long flags)
 {
     int res;
+
+    struct process *process = current_process();
 
     struct file *desc
         = file_table_get_file(

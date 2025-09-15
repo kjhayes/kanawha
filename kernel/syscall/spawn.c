@@ -8,13 +8,14 @@
 
 int
 syscall_spawn(
-        struct process *process,
         void __user *child_func,
         void *arg,
         unsigned long flags,
         pid_t __user *child_pid)
 {
     int res;
+
+    struct process *process = current_process();
 
     dprintk("syscall_spawn: child_pid=%p\n", child_pid);
 

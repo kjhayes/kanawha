@@ -11,12 +11,13 @@
 
 ssize_t
 syscall_read(
-        struct process *process,
         fd_t file,
         void __user *dst,
         size_t size)
 {
     ssize_t res;
+
+    struct process *process = current_process();
 
 #ifdef CONFIG_DEBUG_SYSCALL_READ
     printk("PID(%ld) syscall_read(file=%ld, size=0x%llx, dst=%p)\n",

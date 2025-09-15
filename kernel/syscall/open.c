@@ -15,13 +15,14 @@
 
 int
 syscall_open(
-        struct process *process,
         const char __user *path,
         unsigned long access_flags,
         unsigned long mode_flags,
         fd_t __user *fd)
 {
     int res;
+    
+    struct process *process = current_process();
 
     size_t path_len;
     res = process_strlen_usermem(process, path, SYSCALL_OPEN_MAX_PATH_LEN+1, &path_len);

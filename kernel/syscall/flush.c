@@ -11,11 +11,12 @@
 
 int
 syscall_flush(
-        struct process *process,
         fd_t file,
         unsigned long flags) 
 {
     int res;
+
+    struct process *process = current_process();
 
     LOG("PID(%ld) syscall_flush: file=%ld, flags=0x%lx\n",
             (sl_t)process->id,

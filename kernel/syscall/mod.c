@@ -9,12 +9,13 @@
 
 int
 syscall_insmod(
-        struct process *process,
         fd_t mod_fd,
         const char __user *modname,
         unsigned long flags)
 {
     int res;
+
+    struct process *process = current_process();
 
     if(!process_is_root(process)) {
         return -EPERM;
@@ -107,11 +108,12 @@ syscall_insmod(
 
 int
 syscall_rmmod(
-        struct process *process,
         const char __user *modname,
         unsigned long flags)
 {
     int res;
+
+    struct process *process = current_process();
 
     if(!process_is_root(process)) {
         return -EPERM;

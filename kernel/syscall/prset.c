@@ -13,12 +13,14 @@ arch_prset(
 
 int
 syscall_prset(
-	struct process *process,
 	unsigned long type,
 	long field,
 	unsigned long value)
 {
     int res;
+
+    struct process *process = current_process();
+
     switch(type) {
 	case PRINFO_TYPE_ARCH:
 	    return arch_prset(field, value);

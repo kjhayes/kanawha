@@ -12,10 +12,11 @@
 
 int
 syscall_chroot(
-        struct process *process,
         fd_t fd)
 {
     int res;
+
+    struct process *process = current_process();
 
     DEBUG_ASSERT(KERNEL_ADDR(process));
     DEBUG_ASSERT(KERNEL_ADDR(process->file_table));

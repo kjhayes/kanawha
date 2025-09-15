@@ -8,12 +8,12 @@
 
 int
 syscall_mkdir(
-        struct process *process,
         fd_t dir_fd,
         char __user * name,
         unsigned long user_flags)
 {
     int res;
+    struct process *process = current_process();
     dprintk("syscall_mkdir: dir_fd=%ld, name=%p, userflags=%p\n",
             dir_fd, name, user_flags);
 

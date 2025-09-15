@@ -1,9 +1,17 @@
 #ifndef __KANAWHA__UAPI_SYSCALL_H__
 #define __KANAWHA__UAPI_SYSCALL_H__
 
-#include <kanawha/types.h>
+#ifdef KANAWHA_BUILDING_KERNEL
+#include <kanawha/uapi/types.h>
+#include <kanawha/uapi/signature.h>
 #include <kanawha/uapi/file.h>
 #include <kanawha/uapi/process.h>
+#else
+#include <kanawha/types.h>
+#include <kanawha/signature.h>
+#include <kanawha/file.h>
+#include <kanawha/process.h>
+#endif
 
 typedef int syscall_id_t;
 
@@ -31,7 +39,7 @@ ARG(size_t, size)
 #define SYSCALL_SIG_WRITE(RET,ARG,...)\
 RET(ssize_t)\
 ARG(fd_t, file)\
-ARG(void __user *, src)\
+ARG(const void __user *, src)\
 ARG(size_t, size)
 
 #define SYSCALL_SIG_FLUSH(RET,ARG,...)\
@@ -301,12 +309,25 @@ X(sigmod,    43, SIGMOD,     SYSCALL_SIG_SIGMOD)\
 X(prget,     44, PRGET,      SYSCALL_SIG_PRGET)\
 X(prset,     45, PRSET,      SYSCALL_SIG_PRSET)\
 
+#ifdef KANAWHA_BUILDING_KERNEL
+
 #define DECLARE_SYSCALL_ID_CONSTANTS(__name, __id, __NAME, ...)\
 const static syscall_id_t SYSCALL_ID_ ## __NAME = __id;
 SYSCALL_XLIST(DECLARE_SYSCALL_ID_CONSTANTS)
 #undef DECLARE_SYSCALL_ID_CONSTANTS
 
-#ifdef KANAWHA_SYSCALL_UNDEF_XLISTS
+#else
+
+#ifdef __user
+#undef __user
+#endif
+#define __user
+
+#define KANAWHA_DECLARE_UAPI_SYSCALL(__name, __ID, __NAME, __SIG)\
+    SIG_RETURN_TYPE(__SIG) kanawha_sys_ ## __name (SIG_ARG_DECLS(__SIG));
+
+SYSCALL_XLIST(KANAWHA_DECLARE_UAPI_SYSCALL)
+
 #undef SYSCALL_SIG_EXIT
 #undef SYSCALL_SIG_OPEN
 #undef SYSCALL_SIG_CLOSE
@@ -346,6 +367,7 @@ SYSCALL_XLIST(DECLARE_SYSCALL_ID_CONSTANTS)
 #undef SYSCALL_SIG_POLL
 #undef SYSCALL_SIG_SIGSEND
 #undef SYSCALL_XLIST
+
 #endif
 
 #endif

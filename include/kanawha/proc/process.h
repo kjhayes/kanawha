@@ -185,7 +185,7 @@ int
 process_read_usermem(
         struct process *process,
         void *dst,
-        void __user * src,
+        const void __user * src,
         size_t length);
 
 int

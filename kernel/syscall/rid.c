@@ -10,12 +10,13 @@
 
 int
 syscall_rid(
-        struct process *process,
         pid_t target_pid,
         unsigned long flags,
         id_t __user *id_out)
 {
     int res;
+
+    struct process *process = current_process();
 
     id_t id;
 

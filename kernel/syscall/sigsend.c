@@ -12,12 +12,13 @@
 
 int
 syscall_sigsend(
-        struct process *process,
         pid_t procid,
         int signal,
         unsigned long flags)
 {
     int res;
+
+    struct process *process = current_process();
 
     LOG("trying to send signal %d to process %ld\n",
             (s_t)signal,

@@ -17,12 +17,12 @@
 
 ssize_t
 syscall_write(
-        struct process *process,
         fd_t file,
-        void __user *src,
+        const void __user *src,
         size_t size)
 {
     ssize_t res;
+    struct process *process = current_process();
 
     LOG("file=%ld, size=0x%llx\n",
             (sl_t)file,

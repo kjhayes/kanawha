@@ -7,10 +7,11 @@
 
 int
 syscall_close(
-        struct process *process,
         fd_t file)
 {
     int res;
+
+    struct process *process = current_process();
 
     res = file_table_close(
             process->file_table,

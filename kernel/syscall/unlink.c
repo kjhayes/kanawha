@@ -14,11 +14,12 @@
 
 int
 syscall_unlink(
-        struct process *process,
         fd_t dir_fd,
         char __user * name)
 {
     int res;
+
+    struct process *process = current_process();
 
     LOG("PID(%ld) syscall_unlink: dir_fd=%ld, name=%p\n",
             (sl_t)process->id,

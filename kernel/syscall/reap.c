@@ -11,13 +11,13 @@
 
 int
 syscall_reap(
-        struct process *process,
         unsigned long flags,
         pid_t __user *pid_inout,
         int __user *user_exitcode)
 {
     int res;
 
+    struct process *process = current_process();
 
     int nowait = (flags & REAP_NON_BLOCKING);
 

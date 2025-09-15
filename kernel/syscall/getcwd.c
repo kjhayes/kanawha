@@ -5,11 +5,12 @@
 
 int
 syscall_getcwd(
-        struct process *process,
         char __user *buffer,
         size_t buflen)
 {
     int res;
+
+    struct process *process = current_process();
 
     struct fs_path *cwd = process->working_directory;
 

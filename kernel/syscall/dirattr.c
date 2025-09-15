@@ -13,12 +13,12 @@
 
 int
 syscall_dirattr(
-        struct process *process,
         fd_t dir_fd,
         int attr,
         size_t __user *user_value)
 {
     int res;
+    struct process *process = current_process();
     struct file *file =
         file_table_get_file(
                 process->file_table,

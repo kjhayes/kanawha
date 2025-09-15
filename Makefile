@@ -70,6 +70,7 @@ ARCH_KERNEL_DIR := $(ARCH_ROOT_DIR)/$(ARCH)
 
 COMMON_FLAGS += \
 				-D__KANAWHA__ \
+				-DKANAWHA_BUILDING_KERNEL \
 				-I $(INCLUDE_DIR) \
 				-include $(AUTOCONF) \
 				$(subst ",,$(CONFIG_OPT_FLAGS)) \
@@ -133,7 +134,12 @@ $(OUTPUT_DIR)/kanawha.bin: $(OUTPUT_DIR)/kanawha.o
 	$(call qinfo, OBJCOPY, $(call rel-dir, $@, $(OUTPUT_DIR)))
 	$(Q)$(OBJCOPY) -O binary $< $@
 
-DEFAULT_BUILD_RULE ?= kanawha
+uapi: $(INCLUDE_DIR)/kanawha/uapi FORCE
+	$(Q)cp -RT $< $(OUTPUT_DIR)/uapi
+
+all: kanawha uapi FORCE
+
+DEFAULT_BUILD_RULE ?= all
 default: $(DEFAULT_BUILD_RULE)
 
 modules: $(KERNEL_MOD_RULES) FORCE
@@ -143,6 +149,7 @@ modules: $(KERNEL_MOD_RULES) FORCE
 clean: FORCE
 	$(Q)find $(OUTPUT_DIR) -name "*.o" -delete $(QPIPE) $(QIGNORE)
 	$(Q)find $(OUTPUT_DIR) -name "*.d" -delete $(QPIPE) $(QIGNORE)
+	$(Q)find $(OUTPUT_DIR)/uapi -name "*.h" -delete $(QPIPE) $(QIGNORE)
 	$(Q)rm $(LD_SCRIPT) $(QPIPE) $(QIGNORE)
 	$(Q)rm $(AUTOCONF) $(QPIPE) $(QIGNORE)
 	$(Q)rm -r $(OUTPUT_DIR) $(QPIPE) $(QIGNORE)

@@ -5,9 +5,10 @@
 
 ssize_t
 syscall_time(
-        struct process *process,
         unsigned long flags)
 {
+    struct process *process = current_process();
+
     unsigned long type = (flags >> 0) & 0b11;
     unsigned long unit = (flags >> 2) & 0b11;
 

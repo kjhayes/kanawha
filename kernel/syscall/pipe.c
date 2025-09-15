@@ -14,12 +14,13 @@
 
 int
 syscall_pipe(
-        struct process *process,
         unsigned long flags,
 	unsigned long mode_flags,
         fd_t __user *out)
 {
     int res;
+
+    struct process *process = current_process();
 
     if((mode_flags & FILE_MODE_OPEN_TRUNC)
      ||(mode_flags & FILE_MODE_WRITE_EXTEND))

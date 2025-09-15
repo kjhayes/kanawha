@@ -7,10 +7,11 @@
 
 int
 syscall_sleep(
-        struct process *process,
         size_t duration,
         unsigned long flags)
 {
+    struct process *process = current_process();
+
     switch(flags) {
         case SLEEP_DURATION_MSEC:
             thread_sleep(msec_to_duration(duration), 0);

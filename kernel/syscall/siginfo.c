@@ -13,12 +13,13 @@
 
 int
 syscall_siginfo(
-        struct process *process,
 	unsigned long attr,
 	unsigned long __user *value)
 {
     int res;
     unsigned long ret;
+
+    struct process *process = current_process();
 
     switch(attr) {
 	case SIGINFO_RETURN:

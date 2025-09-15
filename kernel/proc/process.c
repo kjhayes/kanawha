@@ -277,7 +277,6 @@ init_process_kernel_entry(void *in)
     enable_irqs();
 
     res = syscall_exec(
-            process,
             binary_fd,
             0);
     if(res) {
@@ -817,7 +816,7 @@ int
 process_read_usermem(
         struct process *process,
         void *dst,
-        void __user * src,
+        const void __user * src,
         size_t length)
 {
     int res;
