@@ -82,16 +82,12 @@ virtio_pci_init_capabilities(
 
     struct pci_func *func = vpci_dev->func;
 
-    size_t num_found = 0;
-
     struct pci_cap *cap = pci_func_find_cap(
             vpci_dev->func,
             PCI_CAP_ID_VENDOR_SPECIFIC);
 
     while(cap != NULL)
     {
-        num_found++;
-
         struct virtio_pci_cap *vcap =
             kzmalloc(sizeof(struct virtio_pci_cap), KM_KERNEL);
         if(vcap == NULL) {
@@ -144,27 +140,6 @@ virtio_pci_find_cap(
         }
     }
     return NULL;
-}
-
-static int
-virtio_pci_init_queues(
-        struct virtio_pci_device *device)
-{
-    uint32_t num_queues =
-        virtio_pci_cap_bar_readl(
-                device,
-                device->common_cfg_cap,
-                VIRTIO_PCI_COMMON_CFG_NUM_QUEUES);
-    dprintk("num_queues=0x%lx\n",
-            num_queues);
-    return 0;
-}
-
-static int
-virtio_pci_deinit_queues(
-        struct virtio_pci_device *device)
-{
-    return -EUNIMPL;
 }
 
 static int

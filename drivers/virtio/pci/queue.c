@@ -313,6 +313,6 @@ virtio_pci_queue_ops = {
     .set_used_ring = virtio_pci_set_used_ring,
     .notify = virtio_pci_notify,
     .enable = virtio_pci_enable_queue,
-    .disable = virtio_pci_enable_queue,
+    .disable = virtio_pci_disable_queue,
 };
 
