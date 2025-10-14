@@ -378,7 +378,7 @@ msi_describe_irq(
     struct pci_func *func = msi_dev->func;
 
     snprintk(buffer, buflen,
-            "msix-%lu.%lu",
+            "msi-%lu.%lu",
             (ul_t)func->device->index,
             (ul_t)func->index);
 
@@ -390,6 +390,6 @@ msi_irq_driver = {
     .mask_irq = msi_mask_irq,
     .unmask_irq = msi_unmask_irq,
     .irq_status = msi_irq_status,
-    .describe_irq = irq_dev_default_describe_irq,
+    .describe_irq = msi_describe_irq,
 };
 
