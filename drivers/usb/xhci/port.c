@@ -39,12 +39,13 @@ usb_xhci_port_write_portsc(
             value);
 }
 
-static int
-usb_xhci_port_is_powered(
-        struct usb_xhci_port *port)
-{
-    return (usb_xhci_port_read_portsc(port) >> 9) & 0b1;
-}
+// Useful but uneeded function (Untested)
+//static int
+//usb_xhci_port_is_powered(
+//        struct usb_xhci_port *port)
+//{
+//    return (usb_xhci_port_read_portsc(port) >> 9) & 0b1;
+//}
 
 static int
 usb_xhci_port_assert_powered(

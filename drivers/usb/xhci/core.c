@@ -67,7 +67,7 @@ usb_xhci_claim_from_bios(struct usb_xhci *dev)
     usb_xhci_for_each_capability_of_type(
             dev,
             USB_XHCI_EXT_CAPABILITY_ID_USB_LEGACY_SUPPORT,
-            usb_xhci_legacy_support_capability_mark_os_ownership,
+            usb_xhci_legacy_support_capability_check_for_bios_release,
             (void*)&res);
 
     if(res) {

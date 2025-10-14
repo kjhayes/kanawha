@@ -42,6 +42,10 @@ usb_xhci_init_command_ring(
             xhci,
             &ring->ring,
             size);
+    if(res) {
+	wprintk("usb_xhci_init_command_ring: Failed to initialize TRB ring!\n");
+	return res;
+    }
 
     uint64_t crcr = (uint64_t)ring->ring.dequeue_phys | 0b1;
 

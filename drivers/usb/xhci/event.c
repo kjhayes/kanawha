@@ -11,15 +11,19 @@
 #include <kanawha/kmalloc.h>
 
 // Register Access
-static int
-usb_xhci_interruptor_enabled(
-        struct usb_xhci_interruptor *intr)
-{
-    uint32_t iman = pci_bar_readl(
-            &intr->xhci->func->bars[0],
-            intr->register_offset + 0x0);
-    return iman & (1ULL<<1);
-}
+
+// Unneeded for now, but having the code here is useful
+// (Note: This means it is NOT TESTED!)
+//static int
+//usb_xhci_interruptor_enabled(
+//        struct usb_xhci_interruptor *intr)
+//{
+//    uint32_t iman = pci_bar_readl(
+//            &intr->xhci->func->bars[0],
+//            intr->register_offset + 0x0);
+//    return iman & (1ULL<<1);
+//}
+
 static int
 usb_xhci_enable_interruptor(
         struct usb_xhci_interruptor *intr)
@@ -50,29 +54,32 @@ usb_xhci_disable_interruptor(
             iman);
     return 0;
 }
-static int
-usb_xhci_interruptor_pending(
-        struct usb_xhci_interruptor *intr)
-{
-    uint32_t iman = pci_bar_readl(
-            &intr->xhci->func->bars[0],
-            intr->register_offset + 0x0);
-    return iman & (1ULL<<0);
-}
-static int
-usb_xhci_clear_pending_interruptor(
-        struct usb_xhci_interruptor *intr)
-{
-    uint32_t iman = pci_bar_readl(
-            &intr->xhci->func->bars[0],
-            intr->register_offset + 0x0);
-    iman |= (1ULL<<0);
-    pci_bar_writel(
-            &intr->xhci->func->bars[0],
-            intr->register_offset + 0x0,
-            iman);
-    return 0;
-}
+
+// Useful but unused functions currently (Untested)
+//static int
+//usb_xhci_interruptor_pending(
+//        struct usb_xhci_interruptor *intr)
+//{
+//    uint32_t iman = pci_bar_readl(
+//            &intr->xhci->func->bars[0],
+//            intr->register_offset + 0x0);
+//    return iman & (1ULL<<0);
+//}
+//static int
+//usb_xhci_clear_pending_interruptor(
+//        struct usb_xhci_interruptor *intr)
+//{
+//    uint32_t iman = pci_bar_readl(
+//            &intr->xhci->func->bars[0],
+//            intr->register_offset + 0x0);
+//    iman |= (1ULL<<0);
+//    pci_bar_writel(
+//            &intr->xhci->func->bars[0],
+//            intr->register_offset + 0x0,
+//            iman);
+//    return 0;
+//}
+
 static int
 usb_xhci_interruptor_set_segment_table_pointer(
         struct usb_xhci_interruptor *intr,
