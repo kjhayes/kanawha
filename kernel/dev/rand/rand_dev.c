@@ -6,6 +6,7 @@ static int
 rand_dev_init(struct rand_dev *dev)
 {
     waitqueue_init(&dev->read_wq);
+    printk("rand_dev registered: %s\n", rand_dev_get_name(dev));
     return 0;
 }
 
@@ -13,6 +14,7 @@ static int
 rand_dev_deinit(struct rand_dev *dev)
 {
     waitqueue_deinit(&dev->read_wq);
+    printk("rand_dev unregistered: %s\n", rand_dev_get_name(dev));
     return 0;
 }
 

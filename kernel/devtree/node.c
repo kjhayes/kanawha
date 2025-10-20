@@ -29,7 +29,7 @@ dt_node_get_name(
             len++;
         }
 
-        char *name_buf = kmalloc(len+1);
+        char *name_buf = kmalloc(len+1, KM_KERNEL);
         if(name_buf == NULL) {
             spin_unlock_irq_restore(&node->name_lock, irq_flags);
             return NULL;

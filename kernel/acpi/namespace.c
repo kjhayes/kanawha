@@ -484,13 +484,13 @@ acpi_create_default_namespace(void)
 }
 declare_init_desc(dynamic, acpi_create_default_namespace, "Creating Default ACPI Namespace");
 
-static int
-acpi_dump_namespace_on_launch(void) {
-    if(default_namespace == NULL) {
-	return -EDEFER;
-    }
-    acpi_namespace_dump(do_printk, default_namespace);
-    return 0;
-}
-declare_init_desc(launch, acpi_dump_namespace_on_launch, "Dumping Default ACPI Namespace");
+//static int
+//acpi_dump_namespace_on_launch(void) {
+//    if(default_namespace == NULL) {
+//	return -EDEFER;
+//    }
+//    acpi_namespace_dump(do_printk, default_namespace);
+//    return 0;
+//}
+//declare_init_desc(launch, acpi_dump_namespace_on_launch, "Dumping Default ACPI Namespace");
 

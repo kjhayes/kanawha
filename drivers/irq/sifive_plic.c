@@ -119,7 +119,7 @@ sifive_plic_dt_init(
 {
     int res;
 
-    struct sifive_plic *plic = kmalloc(sizeof(struct sifive_plic));
+    struct sifive_plic *plic = kmalloc(sizeof(struct sifive_plic), KM_KERNEL);
     if(plic == NULL) {
         return -ENOMEM;
     }
@@ -177,7 +177,7 @@ sifive_plic_dt_init(
     printk("Found SiFive PLIC with 0x%lx Interrupts and 0x%lx Contexts\n", (ul_t)irq_count, (ul_t)ctx_count);
 
     plic->ctx_count = ctx_count;
-    plic->contexts = kmalloc(sizeof(struct sifive_plic_context) * ctx_count);
+    plic->contexts = kmalloc(sizeof(struct sifive_plic_context) * ctx_count, KM_KERNEL);
     if(plic->contexts == NULL) {
         mmio_unmap(plic->mmio_base, plic->mmio_size);
         free_irq_domain_linear(plic->irq_domain);

@@ -3,6 +3,7 @@
 
 #include <kanawha/types.h>
 #include <kanawha/errno.h>
+#include <kanawha/attribute.h>
 
 #define SBI_EXTID_BASE 0x10
 
@@ -83,6 +84,7 @@ sbi_ecall(
 }
 
 // Returns 0 if the extension exists, negative errno if not
+__maybe_unused
 static int
 sbi_probe_extension(
         long ext_id)

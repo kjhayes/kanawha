@@ -178,7 +178,7 @@ riscv64_setup_cpu_hlic(
 {
     int res;
 
-    struct riscv64_hlic *hlic = kmalloc(sizeof(struct riscv64_hlic));
+    struct riscv64_hlic *hlic = kmalloc(sizeof(struct riscv64_hlic), KM_KERNEL);
     if(hlic == NULL) {
         return -ENOMEM;
     }
@@ -191,7 +191,7 @@ riscv64_setup_cpu_hlic(
     if(hlic_domain == NULL) {
         eprintk("Failed to allocate IRQ domain for CPU %lu HLIC!\n", cpu->cpu.id);
         kfree(cpu);
-        return res;
+        return -ENOMEM;
     }
 
     hlic->irq_dev.driver = &riscv64_hlic_irq_driver;

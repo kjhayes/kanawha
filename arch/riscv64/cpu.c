@@ -114,7 +114,7 @@ riscv64_dt_cpu_init(
     hartid_t hartid = (hartid_t)(uintptr_t)reg_addr_hartid;
     dprintk("Found HARTID(0x%lx)\n", (ul_t)hartid);
 
-    struct riscv64_cpu *cpu = kmalloc(sizeof(struct riscv64_cpu));
+    struct riscv64_cpu *cpu = kmalloc(sizeof(struct riscv64_cpu), KM_KERNEL);
     if(cpu == NULL) {
         eprintk("Failed to allocate cpu struct for hartid=%lu\n", hartid);
         return res;

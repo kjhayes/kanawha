@@ -21,6 +21,7 @@ eth_dev_init(struct eth_dev *dev)
 {
     irq_lock_init(&dev->recv_callback_lock);
     ilist_init(&dev->recv_callback_list);
+    printk("eth_dev registered: %s\n", eth_dev_get_name(dev));
     return 0;
 }
 
@@ -36,6 +37,7 @@ eth_dev_deinit(struct eth_dev *dev)
     }
     irq_lock_release(&dev->recv_callback_lock);
 
+    printk("eth_dev unregistered: %s\n", eth_dev_get_name(dev));
     return 0;
 }
 

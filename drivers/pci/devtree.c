@@ -44,7 +44,7 @@ pci_ecam_dt_init_node(
     size_t mmio_size = phys_size;
 
     // Register the ECAM mechanism
-    struct mmio_pci_ecam *ecam = kmalloc(sizeof(*ecam));
+    struct mmio_pci_ecam *ecam = kmalloc(sizeof(*ecam), KM_KERNEL);
     if(ecam == NULL) {
         return -ENOMEM;
     }

@@ -6,12 +6,14 @@
 static int
 blk_dev_init(struct blk_dev *dev)
 {
+    printk("blk_dev registered: %s\n", blk_dev_get_name(dev));
     return 0;
 }
 
 static int
 blk_dev_deinit(struct blk_dev *dev)
 {
+    printk("blk_dev unregistered: %s\n", blk_dev_get_name(dev));
     return 0;
 }
 

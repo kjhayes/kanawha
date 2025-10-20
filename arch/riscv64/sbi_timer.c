@@ -254,7 +254,7 @@ sbi_timer_setup_cpu(cpu_id_t id)
 
     hartid_t hartid = cpu_id_to_hartid(id);
 
-    struct sbi_timer *timer = kmalloc(sizeof(struct sbi_timer));
+    struct sbi_timer *timer = kmalloc(sizeof(struct sbi_timer), KM_KERNEL);
     if(timer == NULL) {
         return -ENOMEM;
     }

@@ -34,7 +34,7 @@ dt_8250_init_node(
 {
     int res;
 
-    struct dt_uart_8250 *uart = kmalloc(sizeof(struct dt_uart_8250));
+    struct dt_uart_8250 *uart = kmalloc(sizeof(struct dt_uart_8250), KM_KERNEL);
     if(uart == NULL) {
         eprintk("Failed allocate device tree 8250 struct!\n");
         return -ENOMEM;

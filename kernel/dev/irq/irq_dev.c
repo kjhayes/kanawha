@@ -3,11 +3,25 @@
 #include <kanawha/string.h>
 #include <kanawha/init.h>
 
+static int
+irq_dev_init(struct irq_dev *dev)
+{
+    printk("irq_dev registered: %s\n", irq_dev_get_name(dev));
+    return 0;
+}
+
+static int
+irq_dev_deinit(struct irq_dev *dev)
+{
+    printk("irq_dev unregistered: %s\n", irq_dev_get_name(dev));
+    return 0;
+}
+
 DEFINE_REGISTRY(
         irq_dev,
         registry_node,
-        REGISTRY_NO_INIT_FUNCTION,
-        REGISTRY_NO_DEINIT_FUNCTION
+        irq_dev_init,
+        irq_dev_deinit 
         );
 
 unsigned long

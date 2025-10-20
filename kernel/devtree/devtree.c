@@ -43,7 +43,7 @@ devtree_provide_fdt(
         tree = &boot_device_tree;
     } else {
         device_tree_list_lock_release();
-        tree = kmalloc(sizeof(struct devtree));
+        tree = kmalloc(sizeof(struct devtree), KM_KERNEL);
         device_tree_list_lock_acquire();
     }
 
@@ -95,7 +95,7 @@ devtree_get_fdt(
 static inline struct dt_node *
 alloc_dt_node_struct(void) {
     struct dt_node *node;
-    node = kmalloc(sizeof(struct dt_node));
+    node = kmalloc(sizeof(struct dt_node), KM_KERNEL);
     if(node == NULL) {
         return NULL;
     }
@@ -107,6 +107,7 @@ alloc_dt_node_struct(void) {
     return node;
 }
 
+__maybe_unused
 static inline void
 free_dt_node_struct(
         struct dt_node *node)

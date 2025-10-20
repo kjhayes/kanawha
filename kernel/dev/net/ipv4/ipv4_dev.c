@@ -6,6 +6,7 @@ static int
 ipv4_dev_init(
         struct ipv4_dev *dev)
 {
+    printk("ipv4_dev registered: %s\n", ipv4_dev_get_name(dev));
     return 0;
 }
 
@@ -13,6 +14,7 @@ static int
 ipv4_dev_deinit(
         struct ipv4_dev *dev)
 {
+    printk("ipv4_dev unregistered: %s\n", ipv4_dev_get_name(dev));
     return 0;
 }
 

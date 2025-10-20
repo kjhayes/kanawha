@@ -71,6 +71,7 @@ term_dev_init(struct term_dev *dev)
     dev->canon_output_buflen = 0;
     dev->canon_output_buffer = NULL;
 
+    printk("term_dev registered: %s\n", term_dev_get_name(dev));
     return 0;
 }
 
@@ -82,6 +83,7 @@ term_dev_deinit(struct term_dev *dev)
     kfree(dev->input_buffer);
     // TODO drop all buffers in the canonical line queue
     kfree(dev->buffer_queue);
+    printk("term_dev unregistered: %s\n", term_dev_get_name(dev));
     return 0;
 }
 

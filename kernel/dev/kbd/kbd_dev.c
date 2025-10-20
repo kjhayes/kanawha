@@ -33,6 +33,7 @@ kbd_dev_init(
     }
     waitqueue_name(kbd->read_queue, kbd_dev_get_name(kbd));
 
+    printk("kbd_dev registered: %s\n", kbd_dev_get_name(kbd));
     return 0;
 }
 
@@ -43,6 +44,7 @@ kbd_dev_deinit(struct kbd_dev *kbd)
     wake_all(kbd->read_queue);
     waitqueue_deinit(kbd->read_queue);
     kfree(kbd->read_queue);
+    printk("kbd_dev unregistered: %s\n", kbd_dev_get_name(kbd));
     return -EUNIMPL;
 }
 

@@ -1,6 +1,4 @@
 
-obj-y += idt_test.o 
-
 obj-y += \
 	ptree.o \
 	stree.o \

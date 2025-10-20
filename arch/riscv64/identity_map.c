@@ -6,9 +6,7 @@
 #include <kanawha/types.h>
 #include <kanawha/vmem.h>
 #include <kanawha/init.h>
-
-#define TEXT_SECTION ".boot.text"
-#define DATA_SECTION ".boot.data"
+#include <kanawha/section.h>
 
 #ifdef CONFIG_RISCV64_SV57
 #define ROOT_PAGE_LEVEL 4
@@ -51,13 +49,13 @@
      + (1ULL<<(CONFIG_RISCV64_BOOT_KERNEL_MAP_ORDER>=21?CONFIG_RISCV64_BOOT_KERNEL_MAP_ORDER-21:0)) /* To allow the kernel to be mapped at 2MB addresses*/ \
      )
 
-__attribute__((section(DATA_SECTION)))
+__boot_data
 static struct riscv64_sv_page_table riscv64_boot_page_table_cache[RISCV64_BOOT_PAGE_TABLE_CACHE_SIZE];
-__attribute__((section(DATA_SECTION)))
+__boot_data
 static size_t riscv64_boot_page_table_cache_allocated_count = 0;
 
 static inline struct riscv64_sv_page_table *
-__attribute__((section(TEXT_SECTION)))
+__boot_text
 riscv64_boot_alloc_page_table(void)
 {
     if(riscv64_boot_page_table_cache_allocated_count >= RISCV64_BOOT_PAGE_TABLE_CACHE_SIZE) {
@@ -71,13 +69,13 @@ riscv64_boot_alloc_page_table(void)
 
 extern uint8_t __kernel_virt_start[];
 extern uint8_t __kernel_virt_end[];
-__attribute__((section(DATA_SECTION)))
+__boot_data
 static void __phys * volatile kernel_start = (void __phys *)&__kernel_virt_start;
-__attribute__((section(DATA_SECTION)))
+__boot_data
 static void __phys * volatile kernel_end = (void __phys *)&__kernel_virt_end;
 
 static void
-__attribute__((section(TEXT_SECTION)))
+__boot_text
 riscv64_boot_drill_mapping(
         struct riscv64_sv_page_table *pt,
         int pt_level,
@@ -209,7 +207,7 @@ riscv64_boot_drill_mapping(
 }
 
 void *
-__attribute__((section(TEXT_SECTION)))
+__boot_text
 riscv64_boot_setup_paging(void __phys *kernel_phys_base)
 {
     { // Clear every page in the page table cache

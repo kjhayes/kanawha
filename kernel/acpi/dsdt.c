@@ -46,7 +46,7 @@ acpi_load_dsdt_into_namespace(void)
     struct acpi_table *dsdt = acpi_find_table("DSDT");
     if(dsdt == NULL) {
         wprintk("Could not find ACPI DSDT: Failing to load DSDT!\n");
-	return -EDEFER;
+	return 0;
     }
 
     struct acpi_table_data *dsdt_data = (struct acpi_table_data*)dsdt->table;
