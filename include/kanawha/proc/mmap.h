@@ -50,6 +50,9 @@ struct mmap_region
     struct ptree page_tree;
 
     struct ptree_node tree_node;
+
+    int has_name;
+    char *name;
 };
 
 struct mmap
@@ -104,6 +107,10 @@ int
 mmap_unmap_region(
         struct process *process,
         uintptr_t mmap_offset);
+
+const char *
+mmap_region_get_name(
+	struct mmap_region *region);
 
 int
 mmap_read(

@@ -7,7 +7,7 @@
 #include <kanawha/assert.h>
 #include <kanawha/fs/node.h>
 
-#define SYSCALL_WRITE_MAX_CHUNK_SIZE 0x1000
+#define SYSCALL_WRITE_MAX_CHUNK_SIZE FILE_WRITE_MAX_BUFSIZE
 
 #ifdef CONFIG_DEBUG_SYSCALL_WRITE
 #define LOG(fmt, ...) printk("PID(%ld) syscall_write: " fmt, (sl_t)process->id, ##__VA_ARGS__)

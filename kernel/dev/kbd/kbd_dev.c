@@ -99,6 +99,13 @@ kbd_driver_dequeue_event(
 }
 
 int
+kbd_driver_event_buffer_empty(
+	struct kbd_dev *kbd)
+{
+    return kbd->buf_head == kbd->buf_tail;
+}
+
+int
 kbd_driver_wait_for_event(
 	struct kbd_dev *dev)
 {

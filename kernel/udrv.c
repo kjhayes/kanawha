@@ -2,6 +2,7 @@
 #include <kanawha/udrv.h>
 #include <kanawha/fs/node.h>
 #include <kanawha/fs/file.h>
+#include <kanawha/uapi/poll.h>
 
 static struct vfs_mount *udrv_fs_mount = NULL;
 
@@ -213,12 +214,14 @@ udrv_dev_fs_file_read(
 	container_of(list_node, struct udrv_user_pkt, queue_node);
 
     ssize_t to_write = MIN(amount, user_pkt->pktlen);
+    //printk("writing udrv packet of length=0x%lx to userspace! (buflen=0x%lx, pktlen=0x%lx)\n", to_write, amount, user_pkt->pktlen);
     memcpy(buffer, &user_pkt->pkt, to_write);
 
     irq_lock_release(&dev->read_pkt_queue_lock);
 
     kfree(user_pkt);
 
+    //printk("wrote udrv packet of length=0x%lx to userspace!\n", to_write);
     return to_write;
 }
 
@@ -266,6 +269,34 @@ udrv_dev_fs_file_write(
     return amount;
 }
 
+static int
+udrv_dev_fs_file_poll(
+	struct file *file,
+	unsigned long in,
+	unsigned long *out)
+{
+    struct fs_node *fs_node = fs_path_get_fs_node(file->path);
+    struct vfs_node *vfs_node = fs_node->backing.priv_state;
+    struct udrv_dev *dev = container_of(vfs_node, struct udrv_dev, vfs_node);
+    struct udrv_mount *mnt = dev->mnt;
+
+    *out = 0;
+
+    if(in & POLL_READ_NONBLOCKING) {
+	irq_lock_acquire(&dev->read_pkt_queue_lock);
+	if(!ilist_empty(&dev->read_pkt_queue)) {
+	    *out |= POLL_READ_NONBLOCKING;
+	}
+	irq_lock_release(&dev->read_pkt_queue_lock);
+    }
+
+    if(in & POLL_WRITE_NONBLOCKING) {
+	*out = POLL_WRITE_NONBLOCKING;
+    }
+
+    return 0;
+}
+
 static struct fs_node_ops
 udrv_dev_fs_node_ops = {
     .lookup = vfs_dir_lookup,
@@ -277,6 +308,7 @@ static struct fs_file_ops
 udrv_dev_fs_file_ops = {
     .read = udrv_dev_fs_file_read,
     .write = udrv_dev_fs_file_write,
+    .poll = udrv_dev_fs_file_poll,
 
     .flush = fs_file_nop_flush,
 

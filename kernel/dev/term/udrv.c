@@ -7,8 +7,6 @@
 
 static struct term_driver udrv_term_driver;
 
-#define UDRV_RAND_BUFLEN 256
-
 struct udrv_term_dev {
     struct udrv_dev udrv_dev;
     struct term_dev term_dev;

@@ -3,6 +3,11 @@
 
 typedef unsigned long fd_t;
 
+// The maximum amount of data which can be transferred
+// by a single read/write system call
+#define FILE_READ_MAX_BUFSIZE  (0x10000)
+#define FILE_WRITE_MAX_BUFSIZE (0x10000)
+
 #define FILE_PERM_READ  (1ULL<<0)
 #define FILE_PERM_WRITE (1ULL<<1)
 #define FILE_PERM_EXEC  (1ULL<<2)

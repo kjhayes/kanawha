@@ -7,6 +7,7 @@
 #include <kanawha/init.h>
 #include <kanawha/lock.h>
 #include <kanawha/kmalloc.h>
+#include <kanawha/uapi/poll.h>
 
 #include <kanawha/fs/node.h>
 #include <kanawha/fs/file.h>
@@ -146,6 +147,32 @@ kbd_fs_file_read(
     return amount;
 }
 
+static int
+kbd_fs_file_poll(
+        struct file *file,
+        unsigned long in,
+	unsigned long *out)
+{
+    struct fs_node *fs_node = fs_path_get_fs_node(file->path);
+    if(fs_node == NULL) {
+        return -ENXIO;
+    }
+
+    struct vfs_node *vfs_node = fs_node->backing.priv_state;
+    struct kbd_dev_fs_node *kbfs = container_of(vfs_node, struct kbd_dev_fs_node, vfs_node);
+    struct kbd_dev *kbd = kbfs->dev;
+
+    *out = 0;
+
+    if(in & POLL_READ_NONBLOCKING) {
+        if(!kbd_driver_event_buffer_empty(kbd)) {
+	    *out |= POLL_READ_NONBLOCKING;
+        }
+    }
+
+    return 0;
+}
+
 static struct fs_node_ops
 kbd_dev_fs_node_ops =
 {
@@ -156,6 +183,7 @@ FS_NODE_OPS_INIT_UNDEF(kbd_dev_fs_node_ops);
 static struct fs_file_ops
 kbd_dev_fs_file_ops = {
     .read = kbd_fs_file_read,
+    .poll = kbd_fs_file_poll,
     .write = fs_file_eof_write,
     .flush = fs_file_nop_flush,
     .seek = fs_file_seek_pinned_zero,

@@ -6,8 +6,9 @@
 #include <kanawha/kmalloc.h>
 #include <kanawha/assert.h>
 #include <kanawha/fs/node.h>
+#include <kanawha/uapi/file.h>
 
-#define SYSCALL_READ_MAX_CHUNK_SIZE 0x1000
+#define SYSCALL_READ_MAX_CHUNK_SIZE FILE_READ_MAX_BUFSIZE
 
 ssize_t
 syscall_read(

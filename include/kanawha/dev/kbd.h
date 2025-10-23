@@ -36,6 +36,10 @@ kbd_driver_dequeue_event(
         struct kbd_event *event);
 
 int
+kbd_driver_event_buffer_empty(
+	struct kbd_dev *kbd);
+
+int
 kbd_driver_wait_for_event(
 	struct kbd_dev *kbd);
 

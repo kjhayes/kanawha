@@ -147,6 +147,17 @@ mmap_deattach(
     return 0;
 }
 
+const char *
+mmap_region_get_name(
+	struct mmap_region *region)
+{
+    if(region->has_name) {
+	return region->name;
+    } else {
+	return "";
+    }
+}
+
 int
 mmap_region_map_page(
         struct mmap_region *region,
@@ -436,6 +447,7 @@ mmap_map_region(
     struct fs_node *fs_node;
 
     unsigned long mmap_type = mmap_flags & 0b11;
+    char *name_clone = NULL;
 
     if(mmap_type != MMAP_ANON) {
         struct file *desc =
@@ -460,6 +472,11 @@ mmap_map_region(
             goto err0;
         }
 
+	name_clone = kstrdup(fs_path_get_name(desc->path));
+	if(name_clone == NULL) {
+	    // We failed to clone the name of this file...
+	}
+
         file_table_put_file(process->file_table, process, desc);
     }
     else {
@@ -478,6 +495,13 @@ mmap_map_region(
         goto err1;
     }
 
+    if(name_clone == NULL) {
+        region->has_name = 0;
+        region->name = "";
+    } else {
+	region->has_name = 1;
+	region->name = name_clone;
+    }
     region->mmap = mmap;
     region->mmap_flags = mmap_flags;
     region->fs_node = fs_node;
@@ -520,6 +544,9 @@ mmap_map_region(
 err3:
     spin_unlock(&mmap->lock);
 //err2:
+    if(region->has_name) {
+	kfree(region->name);
+    }
     kfree(region);
 err1:
     if(fs_node) {
@@ -739,6 +766,10 @@ mmap_unmap_region_lockless(
    
     if(fs_node) {
         fs_node_put(fs_node);
+    }
+
+    if(region->has_name) {
+	kfree(region->name);
     }
 
     spin_unlock(&region->page_tree_lock);
@@ -1794,7 +1825,7 @@ dump_mmap_region(
 
     spin_lock(&region->page_tree_lock);
 
-    (*printer)("\tRegion [%p-%p] %s%s%s %s%s%s\n",
+    (*printer)("\tRegion [%p-%p] %s%s%s %s%s%s %s\n",
             (uintptr_t)region->tree_node.key,
             (uintptr_t)region->tree_node.key + region->size,
             region->mmap_flags & MMAP_PROT_READ ? "[READ]" : "",
@@ -1802,7 +1833,8 @@ dump_mmap_region(
             region->mmap_flags & MMAP_PROT_EXEC ? "[EXEC]" : "",
             region->mmap_flags & MMAP_ANON ? "[ANON]" : "",
             region->mmap_flags & MMAP_SHARED ? "[SHARED]" : "",
-            region->mmap_flags & MMAP_PRIVATE ? "[PRIVATE]" : ""
+            region->mmap_flags & MMAP_PRIVATE ? "[PRIVATE]" : "",
+	    mmap_region_get_name(region)
             );
 
     struct ptree_node *pnode;
