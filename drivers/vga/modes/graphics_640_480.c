@@ -15,7 +15,13 @@ vga_fb_flush_mode_graphics_640_480(
 {
 //    vga_screen_disable(&fb->vga_dev);
 
+    void __phys *vga_mem = (void __phys *)0xA0000;
     size_t bitbuffer_size = ((640*480)/8);
+
+    if(!fb->buffer_exists) {
+	return 0;
+    }
+
     uint8_t *red_bitbuffer = kmalloc(bitbuffer_size, KM_KERNEL);
     uint8_t *green_bitbuffer = kmalloc(bitbuffer_size, KM_KERNEL);
     uint8_t *blue_bitbuffer = kmalloc(bitbuffer_size, KM_KERNEL);
@@ -47,10 +53,10 @@ vga_fb_flush_mode_graphics_640_480(
 
 	for(size_t bit = 0; bit < 8; bit++) {
 	    uint8_t bitshift = (7-bit);
-	    red_bits       |= (((quad >> (8*bit)) & 0b0001) >> 0) << bitshift;
-	    green_bits     |= (((quad >> (8*bit)) & 0b0010) >> 1) << bitshift;
-	    blue_bits      |= (((quad >> (8*bit)) & 0b0100) >> 2) << bitshift;
-	    intensity_bits |= (((quad >> (8*bit)) & 0b1000) >> 3) << bitshift;
+	    red_bits       |= ((((quad >> (8*bit)) & 0b0001) >> 0) << bitshift);
+	    green_bits     |= ((((quad >> (8*bit)) & 0b0010) >> 1) << bitshift);
+	    blue_bits      |= ((((quad >> (8*bit)) & 0b0100) >> 2) << bitshift);
+	    intensity_bits |= ((((quad >> (8*bit)) & 0b1000) >> 3) << bitshift);
 	}
 
 	red_bitbuffer[i] = red_bits;
@@ -58,8 +64,6 @@ vga_fb_flush_mode_graphics_640_480(
 	blue_bitbuffer[i] = blue_bits;
 	intensity_bitbuffer[i] = intensity_bits;
     }
-
-    void __phys *vga_mem = (void __phys *)0xA0000;
 
     vga_write_field(&fb->vga_dev, MemoryPlaneWriteEnable, 0b0001);
     memcpy_vp(vga_mem, red_bitbuffer, bitbuffer_size);
@@ -102,7 +106,7 @@ vga_fb_setup_mode_graphics_640_480(
     vga_write_register(vga,  MiscellaneousOutput,      0xE3);
     vga_write_register(vga,  ClockingMode,             0x01);
     vga_write_register(vga,  CharacterMapSelect,       0x00);
-    vga_write_register(vga,  SequencerMemoryMode,      0x00);
+    vga_write_register(vga,  SequencerMemoryMode,      0x02);
     vga_write_register(vga,  GraphicsMode,             0x00);
     vga_write_register(vga,  MiscellaneousGraphics,    0x05);
     vga_write_register(vga,  HorizontalTotal,          0x5F);
@@ -133,6 +137,72 @@ vga_fb_setup_mode_graphics_640_480(
     vga_write_register(vga,  BitMask,                  0xFF); // Added
     vga_write_register(vga,  DACMask,                  0xFF); // Added
 
+    // TEST
+    vga_write_sequencer_register_set(vga, 0x00, 0x03);
+    vga_write_sequencer_register_set(vga, 0x01, 0x01);
+    vga_write_sequencer_register_set(vga, 0x02, 0x0F);
+    vga_write_sequencer_register_set(vga, 0x03, 0x00);
+    vga_write_sequencer_register_set(vga, 0x04, 0x06);
+
+    vga_write_crt_register_set(vga, 0x00, 0x5F);
+    vga_write_crt_register_set(vga, 0x01, 0x4F);
+    vga_write_crt_register_set(vga, 0x02, 0x50);
+    vga_write_crt_register_set(vga, 0x03, 0x82);
+    vga_write_crt_register_set(vga, 0x04, 0x54);
+    vga_write_crt_register_set(vga, 0x05, 0x80);
+    vga_write_crt_register_set(vga, 0x06, 0x0B);
+    vga_write_crt_register_set(vga, 0x07, 0x3E);
+    vga_write_crt_register_set(vga, 0x08, 0x00);
+    vga_write_crt_register_set(vga, 0x09, 0x40);
+    vga_write_crt_register_set(vga, 0x0A, 0x00);
+    vga_write_crt_register_set(vga, 0x0B, 0x00);
+    vga_write_crt_register_set(vga, 0x0C, 0x00);
+    vga_write_crt_register_set(vga, 0x0D, 0x00);
+    vga_write_crt_register_set(vga, 0x0E, 0x00);
+    vga_write_crt_register_set(vga, 0x0F, 0x59);
+    vga_write_crt_register_set(vga, 0x10, 0xEA);
+    vga_write_crt_register_set(vga, 0x11, 0x8C & ~(0x80));
+    vga_write_crt_register_set(vga, 0x12, 0xDF);
+    vga_write_crt_register_set(vga, 0x13, 0x28);
+    vga_write_crt_register_set(vga, 0x14, 0x00);
+    vga_write_crt_register_set(vga, 0x15, 0xE7);
+    vga_write_crt_register_set(vga, 0x16, 0x04);
+    vga_write_crt_register_set(vga, 0x17, 0xE3);
+    vga_write_crt_register_set(vga, 0x18, 0xFF);
+
+    vga_write_graphics_register_set(vga, 0, 0x00);
+    vga_write_graphics_register_set(vga, 1, 0x00);
+    vga_write_graphics_register_set(vga, 2, 0x00);
+    vga_write_graphics_register_set(vga, 3, 0x00);
+    vga_write_graphics_register_set(vga, 4, 0x00);
+    vga_write_graphics_register_set(vga, 5, 0x00);
+    vga_write_graphics_register_set(vga, 6, 0x05);
+    vga_write_graphics_register_set(vga, 7, 0x0F);
+    vga_write_graphics_register_set(vga, 8, 0xFF);
+    
+    vga_write_attribute_register_set(vga, 0x00, 0x00);
+    vga_write_attribute_register_set(vga, 0x01, 0x01);
+    vga_write_attribute_register_set(vga, 0x02, 0x02);
+    vga_write_attribute_register_set(vga, 0x03, 0x03);
+    vga_write_attribute_register_set(vga, 0x04, 0x04);
+    vga_write_attribute_register_set(vga, 0x05, 0x05);
+    vga_write_attribute_register_set(vga, 0x06, 0x14);
+    vga_write_attribute_register_set(vga, 0x07, 0x07);
+    vga_write_attribute_register_set(vga, 0x08, 0x38);
+    vga_write_attribute_register_set(vga, 0x09, 0x39);
+    vga_write_attribute_register_set(vga, 0x0A, 0x3A);
+    vga_write_attribute_register_set(vga, 0x0B, 0x3B);
+    vga_write_attribute_register_set(vga, 0x0C, 0x3C);
+    vga_write_attribute_register_set(vga, 0x0D, 0x3D);
+    vga_write_attribute_register_set(vga, 0x0E, 0x3E);
+    vga_write_attribute_register_set(vga, 0x0F, 0x3F);
+    vga_write_attribute_register_set(vga, 0x10, 0x01);
+    vga_write_attribute_register_set(vga, 0x11, 0x00);
+    vga_write_attribute_register_set(vga, 0x12, 0x0F);
+    vga_write_attribute_register_set(vga, 0x13, 0x00);
+    vga_write_attribute_register_set(vga, 0x14, 0x00);
+    // END TEST
+
     // Set all 256 possible colors with the same 16-bit colors repeating
     for(int i = 0; i < 256; i++) {
         uint8_t value = i & 0xF;
@@ -145,6 +215,10 @@ vga_fb_setup_mode_graphics_640_480(
     }
 
     vga_write_field(vga, CRTCRegistersProtectEnable, 1);
+
+    if(fb->buffer_exists) {
+	memset_p(fb->buffer, 0xF, 640*480);
+    }
 
     vga_fb_flush_mode_graphics_640_480(fb);
 
