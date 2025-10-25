@@ -16,6 +16,9 @@
 #include <kanawha/sysfs/vfs.h>
 #include <kanawha/sysfs/sysfs.h>
 
+#include <kanawha/gfx/image.h>
+#include <kanawha/gfx/convert.h>
+
 #include <kanawha/uapi/file.h>
 
 struct fb_dev_fs_node
@@ -34,6 +37,10 @@ struct fb_dev_fs_node
     struct vfs_node mode_set_vfs_node;
     struct vfs_node mode_info_vfs_node;
     size_t mode_info_vfs_current_mode;
+
+#ifdef CONFIG_DISPLAY_LOGO_ON_FRAMEBUFFER_MODESET
+    int have_shown_logo;
+#endif
 };
 
 static struct vfs_mount *fb_dev_fs_mount = NULL;
@@ -108,6 +115,7 @@ fb_dev_buffer_fs_node_load_page(
         DEBUG_ASSERT_MSG(((uintptr_t)fbfs->buffer_addr & ((1ULL<<VMEM_MIN_PAGE_ORDER)-1)) == 0,
                 "Framebuffer Device Returned Layer Data Which is Not Page Aligned!");
     }
+
     fbfs->buffer_pages_loaded++;
     spin_unlock(&fbfs->buffer_lock);
 
@@ -360,6 +368,46 @@ fb_dev_mode_set_fs_file_write(
         return res;
     }
 
+#ifdef CONFIG_DISPLAY_LOGO_ON_FRAMEBUFFER_MODESET
+    if(!fbfs->have_shown_logo)
+    {
+	fbfs->have_shown_logo = 1;
+
+        void __phys *phys_buffer;
+        res = fb_dev_load_buffer(fbfs->dev, &phys_buffer);
+        if(res) {
+    	    wprintk("Failed to load buffer to display logo on framebuffer modeset!\n");
+	    goto fail_display_logo;
+        }
+    
+        struct fb_mode_info *buffer_info = fb_dev_get_mode_info(fbfs->dev, value);
+
+        size_t buflen = buffer_info->buffer_size;
+        void *buffer = kmalloc(buflen, KM_KERNEL);
+        if(buffer == NULL) {
+    	    wprintk("Failed to allocate buffer to display logo on framebuffer modeset!\n");
+	    goto fail_display_logo;
+        }
+        for(int l_index = 0; l_index < buffer_info->layer_count; l_index++) {
+            gfx_convert(
+        	&kanawha_logo_layout,
+        	(void*)kanawha_logo_data,
+        	KANAWHA_LOGO_WIDTH * KANAWHA_LOGO_HEIGHT * 4,
+        	&buffer_info->layer_infos[l_index].layout,
+        	buffer,
+        	buflen);
+        }
+        memcpy_vp(phys_buffer, buffer, buflen);
+        kfree(buffer);
+    
+        fb_dev_flush_buffer(fbfs->dev);
+    
+        fb_dev_put_mode_info(fbfs->dev, value);
+        fb_dev_unload_buffer(fbfs->dev, phys_buffer);
+    }
+fail_display_logo:
+#endif
+
     spin_unlock(&fbfs->buffer_lock);
 
     return buflen;
@@ -596,7 +644,9 @@ fb_dev_fs_on_register(
     fbfs->buffer_pages_loaded = 0;
     fbfs->mode_info_vfs_current_mode = 0;
 
-    size_t buffer_inode;
+#ifdef CONFIG_DISPLAY_LOGO_ON_FRAMEBUFFER_MODESET
+    fbfs->have_shown_logo = 0;
+#endif
 
     fbfs->buffer_vfs_node.fs_node_ops = &fb_dev_buffer_fs_node_ops;
     fbfs->buffer_vfs_node.fs_file_ops = &fb_dev_buffer_fs_file_ops;

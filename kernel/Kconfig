@@ -245,7 +245,7 @@ menu "Schedulers"
 source "kernel/sched/Kconfig"
 endmenu
 
-menu "Misc. Modules"
+menu "Misc. Options"
 
 menu "Device Tree"
 source "kernel/devtree/Kconfig"
@@ -266,4 +266,16 @@ menu "Multiboot2 Options"
 source "kernel/mb2/Kconfig"
 endmenu
 
+config DISPLAY_LOGO_ON_FRAMEBUFFER_MODESET
+    bool "Display Logo on Framebuffer Modeset"
+    default y
+    select LOGO_DATA
+
 endmenu
+
+config LOGO_DATA
+    def_bool n
+    help
+        Should data for the kanawha logo be compiled into the kernel?
+	(Should not be chosen explicitly)
+

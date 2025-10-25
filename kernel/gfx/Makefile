@@ -4,4 +4,5 @@ obj-y += \
 
 obj-y += \
 	fonts/ \
+	images/ \
 
