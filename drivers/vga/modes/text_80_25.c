@@ -159,7 +159,7 @@ vga_fb_setup_mode_text_80_25(
 
     vga_write_field(vga, CRTCRegistersProtectEnable, 0);
 
-    vga_write_register(vga,  AttributeModeControl,     0x0C);
+    vga_write_register(vga,  AttributeModeControl,     0x04);
     vga_write_register(vga,  OverscanColor,            0x00);
     vga_write_register(vga,  ColorPlaneEnable,         0x0F);
     vga_write_register(vga,  HorizontalPixelPanning,   0x08);
