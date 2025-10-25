@@ -26,6 +26,12 @@ config OPT_FLAGS
   help
     Optimization flags to pass to the compiler
 
+config USING_KANAWHA_COMPILER
+  bool "Using *-kanawha-* Toolchain"
+  default n
+  help
+    Are we using a generic compiler or one built for kanawha?
+
 config KANAWHA_INCLUDE_PATH
   string "Kanawha Kernel Include Path"
   default ""

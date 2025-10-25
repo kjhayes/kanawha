@@ -1,18 +1,11 @@
 
-DESTDIR ?= /home/kevin/kanawha-dev/sysroot
-
-SYSROOT_DIR := $(DESTDIR)
-SYSROOT_LIB_DIR := $(SYSROOT_DIR)/usr/lib
-SYSROOT_INCLUDE_DIR := $(SYSROOT_DIR)/usr/include
-
 install: FORCE
-	$(Q)mkdir -p $@
-	$(Q)mkdir -p $@/usr/
 	$(Q)mkdir -p $(SYSROOT_LIB_DIR)
 	$(Q)mkdir -p $(SYSROOT_INCLUDE_DIR)
 	$(Q)cp -RT $(LIBC_INCLUDE_DIR) $(SYSROOT_INCLUDE_DIR)
 	$(Q)cp -RT $(INCLUDE_DIR)/posix $(SYSROOT_INCLUDE_DIR)
 	$(Q)cp -RT $(INCLUDE_DIR)/dl $(SYSROOT_INCLUDE_DIR)
+	$(Q)cp -RT $(INCLUDE_DIR)/libkfb $(SYSROOT_INCLUDE_DIR)
 	$(Q)cp -r $(INCLUDE_DIR)/kanawha $(SYSROOT_INCLUDE_DIR)
 	$(Q)cp -RT $(CONFIG_KANAWHA_INCLUDE_PATH)/kanawha/uapi $(SYSROOT_INCLUDE_DIR)/kanawha
 	$(Q)cp -RT $(CONFIG_KANAWHA_INCLUDE_PATH)/kanawha/uapi $(SYSROOT_INCLUDE_DIR)/kanawha/uapi
@@ -22,4 +15,5 @@ install: FORCE
 	$(Q)cp $(OUTPUT_DIR)/crtn.o $(SYSROOT_LIB_DIR)
 	$(Q)cp $(OUTPUT_DIR)/libc.a $(SYSROOT_LIB_DIR)
 	$(Q)cp $(OUTPUT_DIR)/libdl.a $(SYSROOT_LIB_DIR)
+	$(Q)cp $(OUTPUT_DIR)/libkfb.a $(SYSROOT_LIB_DIR)
 

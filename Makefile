@@ -1,6 +1,12 @@
 
 export
 
+DESTDIR ?= /home/kevin/kanawha-dev/sysroot
+
+SYSROOT_DIR := $(DESTDIR)
+SYSROOT_LIB_DIR := $(SYSROOT_DIR)/usr/lib
+SYSROOT_INCLUDE_DIR := $(SYSROOT_DIR)/usr/include
+
 ROOT_DIR := $(shell pwd)
 SCRIPTS_DIR := $(ROOT_DIR)/scripts
 MK_SCRIPTS_DIR := $(SCRIPTS_DIR)/make
@@ -8,12 +14,18 @@ MK_SCRIPTS_DIR := $(SCRIPTS_DIR)/make
 LIBC_SOURCE_DIR := $(ROOT_DIR)/libc
 CRT_SOURCE_DIR := $(ROOT_DIR)/crt
 DL_SOURCE_DIR := $(ROOT_DIR)/dl
-#LIBM_SOURCE_DIR := $(ROOT_DIR)/libm
+LIBKFB_SOURCE_DIR := $(ROOT_DIR)/libkfb
 
 INCLUDE_DIR := $(ROOT_DIR)/include
 LIBC_INCLUDE_DIR := $(ROOT_DIR)/include/libc
 DL_INCLUDE_DIR := $(ROOT_DIR)/include/dl
-#LIBM_INCLUDE_DIR := $(ROOT_DIR)/include/libm
+LIBKFB_INCLUDE_DIR := $(ROOT_DIR)/include/libkfb
+
+ifdef CONFIG_USING_KANAWHA_COMPILER
+DIRECT_SYSROOT_INCLUDE :=
+else
+DIRECT_SYSROOT_INCLUDE := -ffreestanding -I $(SYSROOT_INCLUDE_DIR)
+endif
 
 OUTPUT_DIR := $(ROOT_DIR)/build/
 MODULE_OUTPUT_DIR := $(OUTPUT_DIR)/modules
@@ -78,6 +90,7 @@ COMMON_FLAGS += \
 				-D__ELK_LIBC__\
 				-I $(INCLUDE_DIR) \
 				-I $(LIBC_INCLUDE_DIR) \
+				$(DIRECT_SYSROOT_INCLUDE) \
 				-include $(AUTOCONF) \
 				$(subst ",,$(CONFIG_OPT_FLAGS)) \
 				-fno-pie \
@@ -98,6 +111,9 @@ $(OUTPUT_DIR)/libc/obj.o: $(AUTOCONF) FORCE
 $(OUTPUT_DIR)/dl/obj.o: $(AUTOCONF) FORCE
 	$(Q)$(MAKE) -C $(DL_SOURCE_DIR) -f $(MK_SCRIPTS_DIR)/build.mk obj
 
+$(OUTPUT_DIR)/libkfb/obj.o: $(AUTOCONF) FORCE
+	$(Q)$(MAKE) -C $(LIBKFB_SOURCE_DIR) -f $(MK_SCRIPTS_DIR)/build.mk obj
+
 #$(OUTPUT_DIR)/libm/obj.o: $(AUTOCONF) FORCE
 #	$(Q)$(MAKE) -C $(LIBM_SOURCE_DIR) -f $(MK_SCRIPTS_DIR)/build.mk obj
 
@@ -117,6 +133,11 @@ $(OUTPUT_DIR)/libc.a: $(OUTPUT_DIR)/libc/obj.o
 
 libdl: $(OUTPUT_DIR)/libdl.a
 $(OUTPUT_DIR)/libdl.a: $(OUTPUT_DIR)/dl/obj.o
+	$(Q)rm -f $@
+	$(Q)$(AR) -cru $@ $^
+
+libkfb: $(OUTPUT_DIR)/libkfb.a
+$(OUTPUT_DIR)/libkfb.a: $(OUTPUT_DIR)/libkfb/obj.o
 	$(Q)rm -f $@
 	$(Q)$(AR) -cru $@ $^
 
@@ -141,7 +162,7 @@ crtn: $(OUTPUT_DIR)/crtn.o
 $(OUTPUT_DIR)/crtn.o: $(OUTPUT_DIR)/crt/crtn-obj.o
 	$(Q)cp $< $@
 
-default: libc crt0 crt1 crti crtn libdl
+default: libc crt0 crt1 crti crtn libdl libkfb
 
 -include $(MK_SCRIPTS_DIR)/asm.mk
 -include $(MK_SCRIPTS_DIR)/initrd.mk
