@@ -34,7 +34,7 @@ kheap_grow(
         struct kheap *heap)
 {
     int res;
-    printk("kheap_grow\n");
+    printk("kheap_grow amt_free=0x%lx bytes\n", page_alloc_amount_free());
 
     size_t page_size = (1ULL << CONFIG_HEAP_GROWTH_ORDER);
     if(heap->heap_size - heap->mapped < page_size) {
@@ -44,8 +44,10 @@ kheap_grow(
     void __phys * page_phys;
     res = page_alloc(CONFIG_HEAP_GROWTH_ORDER, &page_phys, 0);
     if(res) {
+        eprintk("kheap_grow() Failed: amount_free=0x%lx bytes\n", page_alloc_amount_free());
         return res;
     }
+
 
     void * page_virt = heap->vbase + heap->mapped;
 
