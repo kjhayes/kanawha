@@ -15,27 +15,6 @@
 
 DEFINE_LOCAL_IRQ_LOCK(printk_lock);
 
-struct vprintk_state {
-    // Inputs
-    const char *fmt_iter;
-    va_list *args_ptr;
-
-    // State
-    int escaped;
-    size_t buffer_head;
-
-    int uppercase_hex;
-    int size_modifier;
-    int leading_zeros;
-    int digits_specifier;
-    
-    // Constants
-    void *state;
-    int(*print_buffer)(void *state, size_t len, char *buf);
-    size_t buffer_size;
-    char *buffer;
-};
-static int vprintk(struct vprintk_state *state, const char *fmt, va_list *args);
 static int vprintk_flush(struct vprintk_state *state);
 static int vprintk_putc(struct vprintk_state *state, char c);
 static int vprintk_print_pointer(struct vprintk_state *state, void *ptr);
@@ -66,21 +45,6 @@ int do_vprintk(const char *fmt, va_list args)
     res = vprintk(&printk_state, fmt, (va_list*)&args);
     printk_lock_release();
 
-    return res;
-}
-static char panic_state_buffer[CONFIG_PANIC_BUFFER_SIZE] = { 0 };
-static struct vprintk_state panic_state = { 0 };
-
-int do_panic_printk(const char *fmt, ...) 
-{
-    int res;
-
-    va_list args;
-    va_start(args, fmt);
-
-    res = vprintk(&panic_state, fmt, &args);
-
-    va_end(args);
     return res;
 }
 
@@ -516,7 +480,6 @@ int vprintk_handle_escaped(struct vprintk_state *state) {
     return res;
 }
 
-static
 int vprintk(struct vprintk_state *state, const char *fmt, va_list *args) 
 {
     int res;
@@ -580,7 +543,7 @@ int printk_remove_handler(printk_handler_f *handler)
     return 0;
 }
 
-static int
+int
 printk_print_buffer(void *state, size_t len, char *buffer) 
 {
     printk_handlers_lock_acquire();
@@ -607,11 +570,6 @@ int printk_init(void)
     printk_state.buffer_size = CONFIG_PRINTK_BUFFER_SIZE;
     printk_state.print_buffer = printk_print_buffer;
     printk_state.state = NULL;
-
-    panic_state.buffer = panic_state_buffer;
-    panic_state.buffer_size = CONFIG_PANIC_BUFFER_SIZE;
-    panic_state.print_buffer = printk_print_buffer;
-    panic_state.state = NULL;
 
     printk_add_handler(klog_putc);
     return 0;
@@ -674,34 +632,7 @@ snprintk(char *buf, size_t size, const char *fmt, ...)
     return state.chars_attempted;
 }
 
-__noreturn
-void do_panic(void)
-{
-    disable_irqs();
-
-    do_panic_printk("    THREAD(");
-    if(current_thread()) { \
-        do_panic_printk("%lld", (ull_t)current_thread()->id);
-    } else {
-        do_panic_printk("NULL");
-    }
-    do_panic_printk(")");
-    if(current_process()) {
-        do_panic_printk(" PROCESS(%lld)", (ull_t)current_process()->id);
-    }
-    do_panic_printk("\n");
-
-    dump_threads(do_panic_printk);
-
-    while(1) {
-        disable_irqs();
-        halt();
-    }
-}
-
 EXPORT_SYMBOL(do_printk);
-EXPORT_SYMBOL(do_panic_printk);
 EXPORT_SYMBOL(printk_add_handler);
 EXPORT_SYMBOL(snprintk);
-EXPORT_SYMBOL(do_panic);
 

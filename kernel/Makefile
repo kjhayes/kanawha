@@ -59,6 +59,7 @@ obj-y += net/
 obj-y += linux/
 obj-y += sysfs/
 obj-y += gfx/
+obj-y += panic/
 
 obj-y += memdump.o
 

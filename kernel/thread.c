@@ -17,6 +17,7 @@
 #include <kanawha/proc/process.h>
 #include <kanawha/assert.h>
 #include <kanawha/attribute.h>
+#include <kanawha/event.h>
 
 static DECLARE_PTREE(thread_tree);
 DEFINE_LOCAL_IRQ_LOCK(thread_tree_lock);
@@ -697,6 +698,27 @@ dump_threads(printk_f *printer)
     thread_tree_lock_release();
     return 0;
 }
+
+#ifdef CONFIG_DEBUG_DUMP_THREADS_PERIODICALLY
+static struct periodic_event *debug_dump_threads_event = NULL;
+static void
+debug_dump_threads_periodically(void *state) {
+    dump_threads(do_printk);
+}
+static int
+init_debug_dump_threads_periodically(void)
+{
+    debug_dump_threads_event = create_periodic_event(
+	    sec_to_duration(CONFIG_DEBUG_DUMP_THREADS_PERIODICALLY_PERIOD),
+	    NULL,
+	    debug_dump_threads_periodically);
+    if(debug_dump_threads_event == NULL) {
+	return -EINVAL;
+    }
+    return 0;
+}
+declare_init(launch, init_debug_dump_threads_periodically);
+#endif
 
 static int
 global_vmem_region_slab_alloc_static_init(void) {

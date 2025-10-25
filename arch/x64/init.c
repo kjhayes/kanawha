@@ -36,6 +36,7 @@ void * x64_boot_bsp_init(void)
 
     klog_init();
     printk_init();
+    panic_printk_init();
 
     // boot Init Stages
     res = handle_init_stage__boot();

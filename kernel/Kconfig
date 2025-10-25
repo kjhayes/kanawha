@@ -164,6 +164,16 @@ config DEBUG_INIT_STAGES
     help
       Debug the init Stages Framework
 
+config DEBUG_DUMP_THREADS_PERIODICALLY
+    bool "Dump Thread Info Periodically"
+    depends on DEBUGGING
+    default n
+
+config DEBUG_DUMP_THREADS_PERIODICALLY_PERIOD
+    int "Dump Thread Period (sec)"
+    depends on DEBUG_DUMP_THREADS_PERIODICALLY
+    default 60
+
 config DEBUG_TRACK_PROCESS_EXEC
     bool "Track Process Exec Path"
     depends on DEBUGGING
