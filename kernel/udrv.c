@@ -130,9 +130,12 @@ udrv_mount_mkfile(
     dev->mnt = mnt;
     waitqueue_init(&dev->read_wq);
     waitqueue_init(&dev->write_wq);
+    waitqueue_init(&dev->send_wq);
 
     irq_lock_init(&dev->read_pkt_queue_lock);
     ilist_init(&dev->read_pkt_queue);
+    dev->read_pkts_queued = 0;
+    dev->max_read_pkts_queued = 1;
 
     size_t inode;
     res = vfs_mount_insert_node(udrv_fs_mount, &dev->vfs_node, &inode);
@@ -209,6 +212,7 @@ udrv_dev_fs_file_read(
 	}
 	break;
     }
+    dev->read_pkts_queued--;
 
     struct udrv_user_pkt *user_pkt =
 	container_of(list_node, struct udrv_user_pkt, queue_node);
@@ -220,6 +224,10 @@ udrv_dev_fs_file_read(
     irq_lock_release(&dev->read_pkt_queue_lock);
 
     kfree(user_pkt);
+
+    if(dev->read_pkts_queued < dev->max_read_pkts_queued) {
+        wake_all(&dev->send_wq);
+    }
 
     //printk("wrote udrv packet of length=0x%lx to userspace!\n", to_write);
     return to_write;
@@ -291,7 +299,7 @@ udrv_dev_fs_file_poll(
     }
 
     if(in & POLL_WRITE_NONBLOCKING) {
-	*out = POLL_WRITE_NONBLOCKING;
+	*out |= POLL_WRITE_NONBLOCKING;
     }
 
     return 0;
@@ -343,7 +351,30 @@ udrv_send_user_pkt(
 {
     struct udrv_user_pkt *user_pkt = container_of(pkt, struct udrv_user_pkt, pkt);
     irq_lock_acquire(&dev->read_pkt_queue_lock);
+    while(dev->read_pkts_queued > dev->max_read_pkts_queued) {
+        irq_lock_release(&dev->read_pkt_queue_lock);
+	wait_on(&dev->send_wq);
+        irq_lock_acquire(&dev->read_pkt_queue_lock);
+    }
     ilist_push_head(&dev->read_pkt_queue, &user_pkt->queue_node);
+    dev->read_pkts_queued++;
+    irq_lock_release(&dev->read_pkt_queue_lock);
+
+    udrv_dev_wake_readers(dev);
+
+    return 0;
+}
+
+int
+udrv_send_user_pkt_no_wait(
+	struct udrv_dev *dev,
+	struct udrv_pkt *pkt)
+{
+    struct udrv_user_pkt *user_pkt = container_of(pkt, struct udrv_user_pkt, pkt);
+
+    irq_lock_acquire(&dev->read_pkt_queue_lock);
+    ilist_push_head(&dev->read_pkt_queue, &user_pkt->queue_node);
+    dev->read_pkts_queued++;
     irq_lock_release(&dev->read_pkt_queue_lock);
 
     udrv_dev_wake_readers(dev);

@@ -58,9 +58,12 @@ struct udrv_dev
 
     struct waitqueue write_wq;
     struct waitqueue read_wq;
+    struct waitqueue send_wq;
 
     irq_lock_t read_pkt_queue_lock;
     ilist_t read_pkt_queue;
+    unsigned long read_pkts_queued;
+    unsigned long max_read_pkts_queued;
 };
 
 static inline void
@@ -85,6 +88,14 @@ udrv_create_user_pkt(
 // (Frees the backing memory when the packet is fully sent)
 int
 udrv_send_user_pkt(
+	struct udrv_dev *dev,
+	struct udrv_pkt *pkt);
+
+// This will ignore buffer length and force a packet to
+// be send regardless of how many packets are currently queued
+// for userspace (should only be used in rare circumstances)
+int
+udrv_send_user_pkt_no_wait(
 	struct udrv_dev *dev,
 	struct udrv_pkt *pkt);
 

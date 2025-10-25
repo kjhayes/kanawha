@@ -34,4 +34,16 @@ struct udrv_fb_pkt_write_to_buffer
     char data[];
 };
 
+// Userspace is requesting that the kernel not actually flush
+// data for some amount of time (the framebuffer is hidden for
+// some reason)
+#define UDRV_FB_PKT_MASK_WRITES (6) // User -> Kernel
+
+// Tells the kernel to begin sending write calls again
+#define UDRV_FB_PKT_UNMASK_WRITES (7) // User -> Kernel
+
+// Tell the kernel that any framedata saved to userspace buffers
+// has been lost and must be resent.
+#define UDRV_FB_PKT_NOTIFY_DATA_LOST (8) // User -> Kernel
+
 #endif

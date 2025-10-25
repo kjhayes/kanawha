@@ -49,11 +49,14 @@ struct udrv_fb_dev
 
     size_t buffer_size;
     dma_addr_t buffer;
+
+    unsigned flush_was_masked;
+    unsigned writes_masked;
     
     char *name;
 };
 
-static int __udrv_fb_set_mode_lockless(struct udrv_fb_dev *dev, size_t mode);
+static int __udrv_fb_set_mode_lock_held(struct udrv_fb_dev *dev, size_t mode);
 
 static struct udrv_dev *
 fb_dev_udrv_create(
@@ -77,6 +80,9 @@ fb_dev_udrv_create(
     dev->current_mode = NULL;
     ilist_init(&dev->mode_info_list);
     dev->buffer_size = 0;
+
+    dev->writes_masked = 0;
+    dev->flush_was_masked = 0;
 
     dev->fb_dev.driver = &udrv_fb_driver;
     res = register_fb_dev(&dev->fb_dev, dev->name);
@@ -182,7 +188,7 @@ fb_dev_udrv_add_mode_info(
     irq_lock_acquire(&dev->mode_lock);
     ilist_push_tail(&dev->mode_info_list, &info->list_node);
     if(dev->current_mode == NULL) {
-	__udrv_fb_set_mode_lockless(dev, index);
+	__udrv_fb_set_mode_lock_held(dev, index);
     }
     irq_lock_release(&dev->mode_lock);
 
@@ -191,6 +197,9 @@ fb_dev_udrv_add_mode_info(
 
     return 0;
 }
+
+// Forward Decl.
+static int udrv_fb_flush_buffer(struct fb_dev *fb_dev);
 
 static int
 fb_dev_udrv_on_recv(
@@ -263,6 +272,25 @@ fb_dev_udrv_on_recv(
 	    }
 	    return 0;
 	}
+	case UDRV_FB_PKT_MASK_WRITES:
+	{
+	    dev->writes_masked = 1;
+	    return 0;
+	}
+	case UDRV_FB_PKT_UNMASK_WRITES:
+	{
+	    dev->writes_masked = 0;
+	    if(dev->flush_was_masked) {
+		// This is dangerous
+		udrv_fb_flush_buffer(&dev->fb_dev);
+	    }
+	    return 0;
+	}
+	case UDRV_FB_PKT_NOTIFY_DATA_LOST:
+	{
+	    udrv_fb_flush_buffer(&dev->fb_dev);
+	    return 0;
+	}
 	default:
 	    wprintk("udrv: fb_dev Received invalid packet! (type=%ld)\n",
 		    (sl_t)pkt->type);
@@ -310,7 +338,7 @@ udrv_fb_get_mode(struct fb_dev *fb_dev)
 }
 
 static int
-__udrv_fb_set_mode_lockless(
+__udrv_fb_set_mode_lock_held(
         struct udrv_fb_dev *dev,
 	size_t mode)
 {
@@ -351,7 +379,9 @@ __udrv_fb_set_mode_lockless(
     req_pkt->flags = 0;
     set_mode->mode = mode;
 
+    irq_lock_release(&dev->mode_lock);
     udrv_send_user_pkt(&dev->udrv_dev,req_pkt);
+    irq_lock_acquire(&dev->mode_lock);
 
     // Wait for userspace to actually finish setting the mode
     // (Ensure that it did so successfully)
@@ -378,7 +408,7 @@ udrv_fb_set_mode(
     int res;
     struct udrv_fb_dev *dev = container_of(fb_dev, struct udrv_fb_dev, fb_dev);
     irq_lock_acquire(&dev->mode_lock);
-    res = __udrv_fb_set_mode_lockless(dev, mode);
+    res = __udrv_fb_set_mode_lock_held(dev, mode);
     irq_lock_release(&dev->mode_lock);
     return res;
 }
@@ -416,7 +446,6 @@ udrv_fb_load_buffer(
 
     void *vbuf = dma_virt_addr(dev->buffer);
     DEBUG_ASSERT(KERNEL_ADDR(vbuf));
-    //memset(vbuf, 'A', buflen);
 
     irq_lock_release(&dev->mode_lock);
     return 0;
@@ -445,7 +474,22 @@ udrv_fb_flush_buffer(
 {
     struct udrv_fb_dev *dev = container_of(fb_dev, struct udrv_fb_dev, fb_dev);
 
+    if(dev->writes_masked) {
+	// The userspace driver has requested
+	// that we suspend actually sending data
+	dev->flush_was_masked = 1;
+	return 0;
+    }
+
     irq_lock_acquire(&dev->mode_lock);
+
+    int forcing = 0;
+
+    if(dev->flush_was_masked) {
+        dev->flush_was_masked = 0;
+	// Force this flush
+	forcing = 1;
+    }
 
     if(dev->buffer_size <= 0 || dev->current_mode == NULL) {
 	// We don't have a current buffer and/or mode...
@@ -480,7 +524,13 @@ udrv_fb_flush_buffer(
 	pkt->datalen = datalen;
 	memcpy(pkt->data, vbuf + offset, datalen);
 
-        udrv_send_user_pkt(&dev->udrv_dev,req_pkt);
+        irq_lock_release(&dev->mode_lock);
+	if(forcing) {
+            udrv_send_user_pkt_no_wait(&dev->udrv_dev,req_pkt);
+	} else {
+            udrv_send_user_pkt(&dev->udrv_dev,req_pkt);
+	}
+        irq_lock_acquire(&dev->mode_lock);
 
 	amt_to_write -= datalen;
 	offset += datalen;
