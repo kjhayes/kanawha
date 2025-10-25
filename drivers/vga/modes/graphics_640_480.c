@@ -13,30 +13,20 @@ static int
 vga_fb_flush_mode_graphics_640_480(
         struct vga_fb *fb)
 {
-//    vga_screen_disable(&fb->vga_dev);
+    vga_screen_disable(&fb->vga_dev);
 
     void __phys *vga_mem = (void __phys *)0xA0000;
-    size_t bitbuffer_size = ((640*480)/8);
 
     if(!fb->buffer_exists) {
 	return 0;
     }
 
-    uint8_t *red_bitbuffer = kmalloc(bitbuffer_size, KM_KERNEL);
-    uint8_t *green_bitbuffer = kmalloc(bitbuffer_size, KM_KERNEL);
-    uint8_t *blue_bitbuffer = kmalloc(bitbuffer_size, KM_KERNEL);
-    uint8_t *intensity_bitbuffer = kmalloc(bitbuffer_size, KM_KERNEL);
-
-    if(red_bitbuffer == NULL ||
-       green_bitbuffer == NULL ||
-       blue_bitbuffer == NULL ||
-       intensity_bitbuffer == NULL) {
-	kfree(red_bitbuffer);
-	kfree(green_bitbuffer);
-	kfree(blue_bitbuffer);
-	kfree(intensity_bitbuffer);
-	return -ENOMEM;
-    }
+#define BITBUFFER_SIZE ((640*480)/8)
+    const size_t bitbuffer_size = BITBUFFER_SIZE;
+    static uint8_t red_bitbuffer[BITBUFFER_SIZE];
+    static uint8_t green_bitbuffer[BITBUFFER_SIZE];
+    static uint8_t blue_bitbuffer[BITBUFFER_SIZE];
+    static uint8_t intensity_bitbuffer[BITBUFFER_SIZE];
     
     for(size_t i = 0; i < bitbuffer_size; i++)
     {
@@ -77,12 +67,7 @@ vga_fb_flush_mode_graphics_640_480(
     vga_write_field(&fb->vga_dev, MemoryPlaneWriteEnable, 0b1000);
     memcpy_vp(vga_mem, intensity_bitbuffer, bitbuffer_size);
 
-//    vga_screen_enable(&fb->vga_dev);
-
-    kfree(red_bitbuffer);
-    kfree(green_bitbuffer);
-    kfree(blue_bitbuffer);
-    kfree(intensity_bitbuffer);
+    vga_screen_enable(&fb->vga_dev);
 
     return 0;
 }
@@ -138,6 +123,8 @@ vga_fb_setup_mode_graphics_640_480(
     vga_write_register(vga,  DACMask,                  0xFF); // Added
 
     // TEST
+    vga_write_register(vga, MiscellaneousOutput, 0xE3);
+
     vga_write_sequencer_register_set(vga, 0x00, 0x03);
     vga_write_sequencer_register_set(vga, 0x01, 0x01);
     vga_write_sequencer_register_set(vga, 0x02, 0x0F);
