@@ -1,7 +1,7 @@
 #ifndef __KANAWHA__X64_GDT_H__
 #define __KANAWHA__X64_GDT_H__
 
-#define X64_GDT64_SIZE 48
+#define X64_GDT64_SIZE 56
 #define X64_TSS_SEGMENT_SIZE 0x68ULL
 
 #ifndef __ASSEMBLER__
@@ -61,6 +61,22 @@ struct __packed gdt64_system_segment {
 };
 _Static_assert(sizeof(struct gdt64_system_segment) == 16, "sizeof(struct gdt64_system_segment) is not exactly 16 bytes!");
 
+// This structure is only defined explicitly by AMD
+// as far as I can tell -KJH
+struct __packed gdt64_call_gate {
+    uint16_t target_offset_15_0;
+    uint16_t target_selector;
+    uint8_t __resv0_0;
+    uint8_t type : 4;
+    uint8_t __resv0_1 : 1;
+    uint8_t ring: 2;
+    uint8_t present: 1;
+    uint16_t target_offset_31_16;
+    uint32_t target_offset_63_32;
+    uint32_t __resv0_2;
+};
+_Static_assert(sizeof(struct gdt64_call_gate) == 16, "sizeof(struct gdt64_system_segment) is not exactly 16 bytes!");
+
 struct __packed gdt64_descriptor {
     uint16_t limit;
     uint64_t address;
@@ -76,6 +92,8 @@ struct __packed gdt64 {
     struct gdt64_segment user_data;
     struct gdt64_segment user_code;
 };
+
+_Static_assert(sizeof(struct gdt64) == X64_GDT64_SIZE, "struct gdt64 does not match X64_GDT64_SIZE macro!");
 
 #define X64_NULL_GDT_SEGMENT_OFFSET        offsetof(struct gdt64, null)
 #define X64_KERNEL_CODE_GDT_SEGMENT_OFFSET offsetof(struct gdt64, kernel_code)
