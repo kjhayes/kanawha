@@ -2,17 +2,18 @@ CONFIG_X64=y
 # CONFIG_RISCV64 is not set
 CONFIG_CLANG=y
 # CONFIG_GCC is not set
-CONFIG_OPT_FLAGS="-O0"
+CONFIG_OPT_FLAGS="-O3"
 CONFIG_MAX_CPUS=64
-CONFIG_PANIC=y
-# CONFIG_WARN is not set
-# CONFIG_IGNORE is not set
+CONFIG_UNHANDLED_IRQ_PANIC=y
+# CONFIG_UNHANDLED_IRQ_WARN is not set
+# CONFIG_UNHANDLED_IRQ_IGNORE is not set
 
 #
 # Kernel Memory Layout
 #
 CONFIG_HEAP_ALIGN_ORDER=30
-CONFIG_HEAP_SIZE_ORDER=24
+CONFIG_HEAP_SIZE_ORDER=32
+CONFIG_HEAP_GROWTH_ORDER=21
 CONFIG_PERCPU_HEAP_SIZE_ORDER=32
 CONFIG_MMIO_RESERVE_SIZE_ORDER=32
 # end of Kernel Memory Layout
@@ -29,24 +30,43 @@ CONFIG_TIMESTAMP_RESOLUTION_MS=10
 #
 CONFIG_ACPI=y
 CONFIG_ACPI_REQUIRED=y
+
+#
+# ACPI Options
+#
+CONFIG_ACPI_SYSFS=y
+# end of ACPI Options
+
 # CONFIG_DEVICETREE is not set
-# CONFIG_DEVICETREE_REQUIRED is not set
 # end of Firmware Interfaces
 
 CONFIG_INIT_PROCESS_PATH="sh"
-CONFIG_INIT_PROCESS_ARGS="init-x64.sh"
-CONFIG_ROOT_FS_RAMFILE="initrd"
-CONFIG_ROOT_FS_FILESYSTEM="cpio"
+CONFIG_INIT_PROCESS_ARGS="init.sh"
+CONFIG_INITIAL_FS_BACKEND_SYSFS_DIR="ramfile"
+CONFIG_INITIAL_FS_BACKEND_FILE_NAME="initrd"
+CONFIG_INITIAL_FS_FILESYSTEM="cpio"
 
 #
 # printk Options
 #
 CONFIG_KLOG_FRAMESIZE=0x1000
-CONFIG_KLOG_BOOT_FRAMES=0x64
+CONFIG_KLOG_BOOT_FRAMES=0x40
 CONFIG_PRINTK_BUFFER_SIZE=0x1000
 CONFIG_PANIC_BUFFER_SIZE=0x1000
 CONFIG_PRINTK_MAX_HANDLERS=8
 CONFIG_LOG_INIT_STAGES=y
+
+#
+# Log Devices on Launch
+#
+# CONFIG_LOG_TERMDEV_REGISTRY_ON_LAUNCH is not set
+# CONFIG_LOG_BLKDEV_REGISTRY_ON_LAUNCH is not set
+# CONFIG_LOG_FBDEV_REGISTRY_ON_LAUNCH is not set
+# CONFIG_LOG_IRQDEV_REGISTRY_ON_LAUNCH is not set
+# CONFIG_LOG_RANDDEV_REGISTRY_ON_LAUNCH is not set
+# CONFIG_LOG_ETHDEV_REGISTRY_ON_LAUNCH is not set
+# CONFIG_LOG_IPV4DEV_REGISTRY_ON_LAUNCH is not set
+# end of Log Devices on Launch
 # end of printk Options
 
 #
@@ -56,16 +76,7 @@ CONFIG_DEBUGGING=y
 CONFIG_DEBUG_SYMBOLS=y
 CONFIG_DEBUG_ASSERTIONS=y
 # CONFIG_PERCPU_DEBUG_ASSERTIONS is not set
-
-#
-# Strace Options
-#
-# CONFIG_STRACE_LOG_SYSCALL_BEGIN is not set
-# CONFIG_STRACE_LOG_SYSCALL_END is not set
-CONFIG_STRACE_LOG_SIGNALS=y
-# end of Strace Options
-
-CONFIG_DISABLE_NORETURN_ATTRIBUTE=y
+# CONFIG_DISABLE_NORETURN_ATTRIBUTE is not set
 
 #
 # Kernel Address Checking
@@ -77,115 +88,67 @@ CONFIG_DEBUG_HIGHER_HALF_KERNEL_ADDRESSES=y
 # CONFIG_DEBUG_KHEAP_TOUCH is not set
 # CONFIG_DEBUG_KMALLOC_BITMAP is not set
 # CONFIG_DEBUG_INIT_STAGES is not set
-CONFIG_DEBUG_SPINLOCK_TRACK_THREADS=y
+# CONFIG_DEBUG_DUMP_THREADS_PERIODICALLY is not set
 CONFIG_DEBUG_TRACK_PROCESS_EXEC=y
+# CONFIG_DEBUG_X64_PEDANTIC_VERIFY_PAGE_TABLES is not set
+# CONFIG_DEBUG_PROCESS_TERMINATION is not set
 
 #
-# syscall Logging
+# Strace Options
+#
+# CONFIG_STRACE_LOG_SYSCALL_BEGIN is not set
+# CONFIG_STRACE_LOG_SYSCALL_END is not set
+# CONFIG_STRACE_LOG_SIGNALS is not set
+# CONFIG_STRACE_TIME_SYSCALLS is not set
+# end of Strace Options
+
+#
+# syscall Debugging
 #
 # CONFIG_DEBUG_SYSCALL_OPEN is not set
 # CONFIG_DEBUG_SYSCALL_EXIT is not set
 # CONFIG_DEBUG_SYSCALL_WRITE is not set
 # CONFIG_DEBUG_SYSCALL_READ is not set
+# CONFIG_DEBUG_SYSCALL_FLUSH is not set
+# CONFIG_DEBUG_SYSCALL_EXEC is not set
 # CONFIG_DEBUG_SYSCALL_ENVIRON is not set
-# end of syscall Logging
+# CONFIG_DEBUG_SYSCALL_MMAP is not set
+# CONFIG_DEBUG_SYSCALL_REAP is not set
+# CONFIG_DEBUG_SYSCALL_FACCESS is not set
+# CONFIG_DEBUG_SYSCALL_CHWDIR is not set
+# CONFIG_DEBUG_SYSCALL_CHROOT is not set
+# CONFIG_DEBUG_SYSCALL_DIRATTR is not set
+# CONFIG_DEBUG_SYSCALL_DIRBEGIN is not set
+# CONFIG_DEBUG_SYSCALL_DIRNAME is not set
+# CONFIG_DEBUG_SYSCALL_DIRNEXT is not set
+# CONFIG_DEBUG_SYSCALL_MKFILE is not set
+# CONFIG_DEBUG_SYSCALL_UNLINK is not set
+# CONFIG_DEBUG_SYSCALL_PIPE is not set
+# CONFIG_DEBUG_SYSCALL_POLL is not set
+# CONFIG_DEBUG_SYSCALL_SIGMOD is not set
+# CONFIG_DEBUG_SYSCALL_SIGINFO is not set
+# CONFIG_DEBUG_SYSCALL_SIGSEND is not set
+# CONFIG_DEBUG_SYSCALL_RID is not set
+# end of syscall Debugging
 # end of Debug Options
 
 #
-# Filesystems
+# kmalloc Options
 #
-CONFIG_CPIO_FS=y
-CONFIG_EXT2_FS=y
+CONFIG_KMALLOC_KHEAP=y
+# CONFIG_KMALLOC_TRACK_CALLSITES is not set
+# end of kmalloc Options
+
+#
+# Filesystem Options
+#
 
 #
 # sysfs Options
 #
-# CONFIG_SYSFS_PCI is not set
+CONFIG_PROCFS=y
+CONFIG_SYSFS_PCI=y
 # end of sysfs Options
-# end of Filesystems
-
-#
-# Drivers
-#
-
-#
-# Block Devices
-#
-
-#
-# Clock Devices
-#
-CONFIG_ACPI_PM_TIMER_CLK=y
-# end of Clock Devices
-
-#
-# IRQ Devices
-#
-# end of IRQ Devices
-
-#
-# Serial Devices
-#
-CONFIG_SERIAL_8250=y
-CONFIG_VIRTIO_CONSOLE=y
-# CONFIG_QEMU_SERIAL is not set
-CONFIG_PC_COM_8250=y
-# end of Serial Devices
-
-#
-# Framebuffer Devices
-#
-
-#
-# Randomness Sources
-#
-CONFIG_VIRTIO_RNG=y
-# end of Randomness Sources
-
-#
-# PCI Options
-#
-CONFIG_PCI=y
-CONFIG_PCI_ASSUME_CONTIGUOUS_DEVICES=y
-# CONFIG_PCI_ALLOC_UNINITIALIZED_MMIO_BARS is not set
-
-#
-# PCI Configuration Space Access Mechanisms
-#
-CONFIG_PCI_PORT_CAM=y
-# end of PCI Configuration Space Access Mechanisms
-# end of PCI Options
-
-CONFIG_PS2=y
-
-#
-# PS/2 Devices
-#
-CONFIG_PS2_8042=y
-CONFIG_PS2_KBD=y
-# end of PS/2 Devices
-
-#
-# Qemu Specific Devices
-#
-# CONFIG_QEMU_PCI_TEST_DEVICE is not set
-# CONFIG_QEMU_PCI_EDU_DEVICE is not set
-# end of Qemu Specific Devices
-
-CONFIG_VIRTIO=y
-
-#
-# Virtio Transports
-#
-CONFIG_VIRTIO_PCI=y
-# end of Virtio Transports
-
-#
-# VGA Options
-#
-CONFIG_VGA_FB_DEV=y
-# end of VGA Options
-# end of Drivers
 
 #
 # Schedulers
@@ -195,7 +158,7 @@ CONFIG_ROUND_ROBIN_SCHED=y
 # end of Schedulers
 
 #
-# Misc. Modules
+# Misc. Options
 #
 
 #
@@ -215,25 +178,148 @@ CONFIG_MULTIBOOT2=y
 CONFIG_MULTIBOOT2_MODULES=y
 CONFIG_MULTIBOOT2_RAMFILE=y
 CONFIG_MULTIBOOT2_ACPI=y
+# CONFIG_MULTIBOOT2_FRAMEBUFFER is not set
 # end of Multiboot2 Options
-# end of Misc. Modules
+
+CONFIG_DISPLAY_LOGO_ON_FRAMEBUFFER_MODESET=y
+# end of Misc. Options
+
+CONFIG_LOGO_DATA=y
 
 #
 # x64 Options
 #
 CONFIG_X64_KERNEL_LOAD_ADDR=0x100000
 CONFIG_X64_VIRTUAL_BASE=0xFFFF800000000000
-CONFIG_X64_IDENTITY_MAP_ORDER=32
+CONFIG_X64_IDENTITY_MAP_ORDER=36
 CONFIG_X64_BOOT_STACK_SIZE=0x4000
 CONFIG_X64_PROT_MODE_TO_LONG_MODE=y
 CONFIG_X64_MULTIBOOT2_BOOT=y
 CONFIG_X64_ASSUME_2MB_PAGES=y
 # CONFIG_X64_ASSUME_1GB_PAGES is not set
-# CONFIG_X64_BOOT_VGA is not set
+CONFIG_X64_BOOT_VGA=y
+# CONFIG_X64_BOOT_VGA_POST_LAUNCH is not set
 CONFIG_X64_BOOT_SERIAL=y
+# CONFIG_X64_BOOT_SERIAL_POST_LAUNCH is not set
 # CONFIG_X64_TEST_VOLATILITY_THREAD is not set
+# CONFIG_X64_IGNORE_MADT_LAPIC is not set
+# CONFIG_X64_IGNORE_MADT_X2APIC is not set
 # end of x64 Options
 
+#
+# Drivers
+#
+
+#
+# Block Devices
+#
+CONFIG_VIRTIO_BLK=m
+CONFIG_AHCI=y
+# end of Block Devices
+
+#
+# Network Devices
+#
+CONFIG_VIRTIO_NET=y
+# end of Network Devices
+
+#
+# Filesystems
+#
+CONFIG_MBR=y
+CONFIG_CPIO_FS=y
+CONFIG_EXT2_FS=y
+CONFIG_RAMFS=y
+CONFIG_FAT=y
+# end of Filesystems
+
+#
+# Clock Devices
+#
+CONFIG_ACPI_PM_TIMER_CLK=y
+# end of Clock Devices
+
+#
+# IRQ Devices
+#
+# end of IRQ Devices
+
+#
+# Terminal Devices
+#
+CONFIG_SERIAL_8250=y
+# CONFIG_QEMU_SERIAL is not set
+CONFIG_PC_COM_8250=y
+# end of Terminal Devices
+
+#
+# Framebuffer Devices
+#
+CONFIG_VIRTIO_GPU_FB=y
+# end of Framebuffer Devices
+
+#
+# Randomness Sources
+#
+CONFIG_VIRTIO_RNG=m
+# end of Randomness Sources
+
+#
+# PCI Options
+#
+CONFIG_PCI=y
+# CONFIG_PCI_ASSUME_CONTIGUOUS_DEVICES is not set
+# CONFIG_PCI_ALLOC_UNINITIALIZED_MMIO_BARS is not set
+
+#
+# PCI Configuration Space Access Mechanisms
+#
+CONFIG_PCI_PORT_CAM=y
+CONFIG_PCI_MMIO_ECAM=y
+CONFIG_PCIE_ACPI_MCFG=y
+# end of PCI Configuration Space Access Mechanisms
+
+# CONFIG_DEBUG_LOG_PCI_BAR_ACCESSES is not set
+# CONFIG_DEBUG_PCI_BAR_ACCESSES is not set
+# end of PCI Options
+
+#
+# USB Options
+#
+# end of USB Options
+
+CONFIG_PS2=y
+
+#
+# PS/2 Devices
+#
+CONFIG_PS2_8042=y
+CONFIG_PS2_KBD=y
+# end of PS/2 Devices
+
+#
+# Qemu Specific Devices
+#
+# CONFIG_QEMU_PCI_TEST_DEVICE is not set
+# CONFIG_QEMU_PCI_EDU_DEVICE is not set
+# end of Qemu Specific Devices
+
+CONFIG_VIRTIO=m
+
+#
+# Virtio Transports
+#
+CONFIG_VIRTIO_PCI=y
+# end of Virtio Transports
+
+#
+# VGA Options
+#
+CONFIG_VGA_FB_DEV=y
+# end of VGA Options
+# end of Drivers
+
+# CONFIG_WIP is not set
 CONFIG_KANAWHA=y
 CONFIG_MODULES=y
 CONFIG_PORT_IO=y
