@@ -7,6 +7,13 @@
 #include <drivers/usb/xhci/endpoint.h>
 
 int
+usb_xhci_init_scratchpads(
+        struct usb_xhci *dev);
+int
+usb_xhci_deinit_scratchpads(
+        struct usb_xhci *dev);
+
+int
 usb_xhci_init_device_contextes(
         struct usb_xhci *dev);
 int

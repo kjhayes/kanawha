@@ -3,6 +3,7 @@
 #include <kanawha/kmalloc.h>
 #include <kanawha/dma.h>
 #include <kanawha/stddef.h>
+#include <kanawha/page_alloc.h>
 #include <drivers/usb/xhci/device.h>
 #include <drivers/usb/xhci/ctx.h>
 #include <drivers/usb/xhci/xhci.h>
@@ -45,6 +46,85 @@ usb_xhci_device_issue_disable_slot_command(
 }
 
 int
+usb_xhci_init_scratchpads(
+	struct usb_xhci *dev)
+{
+    int res;
+
+    printk("USB XHCI: requested %d scratchpads\n",
+	    dev->num_scratchpads);
+    if(dev->num_scratchpads == 0) {
+	dev->scratchpad_pages = NULL;
+	return 0;
+    }
+
+    dev->scratchpad_pages = kzmalloc(
+	    sizeof(void __phys *) * dev->num_scratchpads,
+	    KM_KERNEL);
+    if(dev->scratchpad_pages == NULL) {
+	return -ENOMEM;
+    }
+
+    res = dma_alloc(
+	    sizeof(uint64_t) * dev->num_scratchpads,
+	    6,
+	    DMA_PHYS_64,
+	    &dev->scratchpad_array);
+    if(res) {
+	kfree(dev->scratchpad_pages);
+	dev->scratchpad_pages = NULL;
+	return res;
+    }
+
+    void __phys **dma_virt = dma_virt_addr(dev->scratchpad_array);
+
+    size_t num_allocated = 0;
+    for(size_t i = 0; i < dev->num_scratchpads; i++) {
+	void __phys *page;
+	res = page_alloc(
+		dev->page_order,
+		&page,
+		PAGE_ALLOC_64BIT);
+	if(res) {
+	    break;
+	}
+	dev->scratchpad_pages[i] = page;
+	dma_virt[i] = page;
+	num_allocated++;
+    }
+    if(num_allocated != dev->num_scratchpads) {
+	for(size_t i = 0; i < num_allocated; i++) {
+	    page_free(
+		    dev->page_order,
+		    dev->scratchpad_pages[i]);
+	}
+	kfree(dev->scratchpad_pages);
+	dev->scratchpad_pages = NULL;
+	dma_free(
+		dev->scratchpad_array,
+		sizeof(uint64_t) * dev->num_scratchpads);
+	return res;
+    }
+    return 0;
+}
+
+int
+usb_xhci_deinit_scratchpads(
+	struct usb_xhci *dev)
+{
+    for(size_t i = 0; i < dev->num_scratchpads; i++) {
+        page_free(
+    	    dev->page_order,
+    	    dev->scratchpad_pages[i]);
+    }
+    kfree(dev->scratchpad_pages);
+    dma_free(
+	    dev->scratchpad_array,
+	    sizeof(uint64_t) * dev->num_scratchpads);
+    return 0;
+}
+
+int
 usb_xhci_init_device_contextes(
         struct usb_xhci *dev)
 {
@@ -71,11 +151,11 @@ usb_xhci_init_device_contextes(
     memset(dev->dcbaa, 0, 8*(dev->num_device_ctx+1));
 
     if(dev->num_scratchpads > 0) {
-        dma_free(dev->dcbaa_dma, 8*(dev->num_device_ctx+1));
-        wprintk("USB XHCI Driver does not support scratchpads currently! (device requested %lu scratchpads)\n",
-                (ul_t)dev->num_scratchpads);
-        kfree(devices);
-        return -EINVAL;
+	// Set up the pointer to the
+	// scratchpad buffers
+	DEBUG_ASSERT(KERNEL_ADDR(dev->scratchpad_pages));
+	void __phys *scratchpad_array = dma_phys_addr(dev->scratchpad_array);
+	dev->dcbaa->scratchpad_array_ptr = scratchpad_array;
     }
 
     dev->devices = devices;
@@ -174,7 +254,7 @@ usb_xhci_create_device(
 
     xhci->devices[dev->slot_index-1] = dev;
 
-    printk("USB Device Assigned to Slot %d\n", (int)dev->slot_index);
+    printk("USB XHCI: device assigned to slot %d\n", (int)dev->slot_index);
 
     // Allocate a device context output
 
@@ -197,6 +277,8 @@ usb_xhci_create_device(
     void __phys *phys_buffer = dma_phys_addr(dev->slot_dma_buffer);
     xhci->dcbaa->output_ctx_base_address[dev->slot_index-1] = phys_buffer;
 
+    printk("USB XHCI: setup context for slot %d\n", (int)dev->slot_index);
+
     return dev;
 }
 
@@ -211,6 +293,7 @@ usb_xhci_address_root_hub_device(
     irq_lock_acquire(&dev->endpoint_lock);
     if(dev->endpoints[1] != NULL) {
         irq_lock_release(&dev->endpoint_lock);
+	eprintk("usb_xhci_address_root_hub_device: control transfer ring is already setup!\n");
         return -EALREADY;
     }
 

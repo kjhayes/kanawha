@@ -195,7 +195,7 @@ usb_xhci_init_device(
 {
     int res;
 
-    dprintk("usb_xhci_init_device!\n");
+    printk("USB XHCI found root hub on PCI bus\n");
 
     struct usb_xhci *dev = kzmalloc(sizeof(*dev), KM_KERNEL);
     if(dev == NULL) {
@@ -209,6 +209,7 @@ usb_xhci_init_device(
 
     res = usb_xhci_bootstrap_reg_access(dev);
     if(res) {
+        eprintk("USB XHCI failed to bootstrap register access!\n");
         return res;
     }
 
@@ -226,24 +227,35 @@ usb_xhci_init_device(
     res = usb_xhci_claim_from_bios(dev);
     if(res) {
         kfree(dev);
+        eprintk("USB XHCI failed to claim device from the BIOS!\n");
         return res;
     }
 
     res = usb_xhci_halt(dev);
     if(res) {
         kfree(dev);
+        eprintk("USB XHCI failed to halt the root hub!\n");
         return res;
     }
 
     res = usb_xhci_reset(dev);
     if(res) {
         kfree(dev);
+        eprintk("USB XHCI failed to reset the root hub!\n");
         return res;
+    }
+
+    res = usb_xhci_init_scratchpads(dev);
+    if(res) {
+	kfree(dev);
+        eprintk("USB XHCI failed to initialize scratchpad pages!\n");
+	return res;
     }
 
     res = usb_xhci_init_device_contextes(dev);
     if(res) {
         kfree(dev);
+        eprintk("USB XHCI failed to initialize device contextes!\n");
         return res;
     }
     dprintk("initialized the device contextes!\n");
@@ -251,17 +263,19 @@ usb_xhci_init_device(
     res = usb_xhci_init_command_ring(dev, 255); // Single 4kb Page (probably)
     if(res) {
         usb_xhci_deinit_device_contextes(dev);
+	usb_xhci_deinit_scratchpads(dev);
         kfree(dev);
+        eprintk("USB XHCI failed to initialize command ring!\n");
         return res;
     }
-    dprintk("initialized the command ring!\n");
 
     res = usb_xhci_init_interruptors(dev);
     if(res) {
         usb_xhci_deinit_command_ring(dev);
         usb_xhci_deinit_device_contextes(dev);
+	usb_xhci_deinit_scratchpads(dev);
         kfree(dev);
-        wprintk("Failed to init USB XHCI interruptors! (res=%s)\n",
+        eprintk("Failed to init USB XHCI interruptors! (res=%s)\n",
                 errnostr(res));
         return res;
     }
@@ -271,7 +285,9 @@ usb_xhci_init_device(
         usb_xhci_deinit_interruptors(dev);
         usb_xhci_deinit_command_ring(dev);
         usb_xhci_deinit_device_contextes(dev);
+	usb_xhci_deinit_scratchpads(dev);
         kfree(dev);
+        eprintk("USB XHCI failed to resume root hub!\n");
         return res;
     }
 
@@ -280,7 +296,9 @@ usb_xhci_init_device(
         usb_xhci_deinit_interruptors(dev);
         usb_xhci_deinit_command_ring(dev);
         usb_xhci_deinit_device_contextes(dev);
+	usb_xhci_deinit_scratchpads(dev);
         kfree(dev);
+        eprintk("USB XHCI failed to start command ring!\n");
         return res;
     }
 
@@ -289,37 +307,40 @@ usb_xhci_init_device(
         usb_xhci_deinit_interruptors(dev);
         usb_xhci_deinit_command_ring(dev);
         usb_xhci_deinit_device_contextes(dev);
+	usb_xhci_deinit_scratchpads(dev);
         kfree(dev);
-        wprintk("Failed to init USB XHCI ports! (res=%s)\n",
+        eprintk("Failed to init USB XHCI ports! (res=%s)\n",
                 errnostr(res));
         return res;
     }
 
     res = usb_xhci_reset_all_ports(dev);
     if(res) {
-        wprintk("Failed to reset all USB ports on XHCI bringup!\n");
+        eprintk("Failed to reset all USB ports on XHCI bringup!\n");
     }
 
-//    printk("USB Ports:\n");
-//    usb_xhci_dump_ports(dev, do_printk);
+    printk("USB Ports:\n");
+    usb_xhci_dump_ports(dev, do_printk);
+
 //
 //    printk("USB Command Ring:\n");
 //    usb_xhci_dump_command_ring(do_printk, dev);
 
-    dprintk("running noop command\n");
+    printk("running noop command\n");
     res = usb_xhci_run_noop_command(dev);
     if(res) {
         usb_xhci_deinit_ports(dev);
         usb_xhci_deinit_interruptors(dev);
         usb_xhci_deinit_command_ring(dev);
         usb_xhci_deinit_device_contextes(dev);
+	usb_xhci_deinit_scratchpads(dev);
         kfree(dev);
         eprintk("USB XHCI Failed to Respond to No-Op Command (res=%s)!\n",
                 errnostr(res));
         return res;
     }
 
-    dprintk("finished usb_xhci_init_device\n");
+    printk("finished usb_xhci_init_device\n");
     return 0;
 }
 
@@ -365,5 +386,5 @@ usb_xhci_pci_register(void)
 {
     return register_pci_driver(&usb_xhci_pci_driver);
 }
-declare_init(device, usb_xhci_pci_register);
+declare_init_desc(device, usb_xhci_pci_register, "Registering USB XHCI PCI Driver");
 

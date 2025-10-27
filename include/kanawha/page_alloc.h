@@ -12,6 +12,7 @@
 
 #define PAGE_ALLOC_16BIT (1UL<<0)
 #define PAGE_ALLOC_32BIT (1UL<<1)
+#define PAGE_ALLOC_64BIT (0)
 
 // Allocate some memory
 // Returns 0 on success, -ENOMEM on failure

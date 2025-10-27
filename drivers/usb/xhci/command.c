@@ -198,7 +198,7 @@ usb_xhci_run_command(
     DEBUG_ASSERT(KERNEL_ADDR(control));
     uint32_t control_value = *control;
 
-    dprintk("Launched command\n");
+    printk("usb_xhci_run_command: launched command\n");
     res = usb_xhci_launch_command(
             xhci,
             &cmd,
@@ -209,7 +209,7 @@ usb_xhci_run_command(
         return res;
     }
 
-    dprintk("Awaiting command\n");
+    printk("usb_xhci_run_command: awaiting command\n");
     res = usb_xhci_await_command(
             &cmd);
     if(res) {
@@ -220,6 +220,7 @@ usb_xhci_run_command(
     *status = cmd.completion_status;
     *control = cmd.completion_control;
 
+    printk("usb_xhci_run_command: completed command\n");
     return 0;
 }
 

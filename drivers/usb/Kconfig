@@ -2,9 +2,10 @@
 config USB
     bool "USB Support"
     default y
+    depends on WIP
 
 config USB_XHCI
     bool "USB XHCI Support"
     default y
-    depends on PCI && USB
+    depends on PCI && USB && WIP
 

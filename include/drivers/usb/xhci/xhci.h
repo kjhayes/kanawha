@@ -27,6 +27,10 @@ struct usb_xhci
     size_t num_scratchpads;
     int is_64bit;
 
+    // scratchpad buffers
+    dma_addr_t scratchpad_array;
+    void __phys **scratchpad_pages;
+
     // device contextes state
     dma_addr_t dcbaa_dma;
     struct usb_xhci_dcbaa *dcbaa;

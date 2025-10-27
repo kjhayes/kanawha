@@ -163,27 +163,30 @@ usb_xhci_port_on_attach(
     struct usb_xhci_device *dev =
         usb_xhci_create_device(
                 port->xhci); 
-
     if(dev == NULL) {
+	eprintk("usb_xhci_port_on_attach: failed to create device!\n");
         return -EINVAL;
     }
 
+    printk("Addressing USB Device...\n");
     res = usb_xhci_address_root_hub_device(
             dev,
             port);
     if(res) {
-        wprintk("Failed to address USB device!\n");
+        eprintk("usb_xhci_port_on_attach: Failed to address root hub USB device!\n");
         usb_xhci_destroy_device(dev);
         return res;
     }
 
+    printk("Registering USB Device...\n");
     res = usb_xhci_register_root_hub_device(dev);
     if(res) {
-        wprintk("Failed to register USB device!\n");
+        wprintk("usb_xhci_port_on_attach: Failed to register root hub USB device!\n");
         usb_xhci_destroy_device(dev);
         return res;
     }
 
+    printk("Finished Handling USB Device Attach!\n");
     return 0;
 }
 

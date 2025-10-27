@@ -12,10 +12,10 @@ usb_host_register_device(
     int res;
 
     device->ops = ops;
-    printk("usb_host_register_device\n");
 
     char desc[8];
 
+    printk("Getting USB Device Descriptor...\n");
     res = usb_device_get_descriptor(
             device,
             1,
@@ -78,8 +78,6 @@ usb_device_control_transfer(
         status_dir = USB_STATUS_STAGE_DIR_OUT;
     }
 
-    printk("USB Status Stage\n");
-
     struct usb_transfer *setup;
     setup = usb_device_create_setup_stage_transfer(
             device,
@@ -109,8 +107,6 @@ usb_device_control_transfer(
 
     usb_device_destroy_transfer(device, setup);
 
-    printk("USB Data Stage\n");
-
     struct usb_transfer *data;
     data = usb_device_create_data_stage_transfer(
             device,
@@ -136,8 +132,6 @@ usb_device_control_transfer(
     }
 
     usb_device_destroy_transfer(device, data);
-
-    printk("USB Status Stage\n");
 
     struct usb_transfer *status;
     status = usb_device_create_status_stage_transfer(
