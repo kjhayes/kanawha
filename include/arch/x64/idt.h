@@ -3,37 +3,7 @@
 
 #include <kanawha/types.h>
 #include <kanawha/attribute.h>
-
-/*
- * TODO: Stop using bitfields for this
- * (Bitfield order is undefined and afaik there's no way to enforce it)
- */
-
-#define IDT64_ENTRY_FLAG_DPL_MASK 0x6000
-#define IDT64_ENTRY_FLAG_DPL_RING0 0x0000
-#define IDT64_ENTRY_FLAG_DPL_RING1 0x2000
-#define IDT64_ENTRY_FLAG_DPL_RING2 0x4000
-#define IDT64_ENTRY_FLAG_DPL_RING3 0x6000
-
-#define IDT64_ENTRY_FLAG_PRESENT 0x8000
-
-#define IDT64_ENTRY_FLAG_GATE_TYPE_MASK 0x0F00
-#define IDT64_ENTRY_FLAG_GATE_TYPE_TRAP 0x0F00
-#define IDT64_ENTRY_FLAG_GATE_TYPE_INTERRUPT 0x0E00
-
-#define IDT64_ENTRY_FLAG_IST_MASK 0x0007
-#define IDT64_ENTRY_FLAG_IST_NONE 0x0000
-
-struct __packed idt64_entry {
-    uint16_t offset_0_15;
-    uint16_t segment_selector;
-    uint16_t flags;
-    uint16_t offset_16_31;
-    uint32_t offset_32_64;
-    uint32_t __resv0_2;
-};
-
-_Static_assert(sizeof(struct idt64_entry) == 16, "idt64_entry is not exactly 16 bytes wide!");
+#include <arch/x64/segdesc.h>
 
 struct __packed idt64 {
     struct idt64_entry exception_descriptors[32];
