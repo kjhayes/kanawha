@@ -10,6 +10,9 @@
 .global x64_syscall_entry
 .type x64_syscall_entry, @function
 
+.global x64_syscall_call_gate_entry
+.type x64_syscall_call_gate_entry, @function
+
 x64_syscall_entry_compatibility_mode: 
     jmp . // This should never happen
 
@@ -117,4 +120,9 @@ x64_syscall_entry:
     
     // Set Usermode CS and SS, jump to %rcx and restore %r11 rflags
     sysretq
+
+// Ideally this should never happen but we will
+// cement an entry in the GDT for this.
+x64_syscall_call_gate_entry:
+    jmp .
 

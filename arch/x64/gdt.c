@@ -11,6 +11,8 @@
 #include <kanawha/atomic.h>
 #include <arch/x64/cpu.h>
 
+extern void x64_syscall_call_gate_entry(void);
+
 __attribute__((used))
 struct gdt64 x64_bsp_gdt64 = {
     .null = { 0 }, // Null
@@ -97,13 +99,37 @@ struct gdt64 x64_bsp_gdt64 = {
         .granularity = 1,
         .base_high_8 = 0x0,
     },
+    .syscall_call_gate = {
+	.type = X64_SEGMENT_TYPE_CALL_GATE,
+	.ring = 3,
+	.present = 1,
+	.target_selector = X64_SEGMENT_SELECTOR(
+		X64_KERNEL_CODE_GDT_SEGMENT_OFFSET,
+		0,
+		0),
+    },
 };
 
 __attribute__((used))
 uint8_t x64_bsp_tss_data[X64_TSS_SEGMENT_SIZE] = { 0 };
 
+static void
+x64_init_gdt_runtime_patch(void) {
+    // The compiler doesn't have support for generating this
+    // statically, so we need to do a patch early during boot
+    void *target_ptr = (&x64_syscall_call_gate_entry);
+    x64_bsp_gdt64.syscall_call_gate.target_offset_15_0 = (0xFFFF & (((uint64_t)(void*)target_ptr)>>0));
+    x64_bsp_gdt64.syscall_call_gate.target_offset_31_16 = (0xFFFF & (((uint64_t)(void*)target_ptr)>>16));
+    x64_bsp_gdt64.syscall_call_gate.target_offset_63_32 = (0xFFFFFFFF & (((uint64_t)(void*)target_ptr)>>32));
+    return;
+}
+
 void
-x64_init_gdt_bsp(void) {
+x64_init_gdt_bsp(void)
+{
+    // Need to do some dynamic fix-up to enable call gates
+    x64_init_gdt_runtime_patch();
+
     // Once we are fully in long mode, we need to reload the GDT
     // using it's permanent virtual address
     struct gdt64_descriptor gdtr;
@@ -163,6 +189,9 @@ x64_setup_tss_xcall(void *state)
 static int
 x64_gdt_init_smp(void)
 {
+    // TODO: Move this print out
+    printk("GDT call gate for syscalls at offset %d\n", (int)X64_SYSCALL_CALL_GATE_GDT_SEGMENT_OFFSET);
+
     pin_thread(current_thread());
     for(cpu_id_t id = 0; id < total_num_cpus(); id++) {
         struct cpu *gen_cpu = cpu_from_id(id);
