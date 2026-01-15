@@ -1,5 +1,5 @@
 
-MKDOCS := ./venv/bin/python3 -m mkdocs
+MKDOCS := python3 -m mkdocs
 
 build: site/ FORCE
 site/: docs/ FORCE
