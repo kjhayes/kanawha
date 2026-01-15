@@ -15,6 +15,13 @@
 #include <kanawha/vmem.h>
 #include <kanawha/irq.h>
 
+#define fs_node_page_lock_init(__node_ptr) \
+    thread_lock_init(&__node_ptr->page_lock)
+#define fs_node_page_lock_acquire(__node_ptr) \
+    thread_lock_acquire(&__node_ptr->page_lock)
+#define fs_node_page_lock_release(__node_ptr) \
+    thread_lock_release(&__node_ptr->page_lock)
+
 #define FS_NODE_OPS_ACCESSOR(__self, __field) __self->backing.node_ops->__field
 
 #define FS_NODE_OP_ACQUIRE_LOCK(ptr)\
@@ -44,7 +51,7 @@ fs_node_create(void)
     
     rlock_init(&fs_node->backing_lock);
     
-    spinlock_init(&fs_node->page_lock);
+    fs_node_page_lock_init(fs_node);
     ptree_init(&fs_node->page_cache);
     
     atomic_set_relaxed(&fs_node->refcount, 1);
@@ -145,7 +152,7 @@ fs_node_get_page(
     DEBUG_ASSERT(node);
 
     struct fs_page *page;
-    int irq_flags = spin_lock_irq_save(&node->page_lock);
+    fs_node_page_lock_acquire(node);
 
     struct ptree_node *pnode;
     pnode = ptree_get(&node->page_cache, pfn);
@@ -153,7 +160,7 @@ fs_node_get_page(
 
         page = kzmalloc(sizeof(struct fs_page), KM_KERNEL);
         if(page == NULL) {
-            spin_unlock_irq_restore(&node->page_lock, irq_flags);
+            fs_node_page_lock_release(node);
             return NULL;
         }
 
@@ -162,7 +169,7 @@ fs_node_get_page(
         order_t order;
         res = fs_node_page_order(node, &order);
         if(res) {
-            spin_unlock_irq_restore(&node->page_lock, irq_flags);
+            fs_node_page_lock_release(node);
             kfree(page);
             return NULL;
         }
@@ -176,7 +183,7 @@ fs_node_get_page(
                 load_page_flags,
                 &page->paddr);
         if(res) {
-            spin_unlock_irq_restore(&node->page_lock, irq_flags);
+            fs_node_page_lock_release(node);
             kfree(page);
             return NULL;
         }
@@ -192,7 +199,7 @@ fs_node_get_page(
 	page->pins++;
     }
 
-    spin_unlock_irq_restore(&node->page_lock, irq_flags);
+    fs_node_page_lock_release(node);
     return page;
 }
 
@@ -202,7 +209,7 @@ fs_page_get(
         struct fs_page *page)
 {
     int res;
-    int irq_flags = spin_lock_irq_save(&node->page_lock);
+    fs_node_page_lock_acquire(node);
 
     if(page->pins == 0) {
         res = -EINVAL;
@@ -211,7 +218,7 @@ fs_page_get(
         res = 0;
     }
 
-    spin_unlock_irq_restore(&node->page_lock, irq_flags);
+    fs_node_page_lock_release(node);
     return res;
 }
 
@@ -257,7 +264,7 @@ fs_node_put_page(
     dprintk("fs_node_put_page(node=%p, page=%p)\n",
             node, page);
 
-    int irq_flags = spin_lock_irq_save(&node->page_lock);
+    fs_node_page_lock_acquire(node);
 
     uintptr_t pfn = page->tree_node.key;
 
@@ -278,7 +285,7 @@ fs_node_put_page(
                 eprintk("fs_node_put_page failed because fs_node_flush_fs_page_lockless returned (%s) with dirty page!\n",
                         errnostr(res));
                 page->pins++;
-                spin_unlock_irq_restore(&node->page_lock, irq_flags);
+                fs_node_page_lock_release(node);
                 return res;
             }
         }
@@ -304,7 +311,7 @@ fs_node_put_page(
         dprintk("freed fs_page\n");
     }
 
-    spin_unlock_irq_restore(&node->page_lock, irq_flags);
+    fs_node_page_lock_release(node);
     return 0;
 }
 
@@ -314,9 +321,9 @@ fs_node_flush_fs_page(
         struct fs_page *page)
 {
     int res;
-    int irq_flags = spin_lock_irq_save(&node->page_lock);
+    fs_node_page_lock_acquire(node);
     res = fs_node_flush_fs_page_lockless(node, page);
-    spin_unlock_irq_restore(&node->page_lock, irq_flags);
+    fs_node_page_lock_release(node);
     return res;
 }
 
@@ -326,7 +333,7 @@ fs_node_flush_all_fs_pages(
 {
     int res = 0;
     dprintk("fs_node_flush_all_fs_pages\n");
-    int irq_flags = spin_lock_irq_save(&node->page_lock);
+    fs_node_page_lock_acquire(node);
 
     struct ptree_node *pnode = ptree_get_first(&node->page_cache);
     while(pnode != NULL) {
@@ -339,7 +346,7 @@ fs_node_flush_all_fs_pages(
         pnode = ptree_get_next(pnode);
     }
 
-    spin_unlock_irq_restore(&node->page_lock, irq_flags);
+    fs_node_page_lock_release(node);
     return res;
 }
 

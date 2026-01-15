@@ -160,7 +160,7 @@ struct fs_node
 
     struct fs_mount *mount;
 
-    spinlock_t page_lock;
+    thread_lock_t page_lock;
     struct ptree page_cache;
 
     atomic_t refcount;
