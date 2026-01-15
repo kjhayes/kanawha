@@ -6,8 +6,14 @@ config VIRTIO_BLK
     help
       Include a driver for the virtio-blk device.
 
+config IDE
+    tristate "IDE Driver"
+    default y
+    depends on WIP
+
 config AHCI
     tristate "AHCI Driver"
     depends on PCI
     default y
+    depends on WIP
 
