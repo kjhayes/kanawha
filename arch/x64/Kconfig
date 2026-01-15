@@ -80,5 +80,10 @@ config X64_IGNORE_MADT_X2APIC
   bool "Ignore extra x2APIC found in MADT"
   default n
 
+config X64_ENABLE_CALL_GATE_SYSCALL
+  bool "Include Call Gate Syscall Support (WIP/Unimplemented)"
+  default n
+  depends on WIP
+
 endmenu
 

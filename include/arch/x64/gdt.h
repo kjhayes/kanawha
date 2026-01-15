@@ -1,7 +1,11 @@
 #ifndef __KANAWHA__X64_GDT_H__
 #define __KANAWHA__X64_GDT_H__
 
+#ifdef CONFIG_X64_ENABLE_CALL_GATE_SYSCALL
 #define X64_GDT64_SIZE 72
+#else
+#define X64_GDT64_SIZE 56
+#endif
 #define X64_TSS_SEGMENT_SIZE 0x68ULL
 
 #ifndef __ASSEMBLER__
@@ -26,7 +30,9 @@ struct __packed gdt64 {
     struct gdt64_system_segment tss;
     struct gdt64_segment user_data;
     struct gdt64_segment user_code;
+#ifdef CONFIG_X64_ENABLE_CALL_GATE_SYSCALL
     struct gdt64_call_gate syscall_call_gate;
+#endif
 };
 
 _Static_assert(sizeof(struct gdt64) == X64_GDT64_SIZE, "struct gdt64 does not match X64_GDT64_SIZE macro!");
@@ -37,7 +43,9 @@ _Static_assert(sizeof(struct gdt64) == X64_GDT64_SIZE, "struct gdt64 does not ma
 #define X64_TSS_GDT_SEGMENT_OFFSET               offsetof(struct gdt64, tss)
 #define X64_USER_CODE_GDT_SEGMENT_OFFSET         offsetof(struct gdt64, user_code)
 #define X64_USER_DATA_GDT_SEGMENT_OFFSET         offsetof(struct gdt64, user_data)
+#ifdef CONFIG_X64_ENABLE_CALL_GATE_SYSCALL
 #define X64_SYSCALL_CALL_GATE_GDT_SEGMENT_OFFSET offsetof(struct gdt64, syscall_call_gate)
+#endif
 
 #define X64_SEGMENT_SELECTOR(\
 	__OFFSET,\
