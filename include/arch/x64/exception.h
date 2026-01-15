@@ -120,6 +120,7 @@ x64_excp_state
     uint64_t cs;
     uint64_t rflags;
     uint64_t rsp;
+    uint64_t ss;
 };
 
 __noreturn void
