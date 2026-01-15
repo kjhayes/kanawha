@@ -94,6 +94,7 @@ tasklet_trigger(
 {
     // No need to grab the lock
     tasklet->pending = 1;
+    mbarrier();
     wake_all(&tasklet_waitqueue);
     return 0;
 }
@@ -157,11 +158,14 @@ tasklet_handle_all_pending(void)
     return 0;
 }
 
-static struct thread_state tasklet_thread_state;
 static void
-tasklet_thread(void *__in) {
+tasklet_worker_thread(void *__self) {
     int res;
+    struct tasklet_thread_state *self = __self;
     while(1) {
+	// Enable every loop incase some tasklet incorrectly disables
+	// interrupts
+        enable_irqs();
         tasklet_handle_all_pending();
         res = wait_on(&tasklet_waitqueue);
 	if(res) {
@@ -170,34 +174,74 @@ tasklet_thread(void *__in) {
     }
 }
 
-static int
-init_tasklet_thread(void)
+struct tasklet_worker {
+    struct thread_state thread_state;
+};
+
+static struct tasklet_worker *
+tasklet_create_worker(void)
 {
     int res;
 
-    res = thread_init(&tasklet_thread_state,
-                tasklet_thread,
-                NULL,
+    struct tasklet_worker *worker = kzmalloc(sizeof(*worker), KM_KERNEL);
+    if(worker == NULL) {
+	return NULL;
+    }
+
+    res = thread_init(&worker->thread_state,
+                tasklet_worker_thread,
+                worker,
                 0);
     if(res) {
-        return res;
+	kfree(worker);
+        return NULL;
     }
 
     struct scheduler *sched = current_sched();
     if(sched == NULL) {
-        thread_deinit(&tasklet_thread_state);
-        return -EDEFER;
+        thread_deinit(&worker->thread_state);
+	kfree(worker);
+        return NULL;
     }
 
-    res = scheduler_add_thread(sched, &tasklet_thread_state);
+    res = scheduler_add_thread(sched, &worker->thread_state);
     if(res) {
-        thread_deinit(&tasklet_thread_state);
-        return -EDEFER;
+        thread_deinit(&worker->thread_state);
+	kfree(worker);
+        return NULL;
     }
 
     // Ensure that the thread is awake
-    thread_wake(&tasklet_thread_state);
+    thread_wake(&worker->thread_state);
 
+    return worker;
+}
+
+// Having this be a static number of threads sucks,
+// This *should* be done dynamically (scaling up and down
+// the number of workers with demand)
+#define TASKLET_NUM_WORKERS 16
+static struct tasklet_worker *workers[TASKLET_NUM_WORKERS];
+static int
+init_tasklet_thread(void)
+{
+    int res;
+    int num_workers = 0;
+    for(int i = 0; i < TASKLET_NUM_WORKERS; i++) {
+        struct tasklet_worker *wrk = tasklet_create_worker();
+	if(wrk == NULL) {
+	    workers[i] = NULL;
+	} else {
+	    workers[i] = wrk;
+	    num_workers++;
+	}
+    }
+    if(num_workers <= 0) {
+	eprintk("Failed to spawn any tasklet workers!\n");
+	return -EINVAL;
+    } else if(num_workers < TASKLET_NUM_WORKERS) {
+	wprintk("Spawned fewer tasklet worker threads than requested!\n");
+    }
     return 0;
 }
 declare_init_desc(sched, init_tasklet_thread, "Starting Tasklet Thread");
