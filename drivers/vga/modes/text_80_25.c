@@ -189,6 +189,7 @@ vga_fb_setup_mode_text_80_25(
     vga_write_register(vga,  EndVerticalBlanking,      0xB9);
     vga_write_register(vga,  CRTCModeControl,          0xA3);
 
+    vga_write_register(vga,  CursorStart,              0x20); // Added
     vga_write_register(vga,  MapMask,                  0x03); // Added
     vga_write_register(vga,  EnableSetReset,           0x00); // Added
     vga_write_register(vga,  SetReset,                 0x00); // Added
