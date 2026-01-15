@@ -134,7 +134,7 @@ x64_init_gdt_bsp(void)
     // using it's permanent virtual address
     struct gdt64_descriptor gdtr;
     gdtr.address = (uint64_t)&x64_bsp_gdt64;
-    gdtr.limit = sizeof(struct gdt64);
+    gdtr.limit = sizeof(struct gdt64) - 1;
     asm volatile ("lgdtq (%0)" :: "r" (&gdtr) : "memory");
 }
 
@@ -142,7 +142,7 @@ void
 x64_init_gdt_ap(void) {
     struct gdt64_descriptor gdtr;
     gdtr.address = (uint64_t)&x64_bsp_gdt64;
-    gdtr.limit = sizeof(struct gdt64);
+    gdtr.limit = sizeof(struct gdt64) - 1;
     asm volatile ("lgdtq (%0)" :: "r" (&gdtr) : "memory");
 }
 
@@ -158,7 +158,7 @@ x64_set_own_gdt_xcall(void *state)
 
     struct gdt64_descriptor gdtr;
     gdtr.address = (uint64_t)cpu->gdt;
-    gdtr.limit = sizeof(struct gdt64);
+    gdtr.limit = sizeof(struct gdt64) - 1;
     asm volatile ("lgdtq (%0)" :: "r" (&gdtr) : "memory");
 
     *done = 1;
