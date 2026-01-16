@@ -3,6 +3,7 @@
 
 #include <kanawha/dev/fb.h>
 #include <drivers/vga/vga.h>
+#include <kanawha/lock.h>
 
 struct vga_fb;
 
@@ -19,7 +20,7 @@ struct vga_fb
     struct fb_dev fb_dev;
     struct vga_dev vga_dev;
 
-    spinlock_t mode_lock;
+    thread_lock_t mode_lock;
     size_t current_mode;
     int buffer_exists;
     void __phys *buffer;

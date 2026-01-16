@@ -3,7 +3,6 @@
 #include <kanawha/init.h>
 #include <kanawha/kmalloc.h>
 #include <kanawha/string.h>
-#include <kanawha/spinlock.h>
 #include <kanawha/page_alloc.h>
 #include <kanawha/endian.h>
 #include <drivers/vga/vga.h>
@@ -108,13 +107,13 @@ vga_fb_set_mode(
     }
 
     int res;
-    spin_lock(&fb->mode_lock);
+    thread_lock_acquire(&fb->mode_lock);
 
     struct vga_fb_mode *mode = vga_fb_modes[index];
 
     res = __vga_fb_set_buffer_size(fb, mode->mode_info->buffer_size);
     if(res) {
-        spin_unlock(&fb->mode_lock);
+        thread_lock_release(&fb->mode_lock);
         return res;
     }
 
@@ -136,13 +135,13 @@ vga_fb_set_mode(
 
     res = (mode->setup)(fb);
     if(res) {
-        spin_unlock(&fb->mode_lock);
+        thread_lock_release(&fb->mode_lock);
         return res;
     }
 
     fb->current_mode = index;
 
-    spin_unlock(&fb->mode_lock);
+    thread_lock_release(&fb->mode_lock);
     return res;
 }
 
@@ -167,13 +166,13 @@ vga_fb_load_buffer(
 
     size_t buffer_size;
 
-    spin_lock(&fb->mode_lock);
+    thread_lock_acquire(&fb->mode_lock);
 
     DEBUG_ASSERT(fb->buffer_exists);
 
     *base_out = fb->buffer;
 
-    spin_unlock(&fb->mode_lock);
+    thread_lock_release(&fb->mode_lock);
     return 0;
 }
 static int
@@ -186,13 +185,13 @@ vga_fb_unload_buffer(
 
     int res;
 
-    spin_lock(&fb->mode_lock);
+    thread_lock_acquire(&fb->mode_lock);
 
     DEBUG_ASSERT(fb->buffer_exists);
 
     // Don't need to do anything, we allocate and deallocate the buffer on mode switch
 
-    spin_unlock(&fb->mode_lock);
+    thread_lock_release(&fb->mode_lock);
 
     return 0;
 }
@@ -205,15 +204,15 @@ vga_fb_flush_buffer(
     struct vga_fb *fb =
         container_of(dev, struct vga_fb, fb_dev);
 
-    spin_lock(&fb->mode_lock);
+    thread_lock_acquire(&fb->mode_lock);
 
     if(!fb->buffer_exists) {
-        spin_unlock(&fb->mode_lock);
+        thread_lock_release(&fb->mode_lock);
         return 0;
     }
 
     if(fb->current_mode >= VGA_FB_NUM_MODES) {
-        spin_unlock(&fb->mode_lock);
+        thread_lock_release(&fb->mode_lock);
         return -EINVAL;
     }
 
@@ -231,7 +230,7 @@ vga_fb_flush_buffer(
 
     res = (*mode->flush)(fb);
 
-    spin_unlock(&fb->mode_lock);
+    thread_lock_release(&fb->mode_lock);
     return res;
 }
 
@@ -266,7 +265,7 @@ register_vga_fb_dev(void)
         return res;
     }
 
-    spinlock_init(&fb->mode_lock);
+    thread_lock_init(&fb->mode_lock);
     fb->buffer_exists = 0;
     fb->current_mode = 0;
     res = vga_fb_set_mode(&fb->fb_dev, 0);
