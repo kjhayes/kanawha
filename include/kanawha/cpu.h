@@ -8,10 +8,13 @@ typedef int cpu_id_t;
 
 #define NULL_CPU_ID (cpu_id_t)(-1)
 
-struct cpu {
+#define CPU_FLAG_IS_BSP (1UL<<0)
+
+struct cpu
+{
     cpu_id_t id;
 
-    int is_bsp;
+    unsigned long flags;
 
     void *percpu_data;
 };

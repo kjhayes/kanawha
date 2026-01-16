@@ -25,7 +25,7 @@ bsp_register_smp_cpu(struct cpu *cpu, int is_bsp)
         found = 1;
         system_cpus[0] = cpu;
         cpu->id = 0;
-        cpu->is_bsp = 1;
+        cpu->flags = CPU_FLAG_IS_BSP;
     }
     else {
         for(cpu_id_t id = 1; id < CONFIG_MAX_CPUS; id++) {
@@ -33,7 +33,7 @@ bsp_register_smp_cpu(struct cpu *cpu, int is_bsp)
                 found = 1;
                 system_cpus[id] = cpu;
                 cpu->id = id;
-                cpu->is_bsp = 0;
+                cpu->flags = 0;
                 break;
             }
         }

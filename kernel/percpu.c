@@ -255,7 +255,7 @@ init_cpu_percpu_data(struct cpu *cpu)
             heap->vbase,
             heap->vbase + (1ULL<<CONFIG_PERCPU_HEAP_SIZE_ORDER));
 
-    if(cpu->is_bsp) {
+    if(cpu->flags & CPU_FLAG_IS_BSP) {
         int res = bsp_transfer_to_percpu_heap(cpu);
         if(res) {
             return res;

@@ -201,7 +201,7 @@ x64_gdt_init_smp(void)
         struct cpu *gen_cpu = cpu_from_id(id);
         struct x64_cpu *cpu = container_of(gen_cpu, struct x64_cpu, cpu);
 
-        if(gen_cpu->is_bsp) {
+        if(gen_cpu->flags & CPU_FLAG_IS_BSP) {
             cpu->gdt = &x64_bsp_gdt64;
             cpu->tss_segment = &x64_bsp_tss_data;
         } else {
