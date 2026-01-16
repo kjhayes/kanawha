@@ -1,5 +1,6 @@
 
 #include <kanawha/dev/term.h>
+#include <kanawha/init.h>
 
 #define TERM_DEV_BUFLEN (0x1000)
 #define TERM_DEV_BUFFER_QUEUE_LEN (8)
