@@ -47,3 +47,8 @@ menu "VGA Options"
 depends on PORT_IO
 source "drivers/vga/Kconfig"
 endmenu
+
+menu "Linux Compatibility"
+source "drivers/linux/Kconfig"
+endmenu
+

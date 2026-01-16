@@ -251,10 +251,6 @@ menu "Device Tree"
 source "kernel/devtree/Kconfig"
 endmenu
 
-menu "Linux Compatibility"
-source "kernel/linux/Kconfig"
-endmenu
-
 config MULTIBOOT2
     tristate "Multiboot2 Support"
     default n
