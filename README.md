@@ -3,7 +3,7 @@
 
 ![Logo](images/logo.png)
 
-A simple hobby kernel I'm writing in my free time.
+A simple hobby kernel I'm ([Kevin](https://kjhayes.github.io)) writing in my free time.
 
 This kernel is not *efficient*. There are many many levels of indirection do not have a fantastic reason
 for existing. For example, there is an interface to allow multiple "page_allocator's" to exist in the 
