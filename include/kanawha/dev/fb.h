@@ -1,7 +1,7 @@
 #ifndef __KANAWHA__FB_DEV_H__
 #define __KANAWHA__FB_DEV_H__
 
-#include <kanawha/registry.h>
+#include <kanawha/dev.h>
 #include <kanawha/types.h>
 #include <kanawha/ops.h>
 #include <kanawha/fs/mount.h>
@@ -59,7 +59,7 @@ DECLARE_OP_LIST_PTRS(FB_DEV_OP_LIST, struct fb_dev *);
 
 struct fb_dev
 {
-    struct registry_node registry_node;
+    struct dev dev;
     struct fb_driver *driver;
 };
 
@@ -72,7 +72,7 @@ DEFINE_OP_LIST_WRAPPERS(
         DRIVER_STRUCT_PTR_ACCESSOR,
         SELF_ACCESSOR);
 
-DECLARE_REGISTRY(fb_dev);
+DECLARE_DEV_TYPE(fb_dev);
 
 #undef FB_DEV_OP_LIST
 #undef FB_DEV_GET_MODE_INFO_SIG

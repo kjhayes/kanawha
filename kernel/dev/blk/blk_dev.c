@@ -17,9 +17,9 @@ blk_dev_deinit(struct blk_dev *dev)
     return 0;
 }
 
-DEFINE_REGISTRY(
+DEFINE_DEV_TYPE(
         blk_dev,
-        registry_node,
+        dev,
         blk_dev_init,
         blk_dev_deinit
         );

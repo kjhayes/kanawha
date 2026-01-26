@@ -1,7 +1,7 @@
 #ifndef __KANAWHA__RAND_DEV_H__
 #define __KANAWHA__RAND_DEV_H__
 
-#include <kanawha/registry.h>
+#include <kanawha/dev.h>
 #include <kanawha/types.h>
 #include <kanawha/ops.h>
 #include <kanawha/stree.h>
@@ -25,7 +25,7 @@ DECLARE_OP_LIST_PTRS(RAND_DEV_OP_LIST, struct rand_dev *);
 };
 
 struct rand_dev {
-    struct registry_node registry_node;
+    struct dev dev;
     struct rand_driver *driver;
 
     struct waitqueue read_wq;
@@ -46,7 +46,7 @@ DEFINE_OP_LIST_WRAPPERS(
         DRIVER_STRUCT_PTR_ACCESSOR,
         SELF_ACCESSOR);
 
-DECLARE_REGISTRY(rand_dev);
+DECLARE_DEV_TYPE(rand_dev);
 
 #undef RAND_DEV_OP_LIST
 #undef RAND_DEV_READ_SIG

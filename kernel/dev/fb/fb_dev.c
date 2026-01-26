@@ -16,12 +16,12 @@ fb_dev_deinit(struct fb_dev *dev)
     return 0;
 }
 
-DEFINE_REGISTRY(
-        fb_dev,
-        registry_node,
-	fb_dev_init,
-	fb_dev_deinit
-        );
+DEFINE_DEV_TYPE(
+    fb_dev,
+    dev,
+    fb_dev_init,
+    fb_dev_deinit
+    );
 
 #ifdef CONFIG_LOG_FBDEV_REGISTRY_ON_LAUNCH
 static int

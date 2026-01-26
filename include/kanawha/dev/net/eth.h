@@ -1,7 +1,7 @@
 #ifndef __KANAWHA__ETH_DEV_H__
 #define __KANAWHA__ETH_DEV_H__
 
-#include <kanawha/registry.h>
+#include <kanawha/dev.h>
 #include <kanawha/ops.h>
 #include <kanawha/stree.h>
 #include <kanawha/list.h>
@@ -56,7 +56,7 @@ DECLARE_OP_LIST_PTRS(ETHERNET_DEVICE_OP_LIST, struct eth_dev *);
 };
 
 struct eth_dev {
-    struct registry_node registry_node;
+    struct dev dev;
     struct eth_driver *driver;
 
     irq_lock_t recv_callback_lock;
@@ -72,7 +72,7 @@ DEFINE_OP_LIST_WRAPPERS(
         DRIVER_STRUCT_PTR_ACCESSOR,
         SELF_ACCESSOR);
 
-DECLARE_REGISTRY(eth_dev);
+DECLARE_DEV_TYPE(eth_dev);
 
 #undef ETH_DEV_READ_MAC_SIG
 #undef ETH_DEV_ALLOC_FRAME_SIG

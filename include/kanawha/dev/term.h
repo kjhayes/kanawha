@@ -1,8 +1,8 @@
 #ifndef __KANAWHA__DEV_TERM_H__
 #define __KANAWHA__DEV_TERM_H__
 
+#include <kanawha/dev.h>
 #include <kanawha/ops.h>
-#include <kanawha/registry.h>
 #include <kanawha/lock.h>
 #include <kanawha/rwlock.h>
 #include <kanawha/waitqueue.h>
@@ -61,7 +61,7 @@ struct term_mode
 };
 
 struct term_dev {
-    struct registry_node registry_node;
+    struct dev dev;
     struct term_driver *driver;
 
     struct waitqueue read_wq;
@@ -156,7 +156,7 @@ DEFINE_OP_LIST_WRAPPERS(
 	DRIVER_STRUCT_PTR_ACCESSOR,
 	SELF_ACCESSOR);
 
-DECLARE_REGISTRY(term_dev);
+DECLARE_DEV_TYPE(term_dev);
 
 #undef TERM_DEV_OP_LIST
 #undef TERM_DEV_READ_SIG

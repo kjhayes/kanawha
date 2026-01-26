@@ -18,9 +18,9 @@ rand_dev_deinit(struct rand_dev *dev)
     return 0;
 }
 
-DEFINE_REGISTRY(
+DEFINE_DEV_TYPE(
         rand_dev,
-        registry_node,
+        dev,
         rand_dev_init,
         rand_dev_deinit 
         );

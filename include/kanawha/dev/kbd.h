@@ -1,11 +1,11 @@
 #ifndef __KANAWHA__KBD_H__
 #define __KANAWHA__KBD_H__
 
+#include <kanawha/dev.h>
 #include <kanawha/bitmap.h>
 #include <kanawha/stree.h>
 #include <kanawha/waitqueue.h>
 #include <kanawha/sysfs/vfs.h>
-#include <kanawha/registry.h>
 
 #include <kanawha/uapi/kbd.h>
 
@@ -20,10 +20,10 @@ struct kbd_dev
 
     struct waitqueue *read_queue;
 
-    struct registry_node registry_node;
+    struct dev dev;
 };
 
-DECLARE_REGISTRY(kbd_dev);
+DECLARE_DEV_TYPE(kbd_dev);
 
 int
 kbd_driver_enqueue_event(

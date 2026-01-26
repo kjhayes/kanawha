@@ -1,7 +1,7 @@
 #ifndef __KANAWHA__BLOCK_DEVICE_H__
 #define __KANAWHA__BLOCK_DEVICE_H__
 
-#include <kanawha/registry.h>
+#include <kanawha/dev.h>
 #include <kanawha/ops.h>
 #include <kanawha/types.h>
 #include <kanawha/list.h>
@@ -40,8 +40,9 @@ struct blk_driver {
 DECLARE_OP_LIST_PTRS(BLOCK_DEVICE_OP_LIST, struct blk_dev *);
 };
 
-struct blk_dev {
-    struct registry_node registry_node;
+struct blk_dev
+{
+    struct dev dev;
     struct blk_driver *driver;
 };
 
@@ -53,7 +54,7 @@ DEFINE_OP_LIST_WRAPPERS(
         DRIVER_STRUCT_PTR_ACCESSOR,
         SELF_ACCESSOR);
 
-DECLARE_REGISTRY(blk_dev);
+DECLARE_DEV_TYPE(blk_dev);
 
 #undef BLOCK_DEVICE_READ_SIG
 #undef BLOCK_DEVICE_WRITE_SIG

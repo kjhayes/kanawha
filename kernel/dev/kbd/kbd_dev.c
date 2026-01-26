@@ -48,9 +48,9 @@ kbd_dev_deinit(struct kbd_dev *kbd)
     return -EUNIMPL;
 }
 
-DEFINE_REGISTRY(
+DEFINE_DEV_TYPE(
 	kbd_dev,
-	registry_node,
+	dev,
 	kbd_dev_init,
 	kbd_dev_deinit);
 

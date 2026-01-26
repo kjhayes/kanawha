@@ -17,9 +17,9 @@ irq_dev_deinit(struct irq_dev *dev)
     return 0;
 }
 
-DEFINE_REGISTRY(
+DEFINE_DEV_TYPE(
         irq_dev,
-        registry_node,
+        dev,
         irq_dev_init,
         irq_dev_deinit 
         );

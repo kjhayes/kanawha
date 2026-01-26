@@ -144,9 +144,9 @@ eth_dev_internal_on_recv(
     return 0;
 }
 
-DEFINE_REGISTRY(
+DEFINE_DEV_TYPE(
         eth_dev,
-        registry_node,
+        dev,
         eth_dev_init,
         eth_dev_deinit);
 

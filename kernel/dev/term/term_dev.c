@@ -88,9 +88,9 @@ term_dev_deinit(struct term_dev *dev)
     return 0;
 }
 
-DEFINE_REGISTRY(
+DEFINE_DEV_TYPE(
         term_dev,
-        registry_node,
+        dev,
         term_dev_init,
         term_dev_deinit);
 

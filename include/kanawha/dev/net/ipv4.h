@@ -1,7 +1,7 @@
 #ifndef __KANAWHA__IPV4_DEV_H__
 #define __KANAWHA__IPV4_DEV_H__
 
-#include <kanawha/registry.h>
+#include <kanawha/dev.h>
 #include <kanawha/ops.h>
 #include <kanawha/stree.h>
 #include <kanawha/list.h>
@@ -50,7 +50,7 @@ DECLARE_OP_LIST_PTRS(IPV4_DEVICE_OP_LIST, struct ipv4_dev *);
 };
 
 struct ipv4_dev {
-    struct registry_node registry_node;
+    struct dev dev;
     struct ipv4_driver *driver;
 };
 
@@ -62,7 +62,7 @@ DEFINE_OP_LIST_WRAPPERS(
         DRIVER_STRUCT_PTR_ACCESSOR,
         SELF_ACCESSOR);
 
-DECLARE_REGISTRY(ipv4_dev);
+DECLARE_DEV_TYPE(ipv4_dev);
 
 #undef IPV4_DEV_READ_MAC_SIG
 #undef IPV4_DEV_ALLOC_FRAME_SIG

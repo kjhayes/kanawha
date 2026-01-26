@@ -1,7 +1,7 @@
 #ifndef __KANAWHA__IRQ_DEV_H__
 #define __KANAWHA__IRQ_DEV_H__
 
-#include <kanawha/registry.h>
+#include <kanawha/dev.h>
 #include <kanawha/irq.h>
 #include <kanawha/types.h>
 #include <kanawha/cpu.h>
@@ -59,7 +59,7 @@ DECLARE_OP_LIST_PTRS(IRQ_DEV_OP_LIST, struct irq_dev *);
 };
 
 struct irq_dev {
-    struct registry_node registry_node;
+    struct dev dev;
     struct irq_driver *driver;
 };
 
@@ -71,7 +71,7 @@ DEFINE_OP_LIST_WRAPPERS(
         DRIVER_STRUCT_PTR_ACCESSOR,
         SELF_ACCESSOR);
 
-DECLARE_REGISTRY(irq_dev);
+DECLARE_DEV_TYPE(irq_dev);
 
 #undef IRQ_DEV_OP_LIST
 #undef IRQ_DEV_MASK_IRQ_SIG

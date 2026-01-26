@@ -18,9 +18,9 @@ ipv4_dev_deinit(
     return 0;
 }
 
-DEFINE_REGISTRY(
+DEFINE_DEV_TYPE(
         ipv4_dev,
-        registry_node,
+        dev,
         ipv4_dev_init,
         ipv4_dev_deinit
         );
