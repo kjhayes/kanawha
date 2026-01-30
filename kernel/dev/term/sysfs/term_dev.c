@@ -121,21 +121,21 @@ term_dev_fs_on_register(
     int res;
     struct term_dev_fs_node *node = kmalloc(sizeof(*node), KM_KERNEL);
     if(node == NULL) {
-        return;
+      return;
     }
     node->dev = dev;
 
     res = term_dev_fs_node_init_all_nodes(node);
     if(res) {
-	kfree(node);
-	return;
+	  kfree(node);
+	  return;
     }
 
     res = term_dev_fs_node_link_nodes(node);
     if(res) {
-	term_dev_fs_node_deinit_all_nodes(node);
-	kfree(node);
-	return;
+	  term_dev_fs_node_deinit_all_nodes(node);
+	  kfree(node);
+	  return;
     }
 }
 

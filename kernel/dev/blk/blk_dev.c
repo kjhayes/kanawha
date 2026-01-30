@@ -1,6 +1,5 @@
 
 #include <kanawha/dev/blk.h>
-#include <kanawha/registry.h>
 #include <kanawha/init.h>
 
 static int

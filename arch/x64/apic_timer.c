@@ -9,7 +9,7 @@
 #include <kanawha/irq_domain.h>
 #include <kanawha/cpu.h>
 #include <kanawha/clk.h>
-#include <kanawha/clk_dev.h>
+#include <kanawha/dev/clk.h>
 #include <kanawha/timer.h>
 #include <kanawha/xcall.h>
 
@@ -56,7 +56,7 @@ apic_timer_init_current(void)
     int res;
 
     dprintk("Initializing APIC Timer on CPU %ld\n", (long)current_cpu_id());
-    if(clk_source_get() == NULL) {
+    if(!clk_mono_valid()) {
         eprintk("Cannot calibrate APIC timer without a clock-source!\n");
         return -ENODEV;
     }
@@ -375,12 +375,29 @@ register_cpu_lapic_timer(
 
     struct lapic_timer *timer = &cpu->apic_timer;
 
+    {
+#define NAMEBUFLEN 128
+        char namebuf[NAMEBUFLEN];
+        snprintk(namebuf, NAMEBUFLEN, "lapic-timer-%ld", cpu->cpu.id);
+        namebuf[NAMEBUFLEN-1] = '\0';
+        timer->name = kstrdup(namebuf);
+        if(timer->name == NULL) {
+            return -ENOMEM;
+        }
+#undef NAMEBUFLEN
+    }
+
+    timer->clk_dev.driver = &lapic_clk_driver;
+    res = register_clk_dev(&timer->clk_dev, timer->name);
+    if(res) {
+        eprintk("Failed to register LAPIC %lu as a clk device! (err=%s)\n",
+                (ul_t)cpu->apic.id, errnostr(res));
+    }
+
     timer->timer_dev.driver = &lapic_timer_driver;
     timer->timer_dev.alarm_count = 1;
     timer->alarm_func = NULL;
     timer->periodic = 0;
-
-    timer->clk_dev.driver = &lapic_clk_driver;
 
     res = provide_timer(&timer->timer_dev, 0);
     if(res) {

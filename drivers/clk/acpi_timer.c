@@ -1,5 +1,5 @@
 
-#include <kanawha/clk_dev.h>
+#include <kanawha/dev/clk.h>
 #include <kanawha/clk.h>
 #include <kanawha/init.h>
 #include <kanawha/mmio.h>
@@ -77,6 +77,8 @@ acpi_pm_clk_driver_mmio = {
 static int
 init_acpi_pm_timer_clk(void)
 {
+    int res;
+
     struct acpi_table *table = acpi_find_table(FADT_SIG_STRING);
     if(table == NULL) {
         printk("Could not find ACPI FADT Table to initialize ACPI PM Timer\n");
@@ -135,15 +137,10 @@ init_acpi_pm_timer_clk(void)
 #endif
     }
 
-    int res;
-
-    if(clk_source_get() == NULL) {
-        printk("Setting Clock Source to ACPI PM Timer\n");
-        res = clk_source_set(&clk->clk_dev);
-        if(res) {
-            eprintk("Failed to set clock source!\n");
-            return 0; // Not necessarily a problem
-        }
+    res = register_clk_dev(&clk->clk_dev, "acpi-timer");
+    if(res) {
+        kfree(clk);
+        return res;
     }
 
     return 0;

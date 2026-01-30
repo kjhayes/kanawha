@@ -1,20 +1,19 @@
 
 #include <kanawha/clk.h>
 #include <kanawha/time.h>
-#include <kanawha/clk_dev.h>
+#include <kanawha/dev/clk.h>
 #include <kanawha/common.h>
 #include <kanawha/errno.h>
 
+DEFINE_LOCAL_THREAD_LOCK(clk_source_lock);
 static struct clk_dev *clk_source = NULL;
 
 int
 clk_delay(duration_t duration)
 {
-    if(clk_source_get() == NULL) {
+    if(clk_source == NULL) {
         return -ENODEV;
     }
-
-
     duration_t initial = clk_mono_current();
 
     duration_t prev = initial;
@@ -23,6 +22,9 @@ clk_delay(duration_t duration)
         duration_t cur = clk_mono_current();
         while(cur == prev) {
             pause();
+            if((volatile struct clk_dev *)clk_source == NULL) {
+                return -ENODEV;
+            }
             cur = clk_mono_current();
         }
 
@@ -42,30 +44,67 @@ clk_delay(duration_t duration)
             prev = cur;
         }
     }
-
     return 0;
 }
 
+int clk_mono_valid(void) {
+    return clk_source != NULL;
+}
 duration_t clk_mono_current(void)
 {
+    clk_source_lock_acquire();
     if(clk_source == NULL) {
         return 0;
     }
 
     size_t cur_count = clk_dev_mono_cycles(clk_source);
-    return freq_cycles_to_duration(clk_dev_freq(clk_source), cur_count);
+    duration_t dur = freq_cycles_to_duration(clk_dev_freq(clk_source), cur_count);
+    clk_source_lock_release();
+    return dur;
 }
 
-int
-clk_source_set(struct clk_dev *clk)
+static void
+clk_mono_on_clk_dev_register(
+        struct clk_dev *dev
+        )
 {
-    clk_source = clk;
-    return 0;
+    clk_source_lock_acquire();
+    if(clk_source == NULL) {
+        clk_source = dev;
+        printk("Setting clk_mono to be \"%s\"\n",
+                clk_dev_get_name(dev));
+    }
+    clk_source_lock_release();
 }
+static void
+clk_mono_on_clk_dev_unregister(
+        struct clk_dev *dev
+        )
+{
+    clk_source_lock_acquire();
+    if(clk_source == dev) {
+        clk_source = NULL;
+        eprintk("Lost primary clk_dev for kernel time-keeping! (%s)\n",
+                clk_dev_get_name(dev));
+    }
+    clk_source_lock_release();
+}
+LOCAL_REGISTRY_HOOK(
+        clk_mono_clk_dev_hook,
+        clk_dev,
+        clk_mono_on_clk_dev_register,
+        clk_mono_on_clk_dev_unregister)
 
-struct clk_dev *
-clk_source_get(void)
-{
-    return clk_source;
-}
+//int
+//clk_source_set(struct clk_dev *clk)
+//{
+//    clk_source = clk;
+//    return 0;
+//}
+//
+//struct clk_dev *
+//clk_source_get(void)
+//{
+//    return clk_source;
+//}
 

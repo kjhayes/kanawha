@@ -3,6 +3,7 @@
 
 #include <kanawha/ops.h>
 #include <kanawha/lock.h>
+#include <kanawha/init.h>
 #include <kanawha/printk.h>
 #include <kanawha/stree.h>
 #include <kanawha/list.h>
@@ -244,5 +245,22 @@ struct registry_node {
     __DEFINE_REGISTRY_UNHOOK_FUNC(SNAME, REG_NODE_FIELD);\
     __DEFINE_REGISTRY_DUMP_FUNC(SNAME);\
     __DEFINE_REGISTRY_FOR_EACH_FUNC(SNAME, REG_NODE_FIELD);\
+
+#define LOCAL_REGISTRY_HOOK(\
+        HOOK_NAME,\
+        SNAME,\
+        ON_REGISTER,\
+        ON_UNREGISTER)\
+    static struct SNAME ## _registry_hook *HOOK_NAME = NULL;\
+    static int __init_ ## HOOK_NAME(void) {\
+        HOOK_NAME = hook_ ## SNAME ## _registry(\
+                ON_REGISTER,\
+                ON_UNREGISTER);\
+        if(HOOK_NAME == NULL) {\
+            return -ENOMEM;\
+        }\
+        return 0;\
+    }\
+    declare_init(dynamic, __init_ ## HOOK_NAME);
 
 #endif
