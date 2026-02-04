@@ -4,6 +4,7 @@
 #include <kanawha/spinlock.h>
 #include <kanawha/pio.h>
 #include <kanawha/mmio.h>
+#include <kanawha/registry.h>
 
 struct vga_dev;
 
@@ -272,6 +273,7 @@ X(VerticalRetraceStart,   Overflow,         7,  7,  Overflow,  2,  2,  VerticalR
 
 struct vga_dev
 {
+    // register access/caching
     spinlock_t graphics_lock;
     uint8_t graphics_index;
 
@@ -286,13 +288,10 @@ struct vga_dev
     spinlock_t dac_lock;
     unsigned long dac_order;
 
-    spinlock_t mode_lock;
+    struct registry_node registry_node;
 };
 
-int
-vga_dev_init(
-        struct vga_dev *dev,
-	unsigned long dac_order);
+DECLARE_REGISTRY(vga_dev);
 
 #define VGA_READ_REGISTER_ATTRIBUTES_R \
     __attribute__((always_inline))

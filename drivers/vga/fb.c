@@ -118,19 +118,19 @@ vga_fb_set_mode(
     }
 
     // Clear all of video memory
-    vga_write_field(&fb->vga_dev, WriteMode, 0);
-    vga_write_field(&fb->vga_dev, HostOddEvenMemoryWriteAddressingDisable, 1);
-    vga_write_field(&fb->vga_dev, ChainOddEvenEnable, 0);
-    vga_write_field(&fb->vga_dev, Chain4Enable, 0);
-    vga_write_field(&fb->vga_dev, MemoryPlaneWriteEnable, 0b1111);
-    vga_write_field(&fb->vga_dev, ExtendedMemory, 1);
-    vga_write_field(&fb->vga_dev, RAMEnable, 1);
-    vga_write_field(&fb->vga_dev, MemoryMapSelect, 1);
-    vga_write_field(&fb->vga_dev, BitMask, 0xFF);
-    vga_write_field(&fb->vga_dev, EnableSetReset, 0);
-    vga_write_field(&fb->vga_dev, SetReset, 0);
-    vga_write_field(&fb->vga_dev, LogicalOperation, 0);
-    vga_write_field(&fb->vga_dev, RotateCount, 0);
+    vga_write_field(fb->vga_dev, WriteMode, 0);
+    vga_write_field(fb->vga_dev, HostOddEvenMemoryWriteAddressingDisable, 1);
+    vga_write_field(fb->vga_dev, ChainOddEvenEnable, 0);
+    vga_write_field(fb->vga_dev, Chain4Enable, 0);
+    vga_write_field(fb->vga_dev, MemoryPlaneWriteEnable, 0b1111);
+    vga_write_field(fb->vga_dev, ExtendedMemory, 1);
+    vga_write_field(fb->vga_dev, RAMEnable, 1);
+    vga_write_field(fb->vga_dev, MemoryMapSelect, 1);
+    vga_write_field(fb->vga_dev, BitMask, 0xFF);
+    vga_write_field(fb->vga_dev, EnableSetReset, 0);
+    vga_write_field(fb->vga_dev, SetReset, 0);
+    vga_write_field(fb->vga_dev, LogicalOperation, 0);
+    vga_write_field(fb->vga_dev, RotateCount, 0);
     memset_p((void __phys *)0xA0000, 0x0, 0x10000);
 
     res = (mode->setup)(fb);
@@ -221,7 +221,7 @@ vga_fb_flush_buffer(
     // Wait for VSYNC for a maximum of 10ms
     duration_t max_vsync_wait = msec_to_duration(10);
     time_t start = current_timestamp();
-    while(!vga_read_field(&fb->vga_dev, VerticalRetrace)) {
+    while(!vga_read_field(fb->vga_dev, VerticalRetrace)) {
 	duration_t elapsed = duration_between(start, current_timestamp());
 	if(elapsed < 0 || elapsed >= max_vsync_wait) {
 	    break;
@@ -244,8 +244,16 @@ static struct fb_driver vga_fb_driver = {
     .flush_buffer = vga_fb_flush_buffer,
 };
 
-static int
-register_vga_fb_dev(void)
+static int 
+vga_fb_probe_vga_dev(
+        struct vga_dev *dev)
+{
+    return 0;
+}
+
+static int 
+vga_fb_receive_vga_dev(
+        struct vga_dev *dev)
 {
     int res;
 
@@ -254,16 +262,8 @@ register_vga_fb_dev(void)
         return -ENOMEM;
     }
 
-    unsigned long dac_order = VGA_DAC_ORDER_DEFAULT;
-
-    // QEMU VGA seems to use the DAC order to GRB for some reason?
-    dac_order = VGA_DAC_ORDER_RGB;
-
-    res = vga_dev_init(&fb->vga_dev, dac_order);
-    if(res) {
-        kfree(fb);
-        return res;
-    }
+    fb->vga_dev = dev;
+    dev->registry_node.owner_priv_data = fb;
 
     thread_lock_init(&fb->mode_lock);
     fb->buffer_exists = 0;
@@ -280,7 +280,7 @@ register_vga_fb_dev(void)
             &fb->fb_dev,
             "vga");
     if(res) {
-        printk("register_fb_dev returned %s\n",
+        eprintk("register_fb_dev returned %s\n",
                 errnostr(res));
         kfree(fb);
         return res;
@@ -289,4 +289,87 @@ register_vga_fb_dev(void)
     return 0;
 }
 
-declare_init_desc(device, register_vga_fb_dev, "Registering VGA Framebuffer Device");
+static int
+vga_fb_revoke_vga_dev(
+        struct vga_dev *dev)
+{
+    int res;
+    struct vga_fb *fb = dev->registry_node.owner_priv_data;
+    res = unregister_fb_dev(&fb->fb_dev);
+    if(res) {
+        return res;
+    }
+    if(fb->buffer_exists) {
+        res = page_free(fb->buffer_order, fb->buffer);
+        if(res) {
+            eprintk("Failed to free VGA framebuffer backing page! (err=%s)\n",
+                    errnostr(res));
+        }
+    }
+    kfree(fb);
+    return 0;
+}
+
+static struct vga_dev_owner
+vga_fb_vga_dev_owner = {
+    .probe = vga_fb_probe_vga_dev,
+    .receive = vga_fb_receive_vga_dev,
+    .revoke = vga_fb_revoke_vga_dev,
+};
+
+static int
+vga_fb_install_vga_dev_owner(void)
+{
+    int res;
+    res = register_vga_dev_owner(&vga_fb_vga_dev_owner);
+    if(res) {
+        return res;
+    }
+    return 0;
+}
+declare_init(device, vga_fb_install_vga_dev_owner);
+
+//static int
+//register_legacy_vga_fb_dev(void)
+//{
+//    int res;
+//
+//    struct vga_fb *fb = kzmalloc(sizeof(struct vga_fb), KM_KERNEL);
+//    if(fb == NULL) {
+//        return -ENOMEM;
+//    }
+//
+//    unsigned long dac_order = VGA_DAC_ORDER_DEFAULT;
+//
+//    res = vga_dev_init(&fb->vga_dev, dac_order);
+//    if(res) {
+//        kfree(fb);
+//        return res;
+//    }
+//
+//    thread_lock_init(&fb->mode_lock);
+//    fb->buffer_exists = 0;
+//    fb->current_mode = 0;
+//    res = vga_fb_set_mode(&fb->fb_dev, 0);
+//    if(res) {
+//        kfree(fb);
+//        return res;
+//    }
+//
+//    fb->fb_dev.driver = &vga_fb_driver;
+//
+//    res = register_fb_dev(
+//            &fb->fb_dev,
+//            "vga");
+//    if(res) {
+//        printk("register_fb_dev returned %s\n",
+//                errnostr(res));
+//        kfree(fb);
+//        return res;
+//    }
+//
+//    return 0;
+//}
+
+// declare_init_desc(device, register_vga_fb_dev, "Registering VGA Framebuffer Device");
+

@@ -13,9 +13,9 @@ static int
 vga_fb_flush_mode_graphics_320_200(
         struct vga_fb *fb)
 {
-//    vga_screen_disable(&fb->vga_dev);
+//    vga_screen_disable(fb->vga_dev);
     memcpy_pp((void __phys *)0xA0000, fb->buffer, 320 * 200);
-//    vga_screen_enable(&fb->vga_dev);
+//    vga_screen_enable(fb->vga_dev);
     return 0;
 }
 
@@ -24,7 +24,7 @@ vga_fb_setup_mode_graphics_320_200(
         struct vga_fb *fb)
 {
     int res;
-    struct vga_dev *vga = &fb->vga_dev;
+    struct vga_dev *vga = fb->vga_dev;
 
     vga_screen_disable(vga);
 //text  12h     13h     X

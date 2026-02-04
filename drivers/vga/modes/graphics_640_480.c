@@ -13,7 +13,7 @@ static int
 vga_fb_flush_mode_graphics_640_480(
         struct vga_fb *fb)
 {
-    vga_screen_disable(&fb->vga_dev);
+    vga_screen_disable(fb->vga_dev);
 
     void __phys *vga_mem = (void __phys *)0xA0000;
 
@@ -55,19 +55,19 @@ vga_fb_flush_mode_graphics_640_480(
 	intensity_bitbuffer[i] = intensity_bits;
     }
 
-    vga_write_field(&fb->vga_dev, MemoryPlaneWriteEnable, 0b0001);
+    vga_write_field(fb->vga_dev, MemoryPlaneWriteEnable, 0b0001);
     memcpy_vp(vga_mem, red_bitbuffer, bitbuffer_size);
 
-    vga_write_field(&fb->vga_dev, MemoryPlaneWriteEnable, 0b0010);
+    vga_write_field(fb->vga_dev, MemoryPlaneWriteEnable, 0b0010);
     memcpy_vp(vga_mem, green_bitbuffer, bitbuffer_size);
 
-    vga_write_field(&fb->vga_dev, MemoryPlaneWriteEnable, 0b0100);
+    vga_write_field(fb->vga_dev, MemoryPlaneWriteEnable, 0b0100);
     memcpy_vp(vga_mem, blue_bitbuffer, bitbuffer_size);
 
-    vga_write_field(&fb->vga_dev, MemoryPlaneWriteEnable, 0b1000);
+    vga_write_field(fb->vga_dev, MemoryPlaneWriteEnable, 0b1000);
     memcpy_vp(vga_mem, intensity_bitbuffer, bitbuffer_size);
 
-    vga_screen_enable(&fb->vga_dev);
+    vga_screen_enable(fb->vga_dev);
 
     return 0;
 }
@@ -77,7 +77,7 @@ vga_fb_setup_mode_graphics_640_480(
         struct vga_fb *fb)
 {
     int res;
-    struct vga_dev *vga = &fb->vga_dev;
+    struct vga_dev *vga = fb->vga_dev;
 
     vga_screen_disable(vga);
 

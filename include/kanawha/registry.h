@@ -14,8 +14,14 @@
  * Declarations
  */
 
-struct registry_node {
+struct registry_node
+{
     struct stree_node snode;
+
+    ilist_node_t owner_node;
+    void *owner;
+
+    void *owner_priv_data;
 };
 
 #define __DECLARE_REGISTRY_PUBLIC_DATA(SNAME)\
@@ -66,7 +72,27 @@ struct registry_node {
     int \
     dump_ ## SNAME ## _registry(\
             printk_f *printer);
- 
+
+// Ownership/Claim Functions
+
+#define __DECLARE_REGISTRY_OWNER_STRUCT(SNAME)\
+    struct SNAME ## _owner {\
+        int(*probe)(struct SNAME *sname);\
+        int(*receive)(struct SNAME *sname);\
+        int(*revoke)(struct SNAME *sname);\
+        \
+        ilist_node_t list_node;\
+        ilist_t owned_list;\
+    };
+
+#define __DECLARE_REGISTRY_OWNER_REGISTER_FUNC(SNAME)\
+    int register_ ## SNAME ## _owner(\
+            struct SNAME ## _owner *owner);
+
+#define __DECLARE_REGISTRY_OWNER_UNREGISTER_FUNC(SNAME)\
+    int unregister_ ## SNAME ## _owner(\
+            struct SNAME ## _owner *owner);
+
 #define DECLARE_REGISTRY(SNAME)\
     __DECLARE_REGISTRY_PUBLIC_DATA(SNAME);\
     __DECLARE_REGISTRY_REGISTER_FUNC(SNAME);\
@@ -77,6 +103,9 @@ struct registry_node {
     __DECLARE_REGISTRY_UNHOOK_FUNC(SNAME);\
     __DECLARE_REGISTRY_DUMP_FUNC(SNAME);\
     __DECLARE_REGISTRY_FOR_EACH_FUNC(SNAME);\
+    __DECLARE_REGISTRY_OWNER_STRUCT(SNAME);\
+    __DECLARE_REGISTRY_OWNER_REGISTER_FUNC(SNAME);\
+    __DECLARE_REGISTRY_OWNER_UNREGISTER_FUNC(SNAME);
 
 /*
  * Definitions
@@ -87,7 +116,9 @@ struct registry_node {
 
 #define __DEFINE_REGISTRY_PRIVATE_DATA(SNAME)\
     static DECLARE_STREE(SNAME ## _registry_tree);\
-    static DECLARE_ILIST(SNAME ## _registry_hook_list);
+    static DECLARE_ILIST(SNAME ## _registry_hook_list);\
+    static DECLARE_ILIST(SNAME ## _registry_owner_list);\
+    static DECLARE_ILIST(SNAME ## _registry_unowned_list);
 
 #define __DEFINE_REGISTRY_REGISTER_FUNC(SNAME, REG_NODE_FIELD, INIT_FUNCTION)\
     int \
@@ -97,8 +128,9 @@ struct registry_node {
     {\
         int res;\
         \
-	member->REG_NODE_FIELD.snode.key = name;\
-	\
+        struct registry_node *reg_node = &member->REG_NODE_FIELD;\
+	    reg_node->snode.key = name;\
+	    \
         res = INIT_FUNCTION(member);\
         if (res) {\
             return res;\
@@ -111,7 +143,7 @@ struct registry_node {
             SNAME ## _registry_lock_release();\
             return -EEXIST;\
         }\
-	\
+	    \
         stree_insert(\
                 & SNAME ## _registry_tree,\
                 &member->REG_NODE_FIELD.snode);\
@@ -121,6 +153,27 @@ struct registry_node {
             struct SNAME ## _registry_hook *hook =\
                 container_of(node, struct SNAME ## _registry_hook, list_node);\
             (*hook->on_register)(member);\
+        }\
+        \
+        reg_node->owner = NULL;\
+        ilist_node_t *iter;\
+        ilist_for_each(iter, &(SNAME ## _registry_owner_list)) {\
+            int res;\
+            struct SNAME ## _owner *owner = container_of(iter, struct SNAME ## _owner, list_node);\
+            \
+            res = (*owner->probe)(member);\
+            if(res) {continue;}\
+            \
+            res = (*owner->receive)(member);\
+            if(res) {continue;}\
+            \
+            ilist_push_tail(&owner->owned_list, &reg_node->owner_node);\
+            reg_node->owner = (void*)owner;\
+            break;\
+        }\
+        \
+        if(reg_node->owner == NULL) {\
+            ilist_push_tail(&(SNAME ## _registry_unowned_list), &reg_node->owner_node);\
         }\
         \
         SNAME ## _registry_lock_release();\
@@ -133,10 +186,40 @@ struct registry_node {
             struct SNAME *member)\
     {\
         int res;\
+        struct registry_node *reg_node = &member->REG_NODE_FIELD;\
+        \
+        SNAME ## _registry_lock_acquire();\
+        \
+        if(reg_node->owner != NULL) {\
+            struct SNAME ## _owner *owner = reg_node->owner;\
+            res = (*owner->revoke)(member);\
+            if(res) {\
+                SNAME ## _registry_lock_release();\
+                return res;\
+            }\
+            ilist_remove(&owner->owned_list, &reg_node->owner_node); \
+        } else {\
+            ilist_remove(&(SNAME ## _registry_unowned_list), &reg_node->owner_node);\
+        }\
+        \
+        ilist_node_t *node;\
+        ilist_for_each(node, & SNAME ## _registry_hook_list) {\
+            struct SNAME ## _registry_hook *hook =\
+                container_of(node, struct SNAME ## _registry_hook, list_node);\
+            (*hook->on_unregister)(member);\
+        }\
+        \
+        struct stree_node *removed;\
+        removed = stree_remove(&(SNAME ## _registry_tree), reg_node->snode.key);\
+        DEBUG_ASSERT(removed != &reg_node->snode);\
+        \
+        SNAME ## _registry_lock_release();\
+        \
         res = DEINIT_FUNCTION(member);\
         if (res) {\
             return res;\
         }\
+        \
         return -EUNIMPL;\
     }
 
@@ -226,6 +309,64 @@ struct registry_node {
         return 0;\
     }
 
+#define __DEFINE_REGISTRY_OWNER_REGISTER_FUNC(SNAME, REG_NODE_FIELD)\
+    int register_ ## SNAME ## _owner(\
+            struct SNAME ## _owner *owner)\
+    {\
+        int res;\
+        \
+        ilist_init(&owner->owned_list);\
+        \
+        SNAME ## _registry_lock_acquire(); \
+        ilist_push_tail(& SNAME ## _registry_owner_list, &owner->list_node);\
+        \
+        ilist_node_t *iter;\
+        ilist_for_each(iter, &(SNAME ## _registry_unowned_list)) {\
+            struct SNAME *member =\
+                container_of(iter, struct SNAME, REG_NODE_FIELD.owner_node);\
+            struct registry_node *reg_node = &member->REG_NODE_FIELD;\
+            \
+            res = (*owner->probe)(member);\
+            if(res) {continue;}\
+            res = (*owner->receive)(member);\
+            if(res) {continue;}\
+            \
+            ilist_remove(&(SNAME ## _registry_unowned_list), iter);\
+            ilist_push_tail(&owner->owned_list, iter);\
+            reg_node->owner = (void*)owner;\
+            \
+            break;\
+        }\
+        \
+        SNAME ## _registry_lock_release(); \
+        return 0;\
+    }
+
+#define __DEFINE_REGISTRY_OWNER_UNREGISTER_FUNC(SNAME, REG_NODE_FIELD)\
+    int unregister_ ## SNAME ## _owner(\
+            struct SNAME ## _owner *owner)\
+    {\
+        int res;\
+        SNAME ## _registry_lock_acquire(); \
+        ilist_remove(& SNAME ## _registry_owner_list, &owner->list_node);\
+        \
+        while(1) {\
+            ilist_node_t *removed = ilist_pop_tail(&owner->owned_list);\
+            if(removed == NULL) {\
+                break;\
+            }\
+            struct SNAME *member =\
+                container_of(removed, struct SNAME, REG_NODE_FIELD.owner_node);\
+            struct registry_node *reg_node = &member->REG_NODE_FIELD;\
+            \
+            DEBUG_ASSERT(reg_node->owner == owner);\
+            reg_node->owner = NULL;\
+            ilist_push_tail(&(SNAME ## _registry_unowned_list), &reg_node->owner_node);\
+        }\
+        \
+        SNAME ## _registry_lock_release(); \
+        return 0;\
+    }
 
 // INIT_FUNCTION   -> int init_function(struct SNAME *member);
 //     Should return 0 on success, negative errno on failure
@@ -245,6 +386,8 @@ struct registry_node {
     __DEFINE_REGISTRY_UNHOOK_FUNC(SNAME, REG_NODE_FIELD);\
     __DEFINE_REGISTRY_DUMP_FUNC(SNAME);\
     __DEFINE_REGISTRY_FOR_EACH_FUNC(SNAME, REG_NODE_FIELD);\
+    __DEFINE_REGISTRY_OWNER_REGISTER_FUNC(SNAME, REG_NODE_FIELD);\
+    __DEFINE_REGISTRY_OWNER_UNREGISTER_FUNC(SNAME, REG_NODE_FIELD);\
 
 #define LOCAL_REGISTRY_HOOK(\
         HOOK_NAME,\

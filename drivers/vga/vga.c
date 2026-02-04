@@ -1,14 +1,15 @@
 
 #include <drivers/vga/vga.h>
 #include <kanawha/pio.h>
+#include <kanawha/list.h>
+#include <kanawha/lock.h>
 
-int
-vga_dev_init(
-        struct vga_dev *dev,
-	unsigned long dac_order)
+static int
+vga_dev_init (
+        struct vga_dev *dev)
 {
     spinlock_init(&dev->dac_lock);
-    dev->dac_order = dac_order;
+    dev->dac_order = VGA_DAC_ORDER_RGB;
 
     spinlock_init(&dev->graphics_lock);
     dev->graphics_index = vga_read_register(dev, GraphicsControllerAddress);
@@ -25,9 +26,6 @@ vga_dev_init(
     // Make sure that the attribute address/data register expects an address next
     vga_read_register(dev, InputStatus1);
 
-    // Get the current memory mode info
-    spinlock_init(&dev->mode_lock);
-
     // Set memory map to the 0xA0000-0xAFFFF 64K region
     vga_screen_disable(dev);
 
@@ -38,6 +36,19 @@ vga_dev_init(
 
     return 0;
 }
+
+static int
+vga_dev_deinit(
+        struct vga_dev *dev)
+{
+    return -EUNIMPL;
+}
+
+DEFINE_REGISTRY(
+        vga_dev,
+        registry_node,
+        vga_dev_init,
+        vga_dev_deinit);
 
 uint8_t
 vga_read_graphics_register_set(

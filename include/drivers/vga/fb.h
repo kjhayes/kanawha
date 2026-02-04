@@ -18,7 +18,7 @@ struct vga_fb_mode
 struct vga_fb
 {
     struct fb_dev fb_dev;
-    struct vga_dev vga_dev;
+    struct vga_dev *vga_dev;
 
     thread_lock_t mode_lock;
     size_t current_mode;

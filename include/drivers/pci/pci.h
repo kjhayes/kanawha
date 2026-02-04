@@ -58,6 +58,8 @@ struct pci_func
     struct pci_device *device;
     struct pci_driver *driver;
 
+    void *driver_priv_state;
+
     ilist_node_t global_node;
     ilist_node_t device_node;
     ilist_node_t driver_node;

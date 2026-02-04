@@ -1,5 +1,6 @@
 
-obj-y += vga.o
+obj-y += vga.o \
+	     pci.o \
 
 obj-$(CONFIG_DEBUG_VGA_SERIAL) += serial.o
 
