@@ -18,20 +18,26 @@ struct eth_dev_fs_node
 };
 
 static struct vfs_mount *eth_dev_fs_mount = NULL;
-static struct eth_dev_registry_hook *eth_dev_fs_hook = NULL;
 
 static struct fs_node_ops eth_dev_fs_node_ops;
 static struct fs_file_ops eth_dev_fs_file_ops;
 
-static void
-eth_dev_fs_on_register(
+static int
+eth_dev_fs_probe_eth_dev(
+        struct eth_dev *dev)
+{
+    return 0;
+}
+
+static int
+eth_dev_fs_receive_eth_dev(
         struct eth_dev *dev)
 {
     int res;
 
     struct eth_dev_fs_node *edfs = kmalloc(sizeof(*edfs), KM_KERNEL);
     if(edfs == NULL) {
-        return;
+        return -ENOMEM;
     }
     memset(edfs, 0, sizeof(*edfs));
 
@@ -46,17 +52,18 @@ eth_dev_fs_on_register(
             eth_dev_get_name(dev));
     if(res) {
         kfree(edfs);
-        return;
+        return res;
     }
 
-    return;
+    return 0;
 }
 
-static void
-eth_dev_fs_on_unregister(
+static int
+eth_dev_fs_revoke_eth_dev(
         struct eth_dev *dev)
 {
-    panic("Tried to unregister eth_dev from sysfs! (UNIMPL)\n");
+    wprintk("Tried to unregister eth_dev from sysfs! (UNIMPL)\n");
+    return -EUNIMPL;
 }
 
 static ssize_t 
@@ -193,6 +200,13 @@ FS_FILE_OPS_INIT_UNDEF(eth_dev_fs_file_ops);
 //    return 0;
 //}
 
+static struct eth_dev_owner
+eth_dev_fs_owner = {
+    .probe = eth_dev_fs_probe_eth_dev,
+    .receive = eth_dev_fs_receive_eth_dev,
+    .revoke = eth_dev_fs_revoke_eth_dev,
+};
+
 static int
 eth_dev_init_fs_mount(void)
 {
@@ -207,21 +221,15 @@ eth_dev_init_fs_mount(void)
 
     eth_dev_fs_mount = mnt;
 
-    struct eth_dev_registry_hook *hook;
-    hook = hook_eth_dev_registry(
-            eth_dev_fs_on_register,
-            eth_dev_fs_on_unregister);
-    if(hook == NULL) {
-        eth_dev_fs_mount = NULL;
+    res = register_eth_dev_owner(&eth_dev_fs_owner);
+    if(res) {
         vfs_mount_destroy(mnt);
-        return -ENOMEM;
+        return res;
     }
 
     res = sysfs_register_mount(&eth_dev_fs_mount->fs_mount, "ethdev");
     if(res) {
-        eth_dev_fs_hook = NULL;
-        unhook_eth_dev_registry(hook);
-        eth_dev_fs_mount = NULL;
+        unregister_eth_dev_owner(&eth_dev_fs_owner);
         vfs_mount_destroy(mnt);
         return res;
     }

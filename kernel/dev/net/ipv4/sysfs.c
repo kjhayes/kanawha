@@ -20,20 +20,26 @@ struct ipv4_dev_fs_node
 };
 
 static struct vfs_mount *ipv4_dev_fs_mount = NULL;
-static struct ipv4_dev_registry_hook *ipv4_dev_fs_hook = NULL;
 
 static struct fs_node_ops ipv4_dev_fs_node_ops;
 static struct fs_file_ops ipv4_dev_fs_file_ops;
 
-static void
-ipv4_dev_fs_on_register(
+static int
+ipv4_dev_fs_probe_ipv4_dev(
+        struct ipv4_dev *dev)
+{
+    return 0;
+}
+
+static int
+ipv4_dev_fs_receive_ipv4_dev(
         struct ipv4_dev *dev)
 {
     int res;
 
     struct ipv4_dev_fs_node *edfs = kzmalloc(sizeof(*edfs), KM_KERNEL);
     if(edfs == NULL) {
-        return;
+        return -ENOMEM;
     }
 
     edfs->dev = dev;
@@ -47,7 +53,7 @@ ipv4_dev_fs_on_register(
             ipv4_dev_get_name(dev));
     if(res) {
         kfree(edfs);
-        return;
+        return res;
     }
 
     // TODO Remove This Test PING
@@ -56,14 +62,15 @@ ipv4_dev_fs_on_register(
         wprintk("Failed to send ICMP ping (%s)\n", errnostr(res));
     }
 
-    return;
+    return 0;
 }
 
-static void
-ipv4_dev_fs_on_unregister(
+static int
+ipv4_dev_fs_revoke_ipv4_dev(
         struct ipv4_dev *dev)
 {
-    panic("Tried to unregister ipv4_dev from sysfs! (UNIMPL)\n");
+    wprintk("Tried to unregister ipv4_dev from sysfs! (UNIMPL)\n");
+    return -EUNIMPL;
 }
 
 static ssize_t 
@@ -148,6 +155,13 @@ ipv4_dev_fs_file_ops =
 };
 FS_FILE_OPS_INIT_UNDEF(ipv4_dev_fs_file_ops);
 
+static struct ipv4_dev_owner
+ipv4_dev_fs_owner = {
+    .probe = ipv4_dev_fs_probe_ipv4_dev,
+    .receive = ipv4_dev_fs_receive_ipv4_dev,
+    .revoke = ipv4_dev_fs_revoke_ipv4_dev,
+};
+
 static int
 ipv4_dev_init_fs_mount(void)
 {
@@ -162,21 +176,15 @@ ipv4_dev_init_fs_mount(void)
 
     ipv4_dev_fs_mount = mnt;
 
-    struct ipv4_dev_registry_hook *hook;
-    hook = hook_ipv4_dev_registry(
-            ipv4_dev_fs_on_register,
-            ipv4_dev_fs_on_unregister);
-    if(hook == NULL) {
-        ipv4_dev_fs_mount = NULL;
+    res = register_ipv4_dev_owner(&ipv4_dev_fs_owner);
+    if(res) {
         vfs_mount_destroy(mnt);
-        return -ENOMEM;
+        return res;
     }
 
     res = sysfs_register_mount(&ipv4_dev_fs_mount->fs_mount, "ipv4");
     if(res) {
-        ipv4_dev_fs_hook = NULL;
-        unhook_ipv4_dev_registry(hook);
-        ipv4_dev_fs_mount = NULL;
+        unregister_ipv4_dev_owner(&ipv4_dev_fs_owner);
         vfs_mount_destroy(mnt);
         return res;
     }
