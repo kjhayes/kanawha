@@ -113,41 +113,56 @@ term_dev_fs_node_link_nodes(
 //    return 0;
 //}
 
-static void
-term_dev_fs_on_register(
+static int
+term_dev_fs_probe_term_dev(
+        struct term_dev *dev
+        )
+{
+    return 0;
+}
+
+static int
+term_dev_fs_receive_term_dev(
         struct term_dev *dev
         )
 {
     int res;
     struct term_dev_fs_node *node = kmalloc(sizeof(*node), KM_KERNEL);
     if(node == NULL) {
-      return;
+        return -ENOMEM;
     }
     node->dev = dev;
 
     res = term_dev_fs_node_init_all_nodes(node);
     if(res) {
-	  kfree(node);
-	  return;
+	    kfree(node);
+	    return res;
     }
 
     res = term_dev_fs_node_link_nodes(node);
     if(res) {
-	  term_dev_fs_node_deinit_all_nodes(node);
-	  kfree(node);
-	  return;
+	    term_dev_fs_node_deinit_all_nodes(node);
+	    kfree(node);
+	    return res;
     }
+    return 0;
 }
 
-static struct term_dev_registry_hook *term_dev_fs_hook = NULL;
-
-static void
-term_dev_fs_on_unregister(
+static int
+term_dev_fs_revoke_term_dev(
         struct term_dev *dev
         )
 {
-    panic("Tried to deregister term device! (UNIMPL)\n");
+    wprintk("Tried to deregister term device! (UNIMPL)\n");
+    return -EUNIMPL;
 }
+
+static struct term_dev_owner
+term_dev_fs_owner = {
+    .probe = term_dev_fs_probe_term_dev,
+    .receive = term_dev_fs_receive_term_dev,
+    .revoke = term_dev_fs_revoke_term_dev,
+};
 
 static int
 term_dev_init_fs_mount(void)
@@ -163,25 +178,17 @@ term_dev_init_fs_mount(void)
 
     term_dev_fs_mount = mnt;
 
-    struct term_dev_registry_hook *hook;
-    hook = hook_term_dev_registry(
-            term_dev_fs_on_register,
-            term_dev_fs_on_unregister
-            );
-    if(hook == NULL) {
-        term_dev_fs_mount = NULL;
+    res = register_term_dev_owner(&term_dev_fs_owner);
+    if(res) {
         vfs_mount_destroy(mnt);
-        return -ENOMEM;
+        return res;
     }
-
-    term_dev_fs_hook = hook;
 
     res = sysfs_register_mount(&term_dev_fs_mount->fs_mount, "termdev");
     if(res) {
+        unregister_term_dev_owner(&term_dev_fs_owner);
         term_dev_fs_mount = NULL;
         vfs_mount_destroy(mnt);
-        term_dev_fs_hook = NULL;
-        unhook_term_dev_registry(hook);
         return res;
     }
 
