@@ -23,10 +23,17 @@ struct kbd_dev_fs_node
 static struct vfs_mount *kbd_dev_fs_mount = NULL;
 static struct fs_node_ops kbd_dev_fs_node_ops;
 static struct fs_file_ops kbd_dev_fs_file_ops;
-static struct kbd_dev_registry_hook *kbd_dev_fs_hook = NULL;
 
-static void
-kbd_dev_fs_on_register(
+static int
+kbd_dev_fs_probe_kbd_dev(
+        struct kbd_dev *dev
+        )
+{
+    return 0;
+}
+
+static int
+kbd_dev_fs_receive_kbd_dev(
         struct kbd_dev *dev
         )
 {
@@ -34,7 +41,7 @@ kbd_dev_fs_on_register(
 
     struct kbd_dev_fs_node *node = kmalloc(sizeof(*node), KM_KERNEL);
     if(node == NULL) {
-        return;
+        return -ENOMEM;
     }
     node->dev = dev;
 
@@ -46,19 +53,28 @@ kbd_dev_fs_on_register(
             &node->vfs_node,
             kbd_dev_get_name(dev));
     if(res) {
-        return;
+        kfree(node);
+        return res;
     }
 
+    return 0;
 }
 
-static void
-kbd_dev_fs_on_unregister(
+static int
+kbd_dev_fs_revoke_kbd_dev(
         struct kbd_dev *dev
         )
 {
-    panic("kbd_dev_fs_on_unregister is undefined!\n");
-    return;
+    wprintk("kbd_dev_fs_on_unregister is undefined!\n");
+    return -EUNIMPL;
 }
+
+static struct kbd_dev_owner
+kbd_dev_fs_owner = {
+    .probe = kbd_dev_fs_probe_kbd_dev,
+    .receive = kbd_dev_fs_receive_kbd_dev,
+    .revoke = kbd_dev_fs_revoke_kbd_dev,
+};
 
 static int
 kbd_init_fs_mount(void)
@@ -74,21 +90,16 @@ kbd_init_fs_mount(void)
 
     kbd_dev_fs_mount = mnt;
 
-    struct kbd_dev_registry_hook *hook;
-    hook = hook_kbd_dev_registry(
-	    kbd_dev_fs_on_register,
-	    kbd_dev_fs_on_unregister
-	    );
-    if(hook == NULL) {
-	kbd_dev_fs_mount = NULL;
-	vfs_mount_destroy(mnt);
-	return -ENOMEM;
+    res = register_kbd_dev_owner(&kbd_dev_fs_owner);
+    if(res) {
+        vfs_mount_destroy(mnt);
+        return res;
     }
-
-    kbd_dev_fs_hook = hook;
 
     res = sysfs_register_mount(&kbd_dev_fs_mount->fs_mount, "kbd");
     if(res) {
+        unregister_kbd_dev_owner(&kbd_dev_fs_owner);
+        vfs_mount_destroy(mnt);
         return res;
     }
 
