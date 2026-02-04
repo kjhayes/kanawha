@@ -29,17 +29,24 @@ struct blk_dev_fs_node
 static struct vfs_mount *blk_dev_fs_mount = NULL;
 static struct fs_node_ops blk_dev_fs_node_ops;
 static struct fs_file_ops blk_dev_fs_file_ops;
-static struct blk_dev_registry_hook *blk_dev_fs_hook = NULL;
 
-static void
-blk_dev_fs_on_register(
+static int
+blk_dev_fs_probe_blk_dev(
+        struct blk_dev *dev
+        )
+{
+    return 0;
+}
+
+static int
+blk_dev_fs_receive_blk_dev(
         struct blk_dev *dev
         )
 {
     int res;
     struct blk_dev_fs_node *node = kmalloc(sizeof(*node), KM_KERNEL);
     if(node == NULL) {
-        return;
+        return -ENOMEM;
     }
     node->dev = dev;
 
@@ -63,18 +70,28 @@ blk_dev_fs_on_register(
             &node->vfs_node,
             blk_dev_get_name(dev));
     if(res) {
-        return;
+        kfree(node);
+        return res;
     }
 
+    return 0;
 }
 
-static void
-blk_dev_fs_on_unregister(
+static int
+blk_dev_fs_revoke_blk_dev(
         struct blk_dev *dev
         )
 {
-    panic("Tried to deregister blk device! (UNIMPL)\n");
+    eprintk("Tried to revoke blk device from blk_dev sysfs! (UNIMPL)\n");
+    return -EUNIMPL;
 }
+
+static struct blk_dev_owner
+blk_dev_sysfs_owner = {
+    .probe = blk_dev_fs_probe_blk_dev,
+    .receive = blk_dev_fs_receive_blk_dev,
+    .revoke = blk_dev_fs_revoke_blk_dev,
+};
 
 static int
 blk_dev_init_fs_mount(void)
@@ -90,25 +107,17 @@ blk_dev_init_fs_mount(void)
 
     blk_dev_fs_mount = mnt;
 
-    struct blk_dev_registry_hook *hook;
-    hook = hook_blk_dev_registry(
-            blk_dev_fs_on_register,
-            blk_dev_fs_on_unregister
-            );
-    if(hook == NULL) {
-        blk_dev_fs_mount = NULL;
+    res = register_blk_dev_owner(&blk_dev_sysfs_owner);
+    if(res) {
         vfs_mount_destroy(mnt);
-        return -ENOMEM;
+        return res;
     }
-
-    blk_dev_fs_hook = hook;
 
     res = sysfs_register_mount(&blk_dev_fs_mount->fs_mount, "blkdev");
     if(res) {
         blk_dev_fs_mount = NULL;
         vfs_mount_destroy(mnt);
-        blk_dev_fs_hook = NULL;
-        unhook_blk_dev_registry(hook);
+        unregister_blk_dev_owner(&blk_dev_sysfs_owner);
         return res;
     }
 
