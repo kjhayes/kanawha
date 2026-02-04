@@ -44,7 +44,6 @@ struct fb_dev_fs_node
 };
 
 static struct vfs_mount *fb_dev_fs_mount = NULL;
-static struct fb_dev_registry_hook *fb_dev_fs_hook = NULL;
 
 static int
 fb_dev_buffer_fs_node_load_page(
@@ -626,15 +625,22 @@ static struct fs_file_ops fb_dev_mode_info_fs_file_ops =
 };
 FS_FILE_OPS_INIT_UNDEF(fb_dev_mode_info_fs_file_ops);
 
-static void
-fb_dev_fs_on_register(
+static int
+fb_dev_fs_probe_fb_dev(
+        struct fb_dev *dev)
+{
+    return 0;
+}
+
+static int
+fb_dev_fs_receive_fb_dev(
         struct fb_dev *dev)
 {
     int res;
 
     struct fb_dev_fs_node *fbfs = kmalloc(sizeof(*fbfs), KM_KERNEL);
     if(fbfs == NULL) {
-        return;
+        return -ENOMEM;
     }
     memset(fbfs, 0, sizeof(*fbfs));
 
@@ -703,7 +709,7 @@ fb_dev_fs_on_register(
         goto err4;
     }
 
-    return;
+    return 0;
 
 err4:
     vfs_mount_remove_node(
@@ -723,15 +729,23 @@ err2:
         fb_dev_fs_mount,
         &fbfs->buffer_vfs_node);
 err0:
-    return;
+    return res;
 }
 
-static void
-fb_dev_fs_on_unregister(
+static int
+fb_dev_fs_revoke_fb_dev(
         struct fb_dev *dev)
 {
-    panic("Tried to unregister fb_dev from sysfs! (UNIMPL)\n");
+    eprintk("Tried to unregister fb_dev from sysfs! (UNIMPL)\n");
+    return -EUNIMPL;
 }
+
+static struct fb_dev_owner
+fb_dev_fs_owner = {
+    .probe = fb_dev_fs_probe_fb_dev,
+    .receive = fb_dev_fs_receive_fb_dev,
+    .revoke = fb_dev_fs_revoke_fb_dev,
+};
 
 static int
 fb_dev_init_fs_mount(void)
@@ -746,23 +760,17 @@ fb_dev_init_fs_mount(void)
 
     fb_dev_fs_mount = mnt;
 
-    struct fb_dev_registry_hook *hook;
-    hook = hook_fb_dev_registry(
-            fb_dev_fs_on_register,
-            fb_dev_fs_on_unregister);
-    if(hook == NULL) {
+    res = register_fb_dev_owner(&fb_dev_fs_owner);
+    if(res) {
         vfs_mount_destroy(mnt);
-        return -ENOMEM;
+        return res;
     }
-
-    fb_dev_fs_hook = hook;
 
     res = sysfs_register_mount(
             &fb_dev_fs_mount->fs_mount,
             "fbdev");
     if(res) {
-        fb_dev_fs_hook = NULL;
-        unhook_fb_dev_registry(hook);
+        unregister_fb_dev_owner(&fb_dev_fs_owner);
         fb_dev_fs_mount = NULL;
         vfs_mount_destroy(mnt);
         return res;
