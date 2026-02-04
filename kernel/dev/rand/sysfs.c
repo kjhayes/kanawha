@@ -14,7 +14,6 @@ struct rand_dev_fs_node {
 };
 
 static struct vfs_mount *rand_dev_fs_mount = NULL;
-static struct rand_dev_registry_hook *rand_dev_fs_hook = NULL;
 
 static ssize_t 
 rand_dev_fs_file_read(
@@ -73,15 +72,22 @@ static struct fs_file_ops rand_dev_fs_file_ops =
 };
 FS_FILE_OPS_INIT_UNDEF(rand_dev_fs_file_ops);
 
-static void
-rand_dev_fs_on_register(
+static int
+rand_dev_fs_probe_rand_dev(
+        struct rand_dev *dev)
+{
+    return 0;
+}
+
+static int
+rand_dev_fs_receive_rand_dev(
         struct rand_dev *dev)
 {
     int res;
 
     struct rand_dev_fs_node *rdfs = kmalloc(sizeof(*rdfs), KM_KERNEL);
     if(rdfs == NULL) {
-        return;
+        return -ENOMEM;
     }
     memset(rdfs, 0, sizeof(*rdfs));
 
@@ -97,7 +103,8 @@ rand_dev_fs_on_register(
             &rdfs->vfs_node,
             &inode);
     if(res) {
-        return;
+        kfree(rdfs);
+        return res;
     }
 
     res = vfs_mount_link_root(
@@ -108,16 +115,27 @@ rand_dev_fs_on_register(
         vfs_mount_remove_node(
                 rand_dev_fs_mount,
                 &rdfs->vfs_node);
-        return;
+        kfree(rdfs);
+        return res;
     }
+
+    return 0;
 }
 
-static void
-rand_dev_fs_on_unregister(
+static int
+rand_dev_fs_revoke_rand_dev(
         struct rand_dev *dev)
 {
-    panic("Tried to unregister a rand_dev from sysfs! (UNIMPL)\n");
+    wprintk("Tried to unregister a rand_dev from sysfs! (UNIMPL)\n");
+    return -EUNIMPL;
 }
+
+static struct rand_dev_owner
+rand_dev_fs_owner = {
+    .probe = rand_dev_fs_probe_rand_dev,
+    .receive = rand_dev_fs_receive_rand_dev,
+    .revoke = rand_dev_fs_revoke_rand_dev,
+};
 
 static int
 rand_dev_init_fs_mount(void)
@@ -132,25 +150,17 @@ rand_dev_init_fs_mount(void)
 
     rand_dev_fs_mount = mnt;
 
-    struct rand_dev_registry_hook *hook;
-    hook = hook_rand_dev_registry(
-            rand_dev_fs_on_register,
-            rand_dev_fs_on_unregister);
-    if(hook == NULL) {
-        rand_dev_fs_mount = NULL;
+    res = register_rand_dev_owner(&rand_dev_fs_owner);
+    if(res) {
         vfs_mount_destroy(mnt);
-        return -ENOMEM;
+        return res;
     }
-
-    rand_dev_fs_hook = hook;
 
     res = sysfs_register_mount(
             &rand_dev_fs_mount->fs_mount,
             "randdev");
     if(res) {
-        rand_dev_fs_hook = NULL;
-        unhook_rand_dev_registry(hook);
-        rand_dev_fs_mount = NULL;
+        unregister_rand_dev_owner(&rand_dev_fs_owner);
         vfs_mount_destroy(mnt);
         return -ENOMEM;
     }
