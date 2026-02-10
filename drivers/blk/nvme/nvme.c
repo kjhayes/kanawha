@@ -1,4 +1,6 @@
 
+#include <drivers/blk/nvme/identify.h>
+
 #include <kanawha/init.h>
 #include <kanawha/dev/blk.h>
 #include <drivers/pci/pci.h>
@@ -9,21 +11,27 @@
 #include <kanawha/dma.h>
 #include <kanawha/endian.h>
 #include <kanawha/sleep.h>
+#include <kanawha/dev/blk.h>
 
 struct nvme_sq_entry;
 struct nvme_cq_entry;
 struct nvme_command;
+struct nvme_identify_controller_data;
 
 #define NVME_SQ_ENTRY_ORDER 6
 #define NVME_CQ_ENTRY_ORDER 4
 
 // Command Sets
-#define NVME_OPCODE_DELETE_IO_SUBMISSION_QUEUE (0x0)
-#define NVME_OPCODE_CREATE_IO_SUBMISSION_QUEUE (0x1)
-#define NVME_OPCODE_DELETE_IO_COMPLETION_QUEUE (0x4)
-#define NVME_OPCODE_CREATE_IO_COMPLETION_QUEUE (0x5)
-#define NVME_OPCODE_IDENTIFY  (0x6)
-#define NVME_OPCODE_SELF_TEST (0x14)
+#define NVME_ADMIN_OPCODE_DELETE_IO_SUBMISSION_QUEUE (0x0)
+#define NVME_ADMIN_OPCODE_CREATE_IO_SUBMISSION_QUEUE (0x1)
+#define NVME_ADMIN_OPCODE_DELETE_IO_COMPLETION_QUEUE (0x4)
+#define NVME_ADMIN_OPCODE_CREATE_IO_COMPLETION_QUEUE (0x5)
+#define NVME_ADMIN_OPCODE_IDENTIFY  (0x6)
+#define NVME_ADMIN_OPCODE_SELF_TEST (0x14)
+
+#define NVME_IO_OPCODE_FLUSH (0x0)
+#define NVME_IO_OPCODE_WRITE (0x1)
+#define NVME_IO_OPCODE_READ  (0x2)
 //
 
 // Status Code Types
@@ -32,9 +40,14 @@ struct nvme_command;
 //
 
 // Status Codes
-#define NVME_GENERIC_STATUS_CODE_SUCCESSFULL (0)
+#define NVME_GENERIC_STATUS_CODE_SUCCESS (0)
 #define NVME_GENERIC_STATUS_CODE_INVALID_OPCODE (1)
 //
+
+// Controller Types
+#define NVME_CONTROLLER_TYPE_IO        (1)
+#define NVME_CONTROLLER_TYPE_DISCOVERY (2)
+#define NVME_CONTROLLER_TYPE_ADMIN     (3)
 
 struct nvme_queue
 {
@@ -114,8 +127,35 @@ struct nvme_command
     struct nvme_queue *queue;
 };
 
+#define NVME_NAMESPACE_NAME_BUFLEN 32
+
+struct nvme_namespace
+{
+    struct nvme_dev *nvme;
+
+    uint32_t nsid;
+    struct nvme_identify_namespace_data *identify_data;
+
+    order_t lba_order;
+    size_t num_lba;
+
+    char namebuf[NVME_NAMESPACE_NAME_BUFLEN];
+    struct blk_dev blk_dev;
+
+    size_t metadata_size;
+    dma_addr_t metadata_buffer;
+    void __phys *metadata_phys;
+
+    struct ptree_node nvme_dev_node;
+};
+
+DEFINE_LOCAL_IRQ_LOCK(nvme_dev_global_tree_lock);
+DECLARE_PTREE(nvme_dev_global_tree);
+
 struct nvme_dev {
     struct pci_func *func;
+
+    struct ptree_node global_node;
 
     // Values read from the capabilities register
     order_t page_order;
@@ -127,7 +167,10 @@ struct nvme_dev {
     struct nvme_queue io_queue; // could have more than one of these
                                 // but I'm going to keep it simple for now -KJH
 
-    void *identify_data;
+    struct nvme_identify_controller_data *identify_data;
+
+    irq_lock_t namespace_tree_lock;
+    struct ptree namespace_tree;
 };
 
 __maybe_unused
@@ -511,7 +554,7 @@ nvme_dev_start_self_test(
     int res;
     struct nvme_sq_entry submission = {0};
     struct nvme_cq_entry completion;
-    submission.opcode = NVME_OPCODE_SELF_TEST;
+    submission.opcode = NVME_ADMIN_OPCODE_SELF_TEST;
     submission.nsid = 0xFFFFFFFFUL;
     submission.dword[10] = htole32(do_long_test ? 0x2 : 0x1);
     submission.dword[15] = htole32(0x0);
@@ -540,6 +583,62 @@ nvme_dev_start_self_test(
     return 0;
 }
 
+static int
+nvme_dev_run_identify_command(
+        struct nvme_dev *nvme,
+        uint8_t cns,
+        uint32_t nsid,
+        uint16_t cntid,
+        uint8_t csi,
+        uint16_t cnssid,
+        uint8_t udix,
+        void *dst)
+{
+    int res;
+    dma_addr_t dma_buffer;
+    res = dma_alloc(NVME_IDENTIFY_BUFLEN, 12, DMA_PHYS_64, &dma_buffer);
+    if(res) {
+        wprintk("NVME: Failed to allocate DMA buffer when running IDENTIFY command!\n");
+        return res;
+    }
+
+    struct nvme_sq_entry sq = {0};
+    struct nvme_cq_entry cq;
+    sq.opcode = NVME_ADMIN_OPCODE_IDENTIFY;
+    sq.nsid = htole32(nsid);
+    sq.data_prp[0] = htole64((uintptr_t)dma_phys_addr(dma_buffer));
+    sq.data_prp[1] = 0x0;
+    sq.dword[10] = htole32(((uint32_t)cntid << 16) | ((uint32_t)cns & 0xFF));
+    sq.dword[11] = htole32(((uint32_t)csi << 24) | ((uint32_t)cnssid & 0xFFFF));
+    sq.dword[14] = htole32((uint32_t)csi & 0x3F);
+
+    res = nvme_dev_run_admin_command(
+            nvme,
+            &sq,
+            &cq);
+    if(res) {
+        wprintk("NVME: Failed to run IDENTIFY command!\n");
+        dma_free(dma_buffer, NVME_IDENTIFY_BUFLEN);
+        return res;
+    }
+
+    if(cq.status_code_type != NVME_STATUS_CODE_TYPE_GENERIC) {
+        wprintk("NVME: Received invalid command specific status from IDENTIFY command!\n");
+        dma_free(dma_buffer, NVME_IDENTIFY_BUFLEN);
+        return -EINVAL;
+    }
+    if(cq.status_code != NVME_GENERIC_STATUS_CODE_SUCCESS) {
+        wprintk("NVME: Received error status from IDENTIFY command! (status_code=0x%x)\n",
+                (u_t)cq.status_code);
+        dma_free(dma_buffer, NVME_IDENTIFY_BUFLEN);
+        return -EINVAL;
+    }
+
+    memcpy(dst, dma_virt_addr(dma_buffer), NVME_IDENTIFY_BUFLEN);
+    dma_free(dma_buffer, NVME_IDENTIFY_BUFLEN);
+
+    return 0;
+}
 static int
 nvme_dev_check_capabilities(struct nvme_dev *nvme)
 {
@@ -742,10 +841,10 @@ nvme_dev_init_io_queues(
         void __phys *completion_phys = dma_phys_addr(nvme->io_queue.completion_dma);
         struct nvme_sq_entry submission = {0};
         struct nvme_cq_entry completion;
-        submission.opcode = NVME_OPCODE_CREATE_IO_COMPLETION_QUEUE;
+        submission.opcode = NVME_ADMIN_OPCODE_CREATE_IO_COMPLETION_QUEUE;
         submission.data_prp[0] = htole64((uintptr_t)completion_phys);
         submission.dword[10] = htole32(((completion_len-1) << 16) | (IO_QUEUE_IDX));
-        uint16_t flags = 0x0;
+        uint32_t flags = 0x0;
         flags |= 0b1; // Physically Contiguous (PRP is direct)
         submission.dword[11] = htole32(flags);
 
@@ -758,7 +857,10 @@ nvme_dev_init_io_queues(
             nvme_queue_deinit(nvme, &nvme->io_queue);
             return res;
         }
-        if(completion.status_code != 0) {
+
+        if(!((completion.status_code_type == NVME_STATUS_CODE_TYPE_GENERIC)
+          && (completion.status_code == NVME_GENERIC_STATUS_CODE_SUCCESS)))
+        {
             wprintk("NVME: Failed to create I/O completion queue! (status_type=0x%x) (status=0x%x)\n",
                     (u_t)completion.status_code_type,
                     (u_t)completion.status_code);
@@ -771,10 +873,10 @@ nvme_dev_init_io_queues(
         void __phys *submission_phys = dma_phys_addr(nvme->io_queue.submission_dma);
         struct nvme_sq_entry submission = {0};
         struct nvme_cq_entry completion;
-        submission.opcode = NVME_OPCODE_CREATE_IO_SUBMISSION_QUEUE;
+        submission.opcode = NVME_ADMIN_OPCODE_CREATE_IO_SUBMISSION_QUEUE;
         submission.data_prp[0] = htole64((uintptr_t)submission_phys);
         submission.dword[10] = htole32(((submission_len-1) << 16) | (IO_QUEUE_IDX));
-        uint16_t flags = 0x0;
+        uint32_t flags = 0x0;
         flags |= 0b1; // Physically Contiguous (PRP is direct)
         flags |= (0b10 << 1); // Medium Priority
         flags |= (IO_QUEUE_IDX << 16); // Point this submission queue towards the completion
@@ -795,7 +897,9 @@ nvme_dev_init_io_queues(
             nvme_queue_deinit(nvme, &nvme->io_queue);
             return res;
         }
-        if(completion.status_code != 0) {
+        if(!((completion.status_code_type == NVME_STATUS_CODE_TYPE_GENERIC)
+          && (completion.status_code == NVME_GENERIC_STATUS_CODE_SUCCESS)))
+        {
             wprintk("NVME: Failed to create I/O submission queue! (status_type=0x%x) (status=0x%x)\n",
                     (u_t)completion.status_code_type,
                     (u_t)completion.status_code);
@@ -822,6 +926,433 @@ nvme_dev_deinit_io_queues(
     if(res) {
         return res;
     }
+    return 0;
+}
+
+// Namespace blk_dev
+
+static int
+nvme_namespace_flush(
+        struct nvme_namespace *ns)
+{
+    int res;
+    struct nvme_sq_entry sq = {0};
+    struct nvme_cq_entry cq;
+
+    sq.opcode = NVME_IO_OPCODE_FLUSH;
+    sq.nsid = ns->nsid;
+
+    res = nvme_dev_run_io_command(
+            ns->nvme,
+            &sq,
+            &cq);
+    if(res) {
+        return res;
+    }
+
+    if(!(cq.status_code_type == NVME_STATUS_CODE_TYPE_GENERIC)
+      &&(cq.status_code == NVME_GENERIC_STATUS_CODE_SUCCESS)) {
+        return -EINVAL;
+    }
+
+    return 0;
+}
+
+static int
+nvme_namespace_blk_dev_write(
+        struct blk_dev *dev,
+        void *data,
+        size_t base_sector,
+        size_t num_sectors
+        )
+{
+    int res;
+
+    struct nvme_namespace *ns = container_of(dev, struct nvme_namespace, blk_dev);
+
+    struct nvme_sq_entry sq = {0};
+    struct nvme_cq_entry cq;
+
+    // We can issue a command which targets a maximum of 65536 sectors
+    size_t sectors_at_once = num_sectors;
+    if(sectors_at_once > 0x10000) {
+        sectors_at_once = 0x10000;
+    }
+
+    dma_addr_t buffer;
+    size_t buflen = sectors_at_once << ns->lba_order;
+    res = dma_alloc(ns->lba_order, buflen, DMA_PHYS_64, &buffer);
+    if(res) {
+        wprintk("NVME: Failed to allocate buffer for namespace write!\n");
+        return res;
+    }
+
+    while(num_sectors > 0) {
+        size_t cur_sectors = num_sectors;
+        if(num_sectors > sectors_at_once) {
+            cur_sectors = sectors_at_once;
+        }
+
+        size_t transfer_bytes = cur_sectors << ns->lba_order;
+
+        sq.opcode = NVME_IO_OPCODE_WRITE;
+        sq.nsid = htole32(ns->nsid);
+        sq.metadata_ptr = htole64((uintptr_t)ns->metadata_phys);
+        sq.data_prp[0] = htole64((uintptr_t)dma_phys_addr(buffer));
+        sq.data_prp[1] = 0x0;
+        sq.dword[10] = htole32(base_sector & 0xFFFFFFFFUL);
+        sq.dword[11] = htole32(base_sector >> 32);
+        sq.dword[12] = htole32((uint32_t)((cur_sectors-1) & 0xFFFF));
+
+        memcpy(dma_virt_addr(buffer), data, transfer_bytes);
+
+        res = nvme_dev_run_io_command(ns->nvme, &sq, &cq);
+        if(res) {
+            dma_free(buffer, buflen);
+            wprintk("NVME: Failed to run WRITE I/O command for namespace write! (err=%s)\n",
+                    errnostr(res));
+            return res;
+        }
+
+        if(!((cq.status_code_type == NVME_STATUS_CODE_TYPE_GENERIC)
+          && (cq.status_code == NVME_GENERIC_STATUS_CODE_SUCCESS))) {
+            wprintk("NVME: Failed to write to namespace! (lba=0x%lx, num_lba=0x%lx) (status_code_type=0x%lx, status_code=0x%lx)\n",
+                    (ul_t)base_sector,
+                    (ul_t)cur_sectors,
+                    (ul_t)cq.status_code_type,
+                    (ul_t)cq.status_code
+                    );
+            dma_free(buffer, buflen);
+            return -EINVAL;
+        }
+
+        data += transfer_bytes;
+        base_sector += cur_sectors;
+        num_sectors -= cur_sectors;
+    }
+
+    dma_free(buffer, buflen);
+
+    // Because the blk_dev interface does not expose a
+    // "flush" operation yet, we need to flush after every
+    // single write (effectively we have no hardware block cache)
+    //
+    // TODO: Modify the blk_dev interface to
+    //   (1) allow flushing
+    //   (2) allow writing to a physical page instead of virtual
+    //       (allocating a (probably redundant) DMA buffer every
+    //        write sucks)
+    res = nvme_namespace_flush(ns);
+    if(res) {
+        return res;
+    }
+
+    return 0;
+
+}
+
+static int
+nvme_namespace_blk_dev_read(
+        struct blk_dev *dev,
+        void *data,
+        size_t base_sector,
+        size_t num_sectors
+        )
+{
+    int res;
+
+    struct nvme_namespace *ns = container_of(dev, struct nvme_namespace, blk_dev);
+
+    struct nvme_sq_entry sq = {0};
+    struct nvme_cq_entry cq;
+
+    // We can issue a command which targets a maximum of 65536 sectors
+    size_t sectors_at_once = num_sectors;
+    if(sectors_at_once > 0x10000) {
+        sectors_at_once = 0x10000;
+    }
+
+    dma_addr_t buffer;
+    size_t buflen = sectors_at_once << ns->lba_order;
+    res = dma_alloc(ns->lba_order, buflen, DMA_PHYS_64, &buffer);
+    if(res) {
+        wprintk("NVME: Failed to allocate buffer for namespace read!\n");
+        return res;
+    }
+
+
+    while(num_sectors > 0) {
+        size_t cur_sectors = num_sectors;
+        if(num_sectors > sectors_at_once) {
+            cur_sectors = sectors_at_once;
+        }
+
+        size_t transfer_bytes = cur_sectors << ns->lba_order;
+
+        sq.opcode = NVME_IO_OPCODE_READ;
+        sq.nsid = htole32(ns->nsid);
+        sq.metadata_ptr = htole64((uintptr_t)ns->metadata_phys);
+        sq.data_prp[0] = htole64((uintptr_t)dma_phys_addr(buffer));
+        sq.data_prp[1] = 0x0;
+        sq.dword[10] = htole32(base_sector & 0xFFFFFFFFUL);
+        sq.dword[11] = htole32(base_sector >> 32);
+        sq.dword[12] = htole32((uint32_t)((cur_sectors-1) & 0xFFFF));
+
+        res = nvme_dev_run_io_command(ns->nvme, &sq, &cq);
+        if(res) {
+            dma_free(buffer, buflen);
+            wprintk("NVME: Failed to run READ I/O command for namespace read! (err=%s)\n",
+                    errnostr(res));
+            return res;
+        }
+
+        if(!((cq.status_code_type == NVME_STATUS_CODE_TYPE_GENERIC)
+          && (cq.status_code == NVME_GENERIC_STATUS_CODE_SUCCESS))) {
+            wprintk("NVME: Failed to read from namespace! (lba=0x%lx, num_lba=0x%lx) (status_code_type=0x%lx, status_code=0x%lx)\n",
+                    (ul_t)base_sector,
+                    (ul_t)cur_sectors,
+                    (ul_t)cq.status_code_type,
+                    (ul_t)cq.status_code
+                    );
+            dma_free(buffer, buflen);
+            return -EINVAL;
+        }
+
+        memcpy(data, dma_virt_addr(buffer), transfer_bytes);
+
+        data += transfer_bytes;
+        base_sector += cur_sectors;
+        num_sectors -= cur_sectors;
+    }
+
+    dma_free(buffer, buflen);
+    return 0;
+}
+
+static ssize_t
+nvme_namespace_blk_dev_num_sectors(
+        struct blk_dev *dev)
+{
+    int res;
+    struct nvme_namespace *ns = container_of(dev, struct nvme_namespace, blk_dev);
+    printk("nvme_namespace_blk_dev_num_sectors!\n");
+    return ns->num_lba;
+}
+
+static order_t
+nvme_namespace_blk_dev_sector_order(
+        struct blk_dev *dev)
+{
+    struct nvme_namespace *ns = container_of(dev, struct nvme_namespace, blk_dev);
+    printk("nvme_namespace_blk_dev_sector_order!\n");
+    return ns->lba_order;
+}
+
+static struct blk_driver
+nvme_namespace_blk_driver = {
+    .write = nvme_namespace_blk_dev_write,
+    .read = nvme_namespace_blk_dev_read,
+    .num_sectors = nvme_namespace_blk_dev_num_sectors,
+    .sector_order = nvme_namespace_blk_dev_sector_order,
+};
+
+static int
+nvme_dev_init_namespace(
+        struct nvme_dev *dev,
+        uint32_t nsid)
+{
+    int res;
+
+    struct nvme_namespace *ns;
+    ns = kzmalloc(sizeof(*ns), KM_KERNEL);
+    if(ns == NULL) {
+        return -ENOMEM;
+    }
+
+    ns->nsid = nsid;
+    ns->nvme = dev;
+
+    ns->identify_data = kzmalloc(NVME_IDENTIFY_BUFLEN, KM_KERNEL);
+    if(ns->identify_data == NULL) {
+        kfree(ns);
+        return -ENOMEM;
+    }
+
+    res = nvme_dev_run_identify_command(
+            dev,
+            NVME_CNS_IDENTIFY_NAMESPACE,
+            nsid,
+            0x0,
+            0x0,
+            0x0,
+            0x0,
+            ns->identify_data);
+    if(res) {
+        kfree(ns->identify_data);
+        kfree(ns);
+        return res;
+    }
+
+    // Get the LBA info from the IDENTIFY data page
+    {
+        uint8_t lba_format = ns->identify_data->formatted_lba_size;
+
+        int ext_metadata_lba = lba_format & (1<<4);
+        if(ext_metadata_lba) {
+            kfree(ns->identify_data);
+            kfree(ns);
+            return -EUNIMPL;
+        }
+        lba_format = (lba_format & 0xF) | ((lba_format >> 1) & 0x30);
+        if(ns->identify_data->num_lba_formats < 16) {
+            // We are supposed to ignore the upper two
+            // bits of the 6-bit index
+            lba_format &= 0xF;
+        }
+
+        order_t lba_order = ns->identify_data->lba_formats[lba_format].lba_order;
+        if(lba_order == 0 || lba_order < 9) {
+            // This LBA is not supported?
+            kfree(ns->identify_data);
+            kfree(ns);
+            return -EINVAL;
+        }
+
+        size_t metadata_size = ns->identify_data->lba_formats[lba_format].metadata_size;
+        size_t num_lba = letoh64(ns->identify_data->namespace_size);
+
+        printk("NVME NS(0x%lx): LBA Size = 0x%lx\n",
+                (ul_t)ns->nsid,
+                1UL<<lba_order
+                );
+        printk("NVME NS(0x%lx): Metadata Size = 0x%lx\n",
+                (ul_t)ns->nsid,
+                (ul_t)metadata_size
+                );
+        printk("NVME NS(0x%lx): # LBA = 0x%lx (0x%lx bytes)\n",
+                (ul_t)ns->nsid,
+                (ul_t)num_lba,
+                (ul_t)(num_lba << lba_order)
+                );
+
+        ns->lba_order = lba_order;
+        ns->metadata_size = metadata_size;
+        ns->num_lba = num_lba;
+    }
+
+    snprintk(ns->namebuf, NVME_NAMESPACE_NAME_BUFLEN, "nvme%lun%lu",
+            (ul_t)dev->global_node.key,
+            (ul_t)ns->nsid);
+    ns->namebuf[NVME_NAMESPACE_NAME_BUFLEN-1] = '\0';
+
+    if(ns->metadata_size > 0) {
+        res = dma_alloc(8, ns->metadata_size, DMA_PHYS_64, &ns->metadata_buffer);
+        if(res) {
+            kfree(ns->identify_data);
+            kfree(ns);
+            return res;
+        }
+        ns->metadata_phys = dma_phys_addr(ns->metadata_buffer);
+    } else {
+        ns->metadata_phys = NULL;
+    }
+
+    irq_lock_acquire(&dev->namespace_tree_lock);
+    DEBUG_ASSERT(ptree_get(&dev->namespace_tree, (uintptr_t)ns->nsid) == NULL);
+    ptree_insert(&dev->namespace_tree, &ns->nvme_dev_node, (uintptr_t)ns->nsid);
+    irq_lock_release(&dev->namespace_tree_lock);
+
+    ns->blk_dev.driver = &nvme_namespace_blk_driver;
+    res = register_blk_dev(&ns->blk_dev, ns->namebuf);
+    if(res) {
+        irq_lock_acquire(&dev->namespace_tree_lock);
+        ptree_remove(&dev->namespace_tree, (uintptr_t)ns->nsid);
+        irq_lock_release(&dev->namespace_tree_lock);
+        if(ns->metadata_size > 0) {
+            dma_free(ns->metadata_buffer, ns->metadata_size);
+        }
+        kfree(ns->identify_data);
+        kfree(ns);
+        return res;
+    }
+
+    return 0;
+}
+
+__maybe_unused
+static int
+nvme_dev_deinit_namespace(
+        struct nvme_dev *dev,
+        struct nvme_namespace *ns)
+{
+    irq_lock_acquire(&dev->namespace_tree_lock);
+    ptree_remove(&dev->namespace_tree, (uintptr_t)ns->nsid);
+    irq_lock_release(&dev->namespace_tree_lock);
+    unregister_blk_dev(&ns->blk_dev);
+    if(ns->metadata_size > 0) {
+        dma_free(ns->metadata_buffer, ns->metadata_size);
+    }
+    kfree(ns->identify_data);
+    kfree(ns);
+    return 0;
+}
+
+static int
+nvme_dev_enumerate_namespaces(
+        struct nvme_dev *dev)
+{
+    int res;
+
+    le32_t *buffer = kzmalloc(NVME_IDENTIFY_BUFLEN, KM_KERNEL);
+    if(buffer == NULL) {
+        return -ENOMEM;
+    }
+
+    uint32_t base_nsid = 0;
+
+    while(1) {
+        res = nvme_dev_run_identify_command(
+                dev,
+                0x2, // CNS 0x2 -> List of Active Namespaces
+                base_nsid, // NSID base to use for list
+                0x0,
+                0x0,
+                0x0,
+                0x0,
+                buffer);
+        if(res) {
+            wprintk("NVME: Failed to run IDENTIFY command to get list of active namespace ID's starting at 0x%lx (err=%s)\n",
+                    (ul_t)base_nsid,
+                    errnostr(res));
+            return res;
+        }
+
+        int found_blank = 0;
+        for(size_t i = 0; i < 1024; i++) {
+            uint32_t nsid = letoh32(buffer[i]);
+            if(nsid == 0x0) {
+                found_blank = 1;
+                break;
+            }
+
+            printk("NVME: Found active namespace 0x%lx\n",
+                    (ul_t)nsid);
+
+            res = nvme_dev_init_namespace(dev, nsid);
+            if(res) {
+                wprintk("NVME: Failed to initialize namespace 0x%lx! (err=%s)\n",
+                        (ul_t)nsid,
+                        errnostr(res));
+                continue;
+            }
+        }
+
+        if(found_blank) {
+            break;
+        }
+    }
+
+    kfree(buffer);
     return 0;
 }
 
@@ -859,6 +1390,9 @@ nvme_pci_init_device(
 
     nvme->func = func;
     func->driver_priv_state = nvme;
+
+    irq_lock_init(&nvme->namespace_tree_lock);
+    ptree_init(&nvme->namespace_tree);
 
     pci_func_raw_enable_bus_master(nvme->func);
     pci_func_raw_enable_mmio(nvme->func);
@@ -911,7 +1445,65 @@ nvme_pci_init_device(
                 errnostr(res));
         goto err0;
     }
-    
+
+    // Run the IDENTIFY command to get extra info
+    {
+        nvme->identify_data = kmalloc(NVME_IDENTIFY_BUFLEN, KM_KERNEL);
+        if(nvme->identify_data == NULL) {
+            res = -ENOMEM;
+            goto err0;
+        }
+        res = nvme_dev_run_identify_command(
+                nvme,
+                0x1, // Controller Itself
+                0x0, // NSID Ignored
+                0x0, // CNTID Ignored
+                0x0, // CSI Ignored
+                0x0, // CNSSID Ignored
+                0x0, // UDIX Ignored
+                nvme->identify_data
+                );
+        if(res) {
+            wprintk("NVME: Failed to run controller IDENTIFY command!\n");
+            goto err0;
+        }
+
+        char buffer[64];
+#define CPY_STR_TO_BUFFER(__str) \
+        _Static_assert(sizeof(buffer) > sizeof(__str), ""); \
+        memcpy(buffer, __str, sizeof(__str)); \
+        buffer[sizeof(__str)] = '\0'; \
+        for(long i = sizeof(__str)-1; i >= 0; i--) { \
+            if(buffer[i] == ' ' \
+            || buffer[i] == '\n' \
+            || buffer[i] == '\t' \
+            || buffer[i] == '\r') \
+            {\
+                buffer[i] = '\0';\
+            } \
+            else {\
+                break;\
+            }\
+        }
+
+        printk("NVME: Controller Type \"%s\"\n",
+                nvme->identify_data->controller_type == NVME_CONTROLLER_TYPE_IO ? "I/O"
+              : nvme->identify_data->controller_type == NVME_CONTROLLER_TYPE_DISCOVERY ? "Discovery"
+              : nvme->identify_data->controller_type == NVME_CONTROLLER_TYPE_DISCOVERY ? "Administrative"
+              : "Reserved?");
+
+        CPY_STR_TO_BUFFER(nvme->identify_data->serial_number);
+        printk("NVME: Serial No. \"%s\"\n", buffer);
+        CPY_STR_TO_BUFFER(nvme->identify_data->model_number);
+        printk("NVME: Model No. \"%s\"\n", buffer);
+        CPY_STR_TO_BUFFER(nvme->identify_data->firmware_revision);
+        printk("NVME: Firmware Revision \"%s\"\n", buffer);
+        printk("NVME: Max. Data Transfer Size (0x%lx)\n",
+                1UL<<nvme->identify_data->max_data_transfer_size);
+
+#undef CPY_STR_TO_BUFFER
+    }
+
     // Start a self-test
     res = nvme_dev_start_self_test(nvme, 0);
     if(res) {
@@ -926,10 +1518,24 @@ nvme_pci_init_device(
         goto err0;
     }
 
+    nvme_dev_global_tree_lock_acquire();
+    ptree_insert_any(&nvme_dev_global_tree, &nvme->global_node);
+    nvme_dev_global_tree_lock_release();
+
+    res = nvme_dev_enumerate_namespaces(nvme);
+    if(res) {
+        wprintk("NVME: Failed to enumerate namespaces! (err=%s)\n",
+                errnostr(res));
+        goto err1;
+    }
+
     return 0;
 
-__maybe_unused
 err1:
+    nvme_dev_global_tree_lock_acquire();
+    ptree_remove(&nvme_dev_global_tree, nvme->global_node.key);
+    nvme_dev_global_tree_lock_release();
+
     nvme_dev_deinit_io_queues(nvme);
 
 err0:
@@ -942,6 +1548,9 @@ err0:
         nvme_dev_deinit_admin_queues(nvme);
     }
 
+    if(nvme->identify_data) {
+        kfree(nvme->identify_data);
+    }
     kfree(nvme);
 
     return res;
@@ -958,6 +1567,12 @@ nvme_pci_deinit_device(
     struct nvme_dev *nvme = func->driver_priv_state;
 
     DEBUG_ASSERT(nvme->func == func);
+
+    nvme_dev_global_tree_lock_acquire();
+    ptree_remove(&nvme_dev_global_tree, nvme->global_node.key);
+    nvme_dev_global_tree_lock_release();
+
+    nvme_dev_deinit_io_queues(nvme);
 
     pci_func_raw_disable_bus_master(nvme->func);
     pci_func_raw_disable_mmio(nvme->func);
