@@ -14,6 +14,6 @@ CPP := clang -E -x c $(LLVM_FLAGS)
 LD := ld.lld-17
 AS := clang-17 $(LLVM_FLAGS)
 
-OBJCOPY := llvm-objcopy-17
-OBJDUMP := llvm-objdump-17
+OBJCOPY := llvm-objcopy
+OBJDUMP := llvm-objdump
 

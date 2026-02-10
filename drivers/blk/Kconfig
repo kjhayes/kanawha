@@ -6,6 +6,11 @@ config VIRTIO_BLK
     help
       Include a driver for the virtio-blk device.
 
+config NVME
+    tristate "NVME Driver"
+    default y
+    depends on PCI
+
 config IDE
     tristate "IDE Driver"
     default y
