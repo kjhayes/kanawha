@@ -12,6 +12,7 @@ obj-y += \
 	pic.o \
 	apic_timer.o \
 	ioapic.o \
+	pit/ \
 	vmem.o \
 	thread.o \
 	usermode.o \

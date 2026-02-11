@@ -22,9 +22,13 @@ struct clk_driver {
 DECLARE_OP_LIST_PTRS(CLK_DEV_OP_LIST, struct clk_dev *)
 };
 
-struct clk_dev {
+#define CLK_DEV_FLAG_PERCPU (1ULL<<0)
+struct clk_dev
+{
     struct dev dev;
     struct clk_driver *driver;
+
+    unsigned long flags;
 };
 
 DEFINE_OP_LIST_WRAPPERS(

@@ -11,6 +11,32 @@ typedef size_t khz_t;
 typedef size_t mhz_t;
 typedef size_t ghz_t;
 
+#define FREQ_NOTE_C2  (hz_to_freq(65))
+#define FREQ_NOTE_CS2 (hz_to_freq(69))
+#define FREQ_NOTE_D2  (hz_to_freq(73))
+#define FREQ_NOTE_DS2 (hz_to_freq(78))
+#define FREQ_NOTE_E2  (hz_to_freq(82))
+#define FREQ_NOTE_F2  (hz_to_freq(87))
+#define FREQ_NOTE_FS2 (hz_to_freq(92))
+#define FREQ_NOTE_G2  (hz_to_freq(98))
+#define FREQ_NOTE_GS2 (hz_to_freq(104))
+#define FREQ_NOTE_A2  (hz_to_freq(110))
+#define FREQ_NOTE_AS2 (hz_to_freq(116))
+#define FREQ_NOTE_B2  (hz_to_freq(123))
+#define FREQ_NOTE_C3  (hz_to_freq(131))
+#define FREQ_NOTE_CS3 (hz_to_freq(139))
+#define FREQ_NOTE_D3  (hz_to_freq(147))
+#define FREQ_NOTE_DS3 (hz_to_freq(156))
+#define FREQ_NOTE_E3  (hz_to_freq(165))
+#define FREQ_NOTE_F3  (hz_to_freq(175))
+#define FREQ_NOTE_FS3 (hz_to_freq(185))
+#define FREQ_NOTE_G3  (hz_to_freq(196))
+#define FREQ_NOTE_GS3 (hz_to_freq(208))
+#define FREQ_NOTE_A3  (hz_to_freq(220))
+#define FREQ_NOTE_AS3 (hz_to_freq(233))
+#define FREQ_NOTE_B3  (hz_to_freq(247))
+
+
 #define HZ_PER_KHZ 1000
 #define HZ_PER_MHZ 1000000
 #define HZ_PER_GHZ 1000000000

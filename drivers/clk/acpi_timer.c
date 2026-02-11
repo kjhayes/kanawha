@@ -137,6 +137,7 @@ init_acpi_pm_timer_clk(void)
 #endif
     }
 
+    clk->clk_dev.flags = 0x0;
     res = register_clk_dev(&clk->clk_dev, "acpi-timer");
     if(res) {
         kfree(clk);

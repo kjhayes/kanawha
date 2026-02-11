@@ -31,6 +31,10 @@ menu "Randomness Sources"
 source "drivers/rand/Kconfig"
 endmenu
 
+menu "Sound Devices"
+source "drivers/snd/Kconfig"
+endmenu
+
 menu "PCI Options"
 source "drivers/pci/Kconfig"
 endmenu

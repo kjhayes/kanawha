@@ -1,0 +1,9 @@
+
+config VIRTIO_SND
+    tristate "Virtio Sound Device Driver"
+    default y
+    depends on VIRTIO
+    help
+      Include a driver for the virtio-snd device.
+
+

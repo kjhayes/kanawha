@@ -68,11 +68,24 @@ clk_mono_on_clk_dev_register(
         struct clk_dev *dev
         )
 {
+    // Make sure this isn't a CPU local clk device,
+    // which would make a VERY poor if not incorrect
+    // clock source
+    if(dev->flags & CLK_DEV_FLAG_PERCPU) {
+        return;
+    }
+
     clk_source_lock_acquire();
-    if(clk_source == NULL) {
+    freq_t new_freq = clk_dev_freq(dev);
+    if(clk_source == NULL || (new_freq > clk_dev_freq(clk_source))) {
+        if(clk_source == NULL) {
+            printk("Setting clk_mono to be \"%s\"\n",
+                    clk_dev_get_name(dev));
+        } else {
+            printk("Replacing current clock source with \"%s\" due to higher frequency\n",
+                    clk_dev_get_name(dev));
+        }
         clk_source = dev;
-        printk("Setting clk_mono to be \"%s\"\n",
-                clk_dev_get_name(dev));
     }
     clk_source_lock_release();
 }

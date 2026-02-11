@@ -326,6 +326,7 @@ lapic_clk_freq(struct clk_dev *clk_dev)
 {
     struct lapic_timer *lapic_timer =
         container_of(clk_dev, struct lapic_timer, clk_dev);
+    DEBUG_ASSERT(KERNEL_ADDR(clk_dev));
     return lapic_timer->freq;
 }
 
@@ -333,7 +334,9 @@ static void
 lapic_clk_mono_cycles_xcall(void *__cycles_out)
 {
     struct cpu *gen_cpu = cpu_from_id(current_cpu_id());
+    DEBUG_ASSERT(KERNEL_ADDR(gen_cpu));
     struct x64_cpu *cpu = container_of(gen_cpu, struct x64_cpu, cpu);
+    DEBUG_ASSERT(KERNEL_ADDR(cpu));
 
     struct lapic *lapic = &cpu->apic;
 
@@ -388,6 +391,7 @@ register_cpu_lapic_timer(
     }
 
     timer->clk_dev.driver = &lapic_clk_driver;
+    timer->clk_dev.flags = CLK_DEV_FLAG_PERCPU;
     res = register_clk_dev(&timer->clk_dev, timer->name);
     if(res) {
         eprintk("Failed to register LAPIC %lu as a clk device! (err=%s)\n",

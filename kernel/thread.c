@@ -87,6 +87,10 @@ idle_loop(void) {
     printk("Entered Idle Thread On CPU %d\n", current_cpu_id());
     enable_irqs();
     while(1) {
+        //if(current_cpu_id() == 0 && clk_mono_valid()) {
+        //    printk("clk_mono = 0x%lx\n",
+        //            clk_mono_current());
+        //}
     }
 }
 

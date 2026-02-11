@@ -10,6 +10,7 @@ obj-y += \
 	irq/ \
 	fs/ \
 	kbd/ \
+	snd/ \
 
 obj-y += \
 	pci/ \
