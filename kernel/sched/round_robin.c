@@ -12,6 +12,8 @@
 #include <kanawha/assert.h>
 #include <kanawha/event.h>
 
+#define TIMESLICE_MS 100
+
 struct rr_thread {
     struct thread_state *state;
 
@@ -69,7 +71,7 @@ rr_sched_alloc_instance(
 
     struct periodic_event *event
         = create_periodic_event(
-            msec_to_duration(100),
+            msec_to_duration(TIMESLICE_MS),
             (void*)sched,
             rr_sched_kick);
 
