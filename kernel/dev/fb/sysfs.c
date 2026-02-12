@@ -242,8 +242,8 @@ fb_dev_buffer_fs_node_getattr(
 
     if(info == NULL) {
         spin_unlock(&fbfs->buffer_lock);
-	res = -EINVAL;
-	goto exit;
+	    res = -EINVAL;
+	    goto exit;
     }
 
     res = 0; // Default to zero (success)
@@ -264,6 +264,34 @@ exit:
         fb_dev_put_mode_info(fbfs->dev, mode);
     }
     spin_unlock(&fbfs->buffer_lock);
+
+    return res;
+}
+
+static int
+fb_dev_buffer_fs_node_setattr(
+        struct fs_node *fs_node,
+        int attr,
+        size_t value)
+{
+    int res;
+    struct fb_dev_fs_node *fbfs =
+        container_of(fs_node->backing.priv_state, struct fb_dev_fs_node, buffer_vfs_node);
+    DEBUG_ASSERT(KERNEL_ADDR(fbfs));
+    DEBUG_ASSERT(KERNEL_ADDR(fbfs->dev));
+
+    res = 0; // Default to zero (success)
+    switch(attr) {
+        case FS_NODE_ATTR_DATA_SIZE:
+            // Ignore attempts to change the buffer size...
+            // (This generally leads to better outcomes,
+            //  "opening for truncation" should still work)
+            break;
+        case FS_NODE_ATTR_PAGE_ORDER:
+        default:
+            res = -EINVAL;
+            break;
+    }
 
     return res;
 }
@@ -307,6 +335,7 @@ static struct fs_node_ops fb_dev_buffer_fs_node_ops = {
 
     .flush = fs_node_flush_nop,
     .getattr = fb_dev_buffer_fs_node_getattr,
+    .setattr = fb_dev_buffer_fs_node_setattr,
 };
 FS_NODE_OPS_INIT_UNDEF(fb_dev_buffer_fs_node_ops);
 
