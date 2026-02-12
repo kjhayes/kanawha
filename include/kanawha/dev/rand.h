@@ -6,7 +6,6 @@
 #include <kanawha/ops.h>
 #include <kanawha/stree.h>
 #include <kanawha/ptree.h>
-#include <kanawha/sysfs/vfs.h>
 #include <kanawha/waitqueue.h>
 
 struct rand_dev;

@@ -78,6 +78,9 @@ config LOG_IRQDEV_REGISTRY_ON_LAUNCH
 config LOG_RANDDEV_REGISTRY_ON_LAUNCH
     bool "Log randdev Registry"
     default n
+config LOG_SNDDEV_REGISTRY_ON_LAUNCH
+    bool "Log snddev Registry"
+    default n
 config LOG_ETHDEV_REGISTRY_ON_LAUNCH
     bool "Log ethdev Registry"
     default n

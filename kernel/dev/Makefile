@@ -8,4 +8,5 @@ obj-y += \
 	net/ \
 	term/ \
 	kbd/ \
+	snd/ \
 
