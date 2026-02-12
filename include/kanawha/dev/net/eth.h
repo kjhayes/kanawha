@@ -112,8 +112,8 @@ hook_eth_dev_receive(
         struct eth_dev *dev,
         int(*on_recv)(
             struct eth_dev *dev,
-            void *buffer,
-            size_t buflen,
+            struct eth_frame *frame,
+            size_t framelen,
             unsigned long flags,
             void *priv_state),
         void *priv_state
@@ -131,8 +131,8 @@ unhook_eth_dev_receive(
 int
 eth_dev_internal_on_recv(
         struct eth_dev *dev,
-        void *buffer,
-        size_t buflen,
+        struct eth_frame *frame,
+        size_t framelen,
         unsigned long flags);
 
 #endif

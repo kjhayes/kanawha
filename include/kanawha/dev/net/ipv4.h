@@ -99,8 +99,8 @@ ipv4_packet_drop(
 int
 ipv4_dev_internal_on_recv(
         struct ipv4_dev *dev,
-        void *buffer,
-        size_t buflen,
+        struct ipv4_packet *pkt,
+        size_t pktlen,
         unsigned long flags);
 
 #endif

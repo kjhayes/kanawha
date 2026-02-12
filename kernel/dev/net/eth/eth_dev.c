@@ -9,8 +9,8 @@ struct eth_dev_recv_hook
     void *priv_state;
     int(*on_recv)(
             struct eth_dev *dev,
-            void *buffer,
-            size_t buflen,
+            struct eth_frame *frame,
+            size_t framelen,
             unsigned long flags,
             void *priv_state);
     ilist_node_t list_node;
@@ -47,8 +47,8 @@ hook_eth_dev_receive(
         struct eth_dev *dev,
         int(*on_recv)(
             struct eth_dev *dev,
-            void *buffer,
-            size_t buflen,
+            struct eth_frame *frame,
+            size_t framelen,
             unsigned long flags,
             void *priv_state),
         void *priv_state
@@ -113,8 +113,8 @@ unhook_eth_dev_receive(
 int
 eth_dev_internal_on_recv(
         struct eth_dev *dev,
-        void *buffer,
-        size_t buflen,
+        struct eth_frame *frame,
+        size_t framelen,
         unsigned long flags)
 {
     irq_lock_acquire(&dev->recv_callback_lock);
@@ -128,8 +128,8 @@ eth_dev_internal_on_recv(
 
         int hook_ret = (*hook->on_recv)(
                 dev,
-                buffer,
-                buflen,
+                frame,
+                framelen,
                 flags,
                 hook->priv_state);
 
