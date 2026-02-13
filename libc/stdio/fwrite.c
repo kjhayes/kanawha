@@ -26,11 +26,11 @@ fwrite_unlocked(
                 total_size);
         if(written < 0) {
             stream->error = (int)written;
-            return 0;
+            break;
         }
         if(written == 0) {
             stream->eof = 1;
-            return 0;
+            break;
         }
         total_written += written;
         total_size -= written;
