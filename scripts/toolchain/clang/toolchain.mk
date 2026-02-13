@@ -1,10 +1,10 @@
 
 ifdef CONFIG_X64
-AFLAGS += -mllvm -asm-macro-max-nesting-depth=1024
+KERNEL_AFLAGS += -mllvm -asm-macro-max-nesting-depth=1024
 KERNEL_COMMON_FLAGS += -fno-omit-frame-pointer
 endif
 ifdef CONFIG_RISCV64
-AFLAGS += -mllvm -asm-macro-max-nesting-depth=1024
+KERNEL_AFLAGS += -mllvm -asm-macro-max-nesting-depth=1024
 LLVM_FLAGS += -target riscv64
 endif
 
@@ -24,9 +24,12 @@ KERNEL_AS      := $(AS)
 KERNEL_OBJCOPY := $(OBJCOPY)
 KERNEL_OBJDUMP := $(OBJDUMP)
 
-USER_CC      := $(CC)
-USER_CPP     := $(CPP)
-USER_LD      := $(LD)
-USER_AS      := $(AS)
-USER_OBJCOPY := $(OBJCOPY)
-USER_OBJDUMP := $(OBJDUMP)
+# We do not have a version of clang building
+# for kanawha, so we still use GCC for userspace
+USER_CROSS_COMPILE_PREFIX := x86_64-kanawha-
+USER_CC      := $(USER_CROSS_COMPILE_PREFIX)gcc
+USER_CPP     := $(USER_CROSS_COMPILE_PREFIX)gcc -E
+USER_LD      := $(USER_CROSS_COMPILE_PREFIX)ld
+USER_AS      := $(USER_CROSS_COMPILE_PREFIX)gcc
+USER_OBJCOPY := $(USER_CROSS_COMPILE_PREFIX)objcopy
+USER_OBJDUMP := $(USER_CROSS_COMPILE_PREFIX)objdump

@@ -109,7 +109,7 @@ KERNEL_OBJS := $(foreach DIR,$(KERNEL_SOURCE_DIRS),$(OUTPUT_DIR)/$(call rel-dir,
 KERNEL_MOD_RULES := $(foreach DIR,$(KERNEL_SOURCE_DIRS),$(DIR)/modules)
 
 $(OUTPUT_DIR)/kanawha.o: $(KERNEL_OBJS) $(LDDEPS) | $(OUTPUT_DIR)
-	$(call qinfo, KERNEL_LD, $(call rel-dir, $@, $(OUTPUT_DIR)))
+	$(call qinfo, LD, $(call rel-dir, $@, $(OUTPUT_DIR)))
 	$(Q)$(KERNEL_LD) -T $(LD_SCRIPT) $(KERNEL_OBJS) -o $@ $(LDFLAGS) $(KERNEL_LDFLAGS)
 
 kanawha: $(OUTPUT_DIR)/kanawha.o
@@ -118,17 +118,9 @@ binary: kanawha.bin FORCE
 kanawha.bin: $(OUTPUT_DIR)/kanawha.bin FORCE
 $(OUTPUT_DIR)/kanawha.bin: $(OUTPUT_DIR)/kanawha.o
 	$(call qinfo, OBJCOPY, $(call rel-dir, $@, $(OUTPUT_DIR)))
-	$(Q)$(OBJCOPY) -O binary $< $@
+	$(Q)$(KERNEL_OBJCOPY) -O binary $< $@
 
-UAPI_DIR := $(OUTPUT_DIR)/uapi
-uapi: $(UAPI_DIR)
-$(UAPI_DIR): $(KERNEL_AUTOCONF) $(INCLUDE_DIR)/kanawha/uapi FORCE
-	$(call qinfo, CP, $(call rel-dir, $@/\*, $(OUTPUT_DIR)))
-	$(Q)cp -RT $(INCLUDE_DIR)/kanawha/uapi $@
-	$(call qinfo, CP, $(call rel-dir, $@/kanawha-config.h, $(OUTPUT_DIR)))
-	$(Q)cp $(KERNEL_AUTOCONF) $@/kanawha-config.h
-
-user: $(UAPI_DIR) $(USER_DIR) FORCE
+user: $(USER_DIR) FORCE
 	$(Q)$(MAKE) -C $(USER_DIR) -f $(MK_SCRIPTS_DIR)/user.mk
 
 kernel: kanawha

@@ -5,10 +5,6 @@
 #include <stddef.h>
 #include <string.h>
 
-#ifndef __ELK_LIBC__
-#error "__ELK_LIBC__ is not defined!"
-#endif
-
 static char *__elk_libc_internal__strtok_iter = NULL;
 
 char *strtok(

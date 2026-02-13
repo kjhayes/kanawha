@@ -1,8 +1,7 @@
 #ifndef __ELK_KANAWHA__SYS_WRAPPERS_H__
 #define __ELK_KANAWHA__SYS_WRAPPERS_H__
 
-#undef CONFIG_X64
-#define CONFIG_X64
+#ifndef KANAWHA_BUILDING_KERNEL
 
 #include <stddef.h>
 #include <stdint.h>
@@ -288,5 +287,7 @@ kanawha_sys_sigsend(
         pid_t target,
         int signal,
         unsigned long flags);
+
+#endif /* KANAWHA_BUILDING_KERNEL */
 
 #endif

@@ -3,9 +3,9 @@
 
 #include "elk-libc-internal/size_t.h"
 #include "elk-libc-internal/ssize_t.h"
-#include "elk-libc-internal/off_t.h"
 #include "elk-libc-internal/null.h"
 #include "elk-libc-internal/FILE.h"
+#include "elk-libc-internal/off_t.h"
 
 #include <limits.h>
 

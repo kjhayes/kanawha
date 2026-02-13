@@ -179,7 +179,7 @@ __elk_libc_internal__file_peekstr(
         return NULL;
     }
     if(max+1 > file->peek_buflen) {
-        realloc(file->peek_buffer, max+1);
+        file->peek_buffer = realloc(file->peek_buffer, max+1);
     }
     while(file->peek_datalen < max) {
         size_t room_left = (file->peek_buflen-1) - file->peek_datalen;

@@ -36,7 +36,7 @@ $(CUR_OBJ_OUTPUT_DIR)%/$(goal).o: FORCE
 
 $(goal): $(CUR_OBJ_OUTPUT_DIR)$(goal).o
 $(CUR_OBJ_OUTPUT_DIR)$(goal).o: $(final-obj-in) $(LDDEPS) | $(CUR_OBJ_OUTPUT_DIR)
-	$(call qinfo, KERNEL_LD, $(call rel-dir, $@, $(OUTPUT_DIR)))
+	$(call qinfo, LD, $(call rel-dir, $@, $(OUTPUT_DIR)))
 	$(Q)$(KERNEL_LD) $(LDFLAGS) -r $(final-obj-in) -o $@
 
 else
@@ -52,20 +52,20 @@ $(CUR_OBJ_OUTPUT_DIR): FORCE
 	$(Q)mkdir -p $@
 
 $(CUR_OBJ_OUTPUT_DIR)%.d: $(CUR_SOURCE_DIR)%.c $(CDEPS) $(COMMON_DEPS) | $(CUR_OBJ_OUTPUT_DIR)
-	$(call qinfo, KERNEL_CPP, $(call rel-dir, $@, $(OUTPUT_DIR)))
+	$(call qinfo, CPP, $(call rel-dir, $@, $(OUTPUT_DIR)))
 	$(Q)$(KERNEL_CPP) $(CFLAGS) $(COMMON_FLAGS) -MM -MG $< -MT $(@:%.d=%.o) -o $@
 
 $(CUR_OBJ_OUTPUT_DIR)%.d: $(CUR_SOURCE_DIR)%.S $(CDEPS) $(COMMON_DEPS) | $(CUR_OBJ_OUTPUT_DIR)
-	$(call qinfo, KERNEL_CPP, $(call rel-dir, $@, $(OUTPUT_DIR)))
+	$(call qinfo, CPP, $(call rel-dir, $@, $(OUTPUT_DIR)))
 	$(Q)$(KERNEL_CPP) $(CFLAGS) $(COMMON_FLAGS) -MM -MG $< -MT $(@:%.d=%.o) -o $@
 
 # .c/.S -> .o build rules
 $(CUR_OBJ_OUTPUT_DIR)%.o: $(CUR_SOURCE_DIR)%.c $(CDEPS) $(COMMON_DEPS) | $(CUR_OBJ_OUTPUT_DIR)
-	$(call qinfo, KERNEL_CC, $(call rel-dir, $@, $(OUTPUT_DIR)))
+	$(call qinfo, CC, $(call rel-dir, $@, $(OUTPUT_DIR)))
 	$(Q)$(KERNEL_CC) $(CFLAGS) $(COMMON_FLAGS) -c $< -o $@
 
 $(CUR_OBJ_OUTPUT_DIR)%.o: $(CUR_SOURCE_DIR)%.S $(ADEPS) $(COMMON_DEPS) | $(CUR_OBJ_OUTPUT_DIR)
-	$(call qinfo, KERNEL_AS, $(call rel-dir, $@, $(OUTPUT_DIR)))
+	$(call qinfo, AS, $(call rel-dir, $@, $(OUTPUT_DIR)))
 	$(Q)$(KERNEL_AS) $(AFLAGS) $(COMMON_FLAGS) -c $< -o $@
 
 $(CUR_OBJ_OUTPUT_DIR)%.o: FORCE

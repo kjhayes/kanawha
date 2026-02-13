@@ -4,23 +4,58 @@ default:
 
 -include $(MK_SCRIPTS_DIR)/include.mk
 
+USER_SYSROOT_DIR := $(OUTPUT_DIR)/sysroot
+USER_SYSROOT_INCLUDE_DIR := $(USER_SYSROOT_DIR)/include
+USER_SYSROOT_LIB_DIR := $(USER_SYSROOT_DIR)/lib
+USER_SYSROOT_BIN_DIR := $(USER_SYSROOT_DIR)/bin
+
+$(shell mkdir -p $(USER_SYSROOT_DIR))
+$(shell mkdir -p $(USER_SYSROOT_INCLUDE_DIR))
+$(shell mkdir -p $(USER_SYSROOT_LIB_DIR))
+$(shell mkdir -p $(USER_SYSROOT_BIN_DIR))
+
+UAPI_SYSROOT_DIR := $(USER_SYSROOT_INCLUDE_DIR)/kanawha
+$(shell mkdir -p $(UAPI_SYSROOT_DIR))
+
+uapi: $(UAPI_SYSROOT_DIR)
+$(UAPI_SYSROOT_DIR): $(KERNEL_AUTOCONF) $(INCLUDE_DIR)/kanawha/uapi
+	$(call qinfo, CP, $(call rel-dir, $@/\*, $(OUTPUT_DIR)))
+	$(Q)cp -RT $(INCLUDE_DIR)/kanawha/uapi $@
+	$(call qinfo, CP, $(call rel-dir, $@/kanawha-config.h, $(OUTPUT_DIR)))
+	$(Q)cp $(KERNEL_AUTOCONF) $@/kanawha-config.h
+
 USER_COMMON_FLAGS += \
-	-I$(UAPI_DIR) \
-	-nostdlib \
+	-I$(USER_SYSROOT_INCLUDE_DIR) \
 
 CUR_SOURCE_DIR := $(shell pwd)/
 
 -include $(CUR_SOURCE_DIR)/Makefile
 
 define build-lib =
+
 userlibs: $(OUTPUT_DIR)/$(1)
-$(OUTPUT_DIR)/$(1): $(AUTOCONF) FORCE
+$(OUTPUT_DIR)/$(1): FORCE
 	$(Q)$(MAKE) -C $(CUR_SOURCE_DIR)/$(1) -f $(MK_SCRIPTS_DIR)/userbuild.mk obj
+
+endef
+
+define include-lib =
+userincludes: $$(OUTPUT_DIR)/$(1).api
+$$(OUTPUT_DIR)/$(1).api: $$(CUR_SOURCE_DIR)/$(1)/include
+	$$(call qinfo, CP, $$(call rel-dir, $$(USER_SYSROOT_INCLUDE_DIR)/$(1), $$(OUTPUT_DIR)))
+	$$(Q)cp -RT $$(CUR_SOURCE_DIR)/$(1)/include $$(USER_SYSROOT_INCLUDE_DIR)
+	$$(call qinfo, TOUCH, $$(call rel-dir, $$@, $$(OUTPUT_DIR)))
+	$$(Q)touch $$@
 endef
 
 $(foreach lib,$(libs),$(eval $(call build-lib,$(lib))))
+$(foreach lib,$(libs),$(eval $(call include-lib,$(lib))))
 
-userlibs: FORCE
+userincludes:
+	@
+
+userlibs: uapi userincludes
+	@
 
 default: userlibs FORCE
 
