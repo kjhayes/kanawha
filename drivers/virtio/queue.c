@@ -133,16 +133,13 @@ virtio_queue_free_desc_chain(
 {
     int res;
 
-    struct virtio_queue_desc *desc_table =
-        (struct virtio_queue_desc*)queue->desc_table;
-
     uint16_t index = root_desc;
     int has_next;
 
     do {
 
         has_next = 0;
-        struct virtio_queue_desc *desc = &(desc_table[index]);
+        struct virtio_queue_desc *desc = &(queue->desc_table[index]);
         if(desc->flags & VIRTQ_DESC_F_NEXT) {
             has_next = 1;
         }
@@ -180,10 +177,7 @@ virtio_queue_alloc_desc(
 
     *index_out = bit;
 
-    struct virtio_queue_desc *desc_table =
-        (struct virtio_queue_desc*)queue->desc_table;
-
-    struct virtio_queue_desc *desc = &(desc_table[bit]);
+    struct virtio_queue_desc *desc = &(queue->desc_table[bit]);
 
     desc->addr = 0;
     desc->len = 0;
@@ -209,12 +203,9 @@ virtio_queue_alloc_chained_desc(
     }
 
     uint16_t desc_index = *index_out;
-
-    struct virtio_queue_desc *desc_table =
-        (struct virtio_queue_desc*)queue->desc_table;
    
-    struct virtio_queue_desc *prev_desc = &(desc_table[prev_index]);
-    struct virtio_queue_desc *desc = &(desc_table[desc_index]);
+    struct virtio_queue_desc *prev_desc = &(queue->desc_table[prev_index]);
+    struct virtio_queue_desc *desc = &(queue->desc_table[desc_index]);
 
     prev_desc->next = desc_index;
     prev_desc->flags |= VIRTQ_DESC_F_NEXT;
@@ -230,9 +221,7 @@ virtio_queue_point_desc(
         uint32_t size,
         int output)
 {
-    struct virtio_queue_desc *desc_table =
-        (struct virtio_queue_desc*)queue->desc_table;
-    struct virtio_queue_desc *desc = &(desc_table[desc_index]);
+    struct virtio_queue_desc *desc = &(queue->desc_table[desc_index]);
 
     dprintk("virtio_queue_point_desc %p, size=0x%lx\n",
             buffer, size);
@@ -256,8 +245,7 @@ virtio_queue_try_push_avail_ring(
 {
     int res;
 
-    struct virtio_queue_avail *avail_ring =
-        (struct virtio_queue_avail*)queue->avail_ring;
+    struct virtio_queue_avail *avail_ring = queue->avail_ring;
 
     spin_lock(&queue->avail_lock);
 
@@ -373,8 +361,7 @@ virtio_queue_handle_used_notification(
 
     int irq_flags = spin_lock_irq_save(&queue->used_lock);
 
-    struct virtio_queue_used *used_ring =
-        (struct virtio_queue_used*)queue->used_ring;
+    struct virtio_queue_used *used_ring = queue->used_ring;
 
     size_t last_idx = queue->last_used_idx;
     size_t idx = used_ring->idx;

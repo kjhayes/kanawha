@@ -9,6 +9,7 @@
 #include <kanawha/timer.h>
 #include <kanawha/timer_dev.h>
 #include <kanawha/stddef.h>
+#include <kanawha/init.h>
 
 static size_t num_enabled_periodic_events = 0;
 static DECLARE_ILIST(periodic_event_list);

@@ -92,16 +92,16 @@ struct virtio_queue
     size_t dma_size;
 
     spinlock_t desc_lock;
-    void *desc_table;
+    struct virtio_queue_desc *desc_table;
     unsigned long *desc_bitmap;
 
     spinlock_t avail_lock;
-    void *avail_ring;
+    struct virtio_queue_avail *avail_ring;
     unsigned long *avail_bitmap;
 
     spinlock_t used_lock;
     size_t last_used_idx;
-    void *used_ring;
+    struct virtio_queue_used *used_ring;
 
     spinlock_t req_lock;
     ilist_t unlaunched_reqs;

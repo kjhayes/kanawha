@@ -10,4 +10,6 @@
 #define VIRTIO_STATUS_DEVICE_NEEDS_RESET (1ULL<<6)
 #define VIRTIO_STATUS_FAILED             (1ULL<<7)
 
+#define VIRTIO_F_NOTIFICATION_DATA (38)
+
 #endif

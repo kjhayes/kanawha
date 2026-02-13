@@ -12,6 +12,8 @@
 #include <drivers/virtio/request.h>
 #include <kanawha/endian.h>
 
+#define VIRTIO_SND_STREAM_BUFLEN (0x1000)
+
 DEFINE_LOCAL_IRQ_LOCK(virtio_snd_tree_lock);
 static DECLARE_PTREE(virtio_snd_tree);
 
@@ -119,7 +121,7 @@ enum {
     VIRTIO_SND_PCM_FMT_IEC958_SUBFRAME /* 32 / 32 bits */
 };
 
-const char *
+static inline const char *
 virtio_snd_pcm_format_to_string(
         int format)
 {
@@ -153,6 +155,52 @@ virtio_snd_pcm_format_to_string(
     }
 }
 
+static inline int
+virtio_snd_pcm_format_sample_size(
+        int format)
+{
+    switch(format) {
+        case VIRTIO_SND_PCM_FMT_S8:
+            return 1;
+        case VIRTIO_SND_PCM_FMT_U8:
+            return 1;
+        case VIRTIO_SND_PCM_FMT_S16:
+            return 2;
+        case VIRTIO_SND_PCM_FMT_U16:
+            return 2;
+        case VIRTIO_SND_PCM_FMT_S32:
+            return 4;
+        case VIRTIO_SND_PCM_FMT_U32:
+            return 4;
+        case VIRTIO_SND_PCM_FMT_FLOAT:
+            return 4;
+        case VIRTIO_SND_PCM_FMT_FLOAT64:
+            return 8;
+
+        case VIRTIO_SND_PCM_FMT_IMA_ADPCM:
+        case VIRTIO_SND_PCM_FMT_MU_LAW:
+        case VIRTIO_SND_PCM_FMT_A_LAW:
+        case VIRTIO_SND_PCM_FMT_S18_3:
+        case VIRTIO_SND_PCM_FMT_U18_3:
+        case VIRTIO_SND_PCM_FMT_S20_3:
+        case VIRTIO_SND_PCM_FMT_U20_3:
+        case VIRTIO_SND_PCM_FMT_S24_3:
+        case VIRTIO_SND_PCM_FMT_U24_3:
+        case VIRTIO_SND_PCM_FMT_S20:
+        case VIRTIO_SND_PCM_FMT_U20:
+        case VIRTIO_SND_PCM_FMT_S24:
+        case VIRTIO_SND_PCM_FMT_U24:
+        case VIRTIO_SND_PCM_FMT_DSD_U8:
+        case VIRTIO_SND_PCM_FMT_DSD_U16:
+        case VIRTIO_SND_PCM_FMT_DSD_U32:
+        case VIRTIO_SND_PCM_FMT_IEC958_SUBFRAME:
+            return -EUNIMPL;
+
+        default:
+            return -EINVAL;
+    }
+}
+
 /* supported PCM frame rates */
 enum {
     VIRTIO_SND_PCM_RATE_5512 = 0,
@@ -171,7 +219,7 @@ enum {
     VIRTIO_SND_PCM_RATE_384000
 };
 
-hz_t
+static inline hz_t
 virtio_snd_pcm_rate_to_hz(
         unsigned int rate)
 {
@@ -263,9 +311,15 @@ struct virtio_snd_stream {
     size_t num_rates;
     size_t num_modes;
 
+    irq_lock_t buffer_lock;
+    uint32_t buffer_bytes;
+    uint32_t content_bytes;
+    void *buffer;
+
     struct irq_lock mode_lock;
     size_t cur_mode;
     int started;
+    int sample_size;
 
 #define VIRTIO_SND_STREAM_NAME_BUFLEN 32
     char namebuf[VIRTIO_SND_STREAM_NAME_BUFLEN];
@@ -476,8 +530,6 @@ virtio_snd_stream_set_mode(
         return res;
     }
 
-    stream->cur_mode = mode;
-
     unsigned int pcm_format, pcm_rate;
     virtio_snd_stream_mode_pcm_info(stream, mode, &pcm_format, &pcm_rate);
 
@@ -495,8 +547,8 @@ virtio_snd_stream_set_mode(
         .format = pcm_format,
         .channels = 1,
         .features = 0,
-        .buffer_bytes = htole32(0x1000),
-        .period_bytes = htole32(0x10),
+        .buffer_bytes = htole32(stream->buffer_bytes),
+        .period_bytes = htole32(stream->buffer_bytes),
     };
     struct virtio_snd_hdr resp;
 
@@ -518,6 +570,9 @@ virtio_snd_stream_set_mode(
         irq_lock_release(&stream->mode_lock);
         return -EFAULT;
     }
+
+    stream->cur_mode = mode;
+    stream->sample_size = virtio_snd_pcm_format_sample_size(pcm_format);
 
     res = virtio_snd_stream_start_lockless(stream);
     if(res) {
@@ -663,19 +718,13 @@ virtio_snd_dev_put_mode_info(
     return 0;
 }
 
-static ssize_t
-virtio_snd_dev_write_samples(
-        struct snd_dev *snd,
-        void *buffer,
-        size_t buflen,
-        unsigned long flags)
+static int
+virtio_snd_stream_flush_full_buffer_lockless(
+        struct virtio_snd_stream *stream)
 {
     int res;
 
-    struct virtio_snd_stream *stream =
-        container_of(snd, struct virtio_snd_stream, snd_dev);
-
-    printk("virtio_snd_dev_write_samples\n");
+    DEBUG_ASSERT(stream->buffer_bytes == stream->content_bytes);
 
     struct virtio_snd_pcm_xfer req = {
         .stream_id = htole32(stream->index),
@@ -684,11 +733,11 @@ virtio_snd_dev_write_samples(
 
     void *input_datas[] = {
         &req,
-        buffer,
+        stream->buffer,
     };
     size_t input_sizes[] = {
         sizeof(req),
-        buflen,
+        stream->buffer_bytes,
     };
     void *output_datas[] = {
         &resp,
@@ -714,7 +763,67 @@ virtio_snd_dev_write_samples(
         return -EFAULT;
     }
 
-    return buflen;
+    stream->content_bytes = 0;
+
+    return 0;
+}
+
+static ssize_t
+virtio_snd_dev_write_samples(
+        struct snd_dev *snd,
+        void *buffer,
+        size_t buflen,
+        unsigned long flags)
+{
+    int res;
+
+    struct virtio_snd_stream *stream =
+        container_of(snd, struct virtio_snd_stream, snd_dev);
+
+    printk("virtio_snd_dev_write_samples (buflen=0x%lx)\n", buflen);
+
+    if(stream->sample_size <= 0 || buflen < stream->sample_size) {
+        return -EINVAL;
+    }
+    // Round down to a multiple of the sample size
+    buflen -= (buflen % stream->sample_size);
+
+    irq_lock_acquire(&stream->buffer_lock);
+
+    size_t room_left = stream->buffer_bytes - stream->content_bytes;
+    if(room_left == 0) {
+        // The buffer needs to be written
+        if(flags & SND_DEV_WRITE_SAMPLES_NON_BLOCKING) {
+            return -EWOULDBLOCK;
+        }
+        res = virtio_snd_stream_flush_full_buffer_lockless(stream);
+        if(res) {
+            irq_lock_release(&stream->buffer_lock);
+        }
+        room_left = stream->buffer_bytes - stream->content_bytes;
+    }
+
+    size_t to_write = room_left < buflen ? room_left : buflen;
+    memcpy(stream->buffer + stream->content_bytes,
+           buffer,
+           to_write);
+    stream->content_bytes += to_write;
+
+    if(stream->content_bytes == stream->buffer_bytes) {
+        if(!(flags & SND_DEV_WRITE_SAMPLES_NON_BLOCKING)) {
+            virtio_snd_stream_flush_full_buffer_lockless(stream);
+        } else {
+            // TODO: The might just leave bytes buffered here forever
+            // towards the end of a stream,
+            // the buffer is only about a page (a couple of microseconds of
+            // sound data at the most) so that's not a huge deal,
+            // but it is worth looking into.
+        }
+    }
+
+    irq_lock_release(&stream->buffer_lock);
+
+    return to_write;
 }
 
 static struct snd_driver
@@ -740,6 +849,14 @@ virtio_snd_init_stream(
     }
     stream->index = stream_id;
     stream->snd = snd;
+
+    irq_lock_init(&stream->buffer_lock);
+    stream->buffer_bytes = VIRTIO_SND_STREAM_BUFLEN;
+    stream->buffer = kzmalloc(stream->buffer_bytes, KM_KERNEL);
+    if(stream->buffer == NULL) {
+        kfree(stream);
+        return -ENOMEM;
+    }
 
     irq_lock_init(&stream->mode_lock);
     stream->cur_mode = -1;
@@ -783,12 +900,14 @@ virtio_snd_init_stream(
                 output_datas,
                 output_sizes);
         if(res) {
+            kfree(stream->buffer);
             kfree(stream);
             wprintk("virtio-snd: Failed to query stream %d's information!\n",
                     (int)stream_id);
             return res;
         }
         if(letoh32(hdr.code) != VIRTIO_SND_S_OK) {
+            kfree(stream->buffer);
             kfree(stream);
             wprintk("virtio-snd: Failed to query stream %d's information!\n",
                     (int)stream_id);
@@ -838,6 +957,7 @@ virtio_snd_init_stream(
     {
         res = virtio_snd_stream_prepare_lockless(stream);
         if(res) {
+            kfree(stream->buffer);
             kfree(stream);
             return res;
         }
@@ -848,6 +968,7 @@ virtio_snd_init_stream(
         }
         res = virtio_snd_stream_set_mode(stream, starting_mode);
         if(res) {
+            kfree(stream->buffer);
             kfree(stream);
             return res;
         }
@@ -886,6 +1007,7 @@ virtio_snd_deinit_stream(
 
     DEBUG_ASSERT(stream->index == stream_id);
 
+    kfree(stream->buffer);
     kfree(stream);
 
     return 0;

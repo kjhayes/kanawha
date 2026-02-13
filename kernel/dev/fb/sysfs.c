@@ -292,7 +292,6 @@ fb_dev_buffer_fs_node_setattr(
             res = -EINVAL;
             break;
     }
-
     return res;
 }
 
