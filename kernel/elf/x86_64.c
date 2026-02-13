@@ -80,7 +80,7 @@ x86_64_elf64_apply(
             break;
     }
 
-    Elf64_Addr symbol_value;
+    Elf64_Addr symbol_value = 0;
     //uint64_t symbol_size;
     if(need_symbol) {
         Elf64_Sym *symbol = NULL;

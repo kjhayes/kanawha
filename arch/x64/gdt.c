@@ -15,6 +15,11 @@
 extern void x64_syscall_call_gate_entry(void);
 #endif
 
+// Some versions of GCC incorrectly
+// mark this structure definition as invalid...
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmissing-braces"
+
 __attribute__((used))
 struct gdt64 x64_bsp_gdt64 = {
     .null = { 0 }, // Null
@@ -113,6 +118,8 @@ struct gdt64 x64_bsp_gdt64 = {
     },
 #endif
 };
+
+#pragma GCC diagnostic pop
 
 __attribute__((used))
 uint8_t x64_bsp_tss_data[X64_TSS_SEGMENT_SIZE] = { 0 };

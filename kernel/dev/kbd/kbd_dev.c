@@ -63,11 +63,11 @@ kbd_driver_enqueue_event(
 
         // We filled up the buffer, so we are going to dequeue
         // and lose the oldest key event (updates the bitmap)
-        struct kbd_event lost;
+        struct kbd_event lost = { 0 };
         kbd_driver_dequeue_event(kbd, &lost);
 
         wprintk("kbd(%s) lost key event: (%s, %s)\n",
-		kbd_dev_get_name(kbd),
+                kbd_dev_get_name(kbd),
                 kbd_key_to_string(lost.key),
                 kbd_motion_to_string(lost.motion));
     }

@@ -501,8 +501,9 @@ static int
 buddy_page_allocator_alloc(void *state, order_t order, void __phys * *addr)
 {
     struct buddy_region *region = (struct buddy_region*)state;
-    void *vaddr;
+    void *vaddr = NULL;
     int res = buddy_region_alloc(region, order, &vaddr);
+    DEBUG_ASSERT(KERNEL_ADDR(vaddr));
     *addr = __pa((void *)vaddr);
     return res;
 }

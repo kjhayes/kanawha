@@ -265,6 +265,10 @@ run_irq_actions(struct irq_desc *desc, struct excp_state *excp_state)
                     res = IRQ_UNHANDLED;
                 }
                 break;
+            default:
+                eprintk("IRQ handler returned invalid value!\n");
+                res = IRQ_UNHANDLED;
+                break;
         }
         
         if(res < 0) {
@@ -555,9 +559,6 @@ describe_irq_desc(
 int
 dump_irq_descs(printk_f *printer)
 {
-    char dev_name_buf[64];
-    dev_name_buf[63] = '\0';
-
     int irq_flags = disable_save_irqs();
 
     rlock_read_lock(&irq_domain_map_lock);
@@ -582,9 +583,6 @@ irq_domain_dump(
         printk_f *printer,
         struct irq_domain *domain)
 {
-    char dev_name_buf[64];
-    dev_name_buf[63] = '\0';
-
     int irq_flags = disable_save_irqs();
 
     (*printer)("Domain: [0x%x - 0x%x] {\n",

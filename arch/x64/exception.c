@@ -281,7 +281,7 @@ void
 arch_excp_dump_state(struct excp_state *gen_state, printk_f *printer) {
     struct x64_excp_state *state = (struct x64_excp_state*)gen_state;
 
-    int errcode_valid;
+    int errcode_valid = 0;
     switch(state->vector) {
 #define UNHANDLED_EXCEPTION_CASE(VECTOR,MNEMONIC,DESC_STR,ERRCODE_VALID,TYPE)\
         case VECTOR:\

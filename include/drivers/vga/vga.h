@@ -294,38 +294,44 @@ struct vga_dev
 DECLARE_REGISTRY(vga_dev);
 
 #define VGA_READ_REGISTER_ATTRIBUTES_R \
-    __attribute__((always_inline))
+    __maybe_unused \
+    __attribute__((always_inline)) inline
 
 #define VGA_READ_REGISTER_ATTRIBUTES_W \
+    __maybe_unused \
     __attribute__((error("Cannot read a register which is write-only!")))\
     __attribute__((noinline))
 
 #define VGA_READ_REGISTER_ATTRIBUTES_RW \
-    __attribute__((always_inline))
+    __maybe_unused \
+    __attribute__((always_inline)) inline
 
 #define VGA_WRITE_REGISTER_ATTRIBUTES_R \
+    __maybe_unused \
     __attribute__((error("Cannot write a register which is read-only!")))\
     __attribute__((noinline))
 
 #define VGA_WRITE_REGISTER_ATTRIBUTES_W \
-    __attribute__((always_inline))
+    __maybe_unused \
+    __attribute__((always_inline)) inline
 
 #define VGA_WRITE_REGISTER_ATTRIBUTES_RW \
-    __attribute__((always_inline))
+    __maybe_unused \
+    __attribute__((always_inline)) inline
 
 #define DEFINE_VGA_READ_ALT_MONO_PORT_REGISTER(__REG, __PORT_MONO, __PORT_COLOR, __ACC)\
-static inline uint8_t vga_read_InputOutputAddressSelect_field(struct vga_dev *); \
+static uint8_t vga_read_InputOutputAddressSelect_field(struct vga_dev *); \
 VGA_READ_REGISTER_ATTRIBUTES_ ## __ACC \
-static inline uint8_t \
+static uint8_t \
 vga_read_ ## __REG ## _register(struct vga_dev *dev) {\
     int color = vga_read_field(dev, InputOutputAddressSelect);\
     return color ? inb(__PORT_COLOR) : inb(__PORT_MONO);\
 }
 
 #define DEFINE_VGA_WRITE_ALT_MONO_PORT_REGISTER(__REG, __PORT_MONO, __PORT_COLOR, __ACC)\
-static inline uint8_t vga_read_InputOutputAddressSelect_field(struct vga_dev *); \
+static uint8_t vga_read_InputOutputAddressSelect_field(struct vga_dev *); \
 VGA_WRITE_REGISTER_ATTRIBUTES_ ## __ACC \
-static inline void \
+static void \
 vga_write_ ## __REG ## _register(struct vga_dev *dev, uint8_t value) {\
     int color = vga_read_field(dev, InputOutputAddressSelect);\
     if(color) {\
@@ -342,15 +348,15 @@ vga_write_ ## __REG ## _register(struct vga_dev *dev, uint8_t value) {\
 VGA_PORT_ALT_MONO_REGISTER_XLIST(DEFINE_VGA_ALT_MONO_PORT_REGISTER_ACCESSORS)
 
 #define DEFINE_VGA_READ_SPLIT_REGISTER(__REG, __READ_REG)\
-static inline uint8_t vga_read_ ## __READ_REG ## _register(struct vga_dev *); \
-static inline uint8_t \
+static uint8_t vga_read_ ## __READ_REG ## _register(struct vga_dev *); \
+static uint8_t \
 vga_read_ ## __REG ## _register(struct vga_dev *dev) {\
     return vga_read_register(dev, __READ_REG);\
 }
 
 #define DEFINE_VGA_WRITE_SPLIT_REGISTER(__REG, __WRITE_REG)\
-static inline void vga_write_ ## __WRITE_REG ## _register(struct vga_dev *, uint8_t); \
-static inline void \
+static void vga_write_ ## __WRITE_REG ## _register(struct vga_dev *, uint8_t); \
+static void \
 vga_write_ ## __REG ## _register(struct vga_dev *dev, uint8_t value) {\
     vga_write_register(dev, __WRITE_REG, value);\
 }
@@ -363,14 +369,14 @@ VGA_SPLIT_REGISTER_XLIST(DEFINE_VGA_SPLIT_REGISTER_ACCESSORS)
 
 #define DEFINE_VGA_READ_PORT_REGISTER(__REG, __PORT, __ACC)\
 VGA_READ_REGISTER_ATTRIBUTES_ ## __ACC \
-static inline uint8_t \
+static uint8_t \
 vga_read_ ## __REG ## _register(struct vga_dev *dev) {\
     return inb(__PORT);\
 }
 
 #define DEFINE_VGA_WRITE_PORT_REGISTER(__REG, __PORT, __ACC)\
 VGA_WRITE_REGISTER_ATTRIBUTES_ ## __ACC \
-static inline void \
+static void \
 vga_write_ ## __REG ## _register(struct vga_dev *dev, uint8_t value) {\
     outb(__PORT, value);\
 }
@@ -383,7 +389,7 @@ VGA_PORT_REGISTER_XLIST(DEFINE_VGA_PORT_REGISTER_ACCESSORS)
 
 #define DEFINE_VGA_READ_INDEXED_REGISTER(__REG, __REG_SET, __INDEX, __ACC)\
 VGA_READ_REGISTER_ATTRIBUTES_ ## __ACC \
-static inline uint8_t \
+static uint8_t \
 vga_read_ ## __REG ## _register(struct vga_dev *dev) {\
     return vga_read_ ## __REG_SET ## _register_set(dev, (__INDEX));\
 }
@@ -391,7 +397,7 @@ vga_read_ ## __REG ## _register(struct vga_dev *dev) {\
 
 #define DEFINE_VGA_WRITE_INDEXED_REGISTER(__REG, __REG_SET, __INDEX, __ACC)\
 VGA_WRITE_REGISTER_ATTRIBUTES_ ## __ACC \
-static inline void \
+static void \
 vga_write_ ## __REG ## _register(struct vga_dev *dev, uint8_t value) {\
     vga_write_ ## __REG_SET ## _register_set(dev, (__INDEX), value);\
     DEBUG_ASSERT_MSG(vga_read_register(dev, __REG) == value, "Found sticky bit in VGA register " #__REG "\n");\
@@ -404,7 +410,7 @@ vga_write_ ## __REG ## _register(struct vga_dev *dev, uint8_t value) {\
 VGA_INDEXED_REGISTER_XLIST(DEFINE_VGA_INDEXED_REGISTER_ACCESSORS)
 
 #define DEFINE_VGA_READ_FIELD(__FIELD, __REG, __MSB, __LSB)\
-static inline uint8_t \
+static __maybe_unused uint8_t \
 vga_read_ ## __FIELD ## _field(struct vga_dev *dev) {\
     int shift_amt = __LSB;\
     int bitcount = (__MSB - __LSB) + 1;\
@@ -414,7 +420,7 @@ vga_read_ ## __FIELD ## _field(struct vga_dev *dev) {\
 }
 
 #define DEFINE_VGA_WRITE_FIELD(__FIELD, __REG, __MSB, __LSB)\
-static inline void \
+static __maybe_unused void \
 vga_write_ ## __FIELD ## _field(struct vga_dev *dev, uint8_t value) {\
     int shift_amt = __LSB;\
     int bitcount = (__MSB - __LSB) + 1;\
@@ -432,7 +438,7 @@ vga_write_ ## __FIELD ## _field(struct vga_dev *dev, uint8_t value) {\
 VGA_FIELD_XLIST(DEFINE_VGA_FIELD_ACCESSORS)
 
 #define DEFINE_VGA_READ_DOUBLE_SPLIT_FIELD(__FIELD, __REG1, __MSB1, __LSB1, __REG0, __MSB0, __LSB0)\
-static inline uint16_t \
+static __maybe_unused uint16_t \
 vga_read_ ## __FIELD ## _field(struct vga_dev *dev) {\
     uint16_t value;\
     {\
@@ -447,14 +453,14 @@ vga_read_ ## __FIELD ## _field(struct vga_dev *dev) {\
         int bitcount = (__MSB0 - __LSB0) + 1;\
         int bitmask = (1ULL<<bitcount)-1;\
         uint8_t reg_value = vga_read_register(dev, __REG0);\
-        value << bitcount;\
+        value <<= bitcount;\
         value |= (reg_value>>shift_amt) & bitmask;\
     }\
     return value;\
 }
 
 #define DEFINE_VGA_WRITE_DOUBLE_SPLIT_FIELD(__FIELD, __REG1, __MSB1, __LSB1, __REG0, __MSB0, __LSB0)\
-static inline void \
+static __maybe_unused void \
 vga_write_ ## __FIELD ## _field(struct vga_dev *dev, uint16_t value) {\
      {\
         int shift_amt = __LSB0;\
@@ -464,7 +470,7 @@ vga_write_ ## __FIELD ## _field(struct vga_dev *dev, uint16_t value) {\
         reg_value &= ~(bitmask << shift_amt);\
         reg_value |= ((value & bitmask) << shift_amt);\
         vga_write_register(dev, __REG0, reg_value);\
-        value >> bitcount;\
+        value >>= bitcount;\
     }\
     {\
         int shift_amt = __LSB1;\
@@ -484,7 +490,7 @@ vga_write_ ## __FIELD ## _field(struct vga_dev *dev, uint16_t value) {\
 VGA_DOUBLE_SPLIT_FIELD_XLIST(DEFINE_VGA_DOUBLE_SPLIT_FIELD_ACCESSORS)
 
 #define DEFINE_VGA_READ_TRIPLE_SPLIT_FIELD(__FIELD, __REG2, __MSB2, __LSB2, __REG1, __MSB1, __LSB1, __REG0, __MSB0, __LSB0)\
-static inline uint16_t \
+static __maybe_unused uint16_t \
 vga_read_ ## __FIELD ## _field(struct vga_dev *dev) {\
     uint16_t value;\
     {\
@@ -499,7 +505,7 @@ vga_read_ ## __FIELD ## _field(struct vga_dev *dev) {\
         int bitcount = (__MSB1 - __LSB1) + 1;\
         int bitmask = (1ULL<<bitcount)-1;\
         uint8_t reg_value = vga_read_register(dev, __REG1);\
-        value << bitcount;\
+        value <<= bitcount;\
         value |= (reg_value>>shift_amt) & bitmask;\
     }\
     {\
@@ -507,13 +513,13 @@ vga_read_ ## __FIELD ## _field(struct vga_dev *dev) {\
         int bitcount = (__MSB0 - __LSB0) + 1;\
         int bitmask = (1ULL<<bitcount)-1;\
         uint8_t reg_value = vga_read_register(dev, __REG0);\
-        value << bitcount;\
+        value <<= bitcount;\
         value |= (reg_value>>shift_amt) & bitmask;\
     }\
     return value;\
 }
 #define DEFINE_VGA_WRITE_TRIPLE_SPLIT_FIELD(__FIELD, __REG2, __MSB2, __LSB2, __REG1, __MSB1, __LSB1, __REG0, __MSB0, __LSB0)\
-static inline void \
+static __maybe_unused void \
 vga_write_ ## __FIELD ## _field(struct vga_dev *dev, uint16_t value) {\
      {\
         int shift_amt = __LSB0;\
@@ -523,7 +529,7 @@ vga_write_ ## __FIELD ## _field(struct vga_dev *dev, uint16_t value) {\
         reg_value &= ~(bitmask << shift_amt);\
         reg_value |= ((value & bitmask) << shift_amt);\
         vga_write_register(dev, __REG0, reg_value);\
-        value >> bitcount;\
+        value >>= bitcount;\
     }\
     {\
         int shift_amt = __LSB1;\
@@ -533,7 +539,7 @@ vga_write_ ## __FIELD ## _field(struct vga_dev *dev, uint16_t value) {\
         reg_value &= ~(bitmask << shift_amt);\
         reg_value |= ((value & bitmask) << shift_amt);\
         vga_write_register(dev, __REG1, reg_value);\
-        value >> bitcount;\
+        value >>= bitcount;\
     }\
     {\
         int shift_amt = __LSB2;\

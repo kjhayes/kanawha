@@ -49,7 +49,14 @@ void * x64_boot_bsp_init(void)
         panic("Failed to handle init stage \"static\"! err=%s", errnostr(res));
     }
 
-    return (void*)__va((void __phys *)x64_boot_stack_base);
+    // The compiler reeeeeeally hates this,
+    // so be suspicious about it -KJH
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Warray-bounds"
+    void *boot_stack_virt = (void*)__va((void __phys *)x64_boot_stack_base);
+#pragma GCC diagnostic pop
+
+    return boot_stack_virt;
 }
 
 // Virtual Stack

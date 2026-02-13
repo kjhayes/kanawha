@@ -1745,13 +1745,13 @@ dump_page_table(printk_f *printer, void __phys * table_phys_addr, int level, voi
 
     int leaf_pending = 0;
 
-    void __phys * pending_next_paddr;
-    void __phys * pending_paddr;
-    void * pending_vaddr;
-    size_t pending_size;
-    int pending_index;
-    int pending_final_index;
-    uint64_t pending_flags;
+    void __phys * pending_next_paddr = 0;
+    void __phys * pending_paddr = 0;
+    void * pending_vaddr = 0;
+    size_t pending_size = 0;
+    int pending_index = 0;
+    int pending_final_index = 0;
+    uint64_t pending_flags = 0;
 
 #define DUMP_PENDING_LEAF()\
     do {\

@@ -18,9 +18,11 @@ choice
   default CLANG
   config CLANG
     bool "Clang/LLVM"
+    select TOOLCHAIN_SUPPORTS_ADDRESS_SPACE_ATTRIBUTE
+    select TOOLCHAIN_SUPPORTS_NODEREF_ATTRIBUTE
+    select TOOLCHAIN_SUPPORTS_NORETURN_ATTRIBUTE
   config GCC
     bool "GCC"
-    select TOOLCHAIN_SUPPORTS_BITWISE_ATTRIBUTE
 endchoice
 
 config OPT_FLAGS
@@ -156,4 +158,9 @@ config SMP
 # Toolchain Support
 config TOOLCHAIN_SUPPORTS_BITWISE_ATTRIBUTE
     def_bool n
-
+config TOOLCHAIN_SUPPORTS_ADDRESS_SPACE_ATTRIBUTE
+    def_bool n
+config TOOLCHAIN_SUPPORTS_NODEREF_ATTRIBUTE
+    def_bool n
+config TOOLCHAIN_SUPPORTS_NORETURN_ATTRIBUTE
+    def_bool n

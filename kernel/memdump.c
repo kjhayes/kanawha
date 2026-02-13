@@ -9,8 +9,8 @@ dump_page_alloc_amounts(void)
 
     printk("Free Memory:   %ld MiB %ld KiB %ld Bytes\n",
             amt_free >> 20,
-            (amt_free & (1ULL<<20)-1) >> 12,
-            (amt_free & (1ULL<<12)-1));
+            (amt_free & ((1ULL<<20)-1)) >> 12,
+            (amt_free & ((1ULL<<12)-1)));
 
     return 0;
 }

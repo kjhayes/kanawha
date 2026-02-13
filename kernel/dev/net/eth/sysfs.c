@@ -120,7 +120,9 @@ eth_dev_fs_file_write(
     {
         struct eth_frame_hdr *hdr = buffer;
 
+        __maybe_unused
         struct eth_mac_addr src;
+        __maybe_unused
         struct eth_mac_addr dst;
 
         src.raw = hdr->src_addr;

@@ -49,8 +49,6 @@ x64_route_syscall(struct x64_syscall_state *state)
 
     uint64_t user_rflags = state->caller_regs[PUSHED_CALLER_REGS_INDEX_R11];
 
-    uint64_t *ret_val = &state->caller_regs[PUSHED_CALLER_REGS_INDEX_RAX];
-
     dprintk("x64_route_syscall (id=%ld, user_return=0x%llx, user_rflags=0x%llx)\n",
             (sl_t)id, user_return, (uintptr_t)user_rflags);
 
@@ -74,10 +72,13 @@ x64_route_syscall(struct x64_syscall_state *state)
     args.args[4] = state->caller_regs[PUSHED_CALLER_REGS_INDEX_R9];
     args.args[5] = state->caller_regs[PUSHED_CALLER_REGS_INDEX_R10];
 
-    res = handle_syscall(id, &args, ret_val);
+    uint64_t ret_val;
+    res = handle_syscall(id, &args, &ret_val);
     if(res) {
         wprintk("handle_syscall returned (%s)\n", errnostr(res));
     }
+
+    state->caller_regs[PUSHED_CALLER_REGS_INDEX_RAX] = ret_val;
 
     disable_irqs();
 

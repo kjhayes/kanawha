@@ -10,40 +10,42 @@
  * API Overview
  */
 
-// SIG Macros
-//
-// A SIG Macro defines the signature of a single function.
-// They take the form:
-//
-// #define FILE_OPEN_SIG(RET,ARG,...)\
-// RET(int)
-//
-// #define FILE_READ_SIG(RET,ARG,...)\
-// RET(int)\
-// ARG(void *, dst)\
-// ARG(size_t, src_offset)\
-// ARG(size_t, size)
-//
-// #define FILE_WRITE_SIG(RET,ARG,...)\
-// RET(int)\
-// ARG(size_t, dst_offset)\
-// ARG(void *, src)\
-// ARG(size_t, size)
-//
-// NOTE: RET(void) is not allowed!
+/*
+ SIG Macros
 
-// OP_LIST Macros
-//
-// An OP_LIST is an X-Macro of the form:
-//
-// #define FILE_OP_LIST(OP, ...)\
-// OP(open, FILE_OPEN_SIG, ##__VA_ARGS__)\
-// OP(read, FILE_READ_SIG, ##__VA_ARGS__)\
-// OP(write, FILE_WRITE_SIG, ##__VA_ARGS__)
-//
-// which corresponds to an op list with two functions,
-// read and write, which have signatures defined by the SIG
-// macros FILE_READ_SIG and FILE_WRITE_SIG.
+ A SIG Macro defines the signature of a single function.
+ They take the form:
+
+ #define FILE_OPEN_SIG(RET,ARG,...)\
+ RET(int)
+
+ #define FILE_READ_SIG(RET,ARG,...)\
+ RET(int)\
+ ARG(void *, dst)\
+ ARG(size_t, src_offset)\
+ ARG(size_t, size)
+
+ #define FILE_WRITE_SIG(RET,ARG,...)\
+ RET(int)\
+ ARG(size_t, dst_offset)\
+ ARG(void *, src)\
+ ARG(size_t, size)
+
+ NOTE: RET(void) is not allowed!
+
+ OP_LIST Macros
+
+ An OP_LIST is an X-Macro of the form:
+
+ #define FILE_OP_LIST(OP, ...)\
+ OP(open, FILE_OPEN_SIG, ##__VA_ARGS__)\
+ OP(read, FILE_READ_SIG, ##__VA_ARGS__)\
+ OP(write, FILE_WRITE_SIG, ##__VA_ARGS__)
+
+ which corresponds to an op list with two functions,
+ read and write, which have signatures defined by the SIG
+ macros FILE_READ_SIG and FILE_WRITE_SIG.
+*/
 
 /*
  * Once the above macros have been declared, then the following set

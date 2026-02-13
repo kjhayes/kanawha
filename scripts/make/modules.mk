@@ -34,13 +34,13 @@ endif
 
 define build_mod_obj_rule =
 $(1): FORCE | $(CUR_MOD_OUTPUT_DIR)
-	$$(Q)$$(MAKE) -C $$(CUR_SOURCE_DIR) -f $$(MK_SCRIPTS_DIR)/build.mk $$(CUR_OBJ_OUTPUT_DIR)$$(notdir $$@)
+	$$(Q)$$(MAKE) -C $$(CUR_SOURCE_DIR) -f $$(MK_SCRIPTS_DIR)/kernelbuild.mk $$(CUR_OBJ_OUTPUT_DIR)$$(notdir $$@)
 	$$(Q)cp $$(CUR_OBJ_OUTPUT_DIR)$$(notdir $$@) $$@
 endef
 
 %.ko: %.o $(LDDEPS)
-	$(call qinfo, LD, $(call rel-dir, $@, $(OUTPUT_DIR)))
-	$(Q)$(LD) $(LDFLAGS) -r $< -o $@
+	$(call qinfo, KERNEL_LD, $(call rel-dir, $@, $(OUTPUT_DIR)))
+	$(Q)$(KERNEL_LD) $(LDFLAGS) -r $< -o $@
 
 $(foreach mod,$(mod-objs),$(eval $(call build_mod_obj_rule,$(mod))))
 

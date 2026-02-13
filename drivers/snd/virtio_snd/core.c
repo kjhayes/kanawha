@@ -938,8 +938,8 @@ virtio_snd_init_stream(
                (int)stream->channels_max
               );
 
-        stream->num_formats = __builtin_popcount(stream->format_bitmap);
-        stream->num_rates = __builtin_popcount(stream->rate_bitmap); 
+        stream->num_formats = __builtin_popcountl(stream->format_bitmap);
+        stream->num_rates = __builtin_popcountl(stream->rate_bitmap); 
         stream->num_modes = stream->num_formats * stream->num_rates;
 
 //        for(size_t i = 0; i < stream->num_modes; i++) {

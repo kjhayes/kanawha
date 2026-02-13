@@ -4,15 +4,15 @@ endef
 
 -include $(MK_SCRIPTS_DIR)/include.mk
 
-OBJDUMPFLAGS += -S
+KERNEL_OBJDUMPFLAGS += -S
 
-ifdef OBJDUMP
+ifdef KERNEL_OBJDUMP
 
 asm: kanawha.asm
 kanawha.asm: $(OUTPUT_DIR)/kanawha.asm
 $(OUTPUT_DIR)/kanawha.asm: $(OUTPUT_DIR)/kanawha.o
-	$(call qinfo, OBJDUMP, $(call rel-dir, $@, $(OUTPUT_DIR)))
-	$(Q)$(OBJDUMP) $(OBJDUMPFLAGS) $< > $@
+	$(call qinfo, KERNEL_OBJDUMP, $(call rel-dir, $@, $(OUTPUT_DIR)))
+	$(Q)$(KERNEL_OBJDUMP) $(KERNEL_OBJDUMPFLAGS) $< > $@
 endif
 
 endif

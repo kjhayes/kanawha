@@ -545,14 +545,14 @@ elf64_load_module_read_tables(
     }
 
     // Find and Read the Symbol Table
-    Elf64_Shdr *symtab_hdr;
+    Elf64_Shdr *symtab_hdr = NULL;
     for(size_t i = 0; i < state->hdr.e_shnum; i++) {
         symtab_hdr = &state->shdrs[i];
         if(symtab_hdr->sh_type == SHT_SYMTAB) {
             break;
         }
     }
-    if(symtab_hdr->sh_type != SHT_SYMTAB) {
+    if(symtab_hdr == NULL || symtab_hdr->sh_type != SHT_SYMTAB) {
         eprintk("Could not find module ELF symbol table!\n");
         res = -EINVAL;
         goto err1;

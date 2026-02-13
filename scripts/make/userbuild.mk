@@ -1,6 +1,11 @@
 
 -include $(MK_SCRIPTS_DIR)/include.mk
 
+COMMON_FLAGS += $(USER_COMMON_FLAGS)
+CFLAGS += $(USER_CFLAGS)
+AFLAGS += $(USER_AFLAGS)
+LDFLAGS += $(USER_LDFLAGS)
+
 CUR_SOURCE_DIR := $(shell pwd)/
 CUR_REL_DIR := $(call rel-dir, $(CUR_SOURCE_DIR), $(ROOT_DIR))
 CUR_OBJ_OUTPUT_DIR := $(OUTPUT_DIR)/$(CUR_REL_DIR)/
@@ -27,12 +32,12 @@ $(foreach DEP_FILE,$(obj-in-deps),$(eval $(call include_dep_file,$(DEP_FILE))))
 
 # sub-directory -> sub-dir/.o rule
 $(CUR_OBJ_OUTPUT_DIR)%/$(goal).o: FORCE
-	$(Q)$(MAKE) -C $(CUR_SOURCE_DIR)$* -f $(MK_SCRIPTS_DIR)/build.mk $(goal) 
+	$(Q)$(MAKE) -C $(CUR_SOURCE_DIR)$* -f $(MK_SCRIPTS_DIR)/userbuild.mk $(goal) 
 
 $(goal): $(CUR_OBJ_OUTPUT_DIR)$(goal).o
 $(CUR_OBJ_OUTPUT_DIR)$(goal).o: $(final-obj-in) $(LDDEPS) | $(CUR_OBJ_OUTPUT_DIR)
-	$(call qinfo, LD, $(call rel-dir, $@, $(OUTPUT_DIR)))
-	$(Q)$(LD) $(LDFLAGS) -r $(final-obj-in) -o $@
+	$(call qinfo, USER_LD, $(call rel-dir, $@, $(OUTPUT_DIR)))
+	$(Q)$(USER_LD) $(LDFLAGS) -r $(final-obj-in) -o $@
 
 else
 # If we aren't a pure-goal, try to include our dep-file
@@ -47,19 +52,19 @@ $(CUR_OBJ_OUTPUT_DIR): FORCE
 	$(Q)mkdir -p $@
 
 $(CUR_OBJ_OUTPUT_DIR)%.d: $(CUR_SOURCE_DIR)%.c $(CDEPS) $(COMMON_DEPS) | $(CUR_OBJ_OUTPUT_DIR)
-	$(call qinfo, CPP, $(call rel-dir, $@, $(OUTPUT_DIR)))
-	$(Q)$(CPP) $(CFLAGS) $(COMMON_FLAGS) -MM -MG $< -MT $(@:%.d=%.o) -o $@
+	$(call qinfo, USER_CPP, $(call rel-dir, $@, $(OUTPUT_DIR)))
+	$(Q)$(USER_CPP) $(CFLAGS) $(COMMON_FLAGS) -MM -MG $< -MT $(@:%.d=%.o) -o $@
 
 $(CUR_OBJ_OUTPUT_DIR)%.d: $(CUR_SOURCE_DIR)%.S $(CDEPS) $(COMMON_DEPS) | $(CUR_OBJ_OUTPUT_DIR)
-	$(call qinfo, CPP, $(call rel-dir, $@, $(OUTPUT_DIR)))
-	$(Q)$(CPP) $(CFLAGS) $(COMMON_FLAGS) -MM -MG $< -MT $(@:%.d=%.o) -o $@
+	$(call qinfo, USER_CPP, $(call rel-dir, $@, $(OUTPUT_DIR)))
+	$(Q)$(USER_CPP) $(CFLAGS) $(COMMON_FLAGS) -MM -MG $< -MT $(@:%.d=%.o) -o $@
 
 # .c/.S -> .o build rules
 $(CUR_OBJ_OUTPUT_DIR)%.o: $(CUR_SOURCE_DIR)%.c $(CDEPS) $(COMMON_DEPS) | $(CUR_OBJ_OUTPUT_DIR)
-	$(call qinfo, CC, $(call rel-dir, $@, $(OUTPUT_DIR)))
-	$(Q)$(CC) $(CFLAGS) $(COMMON_FLAGS) -c $< -o $@
+	$(call qinfo, USER_CC, $(call rel-dir, $@, $(OUTPUT_DIR)))
+	$(Q)$(USER_CC) $(CFLAGS) $(COMMON_FLAGS) -c $< -o $@
 
 $(CUR_OBJ_OUTPUT_DIR)%.o: $(CUR_SOURCE_DIR)%.S $(ADEPS) $(COMMON_DEPS) | $(CUR_OBJ_OUTPUT_DIR)
-	$(call qinfo, AS, $(call rel-dir, $@, $(OUTPUT_DIR)))
-	$(Q)$(AS) $(AFLAGS) $(COMMON_FLAGS) -c $< -o $@
+	$(call qinfo, USER_AS, $(call rel-dir, $@, $(OUTPUT_DIR)))
+	$(Q)$(USER_AS) $(AFLAGS) $(COMMON_FLAGS) -c $< -o $@
 

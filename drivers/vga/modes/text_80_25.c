@@ -225,59 +225,6 @@ vga_fb_setup_mode_text_80_25(
 
     vga_write_field(vga, CRTCRegistersProtectEnable, 1);
 
-    // Set up an initial message on the screen
-    {
-//	size_t cursor_x = 0;
-//	size_t cursor_y = 0;
-//
-//#define PUTC(_c)\
-//	do {\
-//	    char __c = _c;\
-//	    if(__c == '\n') {\
-//	        cursor_x = 0;\
-//	        cursor_y++;\
-//	        if(cursor_x >= 80) {\
-//	            cursor_x = 0;\
-//	            cursor_y++;\
-//	        }\
-//	        if(cursor_y >= 25) {\
-//	            cursor_y = 25;\
-//	        }\
-//	        break;\
-//	    }\
-//	    memcpy_vp((void __phys*)fb->buffer + ((cursor_x + (cursor_y * 80))*2), &__c, 1);\
-//	    cursor_x++;\
-//	    if(cursor_x >= 80) {\
-//	        cursor_x = 0;\
-//	        cursor_y++;\
-//	    }\
-//	    if(cursor_y >= 25) {\
-//	        cursor_y = 25;\
-//	    }\
-//	} while(0)
-//
-//#define PUTS(__str)\
-//	do {\
-//	    char *iter = __str;\
-//	    while(*iter) {\
-//		PUTC(*iter);\
-//		iter++;\
-//	    }\
-//	} while(0)
-//
-//	PUTS("Kanawha Kernel VGA Text Mode Driver\n");
-//	for(size_t i = 0; i < 256; i++) {
-//	    if(i == '\n') {
-//		continue;
-//	    } else {
-//	        PUTC((char)i);
-//	    }
-//	}
-//
-//#undef PUTC
-//#undef PUTS
-    }
-
     vga_screen_enable(vga);
 
     res = vga_fb_flush_mode_text_80_25(fb);

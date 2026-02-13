@@ -3,7 +3,7 @@ define __KANAWHA_CONFIG_H__
 endef
 
 DOT_CONFIG ?= $(ROOT_DIR)/.config
-AUTOCONF ?= $(OUTPUT_DIR)/autoconf.h
+KERNEL_AUTOCONF ?= $(OUTPUT_DIR)/autoconf.h
 
 %/defconfig: $(SETUPS_DIR)/%/defconfig FORCE
 	$(Q)cp $(SETUPS_DIR)/$@ $(DOT_CONFIG)
@@ -11,7 +11,7 @@ AUTOCONF ?= $(OUTPUT_DIR)/autoconf.h
 menuconfig: FORCE
 	$(Q)$(PYTHON) -m menuconfig
 
-$(AUTOCONF): $(OUTPUT_DIR) $(DOT_CONFIG)
+$(KERNEL_AUTOCONF): $(OUTPUT_DIR) $(DOT_CONFIG)
 	$(Q)$(PYTHON) -m genconfig --header-path $@
 
 export

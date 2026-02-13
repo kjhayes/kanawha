@@ -146,8 +146,8 @@ static inline int
 pci_single_mailbox_find_msix(
         struct pci_mailbox *mb,
         size_t num_req,
-        uint64_t *addrs,
-        uint32_t *datas,
+        uint64_t addrs[num_req],
+        uint32_t datas[num_req],
         struct irq_desc *descs[num_req])
 {
     int res;
@@ -243,8 +243,8 @@ pci_mailbox_find_msi64(
 int
 pci_mailbox_find_msix(
         size_t num_req,
-        uint64_t *addrs,
-        uint32_t *datas,
+        uint64_t addrs[num_req],
+        uint32_t datas[num_req],
         struct irq_desc *descs[num_req])
 {
     int res;

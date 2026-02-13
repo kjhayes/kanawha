@@ -47,8 +47,14 @@ static int
 mb2_init_modules_as_ramfile(void)
 {
     int res = 0;
+
+    // Trying to access boot data sets off all sorts of
+    // compiler warnings... -KJH (be suspicious of this)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Warray-bounds"
     struct mb2_info **info_ptr = (void*)__va((void __phys *)&boot_mb2_info_ptr);
     struct mb2_info *info = (void*)__va((void __phys *)*info_ptr);
+#pragma GCC diagnostic pop
 
     dprintk("info=%p\n", __pa((vaddr_t)info));
 

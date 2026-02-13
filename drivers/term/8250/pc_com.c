@@ -106,6 +106,10 @@ pc_com_enable_reg_port(
         case UART_8250_SCR:
             pio_offset = 7;
             break;
+        default:
+            DEBUG_ASSERT(0);
+            pio_offset = 0;
+            break;
     }
 
     return com->base_port + pio_offset;

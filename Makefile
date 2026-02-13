@@ -8,6 +8,7 @@ MK_SCRIPTS_DIR := $(SCRIPTS_DIR)/make
 KERNEL_DIR := $(ROOT_DIR)/kernel
 ARCH_ROOT_DIR := $(ROOT_DIR)/arch
 DRIVER_DIR := $(ROOT_DIR)/drivers
+USER_DIR := $(ROOT_DIR)/user
 
 INCLUDE_DIR := $(ROOT_DIR)/include
 
@@ -17,7 +18,6 @@ OUTPUT_DIR := $(ROOT_DIR)/build
 MODULE_OUTPUT_DIR := $(OUTPUT_DIR)/modules
 
 PYTHON := python3
-
 
 default:
 	@
@@ -68,11 +68,15 @@ endif
 
 ARCH_KERNEL_DIR := $(ARCH_ROOT_DIR)/$(ARCH)
 
-COMMON_FLAGS += \
+ifdef CONFIG_DEBUG_SYMBOLS
+KERNEL_COMMON_FLAGS += -g
+endif
+
+KERNEL_COMMON_FLAGS += \
 				-D__KANAWHA__ \
 				-DKANAWHA_BUILDING_KERNEL \
 				-I $(INCLUDE_DIR) \
-				-include $(AUTOCONF) \
+				-include $(KERNEL_AUTOCONF) \
 				$(subst ",,$(CONFIG_OPT_FLAGS)) \
 				-nostdlib \
 				-ffreestanding \
@@ -81,27 +85,9 @@ COMMON_FLAGS += \
 				-Wno-unused-variable \
 				-Werror \
 
-
-COMMON_DEPS += $(AUTOCONF)
 AFLAGS += -D__ASSEMBLER__
 
-ifdef CONFIG_DEBUG_SYMBOLS
-COMMON_FLAGS += -g
-endif
-
-LDFLAGS += $(OUTPUT_DIR)/null.o
-LDDEPS += $(OUTPUT_DIR)/null.o
-$(OUTPUT_DIR)/null.o: $(SCRIPTS_DIR)/null.c $(CDEPS) $(COMMON_DEPS) | $(OUTPUT_DIR)
-	$(call qinfo, CC, $(call rel-dir, $@, $(OUTPUT_DIR)))
-	$(Q)$(CC) -c $(CFLAGS) $(COMMON_FLAGS) $< -o $@
-
-LD_SCRIPT_H := $(LINK_DIR)/kanawha.$(ARCH).ldh
-LD_SCRIPT := $(OUTPUT_DIR)/kanawha.$(ARCH).ld
-$(LD_SCRIPT): $(LD_SCRIPT_H) $(COMMON_DEPS) | $(OUTPUT_DIR)
-	$(call qinfo, CPP, $(call rel-dir, $@, $(OUTPUT_DIR)))
-	$(Q)$(CPP) $(COMMON_FLAGS) $< -o $@
-
-LDDEPS += $(LD_SCRIPT)
+-include $(MK_SCRIPTS_DIR)/link.mk
 
 KERNEL_SOURCE_DIRS := $(KERNEL_DIR) \
 					  $(ARCH_KERNEL_DIR)\
@@ -109,7 +95,7 @@ KERNEL_SOURCE_DIRS := $(KERNEL_DIR) \
 
 define build_kernel_directory =
 $$(OUTPUT_DIR)/$(1)/obj.o: $$(LDDEPS) FORCE
-	$$(Q)$$(MAKE) -C $(ROOT_DIR)/$(1) -f $$(MK_SCRIPTS_DIR)/build.mk obj 
+	$$(Q)$$(MAKE) -C $(ROOT_DIR)/$(1) -f $$(MK_SCRIPTS_DIR)/kernelbuild.mk obj 
 endef
 $(foreach DIR,$(KERNEL_SOURCE_DIRS), $(eval $(call build_kernel_directory,$(call rel-dir, $(DIR), $(ROOT_DIR)))))
 
@@ -123,8 +109,8 @@ KERNEL_OBJS := $(foreach DIR,$(KERNEL_SOURCE_DIRS),$(OUTPUT_DIR)/$(call rel-dir,
 KERNEL_MOD_RULES := $(foreach DIR,$(KERNEL_SOURCE_DIRS),$(DIR)/modules)
 
 $(OUTPUT_DIR)/kanawha.o: $(KERNEL_OBJS) $(LDDEPS) | $(OUTPUT_DIR)
-	$(call qinfo, LD, $(call rel-dir, $@, $(OUTPUT_DIR)))
-	$(Q)$(LD) $(LDFLAGS) -T $(LD_SCRIPT) $(KERNEL_OBJS) -o $@
+	$(call qinfo, KERNEL_LD, $(call rel-dir, $@, $(OUTPUT_DIR)))
+	$(Q)$(KERNEL_LD) -T $(LD_SCRIPT) $(KERNEL_OBJS) -o $@ $(LDFLAGS) $(KERNEL_LDFLAGS)
 
 kanawha: $(OUTPUT_DIR)/kanawha.o
 
@@ -134,10 +120,19 @@ $(OUTPUT_DIR)/kanawha.bin: $(OUTPUT_DIR)/kanawha.o
 	$(call qinfo, OBJCOPY, $(call rel-dir, $@, $(OUTPUT_DIR)))
 	$(Q)$(OBJCOPY) -O binary $< $@
 
-uapi: $(INCLUDE_DIR)/kanawha/uapi FORCE
-	$(Q)cp -RT $< $(OUTPUT_DIR)/uapi
+UAPI_DIR := $(OUTPUT_DIR)/uapi
+uapi: $(UAPI_DIR)
+$(UAPI_DIR): $(KERNEL_AUTOCONF) $(INCLUDE_DIR)/kanawha/uapi FORCE
+	$(call qinfo, CP, $(call rel-dir, $@/\*, $(OUTPUT_DIR)))
+	$(Q)cp -RT $(INCLUDE_DIR)/kanawha/uapi $@
+	$(call qinfo, CP, $(call rel-dir, $@/kanawha-config.h, $(OUTPUT_DIR)))
+	$(Q)cp $(KERNEL_AUTOCONF) $@/kanawha-config.h
 
-all: kanawha uapi FORCE
+user: $(UAPI_DIR) $(USER_DIR) FORCE
+	$(Q)$(MAKE) -C $(USER_DIR) -f $(MK_SCRIPTS_DIR)/user.mk
+
+kernel: kanawha
+all: kanawha uapi user FORCE
 
 DEFAULT_BUILD_RULE ?= all
 default: $(DEFAULT_BUILD_RULE)
@@ -151,7 +146,7 @@ clean: FORCE
 	$(Q)find $(OUTPUT_DIR) -name "*.d" -delete $(QPIPE) $(QIGNORE)
 	$(Q)find $(OUTPUT_DIR)/uapi -name "*.h" -delete $(QPIPE) $(QIGNORE)
 	$(Q)rm $(LD_SCRIPT) $(QPIPE) $(QIGNORE)
-	$(Q)rm $(AUTOCONF) $(QPIPE) $(QIGNORE)
+	$(Q)rm $(KERNEL_AUTOCONF) $(QPIPE) $(QIGNORE)
 	$(Q)rm -r $(OUTPUT_DIR) $(QPIPE) $(QIGNORE)
 
 endif

@@ -36,6 +36,8 @@ uint8_t pci_bar_readb(struct pci_bar *bar, size_t offset)
             panic("pci_bar_readb on PCI_BAR_NONE!");
             return 0;
     }
+    panic("pci_bar_readb on invalid PCI BAR!");
+    return 0;
 }
 uint16_t pci_bar_readw(struct pci_bar *bar, size_t offset)
 {
@@ -53,6 +55,8 @@ uint16_t pci_bar_readw(struct pci_bar *bar, size_t offset)
             panic("pci_bar_readw on PCI_BAR_NONE!");
             return 0;
     }
+    panic("pci_bar_readw on invalid PCI BAR!");
+    return 0;
 }
 uint32_t pci_bar_readl(struct pci_bar *bar, size_t offset)
 {
@@ -70,6 +74,8 @@ uint32_t pci_bar_readl(struct pci_bar *bar, size_t offset)
             panic("pci_bar_readl on PCI_BAR_NONE!");
             return 0;
     }
+    panic("pci_bar_readw on invalid PCI BAR!");
+    return 0;
 }
 uint64_t pci_bar_readq(struct pci_bar *bar, size_t offset)
 {
@@ -88,6 +94,8 @@ uint64_t pci_bar_readq(struct pci_bar *bar, size_t offset)
             panic("pci_bar_readq on PCI_BAR_NONE!");
             return 0;
     }
+    panic("pci_bar_readq on invalid PCI BAR!");
+    return 0;
 }
 
 void pci_bar_writeb(struct pci_bar *bar, size_t offset, uint8_t val)
