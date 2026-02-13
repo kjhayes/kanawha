@@ -1,0 +1,8 @@
+
+choice
+    prompt "malloc Allocator"
+    default MMAP_ALLOC
+    config MMAP_ALLOC
+        bool "MMAP"
+endchoice
+
