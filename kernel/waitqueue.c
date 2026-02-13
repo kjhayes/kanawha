@@ -69,9 +69,9 @@ waitqueue_deinit(
 
     irq_lock_acquire(&queue->lock);
     if(queue->dyn_name) {
-	kfree(queue->name);
-	queue->name = DEFAULT_WAITQUEUE_NAME;
-	queue->dyn_name = 0;
+	    kfree(queue->name);
+	    queue->name = DEFAULT_WAITQUEUE_NAME;
+	    queue->dyn_name = 0;
     }
     irq_lock_release(&queue->lock);
 
@@ -133,12 +133,12 @@ wait_on(struct waitqueue *queue)
     // Make sure that we haven't woken up spurriously
     irq_lock_acquire(&queue->lock);
     if(cur->waitqueue == queue) {
-	// Something interrupted us (probably a signal)
+	    // Something interrupted us (probably a signal)
         queue->num_threads--;
-	ilist_remove(&queue->waiting_threads, &cur->waitqueue_node);
-	cur->waitqueue = NULL;
+    	ilist_remove(&queue->waiting_threads, &cur->waitqueue_node);
+	    cur->waitqueue = NULL;
         irq_lock_release(&queue->lock);
-	return -EINTR;
+	    return -EINTR;
     }
     irq_lock_release(&queue->lock);
 
@@ -155,7 +155,7 @@ wake_single(struct waitqueue *queue)
 
         struct thread_state *thread =
             container_of(node, struct thread_state, waitqueue_node);
-	thread->waitqueue = NULL;
+    	thread->waitqueue = NULL;
 
         thread_wake(thread);
     }
