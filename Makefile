@@ -132,7 +132,7 @@ user: $(UAPI_DIR) $(USER_DIR) FORCE
 	$(Q)$(MAKE) -C $(USER_DIR) -f $(MK_SCRIPTS_DIR)/user.mk
 
 kernel: kanawha
-all: kanawha uapi user FORCE
+all: kanawha FORCE
 
 DEFAULT_BUILD_RULE ?= all
 default: $(DEFAULT_BUILD_RULE)
