@@ -9,6 +9,9 @@ USER_SYSROOT_INCLUDE_DIR := $(USER_SYSROOT_DIR)/include
 USER_SYSROOT_LIB_DIR := $(USER_SYSROOT_DIR)/lib
 USER_SYSROOT_BIN_DIR := $(USER_SYSROOT_DIR)/bin
 
+CUR_OUTPUT_DIR := $(OUTPUT_DIR)/user
+
+$(shell mkdir -p $(CUR_OUTPUT_DIR))
 $(shell mkdir -p $(USER_SYSROOT_DIR))
 $(shell mkdir -p $(USER_SYSROOT_INCLUDE_DIR))
 $(shell mkdir -p $(USER_SYSROOT_LIB_DIR))
@@ -27,21 +30,27 @@ $(UAPI_SYSROOT_DIR): $(KERNEL_AUTOCONF) $(INCLUDE_DIR)/kanawha/uapi
 USER_COMMON_FLAGS += \
 	-I$(USER_SYSROOT_INCLUDE_DIR) \
 
+USER_LDFLAGS += \
+	-L $(USER_SYSROOT_LIB_DIR)
+
 CUR_SOURCE_DIR := $(shell pwd)/
 
 -include $(CUR_SOURCE_DIR)/Makefile
 
 define build-lib =
 
-userlibs: $(OUTPUT_DIR)/$(1)
-$(OUTPUT_DIR)/$(1): FORCE
+$(CUR_OUTPUT_DIR)/$(1)/obj.o: FORCE
 	$(Q)$(MAKE) -C $(CUR_SOURCE_DIR)/$(1) -f $(MK_SCRIPTS_DIR)/userbuild.mk obj
 
+userlibs: $$(USER_SYSROOT_LIB_DIR)/lib$(1).a
+$$(USER_SYSROOT_LIB_DIR)/lib$(1).a: $$(CUR_OUTPUT_DIR)/$(1)/obj.o
+	$$(Q)$$(USER_LD) -r $$(USER_LDFLAGS) $$(LDFLAGS) \
+		$$(CUR_OUTPUT_DIR)/$(1)/obj.o -o $$(USER_SYSROOT_LIB_DIR)/lib$(1).a
 endef
 
 define include-lib =
-userincludes: $$(OUTPUT_DIR)/$(1).api
-$$(OUTPUT_DIR)/$(1).api: $$(CUR_SOURCE_DIR)/$(1)/include
+userincludes: $$(CUR_OUTPUT_DIR)/$(1).api
+$$(CUR_OUTPUT_DIR)/$(1).api: $$(CUR_SOURCE_DIR)/$(1)/include
 	$$(call qinfo, CP, $$(call rel-dir, $$(USER_SYSROOT_INCLUDE_DIR)/$(1), $$(OUTPUT_DIR)))
 	$$(Q)cp -RT $$(CUR_SOURCE_DIR)/$(1)/include $$(USER_SYSROOT_INCLUDE_DIR)
 	$$(call qinfo, TOUCH, $$(call rel-dir, $$@, $$(OUTPUT_DIR)))

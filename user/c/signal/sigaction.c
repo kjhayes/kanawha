@@ -1,4 +1,6 @@
 
+#include <signal.h>
+
 int
 sigaction(
         int signum,
