@@ -94,13 +94,13 @@ KERNEL_SOURCE_DIRS := $(KERNEL_DIR) \
 					  $(DRIVER_DIR)
 
 define build_kernel_directory =
-$$(OUTPUT_DIR)/$(1)/obj.o: $$(LDDEPS) FORCE
+$$(OUTPUT_DIR)/$(1)/obj.o: $$(KERNEL_AUTOCONF) $$(LDDEPS) FORCE
 	$$(Q)$$(MAKE) -C $(ROOT_DIR)/$(1) -f $$(MK_SCRIPTS_DIR)/kernelbuild.mk obj 
 endef
 $(foreach DIR,$(KERNEL_SOURCE_DIRS), $(eval $(call build_kernel_directory,$(call rel-dir, $(DIR), $(ROOT_DIR)))))
 
 define build_module_directory =
-$(1)/modules: $$(LDDEPS) FORCE
+$(1)/modules: $$(KERNEL_AUTOCONF) $$(LDDEPS) FORCE
 	$$(Q)$$(MAKE) -C $(1) -f $$(MK_SCRIPTS_DIR)/modules.mk obj
 endef
 $(foreach DIR,$(KERNEL_SOURCE_DIRS), $(eval $(call build_module_directory,$(DIR))))
@@ -120,11 +120,11 @@ $(OUTPUT_DIR)/kanawha.bin: $(OUTPUT_DIR)/kanawha.o
 	$(call qinfo, OBJCOPY, $(call rel-dir, $@, $(OUTPUT_DIR)))
 	$(Q)$(KERNEL_OBJCOPY) -O binary $< $@
 
-user: $(USER_DIR) FORCE
+user: $(KERNEL_AUTOCONF) $(LDDEPS) $(USER_DIR) FORCE
 	$(Q)$(MAKE) -C $(USER_DIR) -f $(MK_SCRIPTS_DIR)/user.mk
 
 kernel: kanawha
-all: kanawha FORCE
+all: kanawha user FORCE
 
 DEFAULT_BUILD_RULE ?= all
 default: $(DEFAULT_BUILD_RULE)
@@ -132,6 +132,7 @@ default: $(DEFAULT_BUILD_RULE)
 modules: $(KERNEL_MOD_RULES) FORCE
 
 -include $(MK_SCRIPTS_DIR)/asm.mk
+-include $(MK_SCRIPTS_DIR)/initrd.mk
 
 clean: FORCE
 	$(Q)find $(OUTPUT_DIR) -name "*.o" -delete $(QPIPE) $(QIGNORE)

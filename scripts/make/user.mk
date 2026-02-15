@@ -1,4 +1,6 @@
 
+export
+
 default:
 	@
 
@@ -12,20 +14,21 @@ USER_SYSROOT_BIN_DIR := $(USER_SYSROOT_DIR)/bin
 CUR_OUTPUT_DIR := $(OUTPUT_DIR)/user
 
 $(shell mkdir -p $(CUR_OUTPUT_DIR))
+$(shell mkdir -p $(CUR_OUTPUT_DIR)/lib)
+$(shell mkdir -p $(CUR_OUTPUT_DIR)/bin)
 $(shell mkdir -p $(USER_SYSROOT_DIR))
 $(shell mkdir -p $(USER_SYSROOT_INCLUDE_DIR))
 $(shell mkdir -p $(USER_SYSROOT_LIB_DIR))
 $(shell mkdir -p $(USER_SYSROOT_BIN_DIR))
 
-UAPI_SYSROOT_DIR := $(USER_SYSROOT_INCLUDE_DIR)/kanawha
-$(shell mkdir -p $(UAPI_SYSROOT_DIR))
-
-uapi: $(UAPI_SYSROOT_DIR)
-$(UAPI_SYSROOT_DIR): $(KERNEL_AUTOCONF) $(INCLUDE_DIR)/kanawha/uapi
-	$(call qinfo, CP, $(call rel-dir, $@/\*, $(OUTPUT_DIR)))
-	$(Q)cp -RT $(INCLUDE_DIR)/kanawha/uapi $@
-	$(call qinfo, CP, $(call rel-dir, $@/kanawha-config.h, $(OUTPUT_DIR)))
-	$(Q)cp $(KERNEL_AUTOCONF) $@/kanawha-config.h
+uapi: $(CUR_OUTPUT_DIR)/kanawha.api FORCE
+$(CUR_OUTPUT_DIR)/kanawha.api: $(KERNEL_AUTOCONF) $(INCLUDE_DIR)/kanawha/uapi/
+	$(call qinfo, CP, $(call rel-dir, $(USER_SYSROOT_INCLUDE_DIR)/kanawha/\*, $(OUTPUT_DIR)))
+	$(Q)cp -RT $(INCLUDE_DIR)/kanawha/uapi $(USER_SYSROOT_INCLUDE_DIR)/kanawha
+	$(call qinfo, CP, $(call rel-dir, $(USER_SYSROOT_INCLUDE_DIR)/kanawha/kanawha-config.h, $(OUTPUT_DIR)))
+	$(Q)cp $(KERNEL_AUTOCONF) $(USER_SYSROOT_INCLUDE_DIR)/kanawha/kanawha-config.h
+	$(call qinfo, TOUCH, $(call rel-dir, $@, $(OUTPUT_DIR)))
+	$(Q)touch $@
 
 USER_COMMON_FLAGS += \
 	-I$(USER_SYSROOT_INCLUDE_DIR) \
@@ -39,32 +42,53 @@ CUR_SOURCE_DIR := $(shell pwd)/
 
 define build-lib =
 
-$(CUR_OUTPUT_DIR)/$(1)/obj.o: FORCE
-	$(Q)$(MAKE) -C $(CUR_SOURCE_DIR)/$(1) -f $(MK_SCRIPTS_DIR)/userbuild.mk obj
+$$(CUR_OUTPUT_DIR)/lib/$(1)/obj.o: uapi userincludes FORCE
+	$$(Q)$$(MAKE) -C $$(CUR_SOURCE_DIR)/lib/$(1) -f $$(MK_SCRIPTS_DIR)/userbuild.mk obj
 
 userlibs: $$(USER_SYSROOT_LIB_DIR)/lib$(1).a
-$$(USER_SYSROOT_LIB_DIR)/lib$(1).a: $$(CUR_OUTPUT_DIR)/$(1)/obj.o
+$$(USER_SYSROOT_LIB_DIR)/lib$(1).a: $$(CUR_OUTPUT_DIR)/lib/$(1)/obj.o
+	$$(call qinfo, USER_LD, $$(call rel-dir, $$@, $$(OUTPUT_DIR)))
 	$$(Q)$$(USER_LD) -r $$(USER_LDFLAGS) $$(LDFLAGS) \
-		$$(CUR_OUTPUT_DIR)/$(1)/obj.o -o $$(USER_SYSROOT_LIB_DIR)/lib$(1).a
+		$$(CUR_OUTPUT_DIR)/lib/$(1)/obj.o -o $$(USER_SYSROOT_LIB_DIR)/lib$(1).a
 endef
 
 define include-lib =
-userincludes: $$(CUR_OUTPUT_DIR)/$(1).api
-$$(CUR_OUTPUT_DIR)/$(1).api: $$(CUR_SOURCE_DIR)/$(1)/include
+
+userincludes: $$(CUR_OUTPUT_DIR)/lib/$(1).api
+$$(CUR_OUTPUT_DIR)/lib/$(1).api: $$(CUR_SOURCE_DIR)/lib/$(1)/include
 	$$(call qinfo, CP, $$(call rel-dir, $$(USER_SYSROOT_INCLUDE_DIR)/$(1), $$(OUTPUT_DIR)))
-	$$(Q)cp -RT $$(CUR_SOURCE_DIR)/$(1)/include $$(USER_SYSROOT_INCLUDE_DIR)
+	$$(Q)cp -RT $$(CUR_SOURCE_DIR)/lib/$(1)/include $$(USER_SYSROOT_INCLUDE_DIR)
 	$$(call qinfo, TOUCH, $$(call rel-dir, $$@, $$(OUTPUT_DIR)))
 	$$(Q)touch $$@
+
+endef
+
+define build-bin =
+
+$(CUR_OUTPUT_DIR)/bin/$(1)/obj.o: uapi userincludes userlibs FORCE
+	$(Q)$(MAKE) -C $(CUR_SOURCE_DIR)/bin/$(1) -f $(MK_SCRIPTS_DIR)/userbuild.mk obj
+
+userbins: $$(USER_SYSROOT_BIN_DIR)/$(1)
+$$(USER_SYSROOT_BIN_DIR)/$(1): $$(CUR_OUTPUT_DIR)/bin/$(1)/obj.o
+	$$(call qinfo, USER_LD, $$(call rel-dir, $$@, $$(OUTPUT_DIR)))
+	$$(Q)$$(USER_LD) $$(USER_LDFLAGS) $$(LDFLAGS) \
+		$$(CUR_OUTPUT_DIR)/bin/$(1)/obj.o -o $$(USER_SYSROOT_BIN_DIR)/$(1) \
+		-lcrt -lc -lkfb 
+
 endef
 
 $(foreach lib,$(libs),$(eval $(call build-lib,$(lib))))
 $(foreach lib,$(libs),$(eval $(call include-lib,$(lib))))
+$(foreach bin,$(bins),$(eval $(call build-bin,$(bin))))
 
 userincludes:
 	@
 
-userlibs: uapi userincludes
+userlibs: 
 	@
 
-default: userlibs FORCE
+userbins:
+	@
+
+default: userlibs userbins FORCE
 

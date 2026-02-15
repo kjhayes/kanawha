@@ -138,6 +138,10 @@ menu "Drivers"
 source "drivers/Kconfig"
 endmenu
 
+menu "Userspace Options"
+source "user/Kconfig"
+endmenu
+
 config WIP
   bool "WIP Features"
   default n
