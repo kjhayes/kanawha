@@ -182,7 +182,7 @@ ipv4_dev_init_fs_mount(void)
         return res;
     }
 
-    res = sysfs_register_mount(&ipv4_dev_fs_mount->fs_mount, "ipv4");
+    res = sysfs_register_mount(&ipv4_dev_fs_mount->fs_mount, "ipv4dev");
     if(res) {
         unregister_ipv4_dev_owner(&ipv4_dev_fs_owner);
         vfs_mount_destroy(mnt);
