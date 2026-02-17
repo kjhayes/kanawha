@@ -17,10 +17,9 @@ syscall_faccess(
         unsigned long fields,
         unsigned long mode)
 {
+    struct process *process = current_process();
 
     LOG("fields=0x%lx, mode=0x%lx\n", fields, mode);
-
-    struct process *process = current_process();
 
     int res;
     struct file *file =

@@ -21,9 +21,7 @@ syscall_exec(
 	return -EINVAL;
     }
 
-    LOG("exec(%ld) %s\n",
-                file,
-                desc == NULL ? "NULL" : name == NULL ? "UNNAMED" : name);
+    LOG("exec(%ld)\n", file);
 
     return process_exec(
 	    process,
