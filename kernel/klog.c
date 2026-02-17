@@ -197,8 +197,6 @@ klog_fs_file_read(
         return res;
     }
 
-    //struct fs_node *fs_node = fs_path_get_fs_node(path);
-
     size_t offset = file->seek_offset;
 
     klog_tree_lock_acquire();
@@ -229,6 +227,29 @@ klog_fs_file_read(
     return amount;
 }
 
+static ssize_t
+klog_fs_file_write(
+        struct file *file,
+        void *buffer,
+        ssize_t amount,
+        unsigned long flags)
+{
+    int res;
+    ssize_t written = 0;
+    while(written < amount) {
+        res = klog_putc(((char*)buffer)[written]);
+        if(res) {
+            if(written > 0) {
+                return written;
+            } else {
+                return res;
+            }
+        }
+        written++;
+    }
+    return written;
+}
+
 static struct fs_node_ops
 klog_fs_node_ops =
 {
@@ -239,7 +260,7 @@ FS_NODE_OPS_INIT_UNDEF(klog_fs_node_ops);
 static struct fs_file_ops
 klog_fs_file_ops = {
     .read = klog_fs_file_read,
-    .write = fs_file_eof_write,
+    .write = klog_fs_file_write,
     .flush = fs_file_nop_flush,
     .seek = fs_file_seek_pinned_zero,
 };
