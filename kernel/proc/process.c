@@ -263,7 +263,7 @@ init_process_kernel_entry(void *in)
     res = file_table_open(
             process->file_table,
             process,
-	    dir_path,
+	        dir_path,
             binary_path,
             FILE_PERM_READ|FILE_PERM_EXEC,
             0,
@@ -421,6 +421,54 @@ process_free(struct process *process)
 }
 
 static int
+init_process_open_sysfs_file(
+        const char *sysfs_name,
+        const char *file_name,
+        struct fs_node **node_out)
+{
+    int res;
+    struct fs_mount *sysfs_mount = sysfs_mount_find(sysfs_name);
+    if(sysfs_mount == NULL) {
+        eprintk("Cannot find sysfs \"%s\"!\n", sysfs_name);
+        return -ENXIO;
+    }
+
+    size_t sysfs_root_index;
+    res = fs_mount_root_index(sysfs_mount, &sysfs_root_index);
+    if(res) {
+        eprintk("Failed to get root index of initial filesystem backing sysfs!\n");
+        return res;
+    }
+
+    struct fs_node *sysfs_root = fs_mount_get_node(sysfs_mount, sysfs_root_index);
+    if(sysfs_root == NULL) {
+        eprintk("Cannot get sysfs root node \"%s\"!\n", sysfs_name);
+        return -EINVAL;
+    }
+
+    size_t sysfs_file_index;
+    res = fs_node_lookup(sysfs_root, file_name, &sysfs_file_index, NULL, 0);
+    fs_node_put(sysfs_root);
+    if(res != FS_NODE_LOOKUP_HARD) {
+        eprintk("Failed to lookup sysfs file \"%s\" [%s]!\n",
+                file_name,
+		        res < 0 ? errnostr(res) :
+		        res == FS_NODE_LOOKUP_SYMBOLIC ? "cannot use symbolic link" :
+		        "invalid return code from fs_node_lookup");
+        return res;
+    }
+
+    struct fs_node *backing_node = fs_mount_get_node(sysfs_mount, sysfs_file_index);
+    if(backing_node == NULL) {
+        eprintk("Failed to get sysfs file \"%s\"!\n", file_name);
+        return -EINVAL;
+    }
+
+    *node_out = backing_node;
+    return 0;
+}
+
+static int
 launch_init_process(void)
 {
     int res;
@@ -451,45 +499,14 @@ launch_init_process(void)
         return -ENXIO;
     }
 
-    struct fs_mount *sysfs_mount = sysfs_mount_find(CONFIG_INITIAL_FS_BACKEND_SYSFS_DIR);
-    if(sysfs_mount == NULL) {
-        eprintk("Cannot find initial filesystem backing sysfs \"%s\"!\n",
-                CONFIG_INITIAL_FS_BACKEND_SYSFS_DIR);
-        return -ENXIO;
-    }
-
-    size_t sysfs_root_index;
-    res = fs_mount_root_index(sysfs_mount, &sysfs_root_index);
+    struct fs_node *backing_node;
+    res = init_process_open_sysfs_file(
+            CONFIG_INITIAL_FS_BACKEND_SYSFS_DIR,
+            CONFIG_INITIAL_FS_BACKEND_FILE_NAME,
+            &backing_node);
     if(res) {
-        eprintk("Failed to get root index of initial filesystem backing sysfs!\n");
+        eprintk("Failed to open backing file from sysfs for init process!\n");
         return res;
-    }
-
-
-    struct fs_node *sysfs_root = fs_mount_get_node(sysfs_mount, sysfs_root_index);
-    if(sysfs_root == NULL) {
-        eprintk("Cannot get initial filesystem sysfs root node \"%s\"!\n",
-                CONFIG_INITIAL_FS_BACKEND_SYSFS_DIR);
-        return -EINVAL;
-    }
-
-    size_t sysfs_file_index;
-    res = fs_node_lookup(sysfs_root, CONFIG_INITIAL_FS_BACKEND_FILE_NAME, &sysfs_file_index, NULL, 0);
-    fs_node_put(sysfs_root);
-    if(res != FS_NODE_LOOKUP_HARD) {
-        eprintk("Failed to lookup initial filesystem backing file \"%s\" [%s]!\n",
-                CONFIG_INITIAL_FS_BACKEND_FILE_NAME,
-		res < 0 ? errnostr(res) :
-		res == FS_NODE_LOOKUP_SYMBOLIC ? "cannot use symbolic link" :
-		"invalid return code from fs_node_lookup");
-        return res;
-    }
-
-    struct fs_node *backing_node = fs_mount_get_node(sysfs_mount, sysfs_file_index);
-    if(backing_node == NULL) {
-        eprintk("Failed to get initial filesystem backing file \"%s\"!\n",
-                CONFIG_INITIAL_FS_BACKEND_FILE_NAME);
-        return -EINVAL;
     }
 
     struct fs_mount *root_fs_mnt;
