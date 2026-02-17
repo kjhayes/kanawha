@@ -52,7 +52,7 @@ fs_path_unmount(
 int
 fs_path_lookup_for_process(
         struct process *process,
-	struct fs_path *dir_path,
+	    struct fs_path *dir_path,
         const char *path_str,
         unsigned long access_flags,
         unsigned long mode_flags,
