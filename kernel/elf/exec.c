@@ -287,6 +287,12 @@ exec_elf64_handle_segment(
 		    phdr);
         case PT_NULL:
             return 0;
+        case PT_GNU_STACK:
+            // This is just a note requesting
+            // that the stack is not executable,
+            // we don't map a stack for userspace
+            // so we can ignore it.
+            return 0;
         default:
             printk("Ignoring Unsupported ELF Segment \"%s\" offset=%p, memsz=%p\n",
                     elf_get_phdr_type_string(phdr->p_type), phdr->p_offset, phdr->p_memsz);
