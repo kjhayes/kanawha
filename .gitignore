@@ -11,4 +11,7 @@ compile_commands.json
 .config.old
 
 *.log
+*.img
+
+initrd-extra/**/*
 
