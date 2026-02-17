@@ -1,7 +1,7 @@
 #ifndef __KANAWHA__UAPI_FILE_H__
 #define __KANAWHA__UAPI_FILE_H__
 
-typedef unsigned long fd_t;
+typedef int fd_t;
 
 // The maximum amount of data which can be transferred
 // by a single read/write system call
