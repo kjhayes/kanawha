@@ -7,6 +7,7 @@ choice
     select PORT_IO
     select ACPI
     select ACPI_REQUIRED
+    select BUILD_GRUB_ISOIMAGE
   config RISCV64
     bool "RISCV64"
     select DEVICETREE
@@ -167,4 +168,8 @@ config TOOLCHAIN_SUPPORTS_ADDRESS_SPACE_ATTRIBUTE
 config TOOLCHAIN_SUPPORTS_NODEREF_ATTRIBUTE
     def_bool n
 config TOOLCHAIN_SUPPORTS_NORETURN_ATTRIBUTE
+    def_bool n
+
+# Various build flags depending on architecture
+config BUILD_GRUB_ISOIMAGE
     def_bool n
