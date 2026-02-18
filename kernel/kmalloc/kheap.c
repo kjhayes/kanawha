@@ -16,7 +16,7 @@
 #include <kanawha/irq.h>
 #include <kanawha/lock.h>
 
-static struct kheap kmalloc_heap = {
+struct kheap kmalloc_heap = {
     .heap_size = 0,
     .vbase = (void *)NULL,
     .mapped = 0,

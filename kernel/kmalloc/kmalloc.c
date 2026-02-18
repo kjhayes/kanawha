@@ -7,6 +7,12 @@
 #include <kanawha/export.h>
 #include <kanawha/init.h>
 
+#ifdef CONFIG_DEBUG_KMALLOC_BITMAP
+#include <kanawha/bitmap.h>
+#include <kanawha/kheap.h>
+extern struct kheap kmalloc_heap;
+#endif
+
 DEFINE_LOCAL_IRQ_LOCK(kmalloc_lock);
 
 #ifdef CONFIG_DEBUG_KMALLOC_BITMAP

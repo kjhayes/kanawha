@@ -28,3 +28,23 @@ config KMALLOC_TRACK_CALLSITES_SEC_PERIOD
     default 30
     depends on KMALLOC_TRACK_CALLSITES_LOG_PERIODIC
 
+config DEBUG_KHEAP_TOUCH
+    bool "Touch kheap Allocations On Alloc and Free"
+    depends on DEBUGGING
+    default n
+    help
+      By memset-ing out all allocations made using the kheap allocators both
+      during allocation and freeing, then we can trap the allocation and freeing
+      with gdb watchpoints, making tracking down double-free errors easier.
+
+config DEBUG_KMALLOC_BITMAP
+    bool "Track kmalloc Allocations in a Global Bitmap"
+    depends on DEBUGGING && KMALLOC_KHEAP
+    default n
+    help
+      Track every byte in the kmalloc heap with a large bitmap of allocations,
+      this is really justed used for debugging the underlying allocator implemention,
+      though it could be used to catch double free errors
+      The static bitmap uses one bit per byte in the virtual size of the heap,
+      so a small value of CONFIG_HEAP_SIZE_ORDER must be used.
+
