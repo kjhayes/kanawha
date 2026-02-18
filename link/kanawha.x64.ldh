@@ -16,6 +16,8 @@ PHDRS
   phdrs PT_LOAD FILEHDR PHDRS FLAGS(5);
   text PT_LOAD FLAGS(5);
   data PT_LOAD FLAGS(6);
+  kinit PT_LOAD FLAGS(6);
+  ksymtab PT_LOAD FLAGS(6);
   rodata PT_LOAD FLAGS(4);
   boot PT_LOAD FLAGS(7);
   note PT_NULL FLAGS(0);
@@ -78,7 +80,7 @@ SECTIONS
     __init_stage_##STAGE##__init_start = .;\
     *(.kinit.STAGE.init);\
     __init_stage_##STAGE##__init_end = .;\
-  } :data = 0
+  } :kinit = 0
 XFOR_INIT_STAGE(DECLARE_INIT_STAGE_LINKER_SCRIPT_SECTIONS)
 
   .ksymtab : AT(VA_TO_PA(ADDR(.ksymtab)))
@@ -86,7 +88,7 @@ XFOR_INIT_STAGE(DECLARE_INIT_STAGE_LINKER_SCRIPT_SECTIONS)
     __ksymtab_start = .;
     *(.ksymtab* .ksymtab.*)
     __ksymtab_end = .;
-  } :data = 0
+  } :ksymtab = 0
 
   . = ALIGN(0x1000);
 
