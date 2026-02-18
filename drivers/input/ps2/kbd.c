@@ -10,15 +10,17 @@
 #include <drivers/ps2/port.h>
 #include <drivers/ps2/driver.h>
 #include <drivers/input/ps2/scanset.h>
+#include <kanawha/atomic.h>
+
+static atomic_t ps2_kbd_counter = 0;
 
 #define PS2_KBD_NAME_BUFLEN 16
 #define PS2_KBD_KEYPRESS_BUFLEN 64
 struct ps2_kbd
 {
     struct ps2_port *port;
-    struct ptree_node tree_node;
 
-    struct input_dev input;
+    struct input_dev input_dev;
 
     unsigned long scanset_state;
     struct ps2_kbd_scanset *scanset;
@@ -30,21 +32,21 @@ struct ps2_kbd
 
 static int
 ps2_kbd_handle_scancode(
-        struct ps2_kbd *input,
+        struct ps2_kbd *kbd,
         uint8_t scancode)
 {
     struct input_event event;
 
-    int res = (input->scanset->handle_scancode)(
+    int res = (kbd->scanset->handle_scancode)(
             scancode,
-            &input->scanset_state,
+            &kbd->scanset_state,
             &event);
    
     if(res || event.key == INPUT_KEY_UNKNOWN) {
         return 0;
     }
 
-    input_driver_enqueue_event(&input->input, &event);
+    input_driver_enqueue_event(&kbd->input_dev, &event);
     return 0;
 }
 
@@ -56,9 +58,9 @@ ps2_kbd_recv_callback(
 {
     int res;
 
-    struct ps2_kbd *input = (struct ps2_kbd*)priv_data;
-    if(input->registered) {
-        res = ps2_kbd_handle_scancode(input, recv);
+    struct ps2_kbd *kbd = (struct ps2_kbd*)priv_data;
+    if(kbd->registered) {
+        res = ps2_kbd_handle_scancode(kbd, recv);
         if(res) {
             dprintk("ps2_kbd_enqueue_scancode Failed! (lost a key event) (err=%s)\n",
                     errnostr(res));
@@ -78,38 +80,38 @@ ps2_kbd_attach(
     DEBUG_ASSERT(KERNEL_ADDR(port->ops->send));
     DEBUG_ASSERT(KERNEL_ADDR(driver));
 
-    struct ps2_kbd *input = kzmalloc(sizeof(struct ps2_kbd), KM_KERNEL);
-    if(input == NULL) {
+    struct ps2_kbd *kbd = kzmalloc(sizeof(struct ps2_kbd), KM_KERNEL);
+    if(kbd == NULL) {
         return -ENOMEM;
     }
 
-    input->port = port;
-    input->scanset = &qwerty_scanset_2;
-    input->registered = 0;
+    kbd->port = port;
+    kbd->scanset = &qwerty_scanset_2;
+    kbd->registered = 0;
 
     ps2_port_set_callback(
             port,
             ps2_kbd_recv_callback,
-            (void*)input);
+            (void*)kbd);
 
-    uintptr_t id = input->tree_node.key;
-    snprintk(input->name_buf, PS2_KBD_NAME_BUFLEN, "ps2-%llu", (ull_t)id);
-    input->name_buf[PS2_KBD_NAME_BUFLEN-1] = '\0';
+    unsigned long id = atomic_fetch_inc(&ps2_kbd_counter);
+    snprintk(kbd->name_buf, PS2_KBD_NAME_BUFLEN, "ps2-kbd-%lu", (ul_t)id);
+    kbd->name_buf[PS2_KBD_NAME_BUFLEN-1] = '\0';
 
-    res = register_input_dev(&input->input, input->name_buf);
+    res = register_input_dev(&kbd->input_dev, kbd->name_buf);
     if(res) {
-        kfree(input);
+        kfree(kbd);
         return res;
     }
 
     res = ps2_port_enable_scanning(port);
     if(res) {
-        unregister_input_dev(&input->input);
-        kfree(input);
+        unregister_input_dev(&kbd->input_dev);
+        kfree(kbd);
         return res;
     }
 
-    input->registered = 1;
+    kbd->registered = 1;
 
     return 0;
 }

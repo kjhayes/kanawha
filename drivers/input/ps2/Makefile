@@ -1,5 +1,6 @@
 
 obj-y += \
-	driver.o \
+	kbd.o \
+	mouse.o \
 	scanset/
 
