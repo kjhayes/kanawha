@@ -9,7 +9,7 @@
 #include <kanawha/mem_flags.h>
 #include <kanawha/vmem.h>
 
-#define SLAB_ALLOC_BLOCK_PAGE_ORDER PAGE_ALLOC_MIN_ORDER
+#define SLAB_ALLOC_BLOCK_PAGE_ORDER (PAGE_ALLOC_MIN_ORDER >= VMEM_MIN_PAGE_ORDER ? PAGE_ALLOC_MIN_ORDER : VMEM_MIN_PAGE_ORDER)
 
 static void
 init_slab_allocator(
@@ -194,8 +194,10 @@ slab_alloc(struct slab_allocator *alloc)
     ilist_node_t *node;
 
 recurse:
+    DEBUG_ASSERT(KERNEL_ADDR(alloc));
     ilist_for_each(node, &alloc->block_list) {
         struct slab_alloc_block *block = container_of(node, struct slab_alloc_block, list_node);
+        DEBUG_ASSERT(KERNEL_ADDR(block));
         if(block->num_free == 0) {
             continue;
         }
