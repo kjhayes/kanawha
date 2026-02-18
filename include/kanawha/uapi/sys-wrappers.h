@@ -288,6 +288,20 @@ kanawha_sys_sigsend(
         int signal,
         unsigned long flags);
 
+__attribute__((weak))
+int
+kanwaha_sys_connect(
+        fd_t file,
+        fd_t *connection,
+        unsigned long flags);
+
+__attribute__((weak))
+int
+kanwaha_sys_accept(
+        fd_t file,
+        fd_t *connection,
+        unsigned long flags);
+
 #endif /* KANAWHA_BUILDING_KERNEL */
 
 #endif

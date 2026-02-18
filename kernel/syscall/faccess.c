@@ -40,7 +40,7 @@ syscall_faccess(
         mode_flags |= FILE_MODE_NON_BLOCK;
     }
     if(fields & FACCESS_CLOSE_ON_EXEC) {
-	mode_flags |= FILE_MODE_CLOSE_ON_EXEC;
+	    mode_flags |= FILE_MODE_CLOSE_ON_EXEC;
     }
 
     res = 0;

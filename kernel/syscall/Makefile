@@ -42,4 +42,6 @@ obj-y += \
 	openat.o \
 	prget.o \
 	prset.o \
+	connect.o \
+	accept.o \
 

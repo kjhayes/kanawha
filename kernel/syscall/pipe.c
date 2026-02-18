@@ -15,7 +15,7 @@
 int
 syscall_pipe(
         unsigned long flags,
-	unsigned long mode_flags,
+	    unsigned long mode_flags,
         fd_t __user *out)
 {
     int res;

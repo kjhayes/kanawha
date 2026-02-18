@@ -44,6 +44,10 @@
 #define KANAWHA_SYSCALL_ID_SIGSEND   41
 #define KANAWHA_SYSCALL_ID_SIGINFO   42
 #define KANAWHA_SYSCALL_ID_SIGMOD    43
+#define KANAWHA_SYSCALL_ID_PRGET     44
+#define KANAWHA_SYSCALL_ID_PRSET     45
+#define KANAWHA_SYSCALL_ID_CONNECT   46
+#define KANAWHA_SYSCALL_ID_ACCEPT    47
 
 .global kanawha_sys_exit
 .type kanawha_sys_exit,@function
@@ -449,6 +453,46 @@ kanawha_sys_sigsend:
     movq $KANAWHA_SYSCALL_ID_SIGSEND, %rax
     // rdi -> pid_t procid
     // rsi -> int signal 
+    // rdx -> unsigned long flags 
+    syscall
+    retq
+
+.global kanawha_sys_prget
+.type kanawha_sys_prget,@function
+kanawha_sys_prget:
+    movq $KANAWHA_SYSCALL_ID_PRGET, %rax
+    // rdi -> unsigned long type
+    // rsi -> long field
+    // rdx -> unsigned long *value
+    syscall
+    retq
+
+.global kanawha_sys_prset
+.type kanawha_sys_prset,@function
+kanawha_sys_prset:
+    movq $KANAWHA_SYSCALL_ID_PRSET, %rax
+    // rdi -> unsigned long type
+    // rsi -> long field
+    // rdx -> unsigned long value
+    syscall
+    retq
+
+.global kanawha_sys_connect
+.type kanawha_sys_connect,@function
+kanawha_sys_connect:
+    movq $KANAWHA_SYSCALL_ID_CONNECT, %rax
+    // rdi -> fd_t socket
+    // rsi -> fd_t *connection
+    // rdx -> unsigned long flags 
+    syscall
+    retq
+
+.global kanawha_sys_accept
+.type kanawha_sys_accept,@function
+kanawha_sys_accept:
+    movq $KANAWHA_SYSCALL_ID_ACCEPT, %rax
+    // rdi -> fd_t socket
+    // rsi -> fd_t *connection
     // rdx -> unsigned long flags 
     syscall
     retq

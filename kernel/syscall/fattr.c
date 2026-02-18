@@ -103,7 +103,7 @@ syscall_fattr(
             &value,
             sizeof(size_t));
     if(res) {
-
+        return res;
     }
             
     return 0;

@@ -263,6 +263,18 @@ ARG(unsigned long, type)\
 ARG(long, field)\
 ARG(unsigned long, value)
 
+#define SYSCALL_SIG_CONNECT(RET,ARG,...)\
+RET(int)\
+ARG(fd_t, socket)\
+ARG(fd_t __user *, connection)\
+ARG(unsigned long, flags)
+
+#define SYSCALL_SIG_ACCEPT(RET,ARG,...)\
+RET(int)\
+ARG(fd_t, socket)\
+ARG(fd_t __user *, connection)\
+ARG(unsigned long, flags)
+
 #define SYSCALL_XLIST(X)\
 X(exit,      0,  EXIT,       SYSCALL_SIG_EXIT)\
 X(open,      1,  OPEN,       SYSCALL_SIG_OPEN)\
@@ -308,6 +320,8 @@ X(siginfo,   42, SIGINFO,    SYSCALL_SIG_SIGINFO)\
 X(sigmod,    43, SIGMOD,     SYSCALL_SIG_SIGMOD)\
 X(prget,     44, PRGET,      SYSCALL_SIG_PRGET)\
 X(prset,     45, PRSET,      SYSCALL_SIG_PRSET)\
+X(connect,   46, CONNECT,    SYSCALL_SIG_CONNECT)\
+X(accept,    47, ACCEPT,     SYSCALL_SIG_ACCEPT)\
 
 #ifdef KANAWHA_BUILDING_KERNEL
 
