@@ -29,7 +29,6 @@ obj-y += \
 obj-y += \
 	calloc.o \
 
-obj-y += mmap_alloc/
-# obj-$(CONFIG_MMAP_ALLOC) += mmap_alloc/
-# obj-$(CONFIG_FREELIST_ALLOC) += freelist_alloc/
+# obj-y += mmap_alloc/
+obj-y += freelist_alloc/
 

@@ -1,6 +1,5 @@
 
 obj-y += \
-	malloc.o \
-	free.o \
+	core.o \
 	realloc.o \
 
