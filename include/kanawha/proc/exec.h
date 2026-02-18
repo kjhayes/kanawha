@@ -7,7 +7,7 @@
 int
 process_exec(
 	struct process *process,
-        fd_t file,
-        unsigned long exec_flags);
+    struct file *desc,
+    unsigned long exec_flags);
 
 #endif

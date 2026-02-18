@@ -16,16 +16,29 @@ syscall_exec(
 	fd_t file,
 	unsigned long exec_flags)
 {
+    int res;
+
     struct process *process = current_process();
     if(process == NULL) {
 	return -EINVAL;
     }
 
-    LOG("exec(%ld)\n", file);
+    struct file *desc =
+        file_table_get_file(process->file_table, process, file);
+ 
+    if(desc == NULL) {
+        file_table_put_file(process->file_table, process, desc);
+        return -EINVAL;
+    }
 
-    return process_exec(
+    LOG("exec(%ld -> \"%s\")\n", file, fs_path_get_name(desc->path));
+
+    res = process_exec(
 	    process,
-	    file,
+	    desc,
 	    exec_flags);
+
+    file_table_put_file(process->file_table, process, desc);
+    return res;
 }
 
