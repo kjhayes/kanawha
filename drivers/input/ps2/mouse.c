@@ -58,7 +58,7 @@ ps2_mouse_recv_callback(
             evt.mouse_delta_x = delta_x;
             evt.mouse_delta_y = delta_y;
 
-            printk("PS/2 Mouse Event! (%d,%d)\n", delta_x, delta_y);
+            dprintk("PS/2 Mouse Event! (%d,%d)\n", delta_x, delta_y);
 
             input_driver_enqueue_event(
                     &mouse->input_dev, &evt);
