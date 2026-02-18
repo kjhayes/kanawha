@@ -656,7 +656,7 @@ free_phys_mem(void)
           void *cur_end = (void*)(cur_base + cur_size);
           
           // Free this region
-          printk("Registering Buddy Allocator for region [%p - %p)\n",
+          dprintk("Registering Buddy Allocator for region [%p - %p)\n",
                   cur_base, cur_end);
 
           unsigned long page_alloc_flags = 0;
