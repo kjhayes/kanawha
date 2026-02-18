@@ -592,7 +592,7 @@ virtio_snd_dev_get_mode(
     struct virtio_snd_stream *stream =
         container_of(snd, struct virtio_snd_stream, snd_dev);
 
-    printk("virtio_snd_dev_get_mode\n");
+    dprintk("virtio_snd_dev_get_mode\n");
 
     return stream->cur_mode;
 }
@@ -605,7 +605,7 @@ virtio_snd_dev_set_mode(
     struct virtio_snd_stream *stream =
         container_of(snd, struct virtio_snd_stream, snd_dev);
 
-    printk("virtio_snd_dev_set_mode\n");
+    dprintk("virtio_snd_dev_set_mode\n");
 
     return virtio_snd_stream_set_mode(stream, mode);
 }
@@ -618,7 +618,7 @@ virtio_snd_dev_get_mode_info(
     struct virtio_snd_stream *stream =
         container_of(snd, struct virtio_snd_stream, snd_dev);
 
-    printk("virtio_snd_dev_get_mode_info\n");
+    dprintk("virtio_snd_dev_get_mode_info\n");
 
     if(mode >= stream->num_modes) {
         return NULL;
@@ -712,7 +712,7 @@ virtio_snd_dev_put_mode_info(
     DEBUG_ASSERT(KERNEL_ADDR(info));
     DEBUG_ASSERT(mode < stream->num_modes);
 
-    printk("virtio_snd_dev_put_mode_info\n");
+    dprintk("virtio_snd_dev_put_mode_info\n");
 
     kfree(info);
     return 0;
@@ -780,7 +780,7 @@ virtio_snd_dev_write_samples(
     struct virtio_snd_stream *stream =
         container_of(snd, struct virtio_snd_stream, snd_dev);
 
-    printk("virtio_snd_dev_write_samples (buflen=0x%lx)\n", buflen);
+    dprintk("virtio_snd_dev_write_samples (buflen=0x%lx)\n", buflen);
 
     if(stream->sample_size <= 0 || buflen < stream->sample_size) {
         return -EINVAL;

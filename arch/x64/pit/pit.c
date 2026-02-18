@@ -160,7 +160,7 @@ pit_snd_dev_write_samples(
 {
     // A simple blocking implementation for playing notes
 
-    printk("pit_snd_dev_write_samples!\n");
+    dprintk("pit_snd_dev_write_samples!\n");
 
     struct pit_dev *pit = container_of(dev, struct pit_dev, snd_dev);
 
