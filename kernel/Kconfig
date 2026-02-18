@@ -75,6 +75,9 @@ config LOG_FBDEV_REGISTRY_ON_LAUNCH
 config LOG_IRQDEV_REGISTRY_ON_LAUNCH
     bool "Log irqdev Registry"
     default n
+config LOG_INPUTDEV_REGISTRY_ON_LAUNCH
+    bool "Log inputdev Registry"
+    default n
 config LOG_RANDDEV_REGISTRY_ON_LAUNCH
     bool "Log randdev Registry"
     default n

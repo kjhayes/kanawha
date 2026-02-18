@@ -66,10 +66,23 @@ input_driver_enqueue_event(
         struct input_event lost = { 0 };
         input_driver_dequeue_event(input, &lost);
 
-        wprintk("input(%s) lost key event: (%s, %s)\n",
-                input_dev_get_name(input),
-                input_key_to_string(lost.key),
-                input_motion_to_string(lost.motion));
+        switch(lost.type) {
+          case INPUT_EVT_KEY:
+            wprintk("input_dev(%s) lost key event: (%s, %s)\n",
+                    input_dev_get_name(input),
+                    input_key_to_string(lost.key),
+                    input_motion_to_string(lost.motion));
+            break;
+          case INPUT_EVT_MOUSE:
+            wprintk("input_dev(%s) lost mouse event (%d, %d)\n",
+                    input_dev_get_name(input),
+                    (int)lost.mouse_delta_x,
+                    (int)lost.mouse_delta_y);
+            break;
+          default:
+            wprintk("input_dev(%s) lost event of unknown type!\n");
+            break;
+        }
     }
 
     input->buffer[input->buf_head] = *event;
@@ -112,4 +125,12 @@ input_driver_wait_for_event(
     wait_on(dev->read_queue);
     return 0;
 }
+
+#ifdef CONFIG_LOG_INPUTDEV_REGISTRY_ON_LAUNCH
+static int
+dump_input_dev_on_launch(void) {
+    return dump_input_dev_registry(do_printk);
+}
+declare_init(launch, dump_input_dev_on_launch);
+#endif
 
