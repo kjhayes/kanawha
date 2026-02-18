@@ -202,8 +202,8 @@ thread_init(
     if(state->id == NULL_THREAD_ID) {
         // We somehow ran out of thread_id_t
         eprintk("thread_init: Ran out of unique thread_id_t!\n");
-        vmem_map_destroy(state->mem_map);
         thread_tree_lock_release();
+        vmem_map_destroy(state->mem_map);
         return -ENOMEM;
     }
 
@@ -219,6 +219,7 @@ thread_init(
         if(res) {
             eprintk("thread_init: Failed to map in global thread vmem region at virtual address %p (err=%s)\n",
                     global_region->virtual_addr, errnostr(res));
+            thread_tree_lock_release();
             vmem_map_destroy(state->mem_map);
             return res;
         }
