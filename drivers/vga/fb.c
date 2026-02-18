@@ -23,6 +23,8 @@ static struct vga_fb_mode *vga_fb_modes[] = {
 };
 #define VGA_FB_NUM_MODES (sizeof(vga_fb_modes) / sizeof(*vga_fb_modes))
 
+#define VGA_FB_DEFAULT_MODE (3)
+
 // Must be called with the mode lock held
 static int
 __vga_fb_set_buffer_size(
@@ -268,7 +270,7 @@ vga_fb_receive_vga_dev(
     thread_lock_init(&fb->mode_lock);
     fb->buffer_exists = 0;
     fb->current_mode = 0;
-    res = vga_fb_set_mode(&fb->fb_dev, 0);
+    res = vga_fb_set_mode(&fb->fb_dev, VGA_FB_DEFAULT_MODE);
     if(res) {
         kfree(fb);
         return res;
