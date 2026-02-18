@@ -116,6 +116,8 @@ qwerty_2_scanset_handler(
         return -EAGAIN;
     }
 
+    out->type = INPUT_EVT_KEY;
+
     if(((*flags & FLAG_E0) == 0) && (simple_key_set[next_byte] != 0)) {
         out->key = simple_key_set[next_byte];
         if(*flags & FLAG_F0) {

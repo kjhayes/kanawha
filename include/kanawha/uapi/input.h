@@ -93,6 +93,9 @@ X(KEY_UP_ARROW)\
 X(KEY_DOWN_ARROW)\
 X(KEY_LEFT_ARROW)\
 X(KEY_RIGHT_ARROW)\
+X(KEY_MOUSE_LEFT)\
+X(KEY_MOUSE_RIGHT)\
+X(KEY_MOUSE_MIDDLE)\
 
 typedef enum input_key {
 
@@ -122,9 +125,24 @@ INPUT_MOTION_XLIST(DECLARE_MOTION_ENUM)
 
 } input_motion_t;
 
-struct input_event {
-    input_key_t key;
-    input_motion_t motion;
+typedef enum {
+    INPUT_EVT_KEY,
+    INPUT_EVT_MOUSE,
+} input_event_type_t;
+
+struct input_event
+{
+    input_event_type_t type;
+    union {
+        struct {
+            input_key_t key;
+            input_motion_t motion;
+        };
+        struct {
+            int mouse_delta_x;
+            int mouse_delta_y;
+        };
+    };
 };
 
 #endif

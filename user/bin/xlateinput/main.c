@@ -12,6 +12,10 @@ handle_input_event(
     static int shift_pressed = 0;
     static int ctrl_pressed = 0;
 
+    if(evt->type != INPUT_EVT_KEY) {
+        return;
+    }
+
     input_key_t key = evt->key;
     input_motion_t motion = evt->motion;
 
