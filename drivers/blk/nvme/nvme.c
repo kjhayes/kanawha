@@ -1152,6 +1152,9 @@ static struct blk_driver
 nvme_namespace_blk_driver = {
     .write = nvme_namespace_blk_dev_write,
     .read = nvme_namespace_blk_dev_read,
+    .pread = blk_dev_pread_using_read,
+    .pwrite = blk_dev_pwrite_using_write,
+    .flush = blk_dev_nop_flush,
     .num_sectors = nvme_namespace_blk_dev_num_sectors,
     .sector_order = nvme_namespace_blk_dev_sector_order,
 };

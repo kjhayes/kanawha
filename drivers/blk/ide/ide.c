@@ -840,6 +840,9 @@ static struct blk_driver
 ide_primary_blk_driver = {
     .read = ide_primary_blk_dev_read,
     .write = ide_primary_blk_dev_write,
+    .pread = blk_dev_pread_using_read,
+    .pwrite = blk_dev_pwrite_using_write,
+    .flush = blk_dev_nop_flush,
     .num_sectors = ide_primary_blk_dev_num_sectors,
     .sector_order = ide_primary_blk_dev_sector_order,
 };
@@ -886,6 +889,9 @@ static struct blk_driver
 ide_secondary_blk_driver = {
     .read = ide_secondary_blk_dev_read,
     .write = ide_secondary_blk_dev_write,
+    .pread = blk_dev_pread_using_read,
+    .pwrite = blk_dev_pwrite_using_write,
+    .flush = blk_dev_nop_flush,
     .num_sectors = ide_secondary_blk_dev_num_sectors,
     .sector_order = ide_secondary_blk_dev_sector_order,
 };

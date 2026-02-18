@@ -163,6 +163,9 @@ static struct blk_driver
 virtio_blk_driver = {
     .read = virtio_blk_dev_read,
     .write = virtio_blk_dev_write,
+    .pread = blk_dev_pread_using_read,
+    .pwrite = blk_dev_pwrite_using_write,
+    .flush = blk_dev_nop_flush,
     .num_sectors = virtio_blk_num_sectors,
     .sector_order = virtio_blk_sector_order,
 };
