@@ -8,32 +8,32 @@
 #include <string.h>
 #include <poll.h>
 #include <kfb/kfb.h>
-#include <kanawha/kbd.h>
+#include <kanawha/input.h>
 #include <kanawha/file.h>
 #include <kanawha/udrv.h>
 #include <kanawha/udrv/fb.h>
-#include <kanawha/udrv/kbd.h>
+#include <kanawha/udrv/input.h>
 #include <getopt.h>
 
-struct kbd {
+struct input {
     int fd;
 };
 
 struct seat {
     int udrv_fb;
-    int udrv_kbd;
+    int udrv_input;
 
     size_t backing_mode;
     struct fb_mode_info *mode_info;
     struct kfb_framebuffer *backing_fb;
-    struct kbd *backing_kbd;
+    struct input *backing_input;
 };
 
-static struct kbd *
-open_kbd(const char *path)
+static struct input *
+open_input(const char *path)
 {
-    struct kbd *kbd = malloc(sizeof(*kbd));
-    if(kbd == NULL) {
+    struct input *input = malloc(sizeof(*input));
+    if(input == NULL) {
 	perror("malloc");
 	return NULL;
     }
@@ -44,16 +44,16 @@ open_kbd(const char *path)
 	return NULL;
     }
 
-    kbd->fd = fd;
+    input->fd = fd;
 
-    return kbd;
+    return input;
 }
 
 static int
-close_kbd(struct kbd *kbd)
+close_input(struct input *input)
 {
-    close(kbd->fd);
-    free(kbd);
+    close(input->fd);
+    free(input);
     return 0;
 }
 
@@ -86,7 +86,7 @@ static struct seat *
 create_seat(const char *name,
 	    struct kfb_framebuffer *backing_fb,
 	    size_t backing_mode,
-	    struct kbd *backing_kbd)
+	    struct input *backing_input)
 {
     struct seat *seat = malloc(sizeof(struct seat));
     if(seat == NULL) {
@@ -94,10 +94,10 @@ create_seat(const char *name,
 	return NULL;
     }
     seat->udrv_fb  = mkudrv("fb", name);
-    seat->udrv_kbd = mkudrv("kbd", name);
+    seat->udrv_input = mkudrv("input", name);
 
     seat->backing_fb = backing_fb;
-    seat->backing_kbd = backing_kbd;
+    seat->backing_input = backing_input;
     seat->backing_mode = backing_mode;
 
     seat->mode_info = kfb_load_mode_info(backing_fb, backing_mode);
@@ -220,7 +220,7 @@ seat_handle_framebuffer_write_to_buffer(
 static const char *progname = "seat";
 static inline void
 print_usage(void) {
-    fprintf(stderr, "%s KBD FB\n",
+    fprintf(stderr, "%s INPUT FB\n",
 	    progname);
 }
 static inline void
@@ -236,7 +236,7 @@ main(int argc, const char **argv)
 	progname = argv[0];
     }
 
-    const char *kbd_path = NULL;
+    const char *input_path = NULL;
     const char *fb_path = NULL;
     size_t num_seats = 0;
 
@@ -268,7 +268,7 @@ main(int argc, const char **argv)
             panic_usage();
         }
 
-        kbd_path = pos_argv[0];
+        input_path = pos_argv[0];
         fb_path = pos_argv[1];
 
 	num_seats = pos_argc - 2;
@@ -278,7 +278,7 @@ main(int argc, const char **argv)
 	}
     }
 
-    if(kbd_path == NULL) {
+    if(input_path == NULL) {
 	panic_usage();
     }
     if(fb_path == NULL) {
@@ -291,9 +291,9 @@ main(int argc, const char **argv)
 	return -1;
     }
 
-    struct kbd *kbd = open_kbd(kbd_path);
-    if(kbd == NULL) {
-	fprintf(stderr, "Failed to open kbd \"%s\"!\n", kbd_path);
+    struct input *input = open_input(input_path);
+    if(input == NULL) {
+	fprintf(stderr, "Failed to open input \"%s\"!\n", input_path);
 	return -1;
     }
 
@@ -306,7 +306,7 @@ main(int argc, const char **argv)
 
 	snprintf(buffer, 64, "seat-%lu", (unsigned long)i);
 
-	struct seat *seat = create_seat(buffer, framebuffer, seat_modes[i], kbd);
+	struct seat *seat = create_seat(buffer, framebuffer, seat_modes[i], input);
 
 	suspend_seat(seat);
 
@@ -323,19 +323,19 @@ main(int argc, const char **argv)
 
     while(running)
     {
-        struct kbd_event event;
-        ssize_t amt_read = read(kbd->fd, (void*)&event, sizeof(struct kbd_event));
-        size_t num_read = amt_read / sizeof(struct kbd_event);
+        struct input_event event;
+        ssize_t amt_read = read(input->fd, (void*)&event, sizeof(struct input_event));
+        size_t num_read = amt_read / sizeof(struct input_event);
         if(num_read == 1) {
-            // Need to handle a kbd event
-            if(event.key == KBD_KEY_LCTRL) {
-                lctrl_is_pressed = (event.motion != KBD_MOTION_RELEASED);
+            // Need to handle a input event
+            if(event.key == INPUT_KEY_LCTRL) {
+                lctrl_is_pressed = (event.motion != INPUT_MOTION_RELEASED);
             }
-            if(event.key == KBD_KEY_RCTRL) {
-                rctrl_is_pressed = (event.motion != KBD_MOTION_RELEASED);
+            if(event.key == INPUT_KEY_RCTRL) {
+                rctrl_is_pressed = (event.motion != INPUT_MOTION_RELEASED);
             }
             if(lctrl_is_pressed || rctrl_is_pressed) {
-                if(event.key == KBD_KEY_TAB && event.motion == KBD_MOTION_PRESSED) {
+                if(event.key == INPUT_KEY_TAB && event.motion == INPUT_MOTION_PRESSED) {
             	    // cycle the current seat
             	    printf("suspending seat %ld\n", (long)current_seat);
                     suspend_seat(seats[current_seat]);
@@ -348,13 +348,13 @@ main(int argc, const char **argv)
             	    printf("setting seat to %ld\n", (long)current_seat);
                 }
             } else {
-#define BUFLEN (sizeof(struct udrv_pkt) + sizeof(struct kbd_event))
+#define BUFLEN (sizeof(struct udrv_pkt) + sizeof(struct input_event))
                 char buffer[BUFLEN];
                 struct udrv_pkt *pkt = (void*)&buffer;
-                pkt->type = UDRV_KBD_PKT_PROVIDE_INPUT;
+                pkt->type = UDRV_INPUT_PKT_PROVIDE_INPUT;
                 pkt->flags = 0;
-                *(struct kbd_event *)pkt->data = event;
-                write(seats[current_seat]->udrv_kbd, (void*)pkt, BUFLEN);
+                *(struct input_event *)pkt->data = event;
+                write(seats[current_seat]->udrv_input, (void*)pkt, BUFLEN);
 #undef BUFLEN
 	    }
         }

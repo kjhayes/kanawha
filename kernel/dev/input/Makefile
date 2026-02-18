@@ -1,6 +1,6 @@
 
 obj-y += \
-	kbd_dev.o \
+	input_dev.o \
 	event.o \
 	sysfs.o \
 	udrv.o \

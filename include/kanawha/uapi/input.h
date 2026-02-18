@@ -1,7 +1,7 @@
-#ifndef __KANAWHA__UAPI_KBD_H__
-#define __KANAWHA__UAPI_KBD_H__
+#ifndef __KANAWHA__UAPI_INPUT_H__
+#define __KANAWHA__UAPI_INPUT_H__
 
-#define KBD_KEY_XLIST(X)\
+#define INPUT_KEY_XLIST(X)\
 X(KEY_A)\
 X(KEY_B)\
 X(KEY_C)\
@@ -94,37 +94,37 @@ X(KEY_DOWN_ARROW)\
 X(KEY_LEFT_ARROW)\
 X(KEY_RIGHT_ARROW)\
 
-typedef enum kbd_key {
+typedef enum input_key {
 
-    KBD_KEY_UNKNOWN = 0,
+    INPUT_KEY_UNKNOWN = 0,
 
 #define DECLARE_KEY_ENUM(__KEY)\
-    KBD_ ## __KEY,
-KBD_KEY_XLIST(DECLARE_KEY_ENUM)
+    INPUT_ ## __KEY,
+INPUT_KEY_XLIST(DECLARE_KEY_ENUM)
 #undef DECLARE_KEY_ENUM
 
     // Must be last
-    KBD_NUM_KEYS,
+    INPUT_NUM_KEYS,
 
-} kbd_key_t;
+} input_key_t;
 
-#define KBD_MOTION_XLIST(X)\
+#define INPUT_MOTION_XLIST(X)\
 X(MOTION_RELEASED)\
 X(MOTION_PRESSED)\
 X(MOTION_HELD)
 
-typedef enum kbd_motion {
+typedef enum input_motion {
 
 #define DECLARE_MOTION_ENUM(__MOTION)\
-    KBD_ ## __MOTION,
-KBD_MOTION_XLIST(DECLARE_MOTION_ENUM)
+    INPUT_ ## __MOTION,
+INPUT_MOTION_XLIST(DECLARE_MOTION_ENUM)
 #undef DECLARE_MOTION_ENUM
 
-} kbd_motion_t;
+} input_motion_t;
 
-struct kbd_event {
-    kbd_key_t key;
-    kbd_motion_t motion;
+struct input_event {
+    input_key_t key;
+    input_motion_t motion;
 };
 
 #endif

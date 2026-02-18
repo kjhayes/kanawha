@@ -20,7 +20,7 @@ bins += \
     sh \
     stress \
     udrv_term \
-    xlatekbd \
+    xlateinput \
     colors \
     cp \
     fault \

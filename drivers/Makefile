@@ -9,7 +9,7 @@ obj-y += \
 	fb/ \
 	irq/ \
 	fs/ \
-	kbd/ \
+	input/ \
 	snd/ \
 
 obj-y += \

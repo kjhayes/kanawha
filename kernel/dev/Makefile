@@ -7,6 +7,6 @@ obj-y += \
 	rand/ \
 	net/ \
 	term/ \
-	kbd/ \
+	input/ \
 	snd/ \
 
