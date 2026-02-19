@@ -26,11 +26,6 @@ struct fs_path *
 fs_path_get_parent(
         struct fs_path *path);
 
-// Returns an anonymous pipe with no references
-int
-fs_path_create_anon_pipe(
-        struct fs_path **out);
-
 // Create an anonymous path to an fs_node
 // (Has a single reference)
 int

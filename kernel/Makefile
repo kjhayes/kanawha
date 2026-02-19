@@ -33,7 +33,7 @@ obj-y += \
 	string.o \
 	parse.o \
 	waitqueue.o \
-	pipe.o \
+	socket.o \
 	xcall.o \
 	timer.o \
 	time.o \

@@ -4,6 +4,7 @@
 #include <kanawha/fs/path.h>
 #include <kanawha/proc/file_table.h>
 #include <kanawha/printk.h>
+#include <kanawha/socket.h>
 
 #ifdef CONFIG_DEBUG_SYSCALL_PIPE
 #define LOG(fmt, ...) \
@@ -28,28 +29,35 @@ syscall_pipe(
 	    return -EINVAL;
     }
 
-    struct fs_path *pipe;
-
     LOG("flags=0x%lx\n",
             flags);
 
-    res = fs_path_create_anon_pipe(&pipe);
+    struct fs_node *pipe_node;
+    pipe_node = pipe_create_anonymous();
+    if(pipe_node == NULL) {
+        LOG("Failed to create anonymous pipe!\n");
+        return -ENOMEM;
+    }
+
+    struct fs_path *pipe_path;
+    res = fs_path_create_anonymous(pipe_node, &pipe_path);
     if(res) {
-        LOG("Failed to create anonymous pipe: %s\n",
+        LOG("Failed to create anonymous pipe fs_path: %s\n",
                 errnostr(res));
         return res;
     }    
+    fs_node_put(pipe_node);
 
     fd_t fd;
     res = file_table_open_path(
             process->file_table,
             process,
-            pipe,
+            pipe_path,
             FILE_PERM_READ|FILE_PERM_WRITE,
             mode_flags,
             &fd);
     if(res) {
-        fs_path_put(pipe);
+        fs_path_put(pipe_path);
         return res;
     }
 
@@ -59,11 +67,11 @@ syscall_pipe(
                 process->file_table,
                 process,
                 fd);
-        fs_path_put(pipe);
+        fs_path_put(pipe_path);
         return res;
     }
 
-    fs_path_put(pipe);
+    fs_path_put(pipe_path);
     return 0;
 }
 

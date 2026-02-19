@@ -329,65 +329,6 @@ fs_path_put(struct fs_path *path)
 }
 
 int
-fs_path_create_anon_pipe(
-        struct fs_path **out)
-{
-    int res;
-
-    struct fs_path *pipe =
-        kzmalloc(sizeof(struct fs_path), KM_KERNEL);
-    if(pipe == NULL) {
-        return -ENOMEM;
-    }
-
-#ifdef CONFIG_DEBUG_CHECKSUM_FS_PATH
-    pipe->__checksum = FS_PATH_CHECKSUM;
-#endif
-
-    struct fs_node *fs_node = pipe_fs_get_anon_pipe();
-    if(fs_node == NULL) {
-        wprintk("fs_path_create_anon_pipe: Failed to create pipefs node!\n");
-        kfree(pipe);
-        return -EINVAL;
-    }
-
-    res = assign_fs_node_to_fs_path(fs_node, pipe);
-    if(res) {
-        wprintk("assign_fs_node_to_fs_path returned %s during fs_path_create_anon_pipe!\n",
-                errnostr(res));
-        fs_node_put(fs_node);
-        kfree(pipe);
-        return res;
-    }
-
-    fs_node_put(fs_node);
-
-    pipe->type = FS_PATH_NODE;
-    pipe->parent = NULL;
-
-    char buffer[128];
-    snprintk(buffer, 128, "pipe-%ld", pipe->fs_node->cache_node.key);
-    buffer[127] = '\0';
-    pipe->name = kstrdup(buffer);
-    pipe->dynamic_name = 1;
-    if(pipe->name == NULL) {
-        // We can survive this (probably won't for long...)
-        pipe->name = "pipe";
-        pipe->dynamic_name = 0;
-    }
-    pipe->refs = 1; 
-    ilist_init(&pipe->children);
-
-    // Add the pipe to the root fs_path list
-    fs_path_global_lock_acquire();
-    ilist_push_tail(&root_fs_path_list, &pipe->child_node);
-    fs_path_global_lock_release();
-
-    *out = pipe;
-    return 0;
-}
-
-int
 fs_path_create_anonymous(
         struct fs_node *fs_node,
         struct fs_path **out)
