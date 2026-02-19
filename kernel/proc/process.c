@@ -890,7 +890,11 @@ process_get_reapable_child(
             }
         }
         if(child_count == 0) {
-            // Cannot without any children
+            irq_lock_release(&parent->hierarchy_lock);
+            if(nowait) {
+                return -EWOULDBLOCK;
+            }
+            // Cannot wait without any children
             return -EINVAL;
         }
 
