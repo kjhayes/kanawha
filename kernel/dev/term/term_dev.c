@@ -17,12 +17,12 @@ term_dev_init(struct term_dev *dev)
     waitqueue_init(&dev->write_wq);
 
     {
-	char namebuf[64];
-	snprintk(namebuf, 64, "%s-read", term_dev_get_name(dev));
-	namebuf[63] = '\0';
+	    char namebuf[64];
+	    snprintk(namebuf, 64, "%s-read", term_dev_get_name(dev));
+	    namebuf[63] = '\0';
         waitqueue_name(&dev->read_wq, namebuf);
-	snprintk(namebuf, 64, "%s-write", term_dev_get_name(dev));
-	namebuf[63] = '\0';
+	    snprintk(namebuf, 64, "%s-write", term_dev_get_name(dev));
+	    namebuf[63] = '\0';
         waitqueue_name(&dev->write_wq, namebuf);
     }
 
