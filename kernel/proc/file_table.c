@@ -556,20 +556,24 @@ file_table_on_exec(
     struct ptree_node *pnode = ptree_get_first(&table->descriptor_tree);
     while(pnode != NULL) {
 
-	struct file *desc = container_of(pnode, struct file, table_node);
-	
-	if(desc->mode_flags & FILE_MODE_CLOSE_ON_EXEC) {
-	    res = __file_table_close_lockless(
-		    table,
-		    process,
-		    desc);
-	    if(res) {
-		wprintk("Failed to close CLOSE_ON_EXEC file during exec! (err=%s)\n",
-			errnostr(res));
-	    }
-	}
+	    struct file *desc = container_of(pnode, struct file, table_node);
 
-	pnode = ptree_get_next(pnode);
+        // Get the next node preemptively, in case we end up
+        // deleting the current node.
+        struct ptree_node *next = ptree_get_next(pnode);
+	    
+	    if(desc->mode_flags & FILE_MODE_CLOSE_ON_EXEC) {
+	        res = __file_table_close_lockless(
+	    	    table,
+	    	    process,
+	    	    desc);
+	        if(res) {
+	    	    wprintk("Failed to close CLOSE_ON_EXEC file during exec! (err=%s)\n",
+	    	    	errnostr(res));
+	        }
+	    }
+
+	    pnode = next;
     }
 
     thread_lock_release(&table->lock);

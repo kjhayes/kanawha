@@ -337,10 +337,12 @@ ptree_get_next(struct ptree_node *node)
 {
     DEBUG_ASSERT(KERNEL_ADDR(node));
     if(node->right) {
+        DEBUG_ASSERT(KERNEL_ADDR(node->right));
         struct ptree_node *right = node->right;
         // Go as far left as possible after going right once
         while(right->left) {
             right = right->left;
+            DEBUG_ASSERT(KERNEL_ADDR(right));
         }
         return right;
     }
@@ -348,6 +350,7 @@ ptree_get_next(struct ptree_node *node)
     struct ptree_node *parent;
     parent = node->parent;
     while(parent != NULL) {
+        DEBUG_ASSERT(KERNEL_ADDR(parent));
         if(parent->left == node) {
             // parent is next greater 
             return parent;
