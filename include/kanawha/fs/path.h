@@ -31,6 +31,13 @@ int
 fs_path_create_anon_pipe(
         struct fs_path **out);
 
+// Create an anonymous path to an fs_node
+// (Has a single reference)
+int
+fs_path_create_anonymous(
+        struct fs_node *node,
+        struct fs_path **out);
+
 // Returns a root mount point with a single reference
 int
 fs_path_mount_root(

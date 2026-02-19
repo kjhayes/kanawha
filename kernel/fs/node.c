@@ -878,6 +878,25 @@ fs_node_cannot_unlink(
     return -EINVAL;
 }
 
+
+int
+fs_node_cannot_connect(
+        struct fs_node *node,
+        size_t *inode,
+        unsigned long flags)
+{
+    return -EINVAL;
+}
+
+int
+fs_node_cannot_accept(
+        struct fs_node *node,
+        size_t *inode,
+        unsigned long flags)
+{
+    return -EINVAL;
+}
+
 int
 fs_node_load_page_read_alloc(
         struct fs_node *node,

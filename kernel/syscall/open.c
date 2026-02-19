@@ -107,7 +107,7 @@ syscall_open(
     res = file_table_open(
             process->file_table,
             process,
-	    dir_path,
+	        dir_path,
             path_buf,
             access_flags,
             mode_flags,

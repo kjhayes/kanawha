@@ -263,7 +263,7 @@ int
 file_table_open(
         struct file_table *table,
         struct process *process,
-	struct fs_path *dir,
+	    struct fs_path *dir,
         const char *path_str,
         unsigned long access_flags,
         unsigned long mode_flags,
@@ -275,7 +275,7 @@ file_table_open(
 
     res = fs_path_lookup_for_process(
             process,
-	    dir,
+	        dir,
             path_str,
             access_flags,
             mode_flags,
@@ -294,6 +294,34 @@ file_table_open(
             mode_flags,
             fd);
 
+    fs_path_put(path);
+    return res;
+}
+
+int
+file_table_open_node(
+        struct file_table *table,
+        struct process *process,
+        struct fs_node *node,
+        unsigned long access_flags,
+        unsigned long mode_flags,
+        fd_t *fd)
+{
+    int res;
+    struct fs_path *path;
+    res = fs_path_create_anonymous(
+            node,
+            &path);
+    if(res) {
+        return res;
+    }
+    res = file_table_open_path(
+            table,
+            process,
+            path,
+            access_flags,
+            mode_flags,
+            fd);
     fs_path_put(path);
     return res;
 }

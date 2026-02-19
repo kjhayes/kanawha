@@ -25,7 +25,7 @@ syscall_pipe(
     if((mode_flags & FILE_MODE_OPEN_TRUNC)
      ||(mode_flags & FILE_MODE_WRITE_EXTEND))
     {
-	return -EINVAL;
+	    return -EINVAL;
     }
 
     struct fs_path *pipe;

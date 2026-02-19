@@ -24,6 +24,7 @@ DEFINE_LOCAL_IRQ_LOCK(fs_path_global_lock);
 struct fs_path
 {
     char *name;
+    unsigned dynamic_name;
 
     struct fs_node *fs_node;
     ilist_node_t fs_node_node;
@@ -96,7 +97,7 @@ __fs_path_get(struct fs_path *path);
 static int
 __fs_path_lookup_for_process(
         struct process *process,
-	struct fs_path *dir_path,
+        struct fs_path *dir_path,
         const char *path_str,
         unsigned long access_flags,
         unsigned long mode_flags,
@@ -208,6 +209,7 @@ __fs_path_traverse(
             fs_path_global_lock_release();
             return -ENOMEM;
         }
+        child->dynamic_name = 1;
 
         res = assign_fs_node_to_fs_path(child_fs_node, child);
         if(res) {
@@ -367,6 +369,12 @@ fs_path_create_anon_pipe(
     snprintk(buffer, 128, "pipe-%ld", pipe->fs_node->cache_node.key);
     buffer[127] = '\0';
     pipe->name = kstrdup(buffer);
+    pipe->dynamic_name = 1;
+    if(pipe->name == NULL) {
+        // We can survive this (probably won't for long...)
+        pipe->name = "pipe";
+        pipe->dynamic_name = 0;
+    }
     pipe->refs = 1; 
     ilist_init(&pipe->children);
 
@@ -376,6 +384,48 @@ fs_path_create_anon_pipe(
     fs_path_global_lock_release();
 
     *out = pipe;
+    return 0;
+}
+
+int
+fs_path_create_anonymous(
+        struct fs_node *fs_node,
+        struct fs_path **out)
+{
+    int res;
+
+    struct fs_path *path =
+        kzmalloc(sizeof(struct fs_path), KM_KERNEL);
+    if(path == NULL) {
+        return -ENOMEM;
+    }
+
+#ifdef CONFIG_DEBUG_CHECKSUM_FS_PATH
+    path->__checksum = FS_PATH_CHECKSUM;
+#endif
+
+    res = assign_fs_node_to_fs_path(fs_node, path);
+    if(res) {
+        wprintk("assign_fs_node_to_fs_path returned %s during fs_path_create_anonymous!\n",
+                errnostr(res));
+        kfree(path);
+        return res;
+    }
+
+    path->type = FS_PATH_NODE;
+    path->parent = NULL;
+
+    path->name = "anon";
+    path->dynamic_name = 0;
+    path->refs = 1; 
+    ilist_init(&path->children);
+
+    // Add the path to the root fs_path list
+    fs_path_global_lock_acquire();
+    ilist_push_tail(&root_fs_path_list, &path->child_node);
+    fs_path_global_lock_release();
+
+    *out = path;
     return 0;
 }
 
@@ -427,7 +477,8 @@ fs_path_mount_root(
 
     mntpoint->type = FS_PATH_MOUNT;
     mntpoint->parent = NULL;
-    mntpoint->name = kstrdup("/");
+    mntpoint->name = "/";
+    mntpoint->dynamic_name = 0;
     mntpoint->refs = 1; 
     ilist_init(&mntpoint->children);
 
@@ -493,6 +544,7 @@ fs_path_mount_dir(
         kfree(mntpoint);
         return -ENOMEM;
     }
+    mntpoint->dynamic_name = 1;
     mntpoint->refs = 1; 
     ilist_init(&mntpoint->children);
 

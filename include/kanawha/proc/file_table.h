@@ -40,6 +40,15 @@ file_table_deattach(
         struct process *process);
 
 int
+file_table_open_node(
+        struct file_table *table,
+        struct process *process,
+        struct fs_node *node,
+        unsigned long access_flags,
+        unsigned long mode_flags,
+        fd_t *fd);
+
+int
 file_table_open_path(
         struct file_table *table,
         struct process *process,
@@ -52,7 +61,7 @@ int
 file_table_open(
         struct file_table *table,
         struct process *process,
-	struct fs_path *dir,
+        struct fs_path *dir,
         const char *path,
         unsigned long access_flags,
         unsigned long mode_flags,

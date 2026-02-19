@@ -123,6 +123,18 @@ ARG(const char *, path)
 RET(int)\
 ARG(const char *, name)
 
+#define FS_NODE_CONNECT_NON_BLOCKING (1UL<<0)
+#define FS_NODE_CONNECT_SIG(RET,ARG,...)\
+RET(int)\
+ARG(size_t *, conn_inode)\
+ARG(unsigned long, flags)\
+
+#define FS_NODE_ACCEPT_NON_BLOCKING (1UL<<0)
+#define FS_NODE_ACCEPT_SIG(RET,ARG,...)\
+RET(int)\
+ARG(size_t *, conn_inode)\
+ARG(unsigned long, flags)
+
 #define FS_NODE_OP_LIST(OP, ...)\
 OP(read_page, FS_NODE_READ_PAGE_SIG, ##__VA_ARGS__)\
 OP(write_page, FS_NODE_WRITE_PAGE_SIG, ##__VA_ARGS__)\
@@ -138,7 +150,9 @@ OP(mkfifo, FS_NODE_MKFIFO_SIG, ##__VA_ARGS__)\
 OP(mkdir, FS_NODE_MKDIR_SIG, ##__VA_ARGS__)\
 OP(link, FS_NODE_LINK_SIG, ##__VA_ARGS__)\
 OP(symlink, FS_NODE_SYMLINK_SIG, ##__VA_ARGS__)\
-OP(unlink, FS_NODE_UNLINK_SIG, ##__VA_ARGS__)
+OP(unlink, FS_NODE_UNLINK_SIG, ##__VA_ARGS__)\
+OP(connect, FS_NODE_CONNECT_SIG, ##__VA_ARGS__)\
+OP(accept, FS_NODE_ACCEPT_SIG, ##__VA_ARGS__)
 
 struct fs_node_ops {
 DECLARE_OP_LIST_PTRS(FS_NODE_OP_LIST, struct fs_node *)
@@ -317,8 +331,8 @@ fs_node_cannot_lookup(
         struct fs_node *node,
         const char *name,
         size_t *inode,
-	char *sym_buffer,
-	size_t sym_buflen);
+	    char *sym_buffer,
+	    size_t sym_buflen);
 int
 fs_node_cannot_mkfile(
         struct fs_node *node,
@@ -348,6 +362,18 @@ int
 fs_node_cannot_unlink(
         struct fs_node *node,
         const char *name);
+
+int
+fs_node_cannot_connect(
+        struct fs_node *node,
+        size_t *inode,
+        unsigned long flags);
+
+int
+fs_node_cannot_accept(
+        struct fs_node *node,
+        size_t *inode,
+        unsigned long flags);
 
 static inline void
 fs_node_ops_init_undef(struct fs_node_ops *ops)

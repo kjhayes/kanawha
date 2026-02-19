@@ -83,7 +83,7 @@ OP(dir_begin, FS_FILE_DIR_BEGIN_SIG, ##__VA_ARGS__)\
 OP(dir_next, FS_FILE_DIR_NEXT_SIG, ##__VA_ARGS__)\
 OP(dir_readattr, FS_FILE_DIR_READATTR_SIG, ##__VA_ARGS__)\
 OP(dir_readname, FS_FILE_DIR_READNAME_SIG, ##__VA_ARGS__)\
-OP(poll, FS_FILE_POLL_SIG, ##__VA_ARGS__)
+OP(poll, FS_FILE_POLL_SIG, ##__VA_ARGS__)\
 
 struct fs_file_ops {
 DECLARE_OP_LIST_PTRS(FS_FILE_OP_LIST, struct file*);
