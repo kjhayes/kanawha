@@ -30,11 +30,16 @@ syscall_accept(
     struct fs_path *sock_path = sock_desc->path;
     struct fs_node *sock_node = fs_path_get_fs_node(sock_path);
 
+    unsigned long accept_flags = 0;
+    if(sock_desc->mode_flags & FILE_MODE_NON_BLOCK) {
+        accept_flags |= FS_NODE_CONNECT_NON_BLOCKING;
+    }
+
     size_t conn_inode;
     res = fs_node_accept(
             sock_node,
             &conn_inode,
-            flags);
+            accept_flags);
     if(res) {
         file_table_put_file(
             process->file_table,

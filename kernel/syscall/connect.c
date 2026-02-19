@@ -30,11 +30,16 @@ syscall_connect(
     struct fs_path *sock_path = sock_desc->path;
     struct fs_node *sock_node = fs_path_get_fs_node(sock_path);
 
+    unsigned long connect_flags = 0;
+    if(sock_desc->mode_flags & FILE_MODE_NON_BLOCK) {
+        connect_flags |= FS_NODE_CONNECT_NON_BLOCKING;
+    }
+
     size_t conn_inode;
     res = fs_node_connect(
             sock_node,
             &conn_inode,
-            flags);
+            connect_flags);
     if(res) {
         file_table_put_file(
             process->file_table,
@@ -53,7 +58,7 @@ syscall_connect(
             process,
             sock_desc);
     if(conn_node == NULL) {
-        return -EINTR;
+        return -EINVAL;
     }
 
     fd_t conn_fd;

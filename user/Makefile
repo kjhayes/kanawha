@@ -6,6 +6,10 @@ libs += \
 	kfb \
 
 bins += \
+	init \
+	randd
+
+bins += \
     cat \
     cowsay \
     dumpenv \

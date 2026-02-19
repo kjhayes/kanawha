@@ -96,7 +96,7 @@ input_init_fs_mount(void)
         return res;
     }
 
-    res = sysfs_register_mount(&input_dev_fs_mount->fs_mount, "input");
+    res = sysfs_register_mount(&input_dev_fs_mount->fs_mount, "inputdev");
     if(res) {
         unregister_input_dev_owner(&input_dev_fs_owner);
         vfs_mount_destroy(mnt);

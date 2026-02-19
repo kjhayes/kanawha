@@ -5,6 +5,7 @@
 #include <kanawha/uapi/poll.h>
 #include <kanawha/waitqueue.h>
 #include <kanawha/kmalloc.h>
+#include <kanawha/uapi/syscall.h>
 
 #define SOCKET_FS_PIPE_BUFLEN (0x100)
 
@@ -280,12 +281,19 @@ socket_fs_pipe_file_ops = {
 FS_FILE_OPS_INIT_UNDEF(socket_fs_pipe_file_ops);
 
 static int
+socket_fs_mount_create_pipe(
+        struct socket_fs_mount *mnt,
+        size_t *inode_out);
+
+static int
 socket_fs_socket_node_form_connection(
         struct socket_fs_node *socket,
         int can_block,
         int is_client,
         size_t *inode_out)
 {
+    int res;
+
     DEBUG_ASSERT(KERNEL_ADDR(socket));
     DEBUG_ASSERT(socket->type == SOCKET_FS_NODE_SOCKET);
 
@@ -296,18 +304,78 @@ socket_fs_socket_node_form_connection(
         ? SOCKET_STATUS_WAITING_FOR_SERVER
         : SOCKET_STATUS_WAITING_FOR_CLIENT;
 
-    return -EUNIMPL;
+    struct socket_fs_mount *socket_mnt;
+    socket_mnt = container_of(socket->fs_node->mount,
+                              struct socket_fs_mount,
+                              fs_mount);
+    DEBUG_ASSERT(KERNEL_ADDR(socket_mnt));
 
-    //socket_lock_acquire(socket);
-    //while(1) {
-    //    if(socket->socket.status == SOCKET_STATUS_NONE) {
-    //        socket->socket.status = status_waiting_for_other;
-    //        // TODO
-    //    }
-    //}
-    //socket_lock_release(socket);
+    size_t inode = 0;
 
-    //return 0;
+    socket_lock_acquire(socket);
+    while(1) {
+        if(socket->socket.status == SOCKET_STATUS_NONE)
+        {
+            if(!can_block) {
+                res = -EWOULDBLOCK;
+                break;
+            }
+            socket->socket.status = status_waiting_for_other;
+            while(socket->socket.status == status_waiting_for_other) {
+                wait_on_irq_lock_release(
+                        &socket->socket.unpaired_wq,
+                        &socket->lock);
+                socket_lock_acquire(socket);
+            }
+            if(socket->socket.status == SOCKET_STATUS_PAIRED) {
+                // We are done (grab the inode and result saved by
+                // the other end of the connection)
+                res = socket->socket.unpaired_result;
+                inode = socket->socket.unpaired_inode;
+                socket->socket.status = SOCKET_STATUS_NONE;
+                wake_all(&socket->socket.pending_wq);
+                break;
+            } else {
+                if(!can_block) {
+                    res = -EWOULDBLOCK;
+                    break;
+                }
+                // Try again?
+                continue;
+            }
+        }
+        else if((socket->socket.status == status_waiting_for_other)
+             || (socket->socket.status == SOCKET_STATUS_PAIRED))
+        {
+            if(!can_block) {
+                res = -EWOULDBLOCK;
+                break;
+            }
+            // Put ourselves on the pending waitqueue and try again.
+            wait_on_irq_lock_release(
+                    &socket->socket.pending_wq,
+                    &socket->lock);
+            socket_lock_acquire(socket);
+            continue;
+        }
+        else if(socket->socket.status == status_waiting_for_us)
+        {
+            // We are the second to arrive.
+            res = socket_fs_mount_create_pipe(
+                    socket_mnt,
+                    &inode);
+            socket->socket.unpaired_inode = inode;
+            socket->socket.unpaired_result = res;
+            mbarrier();
+            socket->socket.status = SOCKET_STATUS_PAIRED;
+            wake_all(&socket->socket.unpaired_wq);
+            break;
+        }
+    }
+    socket_lock_release(socket);
+
+    *inode_out = inode;
+    return res;
 }
 
 static int
@@ -317,9 +385,10 @@ socket_fs_socket_node_accept(
         unsigned long flags)
 {
     struct socket_fs_node *socket = fs_node->backing.priv_state;
+    int can_block = !(flags & FS_NODE_ACCEPT_NON_BLOCKING);
     return socket_fs_socket_node_form_connection(
             socket,
-            flags,
+            can_block,
             0,
             inode_out);
 }
@@ -331,9 +400,10 @@ socket_fs_socket_node_connect(
         unsigned long flags)
 {
     struct socket_fs_node *socket = fs_node->backing.priv_state;
+    int can_block = !(flags & FS_NODE_CONNECT_NON_BLOCKING);
     return socket_fs_socket_node_form_connection(
             socket,
-            flags,
+            can_block,
             1,
             inode_out);
 }
