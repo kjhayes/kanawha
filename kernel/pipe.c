@@ -26,6 +26,20 @@
  * then we would leak memory
  */
 
+struct pipe
+{
+    // This can probably be a thread_lock but we'll be safe for now
+    irq_lock_t lock;
+
+    size_t head;
+    size_t tail;
+    size_t buflen;
+    void *buffer;
+
+    struct waitqueue read_queue;
+    struct waitqueue write_queue;
+};
+
 #define DEFAULT_PIPE_BUFSIZE PAGE_SIZE_4KB
 
 #define pipe_lock_acquire(__pipe_ptr)\
@@ -144,7 +158,6 @@ pipe_fs_file_write(
     DEBUG_ASSERT(pipe->buflen > pipe->head);
     DEBUG_ASSERT(pipe->buflen > pipe->tail);
 
-    // TODO: Allow writes of more than a byte at a time
     while(written <= 0) {
         if(!pipe_write_full(pipe)) {
             // The buffer still has room
@@ -249,7 +262,7 @@ static int
 pipe_fs_mount_load_node(
         struct fs_mount *mnt,
         size_t index,
-	struct fs_node *fs_node)
+        struct fs_node *fs_node)
 {
     int res;
 
@@ -317,7 +330,7 @@ pipe_fs_mount_load_node(
 static int
 pipe_fs_mount_unload_node(
         struct fs_mount *mnt,
-	size_t index,
+	    size_t index,
         struct fs_node *fs_node)
 {
     struct pipe *pipe = fs_node->backing.priv_state;
@@ -368,7 +381,7 @@ pipe_fs_get_anon_pipe(void)
 {
     next_pipe_index_lock_acquire();
     uint64_t index = next_pipe_index;
-    next_pipe_index++;
+    next_pipe_index += 1;
     next_pipe_index_lock_release();
 
     struct fs_node *node = fs_mount_get_node(
