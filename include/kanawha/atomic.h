@@ -41,6 +41,12 @@ atomic_t atomic_fetch_dec(atomic_t *);
 #ifndef arch_atomic_fetch_dec
 #define arch_atomic_fetch_dec(v) __atomic_fetch_sub(v, 1, __ATOMIC_SEQ_CST)
 #endif
+#ifndef arch_atomic_fetch_or
+#define arch_atomic_fetch_or(v, x) __atomic_fetch_or(v, x, __ATOMIC_SEQ_CST)
+#endif
+#ifndef arch_atomic_fetch_and
+#define arch_atomic_fetch_and(v, x) __atomic_fetch_and(v, x, __ATOMIC_SEQ_CST)
+#endif
 #ifndef arch_atomic_set
 #define arch_atomic_set(x, v) __atomic_store(x, &(v), __ATOMIC_SEQ_CST)
 #endif
@@ -85,13 +91,21 @@ void atomic_bool_set_relaxed(atomic_bool_t *, int);
 /*
  * Wrappers to enable type checking
  */
-static inline atomic_t
+static inline atomic_val_t
 atomic_fetch_inc(atomic_t *x)
 { return arch_atomic_fetch_inc(x); }
 
-static inline atomic_t
+static inline atomic_val_t
 atomic_fetch_dec(atomic_t *x)
 { return arch_atomic_fetch_dec(x); }
+
+static inline atomic_val_t
+atomic_fetch_or(atomic_t *x, atomic_val_t val)
+{ return arch_atomic_fetch_or(x, val); }
+
+static inline atomic_val_t
+atomic_fetch_and(atomic_t *x, atomic_val_t val)
+{ return arch_atomic_fetch_and(x, val); }
 
 static inline void
 atomic_set(atomic_t *x, atomic_val_t val)
