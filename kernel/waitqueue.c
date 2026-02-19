@@ -79,7 +79,9 @@ waitqueue_deinit(
 }
 
 int
-wait_on(struct waitqueue *queue)
+wait_on_with_callback(struct waitqueue *queue,
+                      wait_on_callback_f *callback,
+                      void *priv_state)
 {
     int res;
 
@@ -124,6 +126,10 @@ wait_on(struct waitqueue *queue)
     // Unlock the queue
     irq_lock_release(&queue->lock);
 
+    if(callback != NULL) {
+        (*callback)(priv_state);
+    }
+
     // Force a reschedule (TIRED -> SLEEPING)
     thread_switch(next);
 
@@ -143,6 +149,65 @@ wait_on(struct waitqueue *queue)
     irq_lock_release(&queue->lock);
 
     return 0;
+}
+
+int
+wait_on(struct waitqueue *queue)
+{
+    return wait_on_with_callback(
+            queue,
+            NULL,
+            NULL);
+}
+
+static void
+wait_on_spin_unlock_callback(
+        void *__lock)
+{
+    spinlock_t *lock = __lock;
+    spin_unlock(lock);
+}
+static void
+wait_on_thread_lock_release_callback(
+        void *__lock)
+{
+    struct thread_lock *lock = __lock;
+    thread_lock_release(lock);
+}
+static void
+wait_on_irq_lock_release_callback(
+        void *__lock)
+{
+    struct irq_lock *lock = __lock;
+    irq_lock_release(lock);
+}
+
+int
+wait_on_spin_unlock(struct waitqueue *queue,
+                    spinlock_t *to_unlock)
+{
+    return wait_on_with_callback(
+            queue,
+            wait_on_spin_unlock_callback,
+            to_unlock);
+}
+int
+wait_on_thread_lock_release(struct waitqueue *queue,
+                            thread_lock_t *to_unlock)
+{
+    return wait_on_with_callback(
+            queue,
+            wait_on_thread_lock_release_callback,
+            to_unlock);
+}
+int
+wait_on_irq_lock_release(struct waitqueue *queue,
+                         irq_lock_t *to_unlock)
+{
+    return wait_on_with_callback(
+            queue,
+            wait_on_irq_lock_release_callback,
+            to_unlock);
 }
 
 int

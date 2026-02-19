@@ -19,6 +19,8 @@ struct waitqueue
     char *name;
 };
 
+typedef void(wait_on_callback_f)(void *);
+
 int
 waitqueue_init(
         struct waitqueue *queue);
@@ -37,8 +39,30 @@ waitqueue_deinit(
 
 // Have the current thread go to sleep
 // waiting on the queue.
+// (Calls "callback" right before switching threads)
+int
+wait_on_with_callback(
+        struct waitqueue *queue,
+        wait_on_callback_f *callback,
+        void *priv_state);
+
+// Callback-less version
 int
 wait_on(struct waitqueue *queue);
+
+// After placing ourselves on
+// the queue, unlock a lock.
+int
+wait_on_spin_unlock(struct waitqueue *queue,
+                    spinlock_t *to_unlock);
+int
+wait_on_thread_lock_release(struct waitqueue *queue,
+                            thread_lock_t *to_unlock);
+int
+wait_on_irq_lock_release(struct waitqueue *queue,
+                         irq_lock_t *to_unlock);
+
+
 
 // Wake a single thread waiting on this queue
 int
