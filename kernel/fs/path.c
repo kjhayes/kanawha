@@ -305,7 +305,7 @@ __fs_path_put(struct fs_path *path)
     }
 
     fs_node_put(path->fs_node);
-    if(path->name) {
+    if(path->dynamic_name && path->name) {
         kfree(path->name);
     }
     kfree(path);
