@@ -44,4 +44,5 @@ obj-y += \
 	prset.o \
 	connect.o \
 	accept.o \
+	socket.o \
 

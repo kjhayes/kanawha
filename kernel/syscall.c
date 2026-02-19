@@ -369,10 +369,34 @@ handle_syscall(
                         (unsigned long)args->args[2]
 			);
 	    break;
-        default:
-            syscall_unknown(id);
-            ret_val = -ENOSYS;
-	    break;
+    case SYSCALL_ID_ACCEPT:
+        ret_val = (uint64_t)(int)
+            syscall_accept(
+                    (fd_t)args->args[0],
+                    (fd_t __user *)args->args[1],
+                    (unsigned long)args->args[2]
+                    );
+        break;
+    case SYSCALL_ID_CONNECT:
+        ret_val = (uint64_t)(int)
+            syscall_connect(
+                    (fd_t)args->args[0],
+                    (fd_t __user *)args->args[1],
+                    (unsigned long)args->args[2]
+                    );
+        break;
+    case SYSCALL_ID_SOCKET:
+        ret_val = (uint64_t)(int)
+            syscall_socket(
+                    (unsigned long)args->args[0],
+                    (unsigned long)args->args[1],
+                    (fd_t __user *)args->args[2]
+                    );
+        break;
+    default:
+        syscall_unknown(id);
+        ret_val = -ENOSYS;
+        break;
     }
 
     DEBUG_ASSERT_MSG(irqs_enabled(), "Returned from syscall (%s) with IRQ's disabled!", syscall_id_string(id));

@@ -48,6 +48,7 @@
 #define KANAWHA_SYSCALL_ID_PRSET     45
 #define KANAWHA_SYSCALL_ID_CONNECT   46
 #define KANAWHA_SYSCALL_ID_ACCEPT    47
+#define KANAWHA_SYSCALL_ID_SOCKET    48
 
 .global kanawha_sys_exit
 .type kanawha_sys_exit,@function
@@ -494,6 +495,16 @@ kanawha_sys_accept:
     // rdi -> fd_t socket
     // rsi -> fd_t *connection
     // rdx -> unsigned long flags 
+    syscall
+    retq
+
+.global kanawha_sys_socket
+.type kanawha_sys_socket,@function
+kanawha_sys_socket:
+    movq $KANAWHA_SYSCALL_ID_SOCKET, %rax
+    // rdi -> unsigned long flags
+    // rsi -> unsigned long mode_flags
+    // rdx -> fd_t *out
     syscall
     retq
 

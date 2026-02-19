@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <kanawha/sys-wrappers.h>
 
 #define REST (0)
 
@@ -143,22 +144,30 @@ tune_0[] =
 
 int main(int argc, const char **argv)
 {
-    FILE *file = fopen("/dev/snd/pc-speaker", "a");
-    if(file == NULL) {
-        printf("Failed to open /dev/snd/pc-speaker!\n");
-        exit(-1);
-    }
 
-    uint16_t *tune = tune_0;
-    int num_notes = sizeof(tune_0) / 2;
+    fd_t socket;
+    kanawha_sys_socket(0, FILE_MODE_NON_BLOCK, &socket);
+    fd_t accept_conn;
+    kanawha_sys_accept(socket, &accept_conn, 0);
+    fd_t connect_conn;
+    kanawha_sys_connect(socket, &connect_conn, 0);
 
-    printf("Playing tune of length %d\n", num_notes);
-    ssize_t res = fwrite(tune, 2, num_notes, file);
-    if(res < 0) {
-        printf("Failed to write to /dev/snd/pc-speaker!\n");
-        exit(res);
-    }
-    printf("Finished playing\n");
+//    FILE *file = fopen("/dev/snd/pc-speaker", "a");
+//    if(file == NULL) {
+//        printf("Failed to open /dev/snd/pc-speaker!\n");
+//        exit(-1);
+//    }
+//
+//    uint16_t *tune = tune_0;
+//    int num_notes = sizeof(tune_0) / 2;
+//
+//    printf("Playing tune of length %d\n", num_notes);
+//    ssize_t res = fwrite(tune, 2, num_notes, file);
+//    if(res < 0) {
+//        printf("Failed to write to /dev/snd/pc-speaker!\n");
+//        exit(res);
+//    }
+//    printf("Finished playing\n");
 
     return 0;
 }

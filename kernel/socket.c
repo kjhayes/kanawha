@@ -24,8 +24,18 @@ struct socket_fs_node
     {
         struct
         {
-            struct waitqueue connect_wq;
-            struct waitqueue accept_wq;
+            struct waitqueue pending_wq;
+            struct waitqueue unpaired_wq;
+
+            enum {
+                SOCKET_STATUS_NONE,
+                SOCKET_STATUS_WAITING_FOR_SERVER,
+                SOCKET_STATUS_WAITING_FOR_CLIENT,
+                SOCKET_STATUS_PAIRED,
+            } status;
+
+            int unpaired_result;
+            size_t unpaired_inode;
 
         } socket;
 
@@ -270,12 +280,48 @@ socket_fs_pipe_file_ops = {
 FS_FILE_OPS_INIT_UNDEF(socket_fs_pipe_file_ops);
 
 static int
+socket_fs_socket_node_form_connection(
+        struct socket_fs_node *socket,
+        int can_block,
+        int is_client,
+        size_t *inode_out)
+{
+    DEBUG_ASSERT(KERNEL_ADDR(socket));
+    DEBUG_ASSERT(socket->type == SOCKET_FS_NODE_SOCKET);
+
+    int status_waiting_for_us = is_client
+        ? SOCKET_STATUS_WAITING_FOR_CLIENT
+        : SOCKET_STATUS_WAITING_FOR_SERVER;
+    int status_waiting_for_other = is_client
+        ? SOCKET_STATUS_WAITING_FOR_SERVER
+        : SOCKET_STATUS_WAITING_FOR_CLIENT;
+
+    return -EUNIMPL;
+
+    //socket_lock_acquire(socket);
+    //while(1) {
+    //    if(socket->socket.status == SOCKET_STATUS_NONE) {
+    //        socket->socket.status = status_waiting_for_other;
+    //        // TODO
+    //    }
+    //}
+    //socket_lock_release(socket);
+
+    //return 0;
+}
+
+static int
 socket_fs_socket_node_accept(
         struct fs_node *fs_node,
         size_t *inode_out,
         unsigned long flags)
 {
-    return -EUNIMPL;
+    struct socket_fs_node *socket = fs_node->backing.priv_state;
+    return socket_fs_socket_node_form_connection(
+            socket,
+            flags,
+            0,
+            inode_out);
 }
 
 static int
@@ -284,7 +330,12 @@ socket_fs_socket_node_connect(
         size_t *inode_out,
         unsigned long flags)
 {
-    return -EUNIMPL;
+    struct socket_fs_node *socket = fs_node->backing.priv_state;
+    return socket_fs_socket_node_form_connection(
+            socket,
+            flags,
+            1,
+            inode_out);
 }
 
 static struct fs_node_ops
@@ -364,10 +415,14 @@ socket_fs_mount_create_socket(
     node->type = SOCKET_FS_NODE_SOCKET;
     irq_lock_init(&node->lock);
 
-    waitqueue_init(&node->socket.accept_wq);
-    waitqueue_name(&node->pipe.read_wq, "socket-accept");
-    waitqueue_init(&node->socket.connect_wq);
-    waitqueue_name(&node->pipe.read_wq, "socket-connect");
+    waitqueue_init(&node->socket.pending_wq);
+    waitqueue_name(&node->socket.pending_wq, "socket-pending");
+    waitqueue_init(&node->socket.unpaired_wq);
+    waitqueue_name(&node->socket.unpaired_wq, "socket-unpaired");
+
+    node->socket.status = SOCKET_STATUS_NONE;
+    node->socket.unpaired_result = 0;
+    node->socket.unpaired_inode = 0;
 
     irq_lock_acquire(&mnt->inode_tree_lock);
     ptree_insert_any(&mnt->inode_tree, &node->pnode);
@@ -382,8 +437,8 @@ socket_fs_mount_destroy_socket(
         struct socket_fs_mount *mnt,
         struct socket_fs_node *node)
 {
-    waitqueue_deinit(&node->socket.accept_wq);
-    waitqueue_deinit(&node->socket.connect_wq);
+    waitqueue_deinit(&node->socket.pending_wq);
+    waitqueue_deinit(&node->socket.unpaired_wq);
 
     irq_lock_acquire(&mnt->inode_tree_lock);
     ptree_remove(&mnt->inode_tree, node->pnode.key);

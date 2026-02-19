@@ -290,17 +290,24 @@ kanawha_sys_sigsend(
 
 __attribute__((weak))
 int
-kanwaha_sys_connect(
+kanawha_sys_connect(
         fd_t file,
         fd_t *connection,
         unsigned long flags);
 
 __attribute__((weak))
 int
-kanwaha_sys_accept(
+kanawha_sys_accept(
         fd_t file,
         fd_t *connection,
         unsigned long flags);
+
+__attribute__((weak))
+int
+kanawha_sys_socket(
+        unsigned long flags,
+    	unsigned long mode_flags,
+        fd_t *out);
 
 #endif /* KANAWHA_BUILDING_KERNEL */
 

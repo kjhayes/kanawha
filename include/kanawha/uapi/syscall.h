@@ -275,6 +275,12 @@ ARG(fd_t, socket)\
 ARG(fd_t __user *, connection)\
 ARG(unsigned long, flags)
 
+#define SYSCALL_SIG_SOCKET(RET,ARG,...)\
+RET(int)\
+ARG(unsigned long, flags)\
+ARG(unsigned long, mode_flags)\
+ARG(fd_t __user *, out)
+
 #define SYSCALL_XLIST(X)\
 X(exit,      0,  EXIT,       SYSCALL_SIG_EXIT)\
 X(open,      1,  OPEN,       SYSCALL_SIG_OPEN)\
@@ -322,6 +328,7 @@ X(prget,     44, PRGET,      SYSCALL_SIG_PRGET)\
 X(prset,     45, PRSET,      SYSCALL_SIG_PRSET)\
 X(connect,   46, CONNECT,    SYSCALL_SIG_CONNECT)\
 X(accept,    47, ACCEPT,     SYSCALL_SIG_ACCEPT)\
+X(socket,    48, SOCKET,     SYSCALL_SIG_SOCKET)\
 
 #ifdef KANAWHA_BUILDING_KERNEL
 
