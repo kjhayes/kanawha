@@ -168,9 +168,10 @@ tasklet_worker_thread(void *__self) {
         enable_irqs();
         tasklet_handle_all_pending();
         res = wait_on(&tasklet_waitqueue);
-	if(res) {
-	    // Weird (but ignore it)
-	}
+	    if(res) {
+            // This is very weird...
+            wprintk("tasklet_worker_thread failed to wait on waitqueue?\n");
+	    }
     }
 }
 

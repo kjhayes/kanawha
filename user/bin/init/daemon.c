@@ -40,7 +40,7 @@ int start_daemon(struct daemon *daemon)
         perror("execvp");
         exit(-1);
     }
-    INFO("forked daemon: %s\n", daemon->command); 
+    INFO("forked daemon: %s\n", daemon->command);
     daemon->pid = fork_pid;
     daemon->status = DAEMON_RUNNING;
     return 0;

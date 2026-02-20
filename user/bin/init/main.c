@@ -84,6 +84,8 @@ int main(int argc, const char **argv)
     setstdin("/dev/term/COM1");
     setstdout("/dev/term/COM1");
     setstderr("/dev/term/COM1");
+
+    printf_enabled = 1;
   
     printf("-- Kanawha OS \"init\" --\n");
 
@@ -99,13 +101,15 @@ int main(int argc, const char **argv)
         int daemon_exitcode;
         res = waitpid(-1, &daemon_exitcode, 0);
         if(res <= 0) {
-            INFO("waitpid returned early?\n");
+            INFO("waitpid returned early? res=%d\n", res);
             continue;
         }
-        INFO("Daemon Exited!\n");
         struct daemon **d = daemons;
+        INFO("d = %p\n", d);
+        INFO("*d = %p\n", *d);
         int found = 0;
         while(*d) {
+            INFO("Checking Daemon...\n");
             struct daemon *daemon = *d;
             if(daemon->pid == res) {
                 // This is the one
@@ -119,10 +123,10 @@ int main(int argc, const char **argv)
                 }
                 break;
             }
+            d++;
         }
         if(!found) {
             ERROR("waitpid returned PID(%d) which does not correspond to a running daemon?\n", res);
-            continue;
         }
     }
 

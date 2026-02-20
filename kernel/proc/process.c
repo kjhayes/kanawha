@@ -966,15 +966,18 @@ __process_reap_parent_lock(
 }
 
 int
-process_terminate(
-        struct process *process,
-        int exitcode) 
+process_terminate(int exitcode) 
 {
 #ifdef CONFIG_DEBUG_PROCESS_TERMINATION
 #define LOG(fmt, ...) printk(fmt, ##__VA_ARGS__)
 #else
 #define LOG(...)
 #endif
+
+    struct process *process = current_process();
+    if(process == NULL) {
+        return -EINVAL;
+    }
 
     DEBUG_ASSERT(KERNEL_ADDR(process));
 
@@ -997,6 +1000,69 @@ process_terminate(
                 exitcode);
         return -EINVAL;
     }
+
+    process_hierarchy_lock_acquire(process);
+
+    // Fatally signal all children of this process
+    ilist_node_t *child_node;
+    ilist_for_each(child_node, &process->children)
+    {
+        struct process *child =
+            container_of(child_node, struct process, child_node);
+        DEBUG_ASSERT(KERNEL_ADDR(child));
+        DEBUG_ASSERT(child->parent == process);
+
+        printk("PID(%d) fatally signalling child (%d)\n",
+                (s_t)process->id,
+                (s_t)child->id);
+        res = signal_deliver(
+                child,
+                SIGNAL_ID_ORPHANED,
+                SIGNAL_FLAG_FATAL|SIGNAL_FLAG_COALESCE);
+        if(res) {
+            process_hierarchy_lock_release(process);
+            eprintk("process_terminate failed to signal all children!\n");
+            return res;
+        }
+    }
+
+    // Keep reaping children until we have none
+    while(!ilist_empty(&process->children))
+    {
+        printk("Still waiting on children:\n");
+        ilist_for_each(child_node, &process->children) {
+            struct process *child =
+                container_of(child_node, struct process, child_node);
+            dump_process(do_printk, child);
+        }
+        dump_threads(do_printk);
+        process_hierarchy_lock_release(process);
+        pid_t to_reap_id;
+        res = process_get_reapable_child(
+                process,
+                0,
+                &to_reap_id);
+        if(res == 0) {
+            int exitcode;
+            res = process_reap_child(
+                    process,
+                    to_reap_id,
+                    &exitcode,
+                    0);
+            if(res) {
+                wprintk("Failed to reap child of process during termination!\n");
+            }
+        } else {
+            wprintk("Failed to get child of process to reap during termination!\n");
+        }
+        printk("PID(%d) reaped child! (%lu remaining)\n",
+                (s_t)process->id,
+                (ul_t)ilist_count(&process->children));
+        process_hierarchy_lock_acquire(process);
+    }
+    process_hierarchy_lock_release(process);
+
+    printk("PID(%d) reaped all children!\n", process->id);
 
     irq_lock_acquire(&process->status_lock);
 
@@ -1024,35 +1090,6 @@ process_terminate(
 
     DEBUG_ASSERT(process->status == PROCESS_STATUS_SUSPEND);
 
-    /*
-     * The process might actually still be running on some processor though
-     * (the current thread is probably the process thread anyways)
-     */
-
-    if(process != current_process()) {
-
-        // The compiler likes to assume that "process->thread.status"
-        // is constant after a single read... I do not like this...
-        thread_status_t status;
-        do {
-            status = *(volatile thread_status_t*)&process->thread.status;
-        } while((status == THREAD_STATUS_RUNNING)
-              ||(status == THREAD_STATUS_TIRED));
-
-        while(process->thread.waitqueue) {
-            res = waitqueue_force_remove(
-                    process->thread.waitqueue,
-                    &process->thread);
-            if(res) {
-                wprintk("Failed to force thread off of waitqueue during termination!\n");
-            }
-        }
-
-        LOG("Process is now status=%s\n",
-            thread_status_to_string(process->thread.status));
-
-    }
-
     process->exitcode = exitcode;
     process->status = PROCESS_STATUS_ZOMBIE;
 
@@ -1079,41 +1116,6 @@ process_terminate(
     if(process->environ) {
         environment_deattach(process->environ, process);
     }
-
-    // Terminate and Reap all children of this thread
-    // NOTE: We acquire status_lock before hierarchy_lock here
-    process_hierarchy_lock_acquire(process);
-    ilist_node_t *child_node;
-    while(!ilist_empty(&process->children))
-    {
-        child_node = process->children.next;
-
-        struct process *child =
-            container_of(child_node, struct process, child_node);
-        DEBUG_ASSERT(KERNEL_ADDR(child));
-        DEBUG_ASSERT(child->parent == process);
-
-        int child_exitcode;
-        /*
-         * Trying to reap our children as normal here is a nightmare
-         * trying to grab the hierarchy lock, for now lets just force
-         * all children to terminate with -EINTR if their parent exits.
-         */
-        res = process_terminate(child, -EINTR);
-        if(res) {
-            eprintk("Failed to terminate child process during process_terminate! (err=%s)\n",
-                    errnostr(res));
-        }
-        // This will remove the process from our list of children and deallocate the PID
-        process_pid_lock_acquire();
-        res = __process_reap_parent_lock(child);
-        process_pid_lock_release();
-        if(res) {
-            eprintk("Failed to reap child process after forced termination during process_terminate! (err=%s)\n",
-                    errnostr(res));
-        }
-    }
-    process_hierarchy_lock_release(process);
 
     if(process->parent) {
         // We need to wake anyone waiting on our parent's children
@@ -1148,7 +1150,8 @@ process_terminate(
         // This is some other process that we are forcing to terminate
         irq_lock_release(&process->status_lock);
     } 
-   
+  
+    printk("PID(%ld) finished process terminate!\n", process->id);
     return 0;
 
 #undef LOG
@@ -1245,9 +1248,9 @@ process_spawn_child(
 
     res = signal_state_init_on_spawn(&parent->signal_state, &process->signal_state);
     if(res) {
-	eprintk("process_spawn_child: failed to setup child signal state! (err=%s)\n",
-		errnostr(res));
-	goto err1;
+	    eprintk("process_spawn_child: failed to setup child signal state! (err=%s)\n",
+		    errnostr(res));
+	    goto err1;
     }
 
     res = process_set_root_directory(process, parent->root_directory);
@@ -1367,7 +1370,9 @@ process_spawn_child(
     return process;
 
 err1:
-    process_terminate(process, 1);
+    // process_terminate(process, 1);
+    // TODO
+    panic("NEED TO HANDLE DEALLOCATING A KILLED PROCESS DURING PROCESS SPAWN\n");
     process_reap_child(parent, process->id, &exitcode, 0);
     DEBUG_ASSERT(exitcode == 1);
 //err0:

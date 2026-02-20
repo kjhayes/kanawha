@@ -64,8 +64,8 @@ thread_sleep(
     res = wait_on(&queue);
     if(res) {
         destroy_periodic_event(evt);
-	mbarrier();
-	waitqueue_deinit(&queue);
+	    mbarrier();
+	    waitqueue_deinit(&queue);
         return res;
     }
 

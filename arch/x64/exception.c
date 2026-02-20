@@ -270,8 +270,8 @@ exit:
             cur_thread->arch_state.stack.stack_base;
         struct process *process = current_process();
         if(process != NULL) {
-	    signal_on_return_to_userspace(process);
-            state->rip = (uint64_t)process->user_ip;
+	        signal_on_return_to_userspace(process);
+                state->rip = (uint64_t)process->user_ip;
         }
     }
     return;

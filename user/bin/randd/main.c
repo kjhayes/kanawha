@@ -25,9 +25,9 @@ int main(
     res = kanawha_sys_faccess(
             socket,
             FACCESS_NON_BLOCKING,
-            FACCESS_MODE_SET);
+            FACCESS_MODE_CLEAR);
     if(res) {
-        fprintf(stderr, "randd: Failed to make socket non-blocking!\n");
+        fprintf(stderr, "randd: Failed to make socket blocking!\n");
         return res;
     }
 

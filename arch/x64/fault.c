@@ -34,7 +34,7 @@ x64_gp_fault_handler(
         eprintk("Failed to deliver PROTFAULT signal to process on general protection fault (user_ip=%p) (err=%s)!\n",
                 process->user_ip,
                 errnostr(res));
-        res = process_terminate(process, 1);
+        res = process_terminate(-EFAULT);
         if(res) {
             eprintk("Failed to terminate process which could not be delivered PROTFAULT (err=%s)\n",
                     errnostr(res));
@@ -92,7 +92,7 @@ x64_div_zero_fault_handler(
         eprintk("Failed to deliver PROTFAULT signal to process on divide by zero fault (user_ip=%p) (err=%s)!\n",
                 process->user_ip,
                 errnostr(res));
-        res = process_terminate(process, 1);
+        res = process_terminate(-EFAULT);
         if(res) {
             eprintk("Failed to terminate process which could not be delivered PROTFAULT (err=%s)\n",
                     errnostr(res));
@@ -152,7 +152,7 @@ x64_inval_inst_fault_handler(
         eprintk("Failed to deliver DECODEFAULT signal to process on invalid instruction fault (user_ip=%p) (err=%s)!\n",
                 process->user_ip,
                 errnostr(res));
-        res = process_terminate(process, 1);
+        res = process_terminate(-EFAULT);
         if(res) {
             eprintk("Failed to terminate process which could not be delivered DECODEFAULT (err=%s)\n",
                     errnostr(res));

@@ -122,7 +122,11 @@ int
 input_driver_wait_for_event(
 	struct input_dev *dev)
 {
-    wait_on(dev->read_queue);
+    int res;
+    res = wait_on(dev->read_queue);
+    if(res) {
+        return res;
+    }
     return 0;
 }
 

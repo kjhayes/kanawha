@@ -141,7 +141,10 @@ input_fs_file_read(
                 // Do not block/wait on the queue for more input
                 break;
             }
-	    input_driver_wait_for_event(input);
+            res = input_driver_wait_for_event(input);
+            if(res) {
+                return res;
+            }
             continue;
         }
         else if(res) {

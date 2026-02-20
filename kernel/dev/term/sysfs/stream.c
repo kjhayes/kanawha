@@ -24,6 +24,8 @@ term_dev_stream_fs_file_read(
         ssize_t amount,
         unsigned long flags)
 {
+    int res;
+
     struct term_dev *dev = term_dev_from_file(file, stream_vfs_node);
 
     int can_block = !(flags & FS_FILE_READ_NON_BLOCKING);
@@ -31,19 +33,22 @@ term_dev_stream_fs_file_read(
     ssize_t amt_read;
     while(1) {
         amt_read = term_driver_read_nonblocking(dev, buffer, amount);
-	DEBUG_ASSERT(amt_read <= amount);
+        DEBUG_ASSERT(amt_read <= amount);
         if(amt_read < 0) {
             if(amt_read == -EWOULDBLOCK && can_block) {
-		// amt_read == -EWOULDBLOCK and we can block
-                wait_on(&dev->read_wq);
-		continue;
+		        // amt_read == -EWOULDBLOCK and we can block
+                res = wait_on(&dev->read_wq);
+                if(res) {
+                    return res;
+                }
+		        continue;
             } else {
-		// Return the error
-		return amt_read;
+		        // Return the error
+		        return amt_read;
+	        }
+	    } else {
+	        break;
 	    }
-	} else {
-	    break;
-	}
     }
 
     return amt_read;
@@ -65,18 +70,21 @@ term_dev_stream_fs_file_write(
     ssize_t amt_written = 0;
     while(1) {
         amt_written = term_driver_write_nonblocking(dev, buffer, amount);
-	DEBUG_ASSERT(amt_written <= amount);
+        DEBUG_ASSERT(amt_written <= amount);
         if(amt_written < 0) {
             if(amt_written == -EWOULDBLOCK && can_block) {
-                wait_on(&dev->write_wq);
-		continue;
+                res = wait_on(&dev->write_wq);
+                if(res) {
+                    return res;
+                }
+                continue;
             } else {
-		// Return the error
-		return amt_written;
+		        // Return the error
+		        return amt_written;
+	        }
+	    } else {
+	        break;
 	    }
-	} else {
-	    break;
-	}
     }
 
     return amt_written;

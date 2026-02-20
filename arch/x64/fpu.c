@@ -88,7 +88,7 @@ x64_simd_fault_handler(
         eprintk("Failed to deliver PROTFAULT signal to process on SIMD fault (user_ip=%p) (err=%s)!\n",
                 process->user_ip,
                 errnostr(res));
-        res = process_terminate(process, 1);
+        res = process_terminate(-EFAULT);
         if(res) {
             eprintk("Failed to terminate process which could not be delivered PROTFAULT (err=%s)\n",
                     errnostr(res));

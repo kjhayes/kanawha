@@ -197,13 +197,10 @@ process_strlen_usermem(
 
 
 // Terminate the process without signalling,
-// if process==current_process() then IRQ's
-// will be disabled on return so that we will
+// IRQ's will be disabled on return so that we will
 // not be preempted before we can call thread_abandon
 int
-process_terminate(
-        struct process *process,
-        int exitcode);
+process_terminate(int exitcode);
 
 // De-allocate a process and get the exitcode
 //

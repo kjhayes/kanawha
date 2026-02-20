@@ -19,6 +19,8 @@ signal_state_init(
     state->interrupted_user_ip  = 0;
     state->interrupted = 0;
 
+    state->fatal = 0;
+
     state->num_pending = 0;
     memset(state->pending_bitmap, 0, sizeof(state->pending_bitmap));
 
@@ -53,15 +55,24 @@ signal_deliver(
 
     strace_deliver_signal(process, id);
 
-    if(bitmap_check(process->signal_state.pending_bitmap, id)) {
-	// The signal is already pending
+    if(flags & SIGNAL_FLAG_FATAL) {
+        process->signal_state.fatal = 1;
+    }
+
+    if(!(flags & SIGNAL_FLAG_IGNORABLE)) {
+        thread_wake(&process->thread);
+    }
+
+    if(bitmap_check(process->signal_state.pending_bitmap, id))
+    {
+	    // The signal is already pending
         irq_lock_release(&process->signal_state.lock);
 
-	if((flags & SIGNAL_FLAG_COALESCE) == 0) {
-	    return -EALREADY;
-	}
+	    if((flags & SIGNAL_FLAG_COALESCE) == 0) {
+	        return -EALREADY;
+	    }
 
-	return 0;
+	    return 0;
     }
 
     bitmap_set(process->signal_state.pending_bitmap, id);
@@ -84,8 +95,8 @@ signal_ack(
     process->signal_state.interrupted = 0;
 
     if(bitmap_check(process->signal_state.pending_bitmap, id)) {
-	process->signal_state.num_pending--;
-	bitmap_clear(process->signal_state.pending_bitmap, id);
+	    process->signal_state.num_pending--;
+	    bitmap_clear(process->signal_state.pending_bitmap, id);
     }
 
     irq_lock_release(&process->signal_state.lock);
@@ -101,19 +112,27 @@ signal_on_return_to_userspace(
 
     irq_lock_acquire(&process->signal_state.lock);
 
+    if(process->signal_state.fatal) {
+        irq_lock_release(&process->signal_state.lock);
+        disable_irqs();
+        process_terminate(-EINTR);
+        thread_abandon(force_resched());
+        panic("thread_abandon returned!\n");
+    }
+
     if(process->signal_state.num_pending == 0) {
         irq_lock_release(&process->signal_state.lock);
-	return 0; // Nothing to do
+	    return 0; // Nothing to do
     }
 
     if(process->signal_state.interrupted) {
         irq_lock_release(&process->signal_state.lock);
-	return 0; // Can't deliver another signal
+	    return 0; // Can't deliver another signal
     }
 
     if(process->signal_state.signal_entry_set == 0) {
         irq_lock_release(&process->signal_state.lock);
-	return -EINVAL; // No entry point set
+	    return -EINVAL; // No entry point set
     }
 
     signal_id_t id = bitmap_find_first_set(process->signal_state.pending_bitmap, NUM_SIGNALS);

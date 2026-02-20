@@ -42,9 +42,11 @@ usb_transfer_await(
             return xfer->status;
         }
         res = wait_on(&xfer->status_waitqueue);
-	if(res) {
-	    // Weird but ignore it
-	}
+	    if(res == -EINTR) {
+            // We cannot continue blocking if we
+            // are interrupted
+            return res;
+	    }
     }
     return 0;
 }

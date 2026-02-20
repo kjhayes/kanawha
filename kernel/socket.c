@@ -322,9 +322,12 @@ socket_fs_socket_node_form_connection(
             }
             socket->socket.status = status_waiting_for_other;
             while(socket->socket.status == status_waiting_for_other) {
-                wait_on_irq_lock_release(
+                res = wait_on_irq_lock_release(
                         &socket->socket.unpaired_wq,
                         &socket->lock);
+                if(res) {
+                    return res;
+                }
                 socket_lock_acquire(socket);
             }
             if(socket->socket.status == SOCKET_STATUS_PAIRED) {
@@ -352,9 +355,12 @@ socket_fs_socket_node_form_connection(
                 break;
             }
             // Put ourselves on the pending waitqueue and try again.
-            wait_on_irq_lock_release(
+            res = wait_on_irq_lock_release(
                     &socket->socket.pending_wq,
                     &socket->lock);
+            if(res) {
+                return res;
+            }
             socket_lock_acquire(socket);
             continue;
         }

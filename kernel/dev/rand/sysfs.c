@@ -42,15 +42,18 @@ rand_dev_fs_file_read(
 		rdfs->dev,
             	buf,
             	buflen);
-	if(amt_read < 0) {
-	    if(amt_read == -EWOULDBLOCK && !(flags & FS_FILE_READ_NON_BLOCKING)) {
-		wait_on(&rdfs->dev->read_wq);
-		continue;
-	    } else {
-		return amt_read;
+	    if(amt_read < 0) {
+	        if(amt_read == -EWOULDBLOCK && !(flags & FS_FILE_READ_NON_BLOCKING)) {
+	    	    res = wait_on(&rdfs->dev->read_wq);
+                if(res) {
+                    return res;
+                }
+	    	    continue;
+	        } else {
+	    	    return amt_read;
+	        }
 	    }
-	}
-	break;
+	    break;
     }
 
     return amt_read;

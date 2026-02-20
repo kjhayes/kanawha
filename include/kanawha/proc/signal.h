@@ -24,8 +24,10 @@ struct signal_state
     unsigned long num_pending; // Number of bits set in the pending bitmap
     DECLARE_BITMAP(pending_bitmap, NUM_SIGNALS);
 
+    unsigned int fatal;
+
     // Are we currently running a signal handler?
-    int interrupted;
+    unsigned int interrupted;
     void __user *interrupted_user_ip;
 };
 
@@ -37,6 +39,8 @@ signal_state_init_on_spawn(
 	struct signal_state *child);
 
 #define SIGNAL_FLAG_COALESCE (1ULL<<0) // Make assertion of this signal idempotent
+#define SIGNAL_FLAG_IGNORABLE (1ULL<<1) // Don't wake the thread if it is asleep.
+#define SIGNAL_FLAG_FATAL (1ULL<<2) // Terminate the process on signal delivery.
 int
 signal_deliver(
         struct process *process,

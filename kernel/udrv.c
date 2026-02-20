@@ -186,6 +186,8 @@ udrv_dev_fs_file_read(
         ssize_t amount,
         unsigned long flags)
 {
+    int res;
+
     struct fs_node *fs_node = fs_path_get_fs_node(file->path);
     struct vfs_node *vfs_node = fs_node->backing.priv_state;
     struct udrv_dev *dev = container_of(vfs_node, struct udrv_dev, vfs_node);
@@ -203,11 +205,14 @@ udrv_dev_fs_file_read(
         if(list_node == NULL) {
 	    irq_lock_release(&dev->read_pkt_queue_lock);
 	    if(flags & FS_FILE_WRITE_NON_BLOCKING) {
-		return -EWOULDBLOCK;
+		    return -EWOULDBLOCK;
 	    } else {
-		wait_on(&dev->read_wq);
-		irq_lock_acquire(&dev->read_pkt_queue_lock);
-		continue;
+		    res = wait_on(&dev->read_wq);
+            if(res) {
+                return res;
+            }
+		    irq_lock_acquire(&dev->read_pkt_queue_lock);
+		    continue;
 	    }
 	}
 	break;
@@ -262,12 +267,15 @@ udrv_dev_fs_file_write(
         res = udrv_mount_on_recv(mnt, dev, pkt, pktlen);
         DEBUG_ASSERT_MSG(res <= 0, "udrv_mount_on_recv returned a positive value (unexpected!)");
         if(res < 0) {
-	    if(res == -EWOULDBLOCK && !(flags & FS_FILE_WRITE_NON_BLOCKING)) {
-		wait_on(&dev->write_wq);
-	    } else {
+	        if(res == -EWOULDBLOCK && !(flags & FS_FILE_WRITE_NON_BLOCKING)) {
+		        res = wait_on(&dev->write_wq);
+                if(res) {
+                    return res;
+                }
+	        } else {
                 return res;
-	    }
-	    continue;
+	        }
+	        continue;
         } else {
 	    // Successfully received packet
 	    break;
@@ -349,11 +357,15 @@ udrv_send_user_pkt(
 	struct udrv_dev *dev,
 	struct udrv_pkt *pkt)
 {
+    int res;
     struct udrv_user_pkt *user_pkt = container_of(pkt, struct udrv_user_pkt, pkt);
     irq_lock_acquire(&dev->read_pkt_queue_lock);
     while(dev->read_pkts_queued > dev->max_read_pkts_queued) {
         irq_lock_release(&dev->read_pkt_queue_lock);
-	wait_on(&dev->send_wq);
+	    res = wait_on(&dev->send_wq);
+        if(res) {
+            return res;
+        }
         irq_lock_acquire(&dev->read_pkt_queue_lock);
     }
     ilist_push_head(&dev->read_pkt_queue, &user_pkt->queue_node);

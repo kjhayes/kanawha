@@ -54,4 +54,7 @@ all_term_puts(char *msg)
 }
 
 char log_buffer[LOG_BUFLEN];
+int printf_enabled = 0;
+
+
 

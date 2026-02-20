@@ -683,7 +683,7 @@ vmem_map_unhandled_user_page_fault(
     if(res) {
         eprintk("Failed to deliver signal to process (err=%s)!\n",
                 errnostr(res));
-        res = process_terminate(process, 1);
+        res = process_terminate(-EFAULT);
         if(res) {
             panic("Failed to terminate process which could not be delivered MEMFAULT (err=%s)\n",
                     errnostr(res));

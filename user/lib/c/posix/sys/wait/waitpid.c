@@ -3,6 +3,7 @@
 #include <kanawha/process.h>
 #include <kanawha/sys-wrappers.h>
 #include <errno.h>
+#include <stdio.h>
 
 pid_t
 waitpid(
