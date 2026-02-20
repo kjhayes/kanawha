@@ -31,6 +31,8 @@ syscall_reap(
                 nowait,
                 &to_reap_id);
         if(res) {
+            LOG("process_get_reapable_child returned (%s)!\n",
+                    errnostr(res));
             return res;
         }
     } else {
@@ -40,6 +42,8 @@ syscall_reap(
                 pid_inout,
                 sizeof(pid_t));
         if(res) {
+            LOG("process_read_usermem returned (%s)!\n",
+                    errnostr(res));
             return res;
         }
     }
@@ -68,6 +72,21 @@ syscall_reap(
         // We did reap the process,
         // but the user passed us an invalid location to write,
         // so for now we'll consider that a success and still return zero
+    }
+
+    if(flags & REAP_ANY) {
+        res = process_write_usermem(
+                process,
+                pid_inout,
+                &to_reap_id,
+                sizeof(int));
+        if(res) {
+            LOG("failed to copy reaped PID to userspace! (err=%s)\n",
+                    errnostr(res));
+            // We did reap the process,
+            // but the user passed us an invalid location to write,
+            // so for now we'll consider that a success and still return zero
+        }
     }
 
     return 0;
