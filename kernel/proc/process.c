@@ -75,7 +75,26 @@ dump_processes(printk_f *printer) {
         dump_process(printer, proc);
         node = ptree_get_next(node);
     }
-    process_pid_lock_acquire();
+    process_pid_lock_release();
+}
+
+static inline void
+process_hierarchy_lock_acquire(
+        struct process *process)
+{
+    dprintk("proc(%ld) acquiring proc(%ld)'s hierarchy lock\n",
+            current_process()->id,
+            process->id);
+    irq_lock_acquire(&process->hierarchy_lock);
+}
+static inline void
+process_hierarchy_lock_release(
+        struct process *process)
+{
+    dprintk("proc(%ld) releasing proc(%ld)'s hierarchy lock\n",
+            current_process()->id,
+            process->id);
+    irq_lock_release(&process->hierarchy_lock);
 }
 
 static inline struct process *
@@ -168,13 +187,13 @@ process_get_parent_id(
 
     pid_t parent_id = proc->id;
 
-    irq_lock_acquire(&proc->hierarchy_lock);
+    process_hierarchy_lock_acquire(proc);
 
     if(proc->parent != NULL) {
         parent_id = proc->parent->id;
     }
 
-    irq_lock_release(&proc->hierarchy_lock);
+    process_hierarchy_lock_release(proc);
 
     *pid_out = parent_id;
 
@@ -359,11 +378,11 @@ process_alloc(
 
     process->parent = parent;
     if(parent != NULL) {
-        irq_lock_acquire(&parent->hierarchy_lock);
+        process_hierarchy_lock_acquire(parent);
         ilist_push_tail(&parent->children, &process->child_node);
         process->user_id = parent->user_id;
         process->group_id = parent->group_id;
-        irq_lock_release(&parent->hierarchy_lock);
+        process_hierarchy_lock_release(parent);
     } else {
         DEBUG_ASSERT(flags & PROCESS_FLAG_INIT);
         process->user_id = INIT_UID;
@@ -874,7 +893,7 @@ process_get_reapable_child(
         pid_t *out_child_id)
 {
     int res;
-    irq_lock_acquire(&parent->hierarchy_lock);
+    process_hierarchy_lock_acquire(parent);
 
     while(1) {
         size_t child_count = 0;
@@ -884,13 +903,13 @@ process_get_reapable_child(
             struct process *child =
                 container_of(list_node, struct process, child_node);
             if(child->status == PROCESS_STATUS_ZOMBIE) {
-                irq_lock_release(&parent->hierarchy_lock);
+                process_hierarchy_lock_release(parent);
                 *out_child_id = child->id;
                 return 0;
             }
         }
         if(child_count == 0) {
-            irq_lock_release(&parent->hierarchy_lock);
+            process_hierarchy_lock_release(parent);
             if(nowait) {
                 return -EWOULDBLOCK;
             }
@@ -899,16 +918,16 @@ process_get_reapable_child(
         }
 
         if(nowait) {
-            irq_lock_release(&parent->hierarchy_lock);
+            process_hierarchy_lock_release(parent);
             return -EWOULDBLOCK;
         } else {
-            irq_lock_release(&parent->hierarchy_lock);
+            process_hierarchy_lock_release(parent);
             dprintk("PID(%ld) Sleeping on own child wait queue!\n", process->id);
             res = wait_on(&parent->child_wait_queue);
-	    if(res) {
-		return res;
-	    }
-            irq_lock_acquire(&parent->hierarchy_lock);
+	        if(res) {
+		        return res;
+	        }
+            process_hierarchy_lock_acquire(parent);
         }
     }
 }
@@ -923,8 +942,6 @@ __process_reap_parent_lock(
 
     DEBUG_ASSERT(KERNEL_ADDR(process));
     DEBUG_ASSERT(KERNEL_ADDR(process->parent));
-
-    
 
     // Remove the process from the hierarchy
     ilist_remove(&process->parent->children, &process->child_node);
@@ -1013,14 +1030,27 @@ process_terminate(
      */
 
     if(process != current_process()) {
-        // TODO this is bad
-        while(process->thread.status == THREAD_STATUS_RUNNING ||
-              process->thread.status == THREAD_STATUS_TIRED)
-        {
-            // Wait for the process to stop running
+
+        // The compiler likes to assume that "process->thread.status"
+        // is constant after a single read... I do not like this...
+        thread_status_t status;
+        do {
+            status = *(volatile thread_status_t*)&process->thread.status;
+        } while((status == THREAD_STATUS_RUNNING)
+              ||(status == THREAD_STATUS_TIRED));
+
+        while(process->thread.waitqueue) {
+            res = waitqueue_force_remove(
+                    process->thread.waitqueue,
+                    &process->thread);
+            if(res) {
+                wprintk("Failed to force thread off of waitqueue during termination!\n");
+            }
         }
+
         LOG("Process is now status=%s\n",
             thread_status_to_string(process->thread.status));
+
     }
 
     process->exitcode = exitcode;
@@ -1052,7 +1082,7 @@ process_terminate(
 
     // Terminate and Reap all children of this thread
     // NOTE: We acquire status_lock before hierarchy_lock here
-    irq_lock_acquire(&process->hierarchy_lock);
+    process_hierarchy_lock_acquire(process);
     ilist_node_t *child_node;
     while(!ilist_empty(&process->children))
     {
@@ -1064,25 +1094,26 @@ process_terminate(
         DEBUG_ASSERT(child->parent == process);
 
         int child_exitcode;
-        res = process_reap_child(process, child->id, &child_exitcode, 1);
+        /*
+         * Trying to reap our children as normal here is a nightmare
+         * trying to grab the hierarchy lock, for now lets just force
+         * all children to terminate with -EINTR if their parent exits.
+         */
+        res = process_terminate(child, -EINTR);
         if(res) {
-            res = process_terminate(child, -EINTR);
-            if(res) {
-                eprintk("Failed to terminate child process during process_terminate! (err=%s)\n",
-                        errnostr(res));
-            }
-            // This will remove the process from our list of children and deallocate the PID
-            process_pid_lock_acquire();
-            res = __process_reap_parent_lock(child);
-            process_pid_lock_release();
-            if(res) {
-                eprintk("Failed to reap child process after forced termination during process_terminate! (err=%s)\n",
-                        errnostr(res));
-            }
-        } else {
-            // We reaped the child as normal...
+            eprintk("Failed to terminate child process during process_terminate! (err=%s)\n",
+                    errnostr(res));
+        }
+        // This will remove the process from our list of children and deallocate the PID
+        process_pid_lock_acquire();
+        res = __process_reap_parent_lock(child);
+        process_pid_lock_release();
+        if(res) {
+            eprintk("Failed to reap child process after forced termination during process_terminate! (err=%s)\n",
+                    errnostr(res));
         }
     }
+    process_hierarchy_lock_release(process);
 
     if(process->parent) {
         // We need to wake anyone waiting on our parent's children
@@ -1109,6 +1140,9 @@ process_terminate(
         // IRQ's are left disabled because if we are running on the process' thread
         // (as is the case in an "exit" syscall) then once we suspend the process,
         // if we are preempted, then we will never be scheduled again to return.
+        //
+        // TODO: Look at this again, when did we start using an IRQ lock release here?
+        //       (could be re-enabling interrupts...)
         irq_lock_release(&process->status_lock);
     } else {
         // This is some other process that we are forcing to terminate
@@ -1144,22 +1178,22 @@ process_reap_child(
         return -ENXIO;
     }
 
-    irq_lock_acquire(&parent->hierarchy_lock);
+    process_hierarchy_lock_acquire(parent);
 
     while(process->status != PROCESS_STATUS_ZOMBIE) {
         if(nowait) {
-            irq_lock_release(&parent->hierarchy_lock);
+            process_hierarchy_lock_release(parent);
             process_pid_lock_release();
             return -EWOULDBLOCK;
         } else {
-            irq_lock_release(&process->parent->hierarchy_lock);
+            process_hierarchy_lock_release(parent);
             process_pid_lock_release();
             res = wait_on(&process->wait_queue);
-	    if(res) {
-		return res;
-	    }
+	        if(res) {
+		        return res;
+	        }
             process_pid_lock_acquire();
-            irq_lock_acquire(&process->parent->hierarchy_lock);
+            process_hierarchy_lock_acquire(parent);
         }
     }
 
@@ -1169,13 +1203,13 @@ process_reap_child(
 
     res = __process_reap_parent_lock(process);
     if(res) {
-        irq_lock_release(&parent->hierarchy_lock);
+        process_hierarchy_lock_release(parent);
         process_pid_lock_release();
         wprintk("Leaving process in invalid state after attempted reap failed!\n");
         return res;
     }
 
-    irq_lock_release(&parent->hierarchy_lock);
+    process_hierarchy_lock_release(parent);
     process_pid_lock_release();
 
     return 0;
@@ -1397,7 +1431,7 @@ process_force_awake(
     res = thread_wake(&proc->thread);
     if(res) {
         process_pid_lock_release();
-	return res;
+	    return res;
     }
 
     process_pid_lock_release();

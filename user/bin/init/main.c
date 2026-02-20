@@ -9,6 +9,7 @@
 #include <fcntl.h>
 #include <string.h>
 #include <stdlib.h>
+#include <sys/wait.h>
 
 #include "log.h"
 #include "root.h"
@@ -36,6 +37,43 @@ setstderr(const char *path)
     close(file);
 }
 
+static const char *randd_args[] = {
+    "randd",
+    NULL
+};
+static struct daemon_socket randd_sockets[] = {
+    {
+        .env = "RANDD_SOCKET",
+    }
+};
+static struct daemon randd = {
+    .command = "/sys/initrd/randd",
+    .args = randd_args,
+    .status = DAEMON_UNINIT,
+    .restart_on_exit = 1,
+    .num_sockets = 1,
+    .sockets = randd_sockets,
+};
+
+static const char *sh_args[] = {
+    "sh",
+    "/sys/initrd/aidedinit.sh",
+    NULL
+};
+static struct daemon sh = {
+    .command = "/sys/initrd/sh",
+    .args = sh_args,
+    .restart_on_exit = 1,
+    .status = DAEMON_UNINIT,
+    .num_sockets = 0,
+};
+
+static struct daemon *daemons[] = {
+    &randd,
+    &sh,
+    NULL,
+};
+
 int main(int argc, const char **argv)
 {
     int res;
@@ -51,41 +89,41 @@ int main(int argc, const char **argv)
 
     setenv("PATH", "/bin;/usr/bin;/sys/initrd;/sys/initrd/usr/bin;", 1);
 
-    static const char *randd_args[] = {
-        "randd",
-        NULL
-    };
-    static struct daemon_socket randd_sockets[] = {
-        {
-            .env = "RANDD_SOCKET",
-        }
-    };
-    static struct daemon randd = {
-        .command = "/sys/initrd/randd",
-        .args = randd_args,
-        .status = DAEMON_UNINIT,
-        .num_sockets = 1,
-        .sockets = randd_sockets,
-    };
-
-    start_daemon(&randd);
-
-    static const char *sh_args[] = {
-        "sh",
-        "/sys/initrd/aidedinit.sh",
-        NULL
-    };
-    static struct daemon sh = {
-        .command = "/sys/initrd/sh",
-        .args = sh_args,
-        .status = DAEMON_UNINIT,
-        .num_sockets = 0,
-    };
-
-    start_daemon(&sh);
+    struct daemon **d = daemons;
+    while(*d) {
+        start_daemon(*d);
+        d++;
+    }
 
     while(1) {
-        sleep(10);
+        int daemon_exitcode;
+        res = waitpid(-1, &daemon_exitcode, 0);
+        if(res <= 0) {
+            INFO("waitpid returned early?\n");
+            continue;
+        }
+        INFO("Daemon Exited!\n");
+        struct daemon **d = daemons;
+        int found = 0;
+        while(*d) {
+            struct daemon *daemon = *d;
+            if(daemon->pid == res) {
+                // This is the one
+                found = 1;
+                if(daemon->restart_on_exit) {
+                    res = start_daemon(daemon);
+                    if(res) {
+                        ERROR("Failed to restart daemon: %s!\n",
+                              daemon->command);
+                    }
+                }
+                break;
+            }
+        }
+        if(!found) {
+            ERROR("waitpid returned PID(%d) which does not correspond to a running daemon?\n", res);
+            continue;
+        }
     }
 
     ERROR("returned from main loop!\n");

@@ -445,7 +445,7 @@ socket_fs_mount_create_pipe(
     waitqueue_init(&node->pipe.read_wq);
     waitqueue_name(&node->pipe.read_wq, "pipe-read");
     waitqueue_init(&node->pipe.write_wq);
-    waitqueue_name(&node->pipe.read_wq, "pipe-write");
+    waitqueue_name(&node->pipe.write_wq, "pipe-write");
 
     irq_lock_acquire(&mnt->inode_tree_lock);
     ptree_insert_any(&mnt->inode_tree, &node->pnode);

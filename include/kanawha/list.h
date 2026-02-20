@@ -83,6 +83,8 @@ ilist_push_tail(ilist_t *list, ilist_node_t *node)
     // Attach new tail to list
     node->next = list;
     list->prev = node;
+
+    DEBUG_KERNEL_ILIST_CHECK(list);
 }
 
 static inline ilist_node_t *
@@ -103,6 +105,7 @@ ilist_pop_head(ilist_t *list)
     head->next = head;
     head->prev = head;
 
+    DEBUG_KERNEL_ILIST_CHECK(list);
     return head;
 }
 

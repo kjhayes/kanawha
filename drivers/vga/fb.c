@@ -187,13 +187,7 @@ vga_fb_unload_buffer(
 
     int res;
 
-    thread_lock_acquire(&fb->mode_lock);
-
-    DEBUG_ASSERT(fb->buffer_exists);
-
     // Don't need to do anything, we allocate and deallocate the buffer on mode switch
-
-    thread_lock_release(&fb->mode_lock);
 
     return 0;
 }

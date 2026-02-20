@@ -14,6 +14,8 @@ struct daemon {
         DAEMON_RUNNING,
     } status;
 
+    int restart_on_exit;
+
     int num_sockets;
     struct daemon_socket *sockets;
 };

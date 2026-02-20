@@ -57,14 +57,14 @@ waitqueue_deinit(
 {
     waitqueue_disable(queue);
     while(1) {
-	wake_all(queue);
-	irq_lock_acquire(&queue->lock);
-	if(queue->num_threads == 0) {
+	    wake_all(queue);
+	    irq_lock_acquire(&queue->lock);
+	    if(queue->num_threads == 0) {
+	        irq_lock_release(&queue->lock);
+	        break;
+	    }
 	    irq_lock_release(&queue->lock);
-	    break;
-	}
-	irq_lock_release(&queue->lock);
-	pause();
+	    pause();
     }
 
     irq_lock_acquire(&queue->lock);
@@ -221,7 +221,6 @@ wake_single(struct waitqueue *queue)
         struct thread_state *thread =
             container_of(node, struct thread_state, waitqueue_node);
     	thread->waitqueue = NULL;
-
         thread_wake(thread);
     }
     irq_lock_release(&queue->lock);
@@ -243,7 +242,7 @@ wake_all(struct waitqueue *queue)
 
         struct thread_state *thread =
             container_of(node, struct thread_state, waitqueue_node);
-	thread->waitqueue = NULL;
+	    thread->waitqueue = NULL;
         thread_wake(thread);
 
     } while(1);
