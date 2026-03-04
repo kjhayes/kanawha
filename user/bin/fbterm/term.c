@@ -72,7 +72,7 @@ init_terminal(
         FILE *log_file,
         size_t width,
         size_t height,
-	size_t fb_mode)
+	    size_t fb_mode)
 {
     struct terminal_data *tdata = &terminal_data;
     memset(tdata, 0, sizeof(struct terminal_data));
