@@ -66,19 +66,6 @@ struct udrv_dev
     unsigned long max_read_pkts_queued;
 };
 
-static inline void
-udrv_dev_wake_writers(
-	struct udrv_dev *dev)
-{
-    wake_all(&dev->write_wq);
-}
-static inline void
-udrv_dev_wake_readers(
-	struct udrv_dev *dev)
-{
-    wake_all(&dev->read_wq);
-}
-
 // This is a packet destined for userspace
 struct udrv_pkt *
 udrv_create_user_pkt(
@@ -104,5 +91,11 @@ int
 udrv_drop_user_pkt(
 	struct udrv_dev *dev,
 	struct udrv_pkt *pkt);
+
+// Wake up any "driver" processes waiting
+// to write more packets.
+int
+udrv_wake_driver(
+        struct udrv_dev *dev);
 
 #endif

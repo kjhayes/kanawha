@@ -90,24 +90,23 @@ rand_dev_udrv_on_recv(
 	    irq_lock_acquire(&dev->buflock);
 	    if(dev->datalen != 0) {
 	        irq_lock_release(&dev->buflock);
-		return -EWOULDBLOCK;
+		    return -EWOULDBLOCK;
 	    } else {
-
-		ssize_t datalen = MIN(pktlen - sizeof(*pkt), UDRV_RAND_BUFLEN);
-		if(datalen <= 0) {
+		    ssize_t datalen = MIN(pktlen - sizeof(*pkt), UDRV_RAND_BUFLEN);
+		    if(datalen <= 0) {
 	            irq_lock_release(&dev->buflock);
-		    return -EINVAL;
-		}
+		        return -EINVAL;
+		    }
 
-		dev->datalen = datalen;
-		dev->bufindex = 0;
-		memcpy(dev->buffer, pkt->data, datalen);
+		    dev->datalen = datalen;
+		    dev->bufindex = 0;
+		    memcpy(dev->buffer, pkt->data, datalen);
 
 	        irq_lock_release(&dev->buflock);
 
-		rand_dev_wake_readers(&dev->rand_dev);
+		    rand_dev_wake_readers(&dev->rand_dev);
 
-		return 0;
+		    return 0;
 	    }
 	    break;
 	default:
@@ -155,29 +154,29 @@ udrv_rand_dev_read(
 
     if(dev->datalen == 0) {
         irq_lock_release(&dev->buflock);
-	return -EWOULDBLOCK;
+	    return -EWOULDBLOCK;
     }
 
     // This is slow... but I'll keep it simple
     amt_read = 0;
     while(dev->bufindex < dev->datalen && buflen > 0)
     {
-	*(uint8_t*)buffer = dev->buffer[dev->bufindex];
+	    *(uint8_t*)buffer = dev->buffer[dev->bufindex];
 
-	dev->bufindex++;
-	buffer++;
-	buflen--;
-	amt_read++;
+	    dev->bufindex++;
+	    buffer++;
+	    buflen--;
+	    amt_read++;
     }
 
     if(amt_read == 0 || dev->bufindex == dev->datalen) {
-	dev->datalen = 0;
-	dev->bufindex = 0;
-	udrv_dev_wake_writers(&dev->udrv_dev);
-	if(amt_read == 0) {
+	    dev->datalen = 0;
+	    dev->bufindex = 0;
+	    udrv_wake_driver(&dev->udrv_dev);
+	    if(amt_read == 0) {
             irq_lock_release(&dev->buflock);
-	    return -EWOULDBLOCK;
-	}
+	        return -EWOULDBLOCK;
+	    }
     }
 
     irq_lock_release(&dev->buflock);

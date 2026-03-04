@@ -18,6 +18,18 @@ struct udrv_user_pkt {
     struct udrv_pkt pkt;
 };
 
+static inline void
+udrv_dev_wake_writers(
+	struct udrv_dev *dev)
+{
+    wake_all(&dev->write_wq);
+}
+static inline void
+udrv_dev_wake_readers(
+	struct udrv_dev *dev)
+{
+    wake_all(&dev->read_wq);
+}
 static int
 udrv_mount_on_register(
 	struct udrv_mount *mnt)
@@ -132,6 +144,24 @@ udrv_mount_mkfile(
     waitqueue_init(&dev->write_wq);
     waitqueue_init(&dev->send_wq);
 
+    {
+#define NAMEBUFLEN 64
+        char namebuf[NAMEBUFLEN];
+
+        snprintk(namebuf, NAMEBUFLEN, "%s-udrv-read", name);
+        namebuf[NAMEBUFLEN-1] = '\0';
+        waitqueue_name(&dev->read_wq, namebuf);
+
+        snprintk(namebuf, NAMEBUFLEN, "%s-udrv-write", name);
+        namebuf[NAMEBUFLEN-1] = '\0';
+        waitqueue_name(&dev->write_wq, namebuf);
+
+        snprintk(namebuf, NAMEBUFLEN, "%s-udrv-send", name);
+        namebuf[NAMEBUFLEN-1] = '\0';
+        waitqueue_name(&dev->send_wq, namebuf);
+#undef NAMEBUFLEN
+    }
+
     irq_lock_init(&dev->read_pkt_queue_lock);
     ilist_init(&dev->read_pkt_queue);
     dev->read_pkts_queued = 0;
@@ -203,11 +233,11 @@ udrv_dev_fs_file_read(
     while(1) {
         list_node = ilist_pop_tail(&dev->read_pkt_queue);
         if(list_node == NULL) {
-	    irq_lock_release(&dev->read_pkt_queue_lock);
 	    if(flags & FS_FILE_WRITE_NON_BLOCKING) {
+	        irq_lock_release(&dev->read_pkt_queue_lock);
 		    return -EWOULDBLOCK;
 	    } else {
-		    res = wait_on(&dev->read_wq);
+		    res = wait_on_irq_lock_release(&dev->read_wq, &dev->read_pkt_queue_lock);
             if(res) {
                 return res;
             }
@@ -226,13 +256,13 @@ udrv_dev_fs_file_read(
     //printk("writing udrv packet of length=0x%lx to userspace! (buflen=0x%lx, pktlen=0x%lx)\n", to_write, amount, user_pkt->pktlen);
     memcpy(buffer, &user_pkt->pkt, to_write);
 
-    irq_lock_release(&dev->read_pkt_queue_lock);
-
-    kfree(user_pkt);
-
     if(dev->read_pkts_queued < dev->max_read_pkts_queued) {
         wake_all(&dev->send_wq);
     }
+
+    irq_lock_release(&dev->read_pkt_queue_lock);
+
+    kfree(user_pkt);
 
     //printk("wrote udrv packet of length=0x%lx to userspace!\n", to_write);
     return to_write;
@@ -361,8 +391,7 @@ udrv_send_user_pkt(
     struct udrv_user_pkt *user_pkt = container_of(pkt, struct udrv_user_pkt, pkt);
     irq_lock_acquire(&dev->read_pkt_queue_lock);
     while(dev->read_pkts_queued > dev->max_read_pkts_queued) {
-        irq_lock_release(&dev->read_pkt_queue_lock);
-	    res = wait_on(&dev->send_wq);
+	    res = wait_on_irq_lock_release(&dev->send_wq, &dev->read_pkt_queue_lock);
         if(res) {
             return res;
         }
@@ -370,9 +399,10 @@ udrv_send_user_pkt(
     }
     ilist_push_head(&dev->read_pkt_queue, &user_pkt->queue_node);
     dev->read_pkts_queued++;
-    irq_lock_release(&dev->read_pkt_queue_lock);
 
     udrv_dev_wake_readers(dev);
+
+    irq_lock_release(&dev->read_pkt_queue_lock);
 
     return 0;
 }
@@ -387,9 +417,10 @@ udrv_send_user_pkt_no_wait(
     irq_lock_acquire(&dev->read_pkt_queue_lock);
     ilist_push_head(&dev->read_pkt_queue, &user_pkt->queue_node);
     dev->read_pkts_queued++;
-    irq_lock_release(&dev->read_pkt_queue_lock);
 
     udrv_dev_wake_readers(dev);
+
+    irq_lock_release(&dev->read_pkt_queue_lock);
 
     return 0;
 }
@@ -402,6 +433,14 @@ udrv_drop_user_pkt(
     struct udrv_user_pkt *user_pkt =
 	container_of(pkt, struct udrv_user_pkt, pkt);
     kfree(user_pkt);
+    return 0;
+}
+
+int
+udrv_wake_driver(
+        struct udrv_dev *dev)
+{
+    udrv_dev_wake_writers(dev);
     return 0;
 }
 
