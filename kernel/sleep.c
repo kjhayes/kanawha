@@ -45,7 +45,7 @@ thread_sleep(
         return res;
     }
 
-    waitqueue_name(&queue, "priv-thread_sleep");
+    waitqueue_name(&queue, "sleep");
 
     //printk("Setting Sleep One-Shot Timer\n");
 
