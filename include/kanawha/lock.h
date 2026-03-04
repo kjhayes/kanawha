@@ -161,6 +161,12 @@ irq_lock_release(irq_lock_t *lock)
 }
 
 static inline void
+irq_lock_release_no_enable_irqs(irq_lock_t *lock)
+{
+    atomic_bool_clear(&lock->locked);
+}
+
+static inline void
 irq_lock_acquire_pair(
 	irq_lock_t *a,
 	irq_lock_t *b)
