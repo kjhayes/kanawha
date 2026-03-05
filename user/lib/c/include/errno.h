@@ -1,6 +1,10 @@
 #ifndef __ELK_LIBC__ERRNO_H__
 #define __ELK_LIBC__ERRNO_H__
 
+#ifdef __KANAWHA__UAPI_ERRNO_H__
+#error "Cannot include both <errno.h> and <kanawha/errno.h>!"
+#endif
+
 #define EPERM (1)
 #define ENOENT (2)
 #define ESRCH (3)
