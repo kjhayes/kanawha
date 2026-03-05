@@ -1,11 +1,11 @@
 #ifndef __KANAWHA__PROC_SIGNAL_H__
 #define __KANAWHA__PROC_SIGNAL_H__
 
-#include <kanawha/uapi/signal.h>
-#include <kanawha/uapi/process.h>
-#include <kanawha/usermode.h>
 #include <kanawha/bitmap.h>
 #include <kanawha/lock.h>
+#include <kanawha/uapi/process.h>
+#include <kanawha/uapi/signal.h>
+#include <kanawha/usermode.h>
 
 #define NUM_SIGNALS (256)
 
@@ -34,40 +34,32 @@ struct signal_state
 int
 signal_state_init(struct signal_state *state);
 int
-signal_state_init_on_spawn(
-	struct signal_state *parent,
-	struct signal_state *child);
+signal_state_init_on_spawn(struct signal_state *parent,
+                           struct signal_state *child);
 
-#define SIGNAL_FLAG_COALESCE (1ULL<<0) // Make assertion of this signal idempotent
-#define SIGNAL_FLAG_IGNORABLE (1ULL<<1) // Don't wake the thread if it is asleep.
-#define SIGNAL_FLAG_FATAL (1ULL<<2) // Terminate the process on signal delivery.
+#define SIGNAL_FLAG_COALESCE                                                   \
+    (1ULL << 0) // Make assertion of this signal idempotent
+#define SIGNAL_FLAG_IGNORABLE                                                  \
+    (1ULL << 1) // Don't wake the thread if it is asleep.
+#define SIGNAL_FLAG_FATAL                                                      \
+    (1ULL << 2) // Terminate the process on signal delivery.
 int
-signal_deliver(
-        struct process *process,
-        signal_id_t id,
-        unsigned long flags);
-
-int
-signal_ack(
-	struct process *process,
-	signal_id_t id);
+signal_deliver(struct process *process, signal_id_t id, unsigned long flags);
 
 int
-signal_set_entry(
-        struct process *process,
-        void __user *entry);
+signal_ack(struct process *process, signal_id_t id);
 
 int
-signal_on_return_to_userspace(
-	struct process *process);
+signal_set_entry(struct process *process, void __user *entry);
+
+int
+signal_on_return_to_userspace(struct process *process);
 
 signal_id_t
-process_current_signal(
-	struct process *process);
+process_current_signal(struct process *process);
 
 void __user *
-process_signal_return_addr(
-	struct process *process);
+process_signal_return_addr(struct process *process);
 
 const char *
 signal_id_string(signal_id_t id);

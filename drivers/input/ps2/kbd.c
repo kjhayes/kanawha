@@ -1,16 +1,16 @@
 
-#include <kanawha/init.h>
-#include <kanawha/ptree.h>
-#include <kanawha/errno.h>
-#include <kanawha/kmalloc.h>
-#include <kanawha/string.h>
-#include <kanawha/assert.h>
-#include <kanawha/vmem.h>
-#include <kanawha/dev/input.h>
-#include <drivers/ps2/port.h>
-#include <drivers/ps2/driver.h>
 #include <drivers/input/ps2/scanset.h>
+#include <drivers/ps2/driver.h>
+#include <drivers/ps2/port.h>
+#include <kanawha/assert.h>
 #include <kanawha/atomic.h>
+#include <kanawha/dev/input.h>
+#include <kanawha/errno.h>
+#include <kanawha/init.h>
+#include <kanawha/kmalloc.h>
+#include <kanawha/ptree.h>
+#include <kanawha/string.h>
+#include <kanawha/vmem.h>
 
 static atomic_t ps2_kbd_counter = 0;
 
@@ -31,18 +31,15 @@ struct ps2_kbd
 };
 
 static int
-ps2_kbd_handle_scancode(
-        struct ps2_kbd *kbd,
-        uint8_t scancode)
+ps2_kbd_handle_scancode(struct ps2_kbd *kbd, uint8_t scancode)
 {
     struct input_event event;
 
-    int res = (kbd->scanset->handle_scancode)(
-            scancode,
-            &kbd->scanset_state,
-            &event);
-   
-    if(res || event.key == INPUT_KEY_UNKNOWN) {
+    int res =
+        (kbd->scanset->handle_scancode)(scancode, &kbd->scanset_state, &event);
+
+    if(res || event.key == INPUT_KEY_UNKNOWN)
+    {
         return 0;
     }
 
@@ -51,37 +48,36 @@ ps2_kbd_handle_scancode(
 }
 
 static void
-ps2_kbd_recv_callback(
-        struct ps2_port *port,
-        void *priv_data,
-        uint8_t recv)
+ps2_kbd_recv_callback(struct ps2_port *port, void *priv_data, uint8_t recv)
 {
     int res;
 
-    struct ps2_kbd *kbd = (struct ps2_kbd*)priv_data;
-    if(kbd->registered) {
+    struct ps2_kbd *kbd = (struct ps2_kbd *)priv_data;
+    if(kbd->registered)
+    {
         res = ps2_kbd_handle_scancode(kbd, recv);
-        if(res) {
-            dprintk("ps2_kbd_enqueue_scancode Failed! (lost a key event) (err=%s)\n",
+        if(res)
+        {
+            dprintk("ps2_kbd_enqueue_scancode Failed! (lost a key "
+                    "event) (err=%s)\n",
                     errnostr(res));
         }
     }
 }
 
 static int
-ps2_kbd_attach(
-        struct ps2_driver *driver,
-        struct ps2_port *port)
+ps2_kbd_attach(struct ps2_driver *driver, struct ps2_port *port)
 {
     int res;
-    
+
     DEBUG_ASSERT(KERNEL_ADDR(port));
     DEBUG_ASSERT(KERNEL_ADDR(port->ops));
     DEBUG_ASSERT(KERNEL_ADDR(port->ops->send));
     DEBUG_ASSERT(KERNEL_ADDR(driver));
 
     struct ps2_kbd *kbd = kzmalloc(sizeof(struct ps2_kbd), KM_KERNEL);
-    if(kbd == NULL) {
+    if(kbd == NULL)
+    {
         return -ENOMEM;
     }
 
@@ -89,23 +85,22 @@ ps2_kbd_attach(
     kbd->scanset = &qwerty_scanset_2;
     kbd->registered = 0;
 
-    ps2_port_set_callback(
-            port,
-            ps2_kbd_recv_callback,
-            (void*)kbd);
+    ps2_port_set_callback(port, ps2_kbd_recv_callback, (void *)kbd);
 
     unsigned long id = atomic_fetch_inc(&ps2_kbd_counter);
     snprintk(kbd->name_buf, PS2_KBD_NAME_BUFLEN, "ps2-kbd-%lu", (ul_t)id);
-    kbd->name_buf[PS2_KBD_NAME_BUFLEN-1] = '\0';
+    kbd->name_buf[PS2_KBD_NAME_BUFLEN - 1] = '\0';
 
     res = register_input_dev(&kbd->input_dev, kbd->name_buf);
-    if(res) {
+    if(res)
+    {
         kfree(kbd);
         return res;
     }
 
     res = ps2_port_enable_scanning(port);
-    if(res) {
+    if(res)
+    {
         unregister_input_dev(&kbd->input_dev);
         kfree(kbd);
         return res;
@@ -117,31 +112,21 @@ ps2_kbd_attach(
 }
 
 static int
-ps2_kbd_deattach(
-        struct ps2_driver *driver,
-        struct ps2_port *port)
+ps2_kbd_deattach(struct ps2_driver *driver, struct ps2_port *port)
 {
     return -EUNIMPL;
 }
 
-static struct ps2_driver_ops
-ps2_kbd_driver_ops = {
+static struct ps2_driver_ops ps2_kbd_driver_ops = {
     .attach = ps2_kbd_attach,
     .deattach = ps2_kbd_deattach,
 };
 
-static uint8_t model_f_id_0[] = {
-    0xAB, 0x83
-};
-static uint8_t model_f_id_1[] = {
-    0xAB, 0xC1
-};
-static uint8_t short_id[] = {
-    0xAB, 0x84
-};
+static uint8_t model_f_id_0[] = {0xAB, 0x83};
+static uint8_t model_f_id_1[] = {0xAB, 0xC1};
+static uint8_t short_id[] = {0xAB, 0x84};
 
-static struct ps2_driver
-ps2_kbd_driver = {
+static struct ps2_driver ps2_kbd_driver = {
 
     .ops = &ps2_kbd_driver_ops,
 
@@ -149,26 +134,31 @@ ps2_kbd_driver = {
 
     // These ID's are taken from OSDev's list so I'm not 100%
     // sure how accurate it is.
-    .ids = {
-        { // AT Keyboard
-            .len = 0,
-            .id_bytes = NULL,
-        },
-        { // Model F
-            .len = sizeof(model_f_id_0),
-            .id_bytes = model_f_id_0,
-        },
-        { // Model F (other ID)
-            .len = sizeof(model_f_id_1),
-            .id_bytes = model_f_id_1,
-        },
-        { // Thinkpads and other "Short Keyboards"
-            .len = sizeof(short_id),
-            .id_bytes = short_id,
-        },
+    .ids =
+        {
+            {
+                // AT Keyboard
+                .len = 0,
+                .id_bytes = NULL,
+            },
+            {
+                // Model F
+                .len = sizeof(model_f_id_0),
+                .id_bytes = model_f_id_0,
+            },
+            {
+                // Model F (other ID)
+                .len = sizeof(model_f_id_1),
+                .id_bytes = model_f_id_1,
+            },
+            {
+                // Thinkpads and other "Short Keyboards"
+                .len = sizeof(short_id),
+                .id_bytes = short_id,
+            },
 
-        // There are plenty more but these three should suffice for now
-    },
+            // There are plenty more but these three should suffice for now
+        },
 };
 
 static int
@@ -179,10 +169,10 @@ ps2_kbd_register_driver(void)
     ps2_driver_struct_init(&ps2_kbd_driver);
 
     res = ps2_register_driver(&ps2_kbd_driver);
-    if(res) {
+    if(res)
+    {
         return res;
     }
     return 0;
 }
 declare_init(device, ps2_kbd_register_driver);
-

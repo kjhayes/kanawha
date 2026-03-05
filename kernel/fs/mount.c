@@ -1,25 +1,22 @@
 
 #include <kanawha/fs/mount.h>
 
-#include <kanawha/fs/node.h>
-#include <kanawha/stddef.h>
 #include <kanawha/assert.h>
-#include <kanawha/vmem.h>
+#include <kanawha/fs/node.h>
 #include <kanawha/kmalloc.h>
-#include <kanawha/string.h>
 #include <kanawha/rwlock.h>
+#include <kanawha/stddef.h>
+#include <kanawha/string.h>
+#include <kanawha/vmem.h>
 
 static int
-fs_unload_node(
-        struct fs_node *node)
+fs_unload_node(struct fs_node *node)
 {
     return fs_mount_unload_node(node->mount, node->cache_node.key, node);
 }
 
 int
-init_fs_mount_struct(
-        struct fs_mount *mnt,
-        struct fs_mount_ops *ops)
+init_fs_mount_struct(struct fs_mount *mnt, struct fs_mount_ops *ops)
 {
     mnt->ops = ops;
     spinlock_init(&mnt->cache_lock);
@@ -28,9 +25,7 @@ init_fs_mount_struct(
 }
 
 struct fs_node *
-fs_mount_get_node(
-        struct fs_mount *mnt,
-        size_t node_index)
+fs_mount_get_node(struct fs_mount *mnt, size_t node_index)
 {
     int res;
 
@@ -45,26 +40,29 @@ fs_mount_get_node(
 
     if(node == NULL)
     {
-	fs_node = fs_node_create();
+        fs_node = fs_node_create();
 
         fs_node->mount = mnt;
 
         res = fs_mount_load_node(mnt, node_index, fs_node);
-        if(res) {
-	    kfree(fs_node);
+        if(res)
+        {
+            kfree(fs_node);
             spin_unlock(&mnt->cache_lock);
             return NULL;
         }
 
         res = ptree_insert(&mnt->node_cache, &fs_node->cache_node, node_index);
-        if(res) {
-	    fs_mount_unload_node(mnt, node_index, fs_node);
-	    kfree(fs_node);
+        if(res)
+        {
+            fs_mount_unload_node(mnt, node_index, fs_node);
+            kfree(fs_node);
             spin_unlock(&mnt->cache_lock);
-	    return NULL;
+            return NULL;
         }
-
-    } else {
+    }
+    else
+    {
         DEBUG_ASSERT(KERNEL_ADDR(node));
         fs_node = container_of(node, struct fs_node, cache_node);
         fs_node_get(fs_node);
@@ -76,9 +74,7 @@ fs_mount_get_node(
 }
 
 int
-fs_mount_on_node_unreferenced(
-        struct fs_mount *mnt,
-        struct fs_node *node)
+fs_mount_on_node_unreferenced(struct fs_mount *mnt, struct fs_node *node)
 {
     int res;
     size_t index = node->cache_node.key;
@@ -87,7 +83,8 @@ fs_mount_on_node_unreferenced(
     // We're removing the last reference
 
     res = fs_node_flush_all_fs_pages(node);
-    if(res) {
+    if(res)
+    {
         goto err;
     }
 
@@ -95,8 +92,10 @@ fs_mount_on_node_unreferenced(
     // Add this node to a list of reclaimable nodes
     // (For now we'll just free it, so our "cache" doesn't do much caching)
     struct ptree_node *removed = ptree_remove(&mnt->node_cache, index);
-    if(removed != &node->cache_node) {
-        if(removed != NULL) {
+    if(removed != &node->cache_node)
+    {
+        if(removed != NULL)
+        {
             // ERROR
             // Try to re-insert the incorrectly removed node
             ptree_insert(&mnt->node_cache, removed, removed->key);
@@ -108,7 +107,8 @@ fs_mount_on_node_unreferenced(
     node->refcount = 0;
 
     res = fs_unload_node(node);
-    if(res) {
+    if(res)
+    {
         eprintk("Filesystem failed to unload fs_node!\n");
         goto err;
     }
@@ -122,23 +122,20 @@ err:
 }
 
 int
-fs_mount_begin_unlinking_node(
-        struct fs_mount *mnt,
-        struct fs_node *node)
+fs_mount_begin_unlinking_node(struct fs_mount *mnt, struct fs_node *node)
 {
     spin_lock(&mnt->cache_lock);
-    if(node->refcount > 1) {
-       spin_unlock(&mnt->cache_lock);
-       return -EBUSY;
+    if(node->refcount > 1)
+    {
+        spin_unlock(&mnt->cache_lock);
+        return -EBUSY;
     }
 
     return 0;
 }
 
 int
-fs_mount_end_unlinking_node(
-        struct fs_mount *mnt,
-        struct fs_node *node)
+fs_mount_end_unlinking_node(struct fs_mount *mnt, struct fs_node *node)
 {
     int res;
 
@@ -151,7 +148,8 @@ fs_mount_end_unlinking_node(
     DEBUG_ASSERT(removed == &node->cache_node);
 
     res = fs_unload_node(node);
-    if(res) {
+    if(res)
+    {
         eprintk("Filesystem failed to unload fs_node!\n");
         spin_unlock(&mnt->cache_lock);
         return res;
@@ -164,9 +162,7 @@ fs_mount_end_unlinking_node(
 // Default Implementations
 
 int
-fs_mount_nop_sync(
-        struct fs_mount *mnt)
+fs_mount_nop_sync(struct fs_mount *mnt)
 {
     return 0;
 }
-

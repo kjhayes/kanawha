@@ -1,9 +1,9 @@
 
-#include <stdarg.h>
-#include <fcntl.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <kanawha/file.h>
 #include <kanawha/sys-wrappers.h>
+#include <stdarg.h>
 
 static int
 __fcntl_dupfd(int src, va_list arg)
@@ -12,7 +12,8 @@ __fcntl_dupfd(int src, va_list arg)
     int dst = va_arg(arg, int);
     fd_t new_slot;
     res = kanawha_sys_fmove(dst, src, FMOVE_DUP, &new_slot);
-    if(res) {
+    if(res)
+    {
         errno = res;
         return -1;
     }
@@ -28,12 +29,14 @@ __fcntl_setfl(int src, va_list arg)
 
     unsigned long fields = 0;
 
-    if(flags & O_NONBLOCK) {
+    if(flags & O_NONBLOCK)
+    {
         fields |= FACCESS_NON_BLOCKING;
     }
 
     res = kanawha_sys_faccess(src, fields, FACCESS_MODE_EXACT);
-    if(res) {
+    if(res)
+    {
         errno = res;
         return -1;
     }
@@ -50,7 +53,8 @@ __fcntl_getfl(int src, va_list arg)
 
     unsigned long fields;
     res = kanawha_sys_fattr(src, FILE_ATTR_ACCESS, &fields);
-    if(res) {
+    if(res)
+    {
         errno = res;
         return -1;
     }
@@ -63,17 +67,17 @@ fcntl(int filedes, int cmd, ...)
 {
     va_list arg;
     va_start(arg, cmd);
-    switch(cmd) {
-        case F_DUPFD:
-            return __fcntl_dupfd(filedes, arg);
-        case F_SETFL:
-            return __fcntl_setfl(filedes, arg);
-        case F_GETFL:
-            return __fcntl_getfl(filedes, arg);
-        default:
-            break;
+    switch(cmd)
+    {
+    case F_DUPFD:
+        return __fcntl_dupfd(filedes, arg);
+    case F_SETFL:
+        return __fcntl_setfl(filedes, arg);
+    case F_GETFL:
+        return __fcntl_getfl(filedes, arg);
+    default:
+        break;
     }
     va_end(arg);
     return -1;
 }
-

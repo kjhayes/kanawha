@@ -1,32 +1,36 @@
 
-#include <kanawha/printk.h>
-#include <kanawha/klog.h>
-#include <kanawha/init.h>
-#include <kanawha/errno.h>
-#include <kanawha/percpu.h>
-#include <kanawha/vmem.h>
-#include <kanawha/thread.h>
-#include <kanawha/irq_domain.h>
-#include <kanawha/clk.h>
 #include <kanawha/attribute.h>
+#include <kanawha/clk.h>
+#include <kanawha/errno.h>
+#include <kanawha/init.h>
+#include <kanawha/irq_domain.h>
+#include <kanawha/klog.h>
+#include <kanawha/percpu.h>
+#include <kanawha/printk.h>
+#include <kanawha/thread.h>
 #include <kanawha/usermode.h>
+#include <kanawha/vmem.h>
 
+#include <arch/x64/apic_timer.h>
 #include <arch/x64/fpu.h>
 #include <arch/x64/gdt.h>
 #include <arch/x64/idt.h>
+#include <arch/x64/lapic.h>
 #include <arch/x64/msr.h>
 #include <arch/x64/smp.h>
-#include <arch/x64/lapic.h>
-#include <arch/x64/apic_timer.h>
 
 extern int x64_boot_stack_base[];
 
-void *x64_boot_bsp_init(void);
-void x64_bsp_init(void);
-void x64_init(void*);
+void *
+x64_boot_bsp_init(void);
+void
+x64_bsp_init(void);
+void
+x64_init(void *);
 
 // Physical Stack
-void * x64_boot_bsp_init(void) 
+void *
+x64_boot_bsp_init(void)
 {
     int res;
 
@@ -40,12 +44,14 @@ void * x64_boot_bsp_init(void)
 
     // boot Init Stages
     res = handle_init_stage__boot();
-    if(res) {
+    if(res)
+    {
         panic("Failed to handle init stage \"boot\"! err=%s", errnostr(res));
     }
 
     res = handle_init_stage__static();
-    if(res) {
+    if(res)
+    {
         panic("Failed to handle init stage \"static\"! err=%s", errnostr(res));
     }
 
@@ -53,148 +59,182 @@ void * x64_boot_bsp_init(void)
     // so be suspicious about it -KJH
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Warray-bounds"
-    void *boot_stack_virt = (void*)__va((void __phys *)x64_boot_stack_base);
+    void *boot_stack_virt = (void *)__va((void __phys *)x64_boot_stack_base);
 #pragma GCC diagnostic pop
 
     return boot_stack_virt;
 }
 
 // Virtual Stack
-void x64_bsp_init(void) {
+void
+x64_bsp_init(void)
+{
     int res;
 
     printk("Initializing Kanawha Kernel...\n");
 
     // mem_flags Init Stages
     res = handle_init_stage__mem_flags();
-    if(res) {
-        panic("Failed to handle init stage \"mem_flags\"! err=%s", errnostr(res));
+    if(res)
+    {
+        panic("Failed to handle init stage \"mem_flags\"! err=%s",
+              errnostr(res));
     }
     res = handle_init_stage__post_mem_flags();
-    if(res) {
-        panic("Failed to handle init stage \"post_mem_flags\"! err=%s", errnostr(res));
+    if(res)
+    {
+        panic("Failed to handle init stage \"post_mem_flags\"! err=%s",
+              errnostr(res));
     }
 
     // alloc Init Stages
     res = handle_init_stage__page_alloc();
-    if(res) {
-        panic("Failed to handle init stage \"page_alloc\"! err=%s", errnostr(res));
+    if(res)
+    {
+        panic("Failed to handle init stage \"page_alloc\"! err=%s",
+              errnostr(res));
     }
 
     res = handle_init_stage__dynamic_page();
-    if(res) {
-        panic("Failed to handle init stage \"dynamic_page\"! err=%s", errnostr(res));
+    if(res)
+    {
+        panic("Failed to handle init stage \"dynamic_page\"! err=%s",
+              errnostr(res));
     }
 
     res = handle_init_stage__vmem();
-    if(res) {
+    if(res)
+    {
         panic("Failed to handle init stage \"vmem\"! err=%s", errnostr(res));
     }
 
     res = handle_init_stage__enable_vmem();
-    if(res) {
-        panic("Failed to handle init stage \"enable_vmem\"! err=%s", errnostr(res));
+    if(res)
+    {
+        panic("Failed to handle init stage \"enable_vmem\"! err=%s",
+              errnostr(res));
     }
 
     res = handle_init_stage__post_vmem();
-    if(res) {
-        panic("Failed to handle init stage \"post_vmem\"! err=%s", errnostr(res));
+    if(res)
+    {
+        panic("Failed to handle init stage \"post_vmem\"! err=%s",
+              errnostr(res));
     }
 
     res = handle_init_stage__kmalloc();
-    if(res) {
+    if(res)
+    {
         panic("Failed to handle init stage \"kmalloc\"! err=%s", errnostr(res));
     }
 
     res = handle_init_stage__dynamic();
-    if(res) {
+    if(res)
+    {
         panic("Failed to handle init stage \"dynamic\"! err=%s", errnostr(res));
     }
 
-    printk("Starting threading on CPU (%ld)\n",
-            (long)current_cpu_id());
+    printk("Starting threading on CPU (%ld)\n", (long)current_cpu_id());
 
     cpu_start_threading(x64_init, NULL);
-    
+
     panic("x64_boot_init failed to start threading!\n");
 }
 
-void x64_init(void *in)
+void
+x64_init(void *in)
 {
     int res;
 
-    printk("Started threading on CPU (%ld)\n",
-            (long)current_cpu_id());
+    printk("Started threading on CPU (%ld)\n", (long)current_cpu_id());
 
     enable_irqs();
 
     res = handle_init_stage__threaded();
-    if(res) {
-        panic("Failed to handle init stage \"threaded\"! err=%s", errnostr(res));
+    if(res)
+    {
+        panic("Failed to handle init stage \"threaded\"! err=%s",
+              errnostr(res));
     }
 
     res = handle_init_stage__topo();
-    if(res) {
+    if(res)
+    {
         panic("Failed to handle init stage \"topo\"! err=%s", errnostr(res));
     }
 
     res = handle_init_stage__post_topo();
-    if(res) {
-        panic("Failed to handle init stage \"post_topo\"! err=%s", errnostr(res));
+    if(res)
+    {
+        panic("Failed to handle init stage \"post_topo\"! err=%s",
+              errnostr(res));
     }
 
     res = handle_init_stage__smp_bringup();
-    if(res) {
-        panic("Failed to handle init stage \"smp_bringup\"! err=%s", errnostr(res));
+    if(res)
+    {
+        panic("Failed to handle init stage \"smp_bringup\"! err=%s",
+              errnostr(res));
     }
 
     res = handle_init_stage__smp();
-    if(res) {
+    if(res)
+    {
         panic("Failed to handle init stage \"smp\"! err=%s", errnostr(res));
     }
 
     res = handle_init_stage__sched();
-    if(res) {
+    if(res)
+    {
         panic("Failed to handle init stage \"sched\"! err=%s", errnostr(res));
     }
 
     res = handle_init_stage__fs();
-    if(res) {
+    if(res)
+    {
         panic("Failed to handle init stage \"fs\"! err=%s", errnostr(res));
     }
 
     res = handle_init_stage__platform();
-    if(res) {
-        panic("Failed to handle init stage \"platform\"! err=%s", errnostr(res));
+    if(res)
+    {
+        panic("Failed to handle init stage \"platform\"! err=%s",
+              errnostr(res));
     }
 
     res = handle_init_stage__bus();
-    if(res) {
+    if(res)
+    {
         panic("Failed to handle init stage \"bus\"! err=%s", errnostr(res));
     }
 
     res = handle_init_stage__early_device();
-    if(res) {
-        panic("Failed to handle init stage \"early_device\"! err=%s", errnostr(res));
+    if(res)
+    {
+        panic("Failed to handle init stage \"early_device\"! err=%s",
+              errnostr(res));
     }
 
     res = handle_init_stage__device();
-    if(res) {
+    if(res)
+    {
         panic("Failed to handle init stage \"device\"! err=%s", errnostr(res));
     }
 
     res = handle_init_stage__late();
-    if(res) {
+    if(res)
+    {
         panic("Failed to handle init stage \"late\"! err=%s", errnostr(res));
     }
 
     res = handle_init_stage__launch();
-    if(res) {
+    if(res)
+    {
         panic("Failed to handle init stage \"launch\"! err=%s", errnostr(res));
     }
 
-    //dump_irq_descs(printk);
-    //dump_threads(printk);
+    // dump_irq_descs(printk);
+    // dump_threads(printk);
 
     printk("CPU (%ld) init thread is idling\n", (sl_t)current_cpu_id());
     idle_loop();
@@ -202,10 +242,11 @@ void x64_init(void *in)
     panic("Returned from idle loop on CPU (%ld)!\n", (sl_t)current_cpu_id());
 }
 
-void x64_ap_init(void*);
+void
+x64_ap_init(void *);
 
-__noreturn
-void x64_boot_ap_init(void) 
+__noreturn void
+x64_boot_ap_init(void)
 {
     int res;
 
@@ -233,31 +274,35 @@ void x64_boot_ap_init(void)
 
     // And finally we can setup the vmem subsystem correctly
     res = vmem_percpu_init();
-    if(res) {
+    if(res)
+    {
         eprintk("AP(%ld) vmem_percpu_init Failed! (err=%s)\n",
-                (sl_t)self, errnostr(res));
+                (sl_t)self,
+                errnostr(res));
         panic("AP Init Failed!\n");
     }
 
-    printk("Starting threading on CPU (%ld)\n",
-            (long)current_cpu_id());
+    printk("Starting threading on CPU (%ld)\n", (long)current_cpu_id());
 
-    cpu_start_threading(x64_ap_init, NULL); 
+    cpu_start_threading(x64_ap_init, NULL);
 }
 
-void x64_ap_init(void *old_stack)
+void
+x64_ap_init(void *old_stack)
 {
     int res;
 
     res = lapic_init_current();
-    if(res) {
+    if(res)
+    {
         panic("CPU %ld Failed to initialize the LAPIC!\n",
-                (sl_t)current_cpu_id());
+              (sl_t)current_cpu_id());
     }
     res = apic_timer_init_current();
-    if(res) {
+    if(res)
+    {
         panic("CPU %ld Failed to initialize the APIC Timer!\n",
-                (sl_t)current_cpu_id());
+              (sl_t)current_cpu_id());
     }
 
     x64_ap_notify_booted();
@@ -267,4 +312,3 @@ void x64_ap_init(void *old_stack)
 
     panic("Returned from idle thread abandon!\n");
 }
-

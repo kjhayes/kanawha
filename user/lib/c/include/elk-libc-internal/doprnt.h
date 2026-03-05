@@ -4,10 +4,9 @@
 #include <stdarg.h>
 
 int
-doprnt(
-        int(*putchar)(int c, void *state),
-        void *state,
-        const char *fmt,
-        va_list arg);
+doprnt(int (*putchar)(int c, void *state),
+       void *state,
+       const char *fmt,
+       va_list arg);
 
 #endif

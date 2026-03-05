@@ -1,15 +1,17 @@
 #ifndef __KANAWHA__MMIO_H__
 #define __KANAWHA__MMIO_H__
 
-#include <kanawha/types.h>
+#include <kanawha/attribute.h>
 #include <kanawha/pointer.h>
 #include <kanawha/string.h>
-#include <kanawha/attribute.h>
+#include <kanawha/types.h>
 
 #define __mmio __noderef
 
-void __mmio *mmio_map(void __phys * paddr, size_t size);
-int mmio_unmap(void __mmio *addr, size_t size);
+void __mmio *
+mmio_map(void __phys *paddr, size_t size);
+int
+mmio_unmap(void __mmio *addr, size_t size);
 
 struct vmem_region *
 mmio_vmem_region(void);
@@ -19,50 +21,51 @@ mmio_vmem_region(void);
  */
 
 static inline uint8_t
-mmio_readb(void __mmio *addr) {
-    return *(volatile uint8_t*)addr;
+mmio_readb(void __mmio *addr)
+{
+    return *(volatile uint8_t *)addr;
 }
 static inline uint16_t
 mmio_readw(void __mmio *addr)
 {
-    return *(volatile uint16_t*)addr;
+    return *(volatile uint16_t *)addr;
 }
 static inline uint32_t
 mmio_readl(void __mmio *addr)
 {
-    return *(volatile uint32_t*)addr;
+    return *(volatile uint32_t *)addr;
 }
 static inline uint64_t
 mmio_readq(void __mmio *addr)
 {
-    return *(volatile uint64_t*)addr;
+    return *(volatile uint64_t *)addr;
 }
 
 static inline void
 mmio_writeb(void __mmio *addr, uint8_t val)
 {
-    *(volatile uint8_t*)addr = val;
+    *(volatile uint8_t *)addr = val;
 }
 static inline void
 mmio_writew(void __mmio *addr, uint16_t val)
 {
-    *(volatile uint16_t*)addr = val;
+    *(volatile uint16_t *)addr = val;
 }
 static inline void
 mmio_writel(void __mmio *addr, uint32_t val)
 {
-    *(volatile uint32_t*)addr = val;
+    *(volatile uint32_t *)addr = val;
 }
 static inline void
 mmio_writeq(void __mmio *addr, uint64_t val)
 {
-    *(volatile uint64_t*)addr = val;
+    *(volatile uint64_t *)addr = val;
 }
 
 static inline void
 mmio_memset(void __mmio *addr, int val, size_t length)
 {
-    memset((void*)addr, val, length);
+    memset((void *)addr, val, length);
 }
 
 #endif

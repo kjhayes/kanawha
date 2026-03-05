@@ -6,4 +6,3 @@ wait(int *stat_loc)
 {
     return waitpid(-1, stat_loc, 0);
 }
-

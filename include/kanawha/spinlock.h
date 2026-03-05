@@ -1,19 +1,23 @@
 #ifndef __KANAWHA__SPINLOCK_H__
 #define __KANAWHA__SPINLOCK_H__
 
+#include <kanawha/assert.h>
 #include <kanawha/atomic.h>
-#include <kanawha/types.h>
 #include <kanawha/errno.h>
 #include <kanawha/printk.h>
-#include <kanawha/assert.h>
+#include <kanawha/types.h>
 
-typedef struct {
+typedef struct
+{
     atomic_bool_t held;
 } spinlock_t;
 
-static inline void spinlock_init(spinlock_t *lock);
-static inline void spin_lock(spinlock_t *lock);
-static inline void spin_unlock(spinlock_t *lock);
+static inline void
+spinlock_init(spinlock_t *lock);
+static inline void
+spin_lock(spinlock_t *lock);
+static inline void
+spin_unlock(spinlock_t *lock);
 
 static inline void
 spinlock_init(spinlock_t *lock)
@@ -31,12 +35,14 @@ spin_try_lock(spinlock_t *lock)
     return val;
 }
 
-void spinlock_failed_loop(spinlock_t *lock);
+void
+spinlock_failed_loop(spinlock_t *lock);
 
 static inline void
 spin_lock(spinlock_t *lock)
 {
-    while(spin_try_lock(lock)) {
+    while(spin_try_lock(lock))
+    {
         // "pause" and check for deadlock
         spinlock_failed_loop(lock);
     }
@@ -50,13 +56,13 @@ spin_unlock(spinlock_t *lock)
 }
 
 #ifndef CONFIG_DEBUG_SPINLOCK_TRACK_THREADS
-#define DECLARE_SPINLOCK(__lock)\
-    spinlock_t __lock = {\
-        .held = (atomic_bool_t)0, \
+#define DECLARE_SPINLOCK(__lock)                                               \
+    spinlock_t __lock = {                                                      \
+        .held = (atomic_bool_t)0,                                              \
     }
-#define INIT_SPINLOCK_FIELD(__field)\
-    .__field = { \
-        .held = (atomic_bool_t)0, \
+#define INIT_SPINLOCK_FIELD(__field)                                           \
+    .__field = {                                                               \
+        .held = (atomic_bool_t)0,                                              \
     }
 #endif
 

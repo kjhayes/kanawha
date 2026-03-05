@@ -4,7 +4,6 @@
 #include <arch/x64/lapic.h>
 
 int
-register_cpu_lapic_pci_mailbox(
-        struct lapic *lapic);
+register_cpu_lapic_pci_mailbox(struct lapic *lapic);
 
 #endif

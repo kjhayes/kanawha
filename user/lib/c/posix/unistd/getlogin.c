@@ -1,7 +1,7 @@
 
-#include <unistd.h>
-#include <string.h>
 #include <errno.h>
+#include <string.h>
+#include <unistd.h>
 
 char *
 getlogin(void)
@@ -11,14 +11,15 @@ getlogin(void)
     int res;
 
     static char buffer[GETLOGIN_BUFLEN];
-   
+
     res = getlogin_r(buffer, (size_t)GETLOGIN_BUFLEN);
-    if(res) {
-	errno = res;
-	return NULL;
+    if(res)
+    {
+        errno = res;
+        return NULL;
     }
 
-    buffer[GETLOGIN_BUFLEN-1] = '\0';
+    buffer[GETLOGIN_BUFLEN - 1] = '\0';
 
     return buffer;
 
@@ -26,10 +27,7 @@ getlogin(void)
 }
 
 int
-getlogin_r(
-	char *buf,
-	size_t bufsize)
+getlogin_r(char *buf, size_t bufsize)
 {
     return -EINVAL;
 }
-

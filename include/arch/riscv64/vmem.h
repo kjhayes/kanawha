@@ -20,23 +20,24 @@ struct arch_vmem_region
     struct riscv64_sv_page_table __phys *root_table;
 };
 
-extern size_t __riscv64_identity_map_offset; // Assume low mem is identity mapped at boot
-                                                 // (TODO This is not really a safe assumption)
+extern size_t __riscv64_identity_map_offset; // Assume low mem is identity
+                                             // mapped at boot (TODO This is
+                                             // not really a safe assumption)
 
 static inline void *
-__va(void __phys * paddr) {
-    return (void*)paddr + __riscv64_identity_map_offset;
+__va(void __phys *paddr)
+{
+    return (void *)paddr + __riscv64_identity_map_offset;
 }
 
 static inline void __phys *
-__pa(void * vaddr) {
+__pa(void *vaddr)
+{
     return (void __phys *)(vaddr - __riscv64_identity_map_offset);
 }
 
 // Returns 0 if not-present 1 if present, -ERRNO on error
 int
-riscv64_vmem_map_page_is_present(
-        struct vmem_map *map,
-        void *vaddr);
+riscv64_vmem_map_page_is_present(struct vmem_map *map, void *vaddr);
 
 #endif

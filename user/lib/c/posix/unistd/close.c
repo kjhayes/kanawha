@@ -3,7 +3,7 @@
 #include <kanawha/sys-wrappers.h>
 
 int
-close(int fd) {
+close(int fd)
+{
     kanawha_sys_close((fd_t)fd);
 }
-

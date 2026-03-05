@@ -1,45 +1,48 @@
 
-#include <kanawha/proc/process.h>
-#include <kanawha/proc/file_table.h>
 #include <kanawha/assert.h>
-#include <kanawha/vmem.h>
 #include <kanawha/module.h>
+#include <kanawha/proc/file_table.h>
+#include <kanawha/proc/process.h>
+#include <kanawha/vmem.h>
 
 #define SYSCALL_INSMOD_MAX_NAMELEN 128
 
 int
-syscall_insmod(
-        fd_t mod_fd,
-        const char __user *modname,
-        unsigned long flags)
+syscall_insmod(fd_t mod_fd, const char __user *modname, unsigned long flags)
 {
     int res;
 
     struct process *process = current_process();
 
-    if(!process_is_root(process)) {
+    if(!process_is_root(process))
+    {
         return -EPERM;
     }
 
     size_t namelen;
-    res = process_strlen_usermem(
-            process,
-            modname,
-            SYSCALL_INSMOD_MAX_NAMELEN+1,
-            &namelen);
-    if(res) {
+    res = process_strlen_usermem(process,
+                                 modname,
+                                 SYSCALL_INSMOD_MAX_NAMELEN + 1,
+                                 &namelen);
+    if(res)
+    {
         eprintk("PID(%ld) syscall_insmod: could not get namelen! (err=%s)\n",
-                process->id, errnostr(res));
+                process->id,
+                errnostr(res));
         return res;
     }
-    if(namelen <= 0) {
-        eprintk("PID(%ld) syscall_insmod: name length cannot be <= 0! len=%llu\n",
+    if(namelen <= 0)
+    {
+        eprintk("PID(%ld) syscall_insmod: name length cannot be <= 0! "
+                "len=%llu\n",
                 (sl_t)process->id,
                 (ull_t)namelen);
         return -EINVAL;
     }
-    if(namelen > SYSCALL_INSMOD_MAX_NAMELEN) {
-        eprintk("PID(%ld) syscall_insmod: name is too long! len=%llu, (>%llu)\n",
+    if(namelen > SYSCALL_INSMOD_MAX_NAMELEN)
+    {
+        eprintk("PID(%ld) syscall_insmod: name is too long! len=%llu, "
+                "(>%llu)\n",
                 (sl_t)process->id,
                 (ull_t)namelen,
                 (ull_t)SYSCALL_INSMOD_MAX_NAMELEN);
@@ -47,97 +50,90 @@ syscall_insmod(
     }
 
     char namebuf[namelen + 1];
-    res = process_read_usermem(
-            process,
-            (void*)namebuf,
-            (void __user *)modname,
-            namelen);
-    if(res) {
-        eprintk("syscall_insmod: failed to read file name! process_read_usermem(%p) -> %s\n",
-                modname, errnostr(res));
+    res = process_read_usermem(process,
+                               (void *)namebuf,
+                               (void __user *)modname,
+                               namelen);
+    if(res)
+    {
+        eprintk("syscall_insmod: failed to read file name! "
+                "process_read_usermem(%p) -> %s\n",
+                modname,
+                errnostr(res));
         return res;
     }
 
     namebuf[namelen] = '\0';
 
-    struct file *file = file_table_get_file(
-            process->file_table,
-            process,
-            mod_fd);
-    if(file == NULL) {
-        eprintk("PID(%ld) syscall_insmod: file descriptor(%ld) does not exist!\n",
+    struct file *file =
+        file_table_get_file(process->file_table, process, mod_fd);
+    if(file == NULL)
+    {
+        eprintk("PID(%ld) syscall_insmod: file descriptor(%ld) does not "
+                "exist!\n",
                 process->id,
                 mod_fd);
         return res;
     }
 
     struct fs_node *fs_node = fs_path_get_fs_node(file->path);
-    if(fs_node == NULL) {
-        file_table_put_file(
-                process->file_table,
-                process,
-                file);
+    if(fs_node == NULL)
+    {
+        file_table_put_file(process->file_table, process, file);
         return -EINVAL;
     }
 
     const char *name = fs_path_get_name(file->path);
-    printk("insmod: %s %s\n",
-            name != NULL ? name : "???",
-            namebuf);
+    printk("insmod: %s %s\n", name != NULL ? name : "???", namebuf);
 
-
-    struct module *mod = load_module(
-            fs_node,
-            namebuf,
-            0);
-    if(mod == NULL) {
-        file_table_put_file(
-                process->file_table,
-                process,
-                file);
+    struct module *mod = load_module(fs_node, namebuf, 0);
+    if(mod == NULL)
+    {
+        file_table_put_file(process->file_table, process, file);
         return -EINVAL;
     }
 
-    file_table_put_file(
-            process->file_table,
-            process,
-            file);
+    file_table_put_file(process->file_table, process, file);
 
     return 0;
 }
 
 int
-syscall_rmmod(
-        const char __user *modname,
-        unsigned long flags)
+syscall_rmmod(const char __user *modname, unsigned long flags)
 {
     int res;
 
     struct process *process = current_process();
 
-    if(!process_is_root(process)) {
+    if(!process_is_root(process))
+    {
         return -EPERM;
     }
 
     size_t namelen;
-    res = process_strlen_usermem(
-            process,
-            modname,
-            SYSCALL_INSMOD_MAX_NAMELEN+1,
-            &namelen);
-    if(res) {
+    res = process_strlen_usermem(process,
+                                 modname,
+                                 SYSCALL_INSMOD_MAX_NAMELEN + 1,
+                                 &namelen);
+    if(res)
+    {
         eprintk("PID(%ld) syscall_rmmod: could not get namelen! (err=%s)\n",
-                process->id, errnostr(res));
+                process->id,
+                errnostr(res));
         return res;
     }
-    if(namelen <= 0) {
-        eprintk("PID(%ld) syscall_rmmod: name length cannot be <= 0! len=%llu\n",
+    if(namelen <= 0)
+    {
+        eprintk("PID(%ld) syscall_rmmod: name length cannot be <= 0! "
+                "len=%llu\n",
                 (sl_t)process->id,
                 (ull_t)namelen);
         return -EINVAL;
     }
-    if(namelen > SYSCALL_INSMOD_MAX_NAMELEN) {
-        eprintk("PID(%ld) syscall_rmmod: name is too long! len=%llu, (>%llu)\n",
+    if(namelen > SYSCALL_INSMOD_MAX_NAMELEN)
+    {
+        eprintk("PID(%ld) syscall_rmmod: name is too long! len=%llu, "
+                "(>%llu)\n",
                 (sl_t)process->id,
                 (ull_t)namelen,
                 (ull_t)SYSCALL_INSMOD_MAX_NAMELEN);
@@ -145,14 +141,17 @@ syscall_rmmod(
     }
 
     char namebuf[namelen + 1];
-    res = process_read_usermem(
-            process,
-            (void*)namebuf,
-            (void __user *)modname,
-            namelen);
-    if(res) {
-        eprintk("PID(%ld) syscall_rmmod: failed to read file name! process_read_usermem(%p) -> %s\n",
-                process->id, modname, errnostr(res));
+    res = process_read_usermem(process,
+                               (void *)namebuf,
+                               (void __user *)modname,
+                               namelen);
+    if(res)
+    {
+        eprintk("PID(%ld) syscall_rmmod: failed to read file name! "
+                "process_read_usermem(%p) -> %s\n",
+                process->id,
+                modname,
+                errnostr(res));
         return res;
     }
 
@@ -160,7 +159,8 @@ syscall_rmmod(
 
     printk("rmmod(%s)\n", namebuf);
     struct module *mod = module_get(namebuf);
-    if(mod == NULL) {
+    if(mod == NULL)
+    {
         return -ENXIO;
     }
     module_put(mod);
@@ -169,4 +169,3 @@ syscall_rmmod(
     // Does a put on the module regardless of success
     return unload_module(mod);
 }
-

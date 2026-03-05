@@ -16,23 +16,28 @@ find_and_advance_pci_mailbox(void)
 
     spin_lock(&pci_mailbox_list_lock);
 
-    if(current_pci_mailbox != NULL) {
-        mb = current_pci_mailbox; 
-    } else if(!ilist_empty(&pci_mailbox_list)) {
-        mb = container_of(pci_mailbox_list.next,
-                    struct pci_mailbox,
-                    list_node);
-    } else {
+    if(current_pci_mailbox != NULL)
+    {
+        mb = current_pci_mailbox;
+    }
+    else if(!ilist_empty(&pci_mailbox_list))
+    {
+        mb = container_of(pci_mailbox_list.next, struct pci_mailbox, list_node);
+    }
+    else
+    {
         mb = NULL;
     }
 
-    if(mb) {
-        if(mb->list_node.next != &pci_mailbox_list) {
+    if(mb)
+    {
+        if(mb->list_node.next != &pci_mailbox_list)
+        {
             current_pci_mailbox =
-                container_of(mb->list_node.next,
-                        struct pci_mailbox,
-                        list_node);
-        } else {
+                container_of(mb->list_node.next, struct pci_mailbox, list_node);
+        }
+        else
+        {
             current_pci_mailbox = NULL;
         }
     }
@@ -43,9 +48,7 @@ find_and_advance_pci_mailbox(void)
 }
 
 int
-register_pci_mailbox(
-        struct pci_mailbox *mb,
-        struct pci_mailbox_ops *ops)
+register_pci_mailbox(struct pci_mailbox *mb, struct pci_mailbox_ops *ops)
 {
     mb->ops = ops;
     spin_lock(&pci_mailbox_list_lock);
@@ -55,8 +58,7 @@ register_pci_mailbox(
 }
 
 int
-unregister_pci_mailbox(
-        struct pci_mailbox *mailbox)
+unregister_pci_mailbox(struct pci_mailbox *mailbox)
 {
     // We just won't allow this for now,
     // removing a PCI mailbox would be very very tricky
@@ -65,34 +67,28 @@ unregister_pci_mailbox(
 }
 
 static inline int
-pci_single_mailbox_find_msi32(
-        struct pci_mailbox *mb,
-        size_t num_req,
-        uint32_t *addr_out,
-        uint16_t *data_out,
-        struct irq_desc *descs[num_req])
+pci_single_mailbox_find_msi32(struct pci_mailbox *mb,
+                              size_t num_req,
+                              uint32_t *addr_out,
+                              uint16_t *data_out,
+                              struct irq_desc *descs[num_req])
 {
     int res;
 
     uint32_t addr;
     uint16_t data;
 
-    res = pci_mailbox_msi_req_32(
-            mb,
-            num_req,
-            &addr,
-            &data);
-    if(res) {
+    res = pci_mailbox_msi_req_32(mb, num_req, &addr, &data);
+    if(res)
+    {
         return res;
     }
 
-    for(size_t i = 0; i < num_req; i++) {
-        descs[i] = pci_mailbox_msi_get_desc_32(
-                mb,
-                addr,
-                data,
-                i);
-        if(descs[i] == NULL) {
+    for(size_t i = 0; i < num_req; i++)
+    {
+        descs[i] = pci_mailbox_msi_get_desc_32(mb, addr, data, i);
+        if(descs[i] == NULL)
+        {
             return -ENXIO;
         }
     }
@@ -104,34 +100,28 @@ pci_single_mailbox_find_msi32(
 }
 
 static inline int
-pci_single_mailbox_find_msi64(
-        struct pci_mailbox *mb,
-        size_t num_req,
-        uint64_t *addr_out,
-        uint16_t *data_out,
-        struct irq_desc *descs[num_req])
+pci_single_mailbox_find_msi64(struct pci_mailbox *mb,
+                              size_t num_req,
+                              uint64_t *addr_out,
+                              uint16_t *data_out,
+                              struct irq_desc *descs[num_req])
 {
     int res;
 
     uint64_t addr;
     uint16_t data;
 
-    res = pci_mailbox_msi_req_64(
-            mb,
-            num_req,
-            &addr,
-            &data);
-    if(res) {
+    res = pci_mailbox_msi_req_64(mb, num_req, &addr, &data);
+    if(res)
+    {
         return res;
     }
 
-    for(size_t i = 0; i < num_req; i++) {
-        descs[i] = pci_mailbox_msi_get_desc_64(
-                mb,
-                addr,
-                data,
-                i);
-        if(descs[i] == NULL) {
+    for(size_t i = 0; i < num_req; i++)
+    {
+        descs[i] = pci_mailbox_msi_get_desc_64(mb, addr, data, i);
+        if(descs[i] == NULL)
+        {
             return -ENXIO;
         }
     }
@@ -143,31 +133,25 @@ pci_single_mailbox_find_msi64(
 }
 
 static inline int
-pci_single_mailbox_find_msix(
-        struct pci_mailbox *mb,
-        size_t num_req,
-        uint64_t addrs[num_req],
-        uint32_t datas[num_req],
-        struct irq_desc *descs[num_req])
+pci_single_mailbox_find_msix(struct pci_mailbox *mb,
+                             size_t num_req,
+                             uint64_t addrs[num_req],
+                             uint32_t datas[num_req],
+                             struct irq_desc *descs[num_req])
 {
     int res;
 
-    res = pci_mailbox_msix_req(
-            mb,
-            num_req,
-            addrs,
-            datas);
-    if(res) {
+    res = pci_mailbox_msix_req(mb, num_req, addrs, datas);
+    if(res)
+    {
         return res;
     }
 
-    for(size_t i = 0; i < num_req; i++) {
-        descs[i] = pci_mailbox_msix_get_desc(
-                mb,
-                addrs[i],
-                datas[i],
-                i);
-        if(descs[i] == NULL) {
+    for(size_t i = 0; i < num_req; i++)
+    {
+        descs[i] = pci_mailbox_msix_get_desc(mb, addrs[i], datas[i], i);
+        if(descs[i] == NULL)
+        {
             return -ENXIO;
         }
     }
@@ -176,63 +160,29 @@ pci_single_mailbox_find_msix(
 }
 
 int
-pci_mailbox_find_msi32(
-        size_t num_req,
-        uint32_t *addr,
-        uint16_t *data,
-        struct irq_desc *descs[num_req])
+pci_mailbox_find_msi32(size_t num_req,
+                       uint32_t *addr,
+                       uint16_t *data,
+                       struct irq_desc *descs[num_req])
 {
     int res;
     struct pci_mailbox *original = find_and_advance_pci_mailbox();
-    if(original == NULL) {
+    if(original == NULL)
+    {
         return -ENXIO;
     }
 
     struct pci_mailbox *iter = original;
-    do {
-        res = pci_single_mailbox_find_msi32(
-                iter,
-                num_req,
-                addr,
-                data,
-                descs);
-        if(res) {
+    do
+    {
+        res = pci_single_mailbox_find_msi32(iter, num_req, addr, data, descs);
+        if(res)
+        {
             iter = find_and_advance_pci_mailbox();
             continue;
-        } else {
-            return 0;
         }
-    } while(iter != original);
-
-    return -ENXIO;
-
-}
-
-int
-pci_mailbox_find_msi64(
-        size_t num_req,
-        uint64_t *addr,
-        uint16_t *data,
-        struct irq_desc *descs[num_req])
-{
-    int res;
-    struct pci_mailbox *original = find_and_advance_pci_mailbox();
-    if(original == NULL) {
-        return -ENXIO;
-    }
-
-    struct pci_mailbox *iter = original;
-    do {
-        res = pci_single_mailbox_find_msi64(
-                iter,
-                num_req,
-                addr,
-                data,
-                descs);
-        if(res) {
-            iter = find_and_advance_pci_mailbox();
-            continue;
-        } else {
+        else
+        {
             return 0;
         }
     } while(iter != original);
@@ -241,30 +191,29 @@ pci_mailbox_find_msi64(
 }
 
 int
-pci_mailbox_find_msix(
-        size_t num_req,
-        uint64_t addrs[num_req],
-        uint32_t datas[num_req],
-        struct irq_desc *descs[num_req])
+pci_mailbox_find_msi64(size_t num_req,
+                       uint64_t *addr,
+                       uint16_t *data,
+                       struct irq_desc *descs[num_req])
 {
     int res;
     struct pci_mailbox *original = find_and_advance_pci_mailbox();
-    if(original == NULL) {
+    if(original == NULL)
+    {
         return -ENXIO;
     }
 
     struct pci_mailbox *iter = original;
-    do {
-        res = pci_single_mailbox_find_msix(
-                iter,
-                num_req,
-                addrs,
-                datas,
-                descs);
-        if(res) {
+    do
+    {
+        res = pci_single_mailbox_find_msi64(iter, num_req, addr, data, descs);
+        if(res)
+        {
             iter = find_and_advance_pci_mailbox();
             continue;
-        } else {
+        }
+        else
+        {
             return 0;
         }
     } while(iter != original);
@@ -272,3 +221,33 @@ pci_mailbox_find_msix(
     return -ENXIO;
 }
 
+int
+pci_mailbox_find_msix(size_t num_req,
+                      uint64_t addrs[num_req],
+                      uint32_t datas[num_req],
+                      struct irq_desc *descs[num_req])
+{
+    int res;
+    struct pci_mailbox *original = find_and_advance_pci_mailbox();
+    if(original == NULL)
+    {
+        return -ENXIO;
+    }
+
+    struct pci_mailbox *iter = original;
+    do
+    {
+        res = pci_single_mailbox_find_msix(iter, num_req, addrs, datas, descs);
+        if(res)
+        {
+            iter = find_and_advance_pci_mailbox();
+            continue;
+        }
+        else
+        {
+            return 0;
+        }
+    } while(iter != original);
+
+    return -ENXIO;
+}

@@ -1,18 +1,19 @@
 
-#include <stdio.h>
 #include <assert.h>
+#include <stdio.h>
 
 #undef putchar_unlocked
-int putchar_unlocked(int c)
+int
+putchar_unlocked(int c)
 {
     assert(stdout != NULL);
     return putc_unlocked(c, stdout);
 }
 
 #undef putchar
-int putchar(int c)
+int
+putchar(int c)
 {
     assert(stdout != NULL);
     return putc(c, stdout);
 }
-

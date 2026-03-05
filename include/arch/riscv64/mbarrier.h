@@ -3,8 +3,9 @@
 
 #define mbarrier mbarrier
 static inline void
-mbarrier(void) {
-    asm volatile ("fence" ::: "memory");
+mbarrier(void)
+{
+    asm volatile("fence" ::: "memory");
 }
 
 #endif

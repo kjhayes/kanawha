@@ -2,11 +2,12 @@
 #define __CABIN_FBTERM__FONT_H__
 
 #include "color.h"
+#include "kfb/kfb.h"
 #include <stddef.h>
 #include <stdint.h>
-#include "kfb/kfb.h"
 
-struct glyph_data {
+struct glyph_data
+{
     struct kfb_image *fg;
     struct kfb_image *bg;
 };

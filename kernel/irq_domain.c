@@ -1,17 +1,16 @@
-#include <kanawha/irq_domain.h>
-#include <kanawha/irq.h>
-#include <kanawha/ptree.h>
-#include <kanawha/printk.h>
-#include <kanawha/kmalloc.h>
-#include <kanawha/errno.h>
-#include <kanawha/string.h>
-#include <kanawha/stddef.h>
-#include <kanawha/export.h>
-#include <kanawha/dev/irq.h>
-#include <kanawha/list.h>
-#include <kanawha/stddef.h>
-#include <kanawha/percpu.h>
 #include <kanawha/assert.h>
+#include <kanawha/dev/irq.h>
+#include <kanawha/errno.h>
+#include <kanawha/export.h>
+#include <kanawha/irq.h>
+#include <kanawha/irq_domain.h>
+#include <kanawha/kmalloc.h>
+#include <kanawha/list.h>
+#include <kanawha/percpu.h>
+#include <kanawha/printk.h>
+#include <kanawha/ptree.h>
+#include <kanawha/stddef.h>
+#include <kanawha/string.h>
 
 static DECLARE_RLOCK(irq_domain_map_lock);
 static DECLARE_PTREE(irq_domain_map);
@@ -25,16 +24,16 @@ struct irq_domain
     struct irq_desc *irq_descs;
     struct ptree_node tree_node;
 
-    irq_t(*revmap)(struct irq_domain *domain, hwirq_t hwirq);
+    irq_t (*revmap)(struct irq_domain *domain, hwirq_t hwirq);
 };
 
-irq_t irq_domain_base_irq(
-        struct irq_domain *domain)
+irq_t
+irq_domain_base_irq(struct irq_domain *domain)
 {
     return domain->base_irq;
 }
-size_t irq_domain_num_irqs(
-        struct irq_domain *domain)
+size_t
+irq_domain_num_irqs(struct irq_domain *domain)
 {
     return domain->num_irq;
 }
@@ -43,9 +42,11 @@ struct irq_domain *
 irq_to_domain(irq_t irq)
 {
     rlock_read_lock(&irq_domain_map_lock);
-    struct ptree_node *node = ptree_get_max_less_or_eq(&irq_domain_map, (uintptr_t)irq);
+    struct ptree_node *node =
+        ptree_get_max_less_or_eq(&irq_domain_map, (uintptr_t)irq);
     rlock_read_unlock(&irq_domain_map_lock);
-    if(node == NULL) {
+    if(node == NULL)
+    {
         return NULL;
     }
     struct irq_domain *domain =
@@ -58,7 +59,8 @@ irq_to_desc(irq_t irq)
 {
     struct irq_domain *domain = irq_to_domain(irq);
     DEBUG_ASSERT(KERNEL_ADDR(domain));
-    if(domain == NULL) {
+    if(domain == NULL)
+    {
         return NULL;
     }
 
@@ -68,22 +70,23 @@ irq_to_desc(irq_t irq)
     DEBUG_ASSERT(index < domain->num_irq);
     struct irq_desc *desc = &domain->irq_descs[index];
 
-    DEBUG_ASSERT_MSG(
-            desc->irq == irq,
-            "irq_to_desc(0x%lx) returned irq_desc->irq == 0x%lx", irq, desc->irq);
+    DEBUG_ASSERT_MSG(desc->irq == irq,
+                     "irq_to_desc(0x%lx) returned irq_desc->irq == 0x%lx",
+                     irq,
+                     desc->irq);
 
     return desc;
 }
 
 struct irq_action *
-irq_install_handler(
-        struct irq_desc *desc,
-        void *priv_data,
-        irq_handler_f *handler)
+irq_install_handler(struct irq_desc *desc,
+                    void *priv_data,
+                    irq_handler_f *handler)
 {
     struct irq_action *action;
     action = kzmalloc(sizeof(struct irq_action), KM_KERNEL);
-    if(action == NULL) {
+    if(action == NULL)
+    {
         return NULL;
     }
 
@@ -108,7 +111,8 @@ irq_install_direct_link(struct irq_desc *from, struct irq_desc *to)
 
     struct irq_action *action;
     action = kzmalloc(sizeof(struct irq_action), KM_KERNEL);
-    if(action == NULL) {
+    if(action == NULL)
+    {
         return NULL;
     }
 
@@ -133,20 +137,21 @@ irq_install_direct_link(struct irq_desc *from, struct irq_desc *to)
 }
 
 struct irq_action *
-irq_install_percpu_link(
-        struct irq_desc *desc)
+irq_install_percpu_link(struct irq_desc *desc)
 {
     struct irq_action *action;
     action = kzmalloc(sizeof(struct irq_action), KM_KERNEL);
-    if(action == NULL) {
+    if(action == NULL)
+    {
         return NULL;
     }
 
     action->desc = desc;
     action->type = IRQ_ACTION_PERCPU_LINK;
-    action->percpu_link_data.link = percpu_calloc(sizeof(struct irq_desc*));
+    action->percpu_link_data.link = percpu_calloc(sizeof(struct irq_desc *));
 
-    if(action->percpu_link_data.link == PERCPU_NULL) {
+    if(action->percpu_link_data.link == PERCPU_NULL)
+    {
         kfree(action);
         return NULL;
     }
@@ -160,14 +165,17 @@ irq_install_percpu_link(
 }
 
 int
-irq_action_set_percpu_link(
-        struct irq_action *action,
-        struct irq_desc *percpu_desc,
-        cpu_id_t to)
+irq_action_set_percpu_link(struct irq_action *action,
+                           struct irq_desc *percpu_desc,
+                           cpu_id_t to)
 {
-    DEBUG_ASSERT_MSG(action->desc != percpu_desc, "Trivial IRQ Loop %p == %p", action->desc, percpu_desc);
+    DEBUG_ASSERT_MSG(action->desc != percpu_desc,
+                     "Trivial IRQ Loop %p == %p",
+                     action->desc,
+                     percpu_desc);
 
-    if(action->type != IRQ_ACTION_PERCPU_LINK) {
+    if(action->type != IRQ_ACTION_PERCPU_LINK)
+    {
         return -EINVAL;
     }
     struct irq_desc **slot;
@@ -177,13 +185,12 @@ irq_action_set_percpu_link(
 }
 
 struct irq_action *
-irq_install_resolved_link(
-        struct irq_desc *desc,
-        irq_resolver_f *resolver)
+irq_install_resolved_link(struct irq_desc *desc, irq_resolver_f *resolver)
 {
     struct irq_action *action;
     action = kzmalloc(sizeof(struct irq_action), KM_KERNEL);
-    if(action == NULL) {
+    if(action == NULL)
+    {
         return NULL;
     }
 
@@ -204,14 +211,14 @@ irq_uninstall_action(struct irq_action *action)
     desc->num_actions--;
     rlock_write_unlock(&desc->lock);
 
-    if(action->type == IRQ_ACTION_PERCPU_LINK) {
-        percpu_free(action->percpu_link_data.link, sizeof(struct irq_desc*));
+    if(action->type == IRQ_ACTION_PERCPU_LINK)
+    {
+        percpu_free(action->percpu_link_data.link, sizeof(struct irq_desc *));
     }
 
     kfree(action);
     return res;
 }
-
 
 int
 run_irq_actions(struct irq_desc *desc, struct excp_state *excp_state)
@@ -222,73 +229,95 @@ run_irq_actions(struct irq_desc *desc, struct excp_state *excp_state)
 
     __maybe_unused size_t action_num = 0;
     ilist_node_t *node;
-    ilist_for_each(node, &desc->actions) {
+    ilist_for_each(node, &desc->actions)
+    {
         struct irq_action *action =
             container_of(node, struct irq_action, list_node);
 
         int res;
         struct irq_desc *link_desc;
 
-        dprintk("CPU (%ld) run_irq_actions(desc=%p,excp_state=%p) irq=0x%llx action=%lld [%s]\n",
-            (sl_t)current_cpu_id(), desc, excp_state, (ull_t)desc->irq, action_num,
-            action->type == IRQ_ACTION_HANDLER ? "HANDLER" :
-            action->type == IRQ_ACTION_DIRECT_LINK ? "DIRECT-LINK" :
-            action->type == IRQ_ACTION_PERCPU_LINK ? "PERCPU-LINK" :
-            action->type == IRQ_ACTION_RESOLVED_LINK ? "RESOLVED-LINK" : "UNKNOWN");
+        dprintk("CPU (%ld) run_irq_actions(desc=%p,excp_state=%p) irq=0x%llx "
+                "action=%lld [%s]\n",
+                (sl_t)current_cpu_id(),
+                desc,
+                excp_state,
+                (ull_t)desc->irq,
+                action_num,
+                action->type == IRQ_ACTION_HANDLER         ? "HANDLER"
+                : action->type == IRQ_ACTION_DIRECT_LINK   ? "DIRECT-LINK"
+                : action->type == IRQ_ACTION_PERCPU_LINK   ? "PERCPU-LINK"
+                : action->type == IRQ_ACTION_RESOLVED_LINK ? "RESOLVED-LINK"
+                                                           : "UNKNOWN");
 
         action_num++;
 
-        switch(action->type) {
-            case IRQ_ACTION_HANDLER:
-                res = (*action->handler_data.handler)(excp_state, action);
-                break;
-            case IRQ_ACTION_DIRECT_LINK:
-                res = handle_irq(action->direct_link_data.link, excp_state);
-                break;
-            case IRQ_ACTION_PERCPU_LINK:
-                link_desc = *(struct irq_desc**)percpu_ptr(action->percpu_link_data.link);
-                dprintk("CPU (%ld) &link_desc=%p, link_desc=%p\n",
-                        (sl_t)current_cpu_id(),
-                        (struct irq_desc**)percpu_ptr(action->percpu_link_data.link),
-                        link_desc);
-                if(link_desc) {
-                    res = handle_irq(link_desc, excp_state);
-                } else {
-                    res = IRQ_UNHANDLED;
-                }
-                break;
-            case IRQ_ACTION_RESOLVED_LINK:
-                link_desc = (action->resolved_link_data.resolver)(excp_state, action);
-                if(link_desc) {
-                    res = handle_irq(link_desc, excp_state);
-                } else {
-                    res = IRQ_UNHANDLED;
-                }
-                break;
-            default:
-                eprintk("IRQ handler returned invalid value!\n");
+        switch(action->type)
+        {
+        case IRQ_ACTION_HANDLER:
+            res = (*action->handler_data.handler)(excp_state, action);
+            break;
+        case IRQ_ACTION_DIRECT_LINK:
+            res = handle_irq(action->direct_link_data.link, excp_state);
+            break;
+        case IRQ_ACTION_PERCPU_LINK:
+            link_desc =
+                *(struct irq_desc **)percpu_ptr(action->percpu_link_data.link);
+            dprintk(
+                "CPU (%ld) &link_desc=%p, link_desc=%p\n",
+                (sl_t)current_cpu_id(),
+                (struct irq_desc **)percpu_ptr(action->percpu_link_data.link),
+                link_desc);
+            if(link_desc)
+            {
+                res = handle_irq(link_desc, excp_state);
+            }
+            else
+            {
                 res = IRQ_UNHANDLED;
-                break;
-        }
-        
-        if(res < 0) {
-            rlock_read_unlock(&desc->lock);
-            panic("IRQ Handler for IRQ (%ld) returned \"%s\"!\n",
-                    desc->irq, errnostr(res));
+            }
+            break;
+        case IRQ_ACTION_RESOLVED_LINK:
+            link_desc =
+                (action->resolved_link_data.resolver)(excp_state, action);
+            if(link_desc)
+            {
+                res = handle_irq(link_desc, excp_state);
+            }
+            else
+            {
+                res = IRQ_UNHANDLED;
+            }
+            break;
+        default:
+            eprintk("IRQ handler returned invalid value!\n");
+            res = IRQ_UNHANDLED;
+            break;
         }
 
-        if(res == IRQ_HANDLED) {
+        if(res < 0)
+        {
+            rlock_read_unlock(&desc->lock);
+            panic("IRQ Handler for IRQ (%ld) returned \"%s\"!\n",
+                  desc->irq,
+                  errnostr(res));
+        }
+
+        if(res == IRQ_HANDLED)
+        {
             summary_res = IRQ_HANDLED;
             break;
         }
-        else if(res == IRQ_NONE && summary_res != IRQ_HANDLED) {
+        else if(res == IRQ_NONE && summary_res != IRQ_HANDLED)
+        {
             summary_res = IRQ_NONE;
         }
     }
 
     rlock_read_unlock(&desc->lock);
 
-    if(summary_res == IRQ_UNHANDLED && (desc->flags & IRQ_DESC_FLAG_SPURRIOUS)) {
+    if(summary_res == IRQ_UNHANDLED && (desc->flags & IRQ_DESC_FLAG_SPURRIOUS))
+    {
         // As long as there were no errors, we always consider potentially
         // spurrious descriptors as "handled"
         summary_res = IRQ_NONE;
@@ -299,13 +328,15 @@ run_irq_actions(struct irq_desc *desc, struct excp_state *excp_state)
 int
 handle_irq(struct irq_desc *desc, struct excp_state *excp_state)
 {
-    if(desc->dev && desc->dev->driver->ack_irq) {
+    if(desc->dev && desc->dev->driver->ack_irq)
+    {
         irq_dev_ack_irq(desc->dev, desc->hwirq);
     }
 
     int res = run_irq_actions(desc, excp_state);
 
-    if(desc->dev && desc->dev->driver->eoi_irq) {
+    if(desc->dev && desc->dev->driver->eoi_irq)
+    {
         irq_dev_eoi_irq(desc->dev, desc->hwirq);
     }
     return res;
@@ -315,9 +346,11 @@ int
 mask_irq_desc_single(struct irq_desc *desc)
 {
     int res;
-    if(desc->dev != NULL) {
+    if(desc->dev != NULL)
+    {
         res = irq_dev_mask_irq(desc->dev, desc->hwirq);
-        if(res) {
+        if(res)
+        {
             return res;
         }
     }
@@ -327,9 +360,11 @@ int
 unmask_irq_desc_single(struct irq_desc *desc)
 {
     int res;
-    if(desc->dev != NULL) {
+    if(desc->dev != NULL)
+    {
         res = irq_dev_unmask_irq(desc->dev, desc->hwirq);
-        if(res) {
+        if(res)
+        {
             return res;
         }
     }
@@ -341,17 +376,22 @@ mask_irq_desc_chain(struct irq_desc *desc)
     int res;
 
     res = mask_irq_desc_single(desc);
-    if(res) {
+    if(res)
+    {
         return res;
     }
 
     int irq_flags = spin_lock_irq_save(&desc->direct_links_lock);
     ilist_node_t *incoming_node;
-    ilist_for_each(incoming_node, &desc->direct_links) {
+    ilist_for_each(incoming_node, &desc->direct_links)
+    {
         struct irq_action *direct_link =
-            container_of(incoming_node, struct irq_action, direct_link_data.incoming_node);
+            container_of(incoming_node,
+                         struct irq_action,
+                         direct_link_data.incoming_node);
         res = mask_irq_desc_chain(direct_link->desc);
-        if(res) {
+        if(res)
+        {
             return res;
             spin_unlock_irq_restore(&desc->direct_links_lock, irq_flags);
         }
@@ -366,17 +406,22 @@ unmask_irq_desc_chain(struct irq_desc *desc)
     int res;
 
     res = unmask_irq_desc_single(desc);
-    if(res) {
+    if(res)
+    {
         return res;
     }
 
     int irq_flags = spin_lock_irq_save(&desc->direct_links_lock);
     ilist_node_t *incoming_node;
-    ilist_for_each(incoming_node, &desc->direct_links) {
+    ilist_for_each(incoming_node, &desc->direct_links)
+    {
         struct irq_action *direct_link =
-            container_of(incoming_node, struct irq_action, direct_link_data.incoming_node);
+            container_of(incoming_node,
+                         struct irq_action,
+                         direct_link_data.incoming_node);
         res = unmask_irq_desc_chain(direct_link->desc);
-        if(res) {
+        if(res)
+        {
             spin_unlock_irq_restore(&desc->direct_links_lock, irq_flags);
             return res;
         }
@@ -389,9 +434,12 @@ unsigned long
 irq_desc_status(struct irq_desc *desc)
 {
     unsigned long flags;
-    if(desc->dev != NULL) {
+    if(desc->dev != NULL)
+    {
         flags = irq_dev_irq_status(desc->dev, desc->hwirq);
-    } else {
+    }
+    else
+    {
         flags = IRQ_STATUS_UNKNOWN;
     }
     return flags;
@@ -401,12 +449,14 @@ int
 trigger_irq_desc(struct irq_desc *desc)
 {
     int res;
-    if(desc->dev == NULL) {
+    if(desc->dev == NULL)
+    {
         return -EINVAL;
     }
 
     res = irq_dev_trigger_irq(desc->dev, desc->hwirq);
-    if(res) {
+    if(res)
+    {
         return res;
     }
     return 0;
@@ -414,13 +464,14 @@ trigger_irq_desc(struct irq_desc *desc)
 
 // Assumes the domain_map lock is held
 static int
-alloc_free_irq_region(
-        size_t num_irq,
-        irq_t *base_out)
+alloc_free_irq_region(size_t num_irq, irq_t *base_out)
 {
     // Keep this simple for now, and assume we won't have overflow
-    if(IRQ_MAX - __next_irq_to_give < num_irq) {
-        panic("find_free_irq_region would overflow! Need to implement better IRQ allocation!\n");
+    if(IRQ_MAX - __next_irq_to_give < num_irq)
+    {
+        panic("find_free_irq_region would overflow! Need to implement "
+              "better "
+              "IRQ allocation!\n");
         return -ENOMEM;
     }
 
@@ -430,34 +481,33 @@ alloc_free_irq_region(
     return 0;
 }
 
-struct linear_irq_domain {
+struct linear_irq_domain
+{
     struct irq_domain domain;
     hwirq_t base_hwirq;
 };
 
 static irq_t
-linear_irq_domain_revmap(
-        struct irq_domain *domain,
-        hwirq_t hwirq)
+linear_irq_domain_revmap(struct irq_domain *domain, hwirq_t hwirq)
 {
     struct linear_irq_domain *linear =
         container_of(domain, struct linear_irq_domain, domain);
     size_t index = hwirq - linear->base_hwirq;
-    if(index >= domain->num_irq) {
+    if(index >= domain->num_irq)
+    {
         return NULL_IRQ;
     }
     return domain->base_irq + index;
 }
 
 struct irq_domain *
-alloc_irq_domain_linear(
-        hwirq_t base_hwirq,
-        size_t num_irq)
+alloc_irq_domain_linear(hwirq_t base_hwirq, size_t num_irq)
 {
     int res;
     struct linear_irq_domain *domain;
     domain = kzmalloc(sizeof(struct linear_irq_domain), KM_KERNEL);
-    if(domain == NULL) {
+    if(domain == NULL)
+    {
         return NULL;
     }
 
@@ -465,8 +515,10 @@ alloc_irq_domain_linear(
     domain->domain.revmap = linear_irq_domain_revmap;
 
     domain->domain.num_irq = num_irq;
-    domain->domain.irq_descs = kzmalloc(sizeof(struct irq_desc) * num_irq, KM_KERNEL);
-    if(domain->domain.irq_descs == NULL) {
+    domain->domain.irq_descs =
+        kzmalloc(sizeof(struct irq_desc) * num_irq, KM_KERNEL);
+    if(domain->domain.irq_descs == NULL)
+    {
         kfree(domain);
         return NULL;
     }
@@ -474,7 +526,8 @@ alloc_irq_domain_linear(
     rlock_write_lock(&irq_domain_map_lock);
 
     res = alloc_free_irq_region(num_irq, &domain->domain.base_irq);
-    if(res) {
+    if(res)
+    {
         rlock_write_unlock(&irq_domain_map_lock);
         kfree(domain->domain.irq_descs);
         kfree(domain);
@@ -482,9 +535,12 @@ alloc_irq_domain_linear(
     }
 
     domain->domain.tree_node.key = (uintptr_t)domain->domain.base_irq;
-    ptree_insert(&irq_domain_map, &domain->domain.tree_node, (uintptr_t)domain->domain.base_irq);
+    ptree_insert(&irq_domain_map,
+                 &domain->domain.tree_node,
+                 (uintptr_t)domain->domain.base_irq);
 
-    for(size_t i = 0; i < num_irq; i++) {
+    for(size_t i = 0; i < num_irq; i++)
+    {
         struct irq_desc *desc = &domain->domain.irq_descs[i];
         desc->domain = &domain->domain;
         desc->irq = domain->domain.base_irq + i;
@@ -501,14 +557,14 @@ alloc_irq_domain_linear(
 }
 
 int
-free_irq_domain_linear(
-        struct irq_domain *domain)
+free_irq_domain_linear(struct irq_domain *domain)
 {
     struct linear_irq_domain *linear =
         container_of(domain, struct linear_irq_domain, domain);
 
     rlock_write_lock(&irq_domain_map_lock);
-    struct ptree_node *rem = ptree_remove(&irq_domain_map, domain->tree_node.key);
+    struct ptree_node *rem =
+        ptree_remove(&irq_domain_map, domain->tree_node.key);
     DEBUG_ASSERT(rem == &domain->tree_node);
     rlock_write_unlock(&irq_domain_map_lock);
 
@@ -517,39 +573,32 @@ free_irq_domain_linear(
     return 0;
 }
 
-irq_t irq_domain_revmap(
-        struct irq_domain *domain,
-        hwirq_t hwirq)
+irq_t
+irq_domain_revmap(struct irq_domain *domain, hwirq_t hwirq)
 {
     DEBUG_ASSERT(KERNEL_ADDR(domain->revmap));
     return (*domain->revmap)(domain, hwirq);
 }
 
 int
-irq_domain_set_all_irq_dev(
-        struct irq_domain *domain,
-        struct irq_dev *dev)
+irq_domain_set_all_irq_dev(struct irq_domain *domain, struct irq_dev *dev)
 {
-    for(size_t i = 0; i < domain->num_irq; i++) {
+    for(size_t i = 0; i < domain->num_irq; i++)
+    {
         domain->irq_descs[i].dev = dev;
     }
     return 0;
 }
 
 int
-describe_irq_desc(
-        printk_f *printer,
-        struct irq_desc *desc)
+describe_irq_desc(printk_f *printer, struct irq_desc *desc)
 {
 #define BUFLEN 256
-    if(desc->dev) {
+    if(desc->dev)
+    {
         char buffer[BUFLEN];
-        irq_dev_describe_irq(
-                desc->dev,
-                desc->hwirq,
-                buffer,
-                BUFLEN);
-        buffer[BUFLEN-1] = '\0';
+        irq_dev_describe_irq(desc->dev, desc->hwirq, buffer, BUFLEN);
+        buffer[BUFLEN - 1] = '\0';
         (*printer)(buffer);
     }
 #undef BUFLEN
@@ -564,7 +613,8 @@ dump_irq_descs(printk_f *printer)
     rlock_read_lock(&irq_domain_map_lock);
     struct ptree_node *node;
     node = ptree_get_first(&irq_domain_map);
-    while(node != NULL) {
+    while(node != NULL)
+    {
 
         struct irq_domain *domain =
             container_of(node, struct irq_domain, tree_node);
@@ -579,82 +629,96 @@ dump_irq_descs(printk_f *printer)
 }
 
 int
-irq_domain_dump(
-        printk_f *printer,
-        struct irq_domain *domain)
+irq_domain_dump(printk_f *printer, struct irq_domain *domain)
 {
     int irq_flags = disable_save_irqs();
 
     (*printer)("Domain: [0x%x - 0x%x] {\n",
-            domain->base_irq, (domain->base_irq + domain->num_irq)-1);
-    for(size_t index = 0; index < domain->num_irq; index++) {
+               domain->base_irq,
+               (domain->base_irq + domain->num_irq) - 1);
+    for(size_t index = 0; index < domain->num_irq; index++)
+    {
         irq_t irq = domain->base_irq + index;
         (*printer)("\tIRQ(0x%x) -> ", irq);
         struct irq_desc *desc = &domain->irq_descs[index];
-        if(desc == NULL) {
+        if(desc == NULL)
+        {
             (*printer)("NULL");
-        } else {
-            (*printer)("HWIRQ(0x%x) \"",
-                    desc->hwirq);
+        }
+        else
+        {
+            (*printer)("HWIRQ(0x%x) \"", desc->hwirq);
             describe_irq_desc(printer, desc);
             (*printer)("\"");
         }
 
         unsigned long status = irq_desc_status(desc);
-        if(status & IRQ_STATUS_INVALID) {
+        if(status & IRQ_STATUS_INVALID)
+        {
             (*printer)(" [INVALID]");
-        } else if(status & IRQ_STATUS_UNKNOWN) {
-            // Don't print any status info
-        } else {
-            (*printer)(" %s%s",
-                    status & IRQ_STATUS_MASKED  ? "[MASKED]"  : "",
-                    status & IRQ_STATUS_PENDING ? "[PENDING]" : ""
-                    );
         }
-
+        else if(status & IRQ_STATUS_UNKNOWN)
+        {
+            // Don't print any status info
+        }
+        else
+        {
+            (*printer)(" %s%s",
+                       status &IRQ_STATUS_MASKED ? "[MASKED]" : "",
+                       status &IRQ_STATUS_PENDING ? "[PENDING]" : "");
+        }
 
         (*printer)("\n");
 
         ilist_node_t *action_node;
-        ilist_for_each(action_node, &desc->actions) {
+        ilist_for_each(action_node, &desc->actions)
+        {
             (*printer)("\t\t");
             struct irq_action *action =
                 container_of(action_node, struct irq_action, list_node);
 
-            switch(action->type) {
-                case IRQ_ACTION_HANDLER:
-                    (*printer)("HANDLER(%p)\n",
-                            action->handler_data.handler);
-                    break;
-                case IRQ_ACTION_DIRECT_LINK:
-                    (*printer)("DIRECT-LINK(0x%lx)\n",
-                            (ul_t)action->direct_link_data.link->irq);
-                    break;
-                case IRQ_ACTION_PERCPU_LINK:
-                    (*printer)("PERCPU-LINK\n");
-                    for(cpu_id_t id = 0; id < total_num_cpus(); id++) {
-                        (*printer)("\t\t\tCPU(%lu)", (ul_t)id);
-                        struct irq_desc **percpu_desc = percpu_ptr_specific(action->percpu_link_data.link, id);
-                        if(*percpu_desc == NULL) {
-                            (*printer)(" INVALID-DESC(%p)", *percpu_desc);
-                        } else {
-                            (*printer)(" IRQ(0x%lx)", (ul_t)(*percpu_desc)->irq);
-                        }
-                        (*printer)("\n");
+            switch(action->type)
+            {
+            case IRQ_ACTION_HANDLER:
+                (*printer)("HANDLER(%p)\n", action->handler_data.handler);
+                break;
+            case IRQ_ACTION_DIRECT_LINK:
+                (*printer)("DIRECT-LINK(0x%lx)\n",
+                           (ul_t)action->direct_link_data.link->irq);
+                break;
+            case IRQ_ACTION_PERCPU_LINK:
+                (*printer)("PERCPU-LINK\n");
+                for(cpu_id_t id = 0; id < total_num_cpus(); id++)
+                {
+                    (*printer)("\t\t\tCPU(%lu)", (ul_t)id);
+                    struct irq_desc **percpu_desc =
+                        percpu_ptr_specific(action->percpu_link_data.link, id);
+                    if(*percpu_desc == NULL)
+                    {
+                        (*printer)(" INVALID-DESC(%p)", *percpu_desc);
                     }
-                    break;      
-                case IRQ_ACTION_RESOLVED_LINK:
-                    (*printer)("RESOLVED-LINK RESOLVER(%p)\n",
-                            action->resolved_link_data.resolver);
-                    break;
+                    else
+                    {
+                        (*printer)(" IRQ(0x%lx)", (ul_t)(*percpu_desc)->irq);
+                    }
+                    (*printer)("\n");
+                }
+                break;
+            case IRQ_ACTION_RESOLVED_LINK:
+                (*printer)("RESOLVED-LINK RESOLVER(%p)\n",
+                           action->resolved_link_data.resolver);
+                break;
             }
         }
 
         ilist_node_t *incoming_node;
-        ilist_for_each(incoming_node, &desc->direct_links) {
+        ilist_for_each(incoming_node, &desc->direct_links)
+        {
             (*printer)("\t\t");
             struct irq_action *direct_link =
-                container_of(incoming_node, struct irq_action, direct_link_data.incoming_node);
+                container_of(incoming_node,
+                             struct irq_action,
+                             direct_link_data.incoming_node);
             (*printer)("INCOMING-LINK(0x%lx)\n", (ul_t)direct_link->desc->irq);
         }
     }
@@ -664,9 +728,7 @@ irq_domain_dump(
     return 0;
 }
 
-
 EXPORT_SYMBOL(alloc_irq_domain_linear);
 EXPORT_SYMBOL(free_irq_domain_linear);
 EXPORT_SYMBOL(irq_to_desc);
 EXPORT_SYMBOL(irq_to_domain);
-

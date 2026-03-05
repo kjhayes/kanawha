@@ -1,8 +1,8 @@
 #ifndef __KANAWHA__PCI_BAR_H__
 #define __KANAWHA__PCI_BAR_H__
 
-#include <kanawha/types.h>
 #include <kanawha/mmio.h>
+#include <kanawha/types.h>
 
 #ifdef CONFIG_PORT_IO
 #include <kanawha/pio.h>
@@ -40,14 +40,22 @@ struct pci_bar
     };
 };
 
-uint8_t  pci_bar_readb(struct pci_bar *bar, size_t offset);
-uint16_t pci_bar_readw(struct pci_bar *bar, size_t offset);
-uint32_t pci_bar_readl(struct pci_bar *bar, size_t offset);
-uint64_t pci_bar_readq(struct pci_bar *bar, size_t offset);
+uint8_t
+pci_bar_readb(struct pci_bar *bar, size_t offset);
+uint16_t
+pci_bar_readw(struct pci_bar *bar, size_t offset);
+uint32_t
+pci_bar_readl(struct pci_bar *bar, size_t offset);
+uint64_t
+pci_bar_readq(struct pci_bar *bar, size_t offset);
 
-void pci_bar_writeb(struct pci_bar *bar, size_t offset, uint8_t  val);
-void pci_bar_writew(struct pci_bar *bar, size_t offset, uint16_t val);
-void pci_bar_writel(struct pci_bar *bar, size_t offset, uint32_t val);
-void pci_bar_writeq(struct pci_bar *bar, size_t offset, uint64_t val);
+void
+pci_bar_writeb(struct pci_bar *bar, size_t offset, uint8_t val);
+void
+pci_bar_writew(struct pci_bar *bar, size_t offset, uint16_t val);
+void
+pci_bar_writel(struct pci_bar *bar, size_t offset, uint32_t val);
+void
+pci_bar_writeq(struct pci_bar *bar, size_t offset, uint64_t val);
 
 #endif

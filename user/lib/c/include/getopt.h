@@ -6,7 +6,8 @@ extern int optind;
 extern int opterr;
 extern int optopt;
 
-struct option {
+struct option
+{
     const char *name;
     int has_arg;
     int *flag;
@@ -18,19 +19,13 @@ struct option {
 #define optional_argument 2
 
 extern int
-getopt(
-        int argc,
-        char **argv,
-        const char *optstring);
+getopt(int argc, char **argv, const char *optstring);
 
 extern int
-getopt_long(
-        int argc,
-        char **argv,
-        const char *optstring,
-        struct option *longopts,
-        int *longind);
-
-
+getopt_long(int argc,
+            char **argv,
+            const char *optstring,
+            struct option *longopts,
+            int *longind);
 
 #endif

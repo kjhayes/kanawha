@@ -1,19 +1,19 @@
 
-#include <kanawha/sys-wrappers.h>
-#include <kanawha/dir.h>
-#include <kanawha/file.h>
-#include <kanawha/errno.h>
-#include <kanawha/mount.h>
-#include <stdio.h>
-#include <unistd.h>
 #include <fcntl.h>
-#include <string.h>
+#include <kanawha/dir.h>
+#include <kanawha/errno.h>
+#include <kanawha/file.h>
+#include <kanawha/mount.h>
+#include <kanawha/sys-wrappers.h>
+#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/wait.h>
+#include <unistd.h>
 
+#include "daemon.h"
 #include "log.h"
 #include "root.h"
-#include "daemon.h"
 
 int
 setstdin(const char *path)
@@ -37,15 +37,10 @@ setstderr(const char *path)
     close(file);
 }
 
-static const char *randd_args[] = {
-    "randd",
-    NULL
-};
-static struct daemon_socket randd_sockets[] = {
-    {
-        .env = "RANDD_SOCKET",
-    }
-};
+static const char *randd_args[] = {"randd", NULL};
+static struct daemon_socket randd_sockets[] = {{
+    .env = "RANDD_SOCKET",
+}};
 static struct daemon randd = {
     .command = "/sys/initrd/randd",
     .args = randd_args,
@@ -55,11 +50,7 @@ static struct daemon randd = {
     .sockets = randd_sockets,
 };
 
-static const char *sh_args[] = {
-    "sh",
-    "/sys/initrd/aidedinit.sh",
-    NULL
-};
+static const char *sh_args[] = {"sh", "/sys/initrd/aidedinit.sh", NULL};
 static struct daemon sh = {
     .command = "/sys/initrd/sh",
     .args = sh_args,
@@ -74,33 +65,40 @@ static struct daemon *daemons[] = {
     NULL,
 };
 
-int main(int argc, const char **argv)
+int
+main(int argc, const char **argv)
 {
     int res;
 
     res = setup_root_fs();
-    if(res) {return res;}
+    if(res)
+    {
+        return res;
+    }
 
     setstdin("/dev/term/COM1");
     setstdout("/dev/term/COM1");
     setstderr("/dev/term/COM1");
 
     printf_enabled = 1;
-  
+
     printf("-- Kanawha OS \"init\" --\n");
 
     setenv("PATH", "/bin;/usr/bin;/sys/initrd;/sys/initrd/usr/bin;", 1);
 
     struct daemon **d = daemons;
-    while(*d) {
+    while(*d)
+    {
         start_daemon(*d);
         d++;
     }
 
-    while(1) {
+    while(1)
+    {
         int daemon_exitcode;
         res = waitpid(-1, &daemon_exitcode, 0);
-        if(res <= 0) {
+        if(res <= 0)
+        {
             INFO("waitpid returned early? res=%d\n", res);
             continue;
         }
@@ -108,16 +106,21 @@ int main(int argc, const char **argv)
         INFO("d = %p\n", d);
         INFO("*d = %p\n", *d);
         int found = 0;
-        while(*d) {
+        while(*d)
+        {
             INFO("Checking Daemon...\n");
             struct daemon *daemon = *d;
-            if(daemon->pid == res) {
+            if(daemon->pid == res)
+            {
                 // This is the one
                 found = 1;
-                if(daemon->restart_on_exit) {
+                if(daemon->restart_on_exit)
+                {
                     res = start_daemon(daemon);
-                    if(res) {
-                        ERROR("Failed to restart daemon: %s!\n",
+                    if(res)
+                    {
+                        ERROR("Failed to restart daemon: "
+                              "%s!\n",
                               daemon->command);
                     }
                 }
@@ -125,12 +128,15 @@ int main(int argc, const char **argv)
             }
             d++;
         }
-        if(!found) {
-            ERROR("waitpid returned PID(%d) which does not correspond to a running daemon?\n", res);
+        if(!found)
+        {
+            ERROR("waitpid returned PID(%d) which does not "
+                  "correspond to a "
+                  "running daemon?\n",
+                  res);
         }
     }
 
     ERROR("returned from main loop!\n");
     return -EINVAL;
 }
-

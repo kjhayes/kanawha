@@ -1,6 +1,6 @@
 
-#include <time.h>
 #include <stddef.h>
+#include <time.h>
 
 time_t
 time(time_t *time_out)
@@ -10,7 +10,8 @@ time(time_t *time_out)
     // TODO
     ret = (time_t)(-1);
 
-    if(time_out != NULL) {
+    if(time_out != NULL)
+    {
         *time_out = ret;
     }
     return ret;

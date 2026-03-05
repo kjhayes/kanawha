@@ -4,16 +4,17 @@
 
 #include "kanawha/sys-wrappers.h"
 
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 
-int fclose(FILE *stream)
+int
+fclose(FILE *stream)
 {
-    struct __sFILE *file = (struct __sFILE*)stream;
+    struct __sFILE *file = (struct __sFILE *)stream;
 
-    int res = kanawha_sys_close(
-            file->__fd);
-    if(res) {
+    int res = kanawha_sys_close(file->__fd);
+    if(res)
+    {
         return EOF;
     }
 
@@ -22,4 +23,3 @@ int fclose(FILE *stream)
 
     return 0;
 }
-

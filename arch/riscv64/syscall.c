@@ -1,20 +1,19 @@
 
+#include <arch/riscv64/asm/regs.S>
+#include <arch/riscv64/csr.h>
+#include <arch/riscv64/trap.h>
+#include <kanawha/init.h>
 #include <kanawha/irq.h>
 #include <kanawha/irq_domain.h>
 #include <kanawha/syscall.h>
-#include <kanawha/init.h>
-#include <arch/riscv64/trap.h>
-#include <arch/riscv64/csr.h>
-#include <arch/riscv64/asm/regs.S>
 
 static int
-riscv64_syscall_handler(
-        struct excp_state *excp_state,
-        struct irq_action *action)
+riscv64_syscall_handler(struct excp_state *excp_state,
+                        struct irq_action *action)
 {
     int res;
 
-    struct riscv64_excp_state *state = (struct riscv64_excp_state*)excp_state;
+    struct riscv64_excp_state *state = (struct riscv64_excp_state *)excp_state;
 
     struct syscall_args args;
     args.args[0] = state->caller_regs[RISCV64_PUSHED_CALLER_REGS_INDEX_A0];
@@ -26,14 +25,17 @@ riscv64_syscall_handler(
 
     struct process *process = current_process();
 
-    process->user_ip = (void __user *)state->sepc + 4; // We need the address of the instruction AFTER the ecall
+    process->user_ip =
+        (void __user *)state->sepc +
+        4; // We need the address of the instruction AFTER the ecall
 
     enable_irqs();
     res = handle_syscall(
-            state->caller_regs[RISCV64_PUSHED_CALLER_REGS_INDEX_A7],
-            &args,
-            &state->caller_regs[RISCV64_PUSHED_CALLER_REGS_INDEX_A0]);
-    if(res) {
+        state->caller_regs[RISCV64_PUSHED_CALLER_REGS_INDEX_A7],
+        &args,
+        &state->caller_regs[RISCV64_PUSHED_CALLER_REGS_INDEX_A0]);
+    if(res)
+    {
         return IRQ_UNHANDLED;
     }
     disable_irqs();
@@ -54,20 +56,18 @@ riscv64_setup_syscalls(void)
     int res;
 
     struct irq_desc *desc = riscv64_exception_irq_desc(8);
-    if(desc == NULL) {
+    if(desc == NULL)
+    {
         return -EDEFER;
     }
 
-    struct irq_action *action
-        = irq_install_handler(
-            desc,
-            NULL,
-            riscv64_syscall_handler);
-    if(action == NULL) {
+    struct irq_action *action =
+        irq_install_handler(desc, NULL, riscv64_syscall_handler);
+    if(action == NULL)
+    {
         return -EDEFER;
     }
 
     return 0;
 }
 declare_init_desc(late, riscv64_setup_syscalls, "Installing syscall Handler");
-

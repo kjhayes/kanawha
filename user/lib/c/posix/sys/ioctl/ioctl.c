@@ -1,22 +1,23 @@
 
-#include <stdarg.h>
 #include <errno.h>
+#include <stdarg.h>
 
-int ioctl(int fildes, int request, ...)
+int
+ioctl(int fildes, int request, ...)
 {
     int ret;
 
     va_list args;
     va_start(args, request);
 
-    switch(request) {
-        default:
-            errno = -EINVAL;
-            ret = -1;
-            break;
+    switch(request)
+    {
+    default:
+        errno = -EINVAL;
+        ret = -1;
+        break;
     }
 
     va_end(args);
     return ret;
 }
-

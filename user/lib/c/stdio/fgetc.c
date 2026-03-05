@@ -1,13 +1,14 @@
 
 #include <elk-libc-internal/__sFILE.h>
-#include <kanawha/sys-wrappers.h>
 #include <kanawha/file.h>
+#include <kanawha/sys-wrappers.h>
 
-#include <stdio.h>
 #include <assert.h>
+#include <stdio.h>
 
 #undef fgetc_unlocked
-int fgetc_unlocked(FILE *stream)
+int
+fgetc_unlocked(FILE *stream)
 {
     struct __sFILE *file = (struct __sFILE *)stream;
 
@@ -17,7 +18,8 @@ int fgetc_unlocked(FILE *stream)
 }
 
 #undef fgetc
-int fgetc(FILE *stream)
+int
+fgetc(FILE *stream)
 {
     int res;
     flockfile(stream);
@@ -25,4 +27,3 @@ int fgetc(FILE *stream)
     funlockfile(stream);
     return res;
 }
-

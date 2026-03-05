@@ -1,13 +1,15 @@
 
-#include <unistd.h>
 #include <errno.h>
 #include <stdio.h>
+#include <unistd.h>
 
-int link(const char *path1, const char *path2)
+int
+link(const char *path1, const char *path2)
 {
-    fprintf(stderr, "Attempted to create link between \"%s\" and \"%s\"!\n",
-            path1, path2);
+    fprintf(stderr,
+            "Attempted to create link between \"%s\" and \"%s\"!\n",
+            path1,
+            path2);
     errno = -EUNIMPL;
     return -1;
 }
-

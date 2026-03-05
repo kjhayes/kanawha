@@ -3,7 +3,8 @@
 
 #include <drivers/fs/ext2/ext2.h>
 
-struct ext2_mount {
+struct ext2_mount
+{
     struct fs_mount fs_mount;
     struct fs_node *backing_node;
 
@@ -27,34 +28,26 @@ struct ext2_mount {
 };
 
 int
-ext2_mount_alloc_inode(
-        struct ext2_mount *mnt,
-        size_t pref_group,
-        size_t *inode_out);
+ext2_mount_alloc_inode(struct ext2_mount *mnt,
+                       size_t pref_group,
+                       size_t *inode_out);
 int
-ext2_mount_free_inode(
-        struct ext2_mount *mnt,
-        size_t inode);
+ext2_mount_free_inode(struct ext2_mount *mnt, size_t inode);
 
 int
-ext2_mount_alloc_block(
-        struct ext2_mount *mnt,
-        size_t pref_group,
-        size_t *block_out);
+ext2_mount_alloc_block(struct ext2_mount *mnt,
+                       size_t pref_group,
+                       size_t *block_out);
 int
-ext2_mount_free_block(
-        struct ext2_mount *mnt,
-        size_t block);
+ext2_mount_free_block(struct ext2_mount *mnt, size_t block);
 
 int
-ext2_mount_read_inode_data(
-        struct ext2_mount *mnt,
-        size_t inode_index,
-        struct ext2_inode *inode_data);
+ext2_mount_read_inode_data(struct ext2_mount *mnt,
+                           size_t inode_index,
+                           struct ext2_inode *inode_data);
 int
-ext2_mount_write_inode_data(
-        struct ext2_mount *mnt,
-        size_t inode_index,
-        struct ext2_inode *inode_data);
+ext2_mount_write_inode_data(struct ext2_mount *mnt,
+                            size_t inode_index,
+                            struct ext2_inode *inode_data);
 
 #endif

@@ -3,11 +3,11 @@
 #include <devtree/flat.h>
 #include <devtree/match.h>
 #include <kanawha/kmalloc.h>
-#include <kanawha/vmem.h>
-#include <kanawha/string.h>
-#include <kanawha/printk.h>
-#include <kanawha/mem_flags.h>
 #include <kanawha/lock.h>
+#include <kanawha/mem_flags.h>
+#include <kanawha/printk.h>
+#include <kanawha/string.h>
+#include <kanawha/vmem.h>
 
 // Statically allocate the first device tree struct
 static struct devtree boot_device_tree;
@@ -23,14 +23,14 @@ unflatten_device_tree(struct devtree *tree);
 //
 
 int
-devtree_provide_fdt(
-        struct fdt *fdt)
+devtree_provide_fdt(struct fdt *fdt)
 {
     int res;
 
     // Check the DTB
     res = fdt_check_header(fdt);
-    if(res) {
+    if(res)
+    {
         return res;
     }
 
@@ -39,15 +39,19 @@ devtree_provide_fdt(
     device_tree_list_lock_acquire();
 
     struct devtree *tree = NULL;
-    if(device_tree_list_len == 0) {
+    if(device_tree_list_len == 0)
+    {
         tree = &boot_device_tree;
-    } else {
+    }
+    else
+    {
         device_tree_list_lock_release();
         tree = kmalloc(sizeof(struct devtree), KM_KERNEL);
         device_tree_list_lock_acquire();
     }
 
-    if(tree == NULL) {
+    if(tree == NULL)
+    {
         device_tree_list_lock_release();
         return -ENOMEM;
     }
@@ -59,10 +63,13 @@ devtree_provide_fdt(
     tree->backing_size = fdt_size;
     ptree_init(&tree->phandle_tree);
 
-    if(unflatten_device_trees_on_insertion) {
+    if(unflatten_device_trees_on_insertion)
+    {
         res = unflatten_device_tree(tree);
-        if(res) {
-            if(tree != &boot_device_tree) {
+        if(res)
+        {
+            if(tree != &boot_device_tree)
+            {
                 kfree(tree);
             }
             device_tree_list_lock_release();
@@ -78,25 +85,28 @@ devtree_provide_fdt(
 }
 
 struct devtree *
-devtree_get(void) {
-    if(device_tree_list_len > 0) {
+devtree_get(void)
+{
+    if(device_tree_list_len > 0)
+    {
         return &boot_device_tree;
     }
     return NULL;
 }
 
 struct fdt *
-devtree_get_fdt(
-        struct devtree *dt)
+devtree_get_fdt(struct devtree *dt)
 {
     return dt->backing_data;
 }
 
 static inline struct dt_node *
-alloc_dt_node_struct(void) {
+alloc_dt_node_struct(void)
+{
     struct dt_node *node;
     node = kmalloc(sizeof(struct dt_node), KM_KERNEL);
-    if(node == NULL) {
+    if(node == NULL)
+    {
         return NULL;
     }
     memset(node, 0, sizeof(struct dt_node));
@@ -107,28 +117,25 @@ alloc_dt_node_struct(void) {
     return node;
 }
 
-__maybe_unused
-static inline void
-free_dt_node_struct(
-        struct dt_node *node)
+__maybe_unused static inline void
+free_dt_node_struct(struct dt_node *node)
 {
     spin_lock(&node->name_lock);
-    if(node->name) {
+    if(node->name)
+    {
         kfree(node->name);
     }
     kfree(node);
 }
 
 static struct dt_node *
-unflatten_dt_node(
-        struct devtree *dt,
-        struct fdt_node *fdt_node)
+unflatten_dt_node(struct devtree *dt, struct fdt_node *fdt_node)
 {
     struct fdt *fdt = devtree_get_fdt(dt);
 
-    struct dt_node *node =
-        alloc_dt_node_struct();
-    if(node == NULL) {
+    struct dt_node *node = alloc_dt_node_struct();
+    if(node == NULL)
+    {
         return NULL;
     }
 
@@ -139,9 +146,11 @@ unflatten_dt_node(
     { // Check for a "phandle" property
         struct fdt_property *phandle_prop =
             fdt_find_property_by_name(fdt, fdt_node, "phandle");
-        if(phandle_prop != NULL) {
+        if(phandle_prop != NULL)
+        {
             DEBUG_ASSERT(fdt_property_size(fdt, phandle_prop) == 4);
-            fdt_phandle_t phandle = *(fdt_phandle_t*)fdt_property_data(fdt, phandle_prop);
+            fdt_phandle_t phandle =
+                *(fdt_phandle_t *)fdt_property_data(fdt, phandle_prop);
             ptree_insert(&dt->phandle_tree, &node->phandle_node, phandle);
         }
     }
@@ -150,12 +159,15 @@ unflatten_dt_node(
 
     struct fdt_node *child_fdt_node;
     child_fdt_node = fdt_node_first_subnode(fdt, fdt_node);
-    while(child_fdt_node) {
-        struct dt_node *child =
-            unflatten_dt_node(dt, child_fdt_node);
-        if(child == NULL) {
+    while(child_fdt_node)
+    {
+        struct dt_node *child = unflatten_dt_node(dt, child_fdt_node);
+        if(child == NULL)
+        {
             // TODO we don't clean up our children properly on error
-            wprintk("Failed to unflatten device tree node! (Could be leaking memory!)\n");
+            wprintk("Failed to unflatten device tree node! (Could be "
+                    "leaking "
+                    "memory!)\n");
             break;
         }
 
@@ -169,22 +181,20 @@ unflatten_dt_node(
 }
 
 static int
-unflatten_device_tree(
-        struct devtree *tree)
+unflatten_device_tree(struct devtree *tree)
 {
     int res;
 
     struct fdt *fdt = devtree_get_fdt(tree);
     struct fdt_node *root = fdt_first_node(fdt);
 
-    DEBUG_ASSERT_MSG(fdt_node_next_subnode(fdt, root) == NULL, "FDT has more than one root node!");
+    DEBUG_ASSERT_MSG(fdt_node_next_subnode(fdt, root) == NULL,
+                     "FDT has more than one root node!");
 
-    tree->root_node =
-        unflatten_dt_node(
-            tree,
-            root);
+    tree->root_node = unflatten_dt_node(tree, root);
 
-    if(tree->root_node == NULL) {
+    if(tree->root_node == NULL)
+    {
         return -EINVAL;
     }
 
@@ -194,8 +204,10 @@ unflatten_device_tree(
 
     // Register all of the nodes in the tree
     res = register_devtree(tree);
-    if(res) {
-        wprintk("Failed to register device tree nodes! (May only be partially registered) (err=%s)\n",
+    if(res)
+    {
+        wprintk("Failed to register device tree nodes! (May only be partially "
+                "registered) (err=%s)\n",
                 errnostr(res));
     }
 
@@ -203,14 +215,13 @@ unflatten_device_tree(
 }
 
 struct dt_node *
-devtree_get_node_by_phandle(
-        struct devtree *dt,
-        fdt_phandle_t phandle)
+devtree_get_node_by_phandle(struct devtree *dt, fdt_phandle_t phandle)
 {
     DEBUG_ASSERT(dt->flags & DEVTREE_FLAG_UNFLATTENED);
 
     struct ptree_node *pnode = ptree_get(&dt->phandle_tree, phandle);
-    if(pnode == NULL) {
+    if(pnode == NULL)
+    {
         return NULL;
     }
 
@@ -223,11 +234,13 @@ init_dump_device_trees(void)
     int res;
     device_tree_list_lock_acquire();
     ilist_node_t *node;
-    ilist_for_each(node, &device_tree_list) {
+    ilist_for_each(node, &device_tree_list)
+    {
         struct devtree *dt = container_of(node, struct devtree, list_node);
         struct fdt *fdt = devtree_get_fdt(dt);
         res = dump_fdt(do_printk, fdt);
-        if(res) {
+        if(res)
+        {
             device_tree_list_lock_release();
             return res;
         }
@@ -238,15 +251,18 @@ init_dump_device_trees(void)
 declare_init(static, init_dump_device_trees);
 
 static int
-unflatten_device_trees(void) {
+unflatten_device_trees(void)
+{
     int res;
     device_tree_list_lock_acquire();
 
     ilist_node_t *node;
-    ilist_for_each(node, &device_tree_list) {
+    ilist_for_each(node, &device_tree_list)
+    {
         struct devtree *dt = container_of(node, struct devtree, list_node);
         res = unflatten_device_tree(dt);
-        if(res) {
+        if(res)
+        {
             device_tree_list_lock_release();
             return res;
         }
@@ -256,5 +272,6 @@ unflatten_device_trees(void) {
     device_tree_list_lock_release();
     return 0;
 }
-declare_init_desc(dynamic, unflatten_device_trees, "Unflattening Device Tree(s)");
-
+declare_init_desc(dynamic,
+                  unflatten_device_trees,
+                  "Unflattening Device Tree(s)");

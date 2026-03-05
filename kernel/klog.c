@@ -2,19 +2,20 @@
 
 #include <kanawha/fs/node.h>
 
-#include <kanawha/ptree.h>
+#include <kanawha/errno.h>
+#include <kanawha/init.h>
 #include <kanawha/irq.h>
 #include <kanawha/kmalloc.h>
-#include <kanawha/slab.h>
-#include <kanawha/errno.h>
-#include <kanawha/stddef.h>
-#include <kanawha/string.h>
-#include <kanawha/init.h>
 #include <kanawha/lock.h>
 #include <kanawha/page_alloc.h>
+#include <kanawha/ptree.h>
+#include <kanawha/slab.h>
+#include <kanawha/stddef.h>
+#include <kanawha/string.h>
 
 static int __klog_boot_frames_used = 0;
-static uint8_t __klog_boot_frames[CONFIG_KLOG_BOOT_FRAMES * CONFIG_KLOG_FRAMESIZE];
+static uint8_t
+    __klog_boot_frames[CONFIG_KLOG_BOOT_FRAMES * CONFIG_KLOG_FRAMESIZE];
 
 static DECLARE_PTREE(klog_tree);
 DEFINE_LOCAL_IRQ_LOCK(klog_tree_lock);
@@ -34,15 +35,16 @@ struct klog_frame
 };
 
 int
-klog_init(void) 
+klog_init(void)
 {
-    klog_frame_slab_allocator = create_static_slab_allocator(
-            klog_frame_slab_buffer,
-            KLOG_FRAME_SLAB_BUFFER_SIZE,
-            sizeof(struct klog_frame),
-            orderof(struct klog_frame));
+    klog_frame_slab_allocator =
+        create_static_slab_allocator(klog_frame_slab_buffer,
+                                     KLOG_FRAME_SLAB_BUFFER_SIZE,
+                                     sizeof(struct klog_frame),
+                                     orderof(struct klog_frame));
 
-    if(klog_frame_slab_allocator == NULL) {
+    if(klog_frame_slab_allocator == NULL)
+    {
         return -ENOMEM;
     }
 
@@ -57,14 +59,19 @@ klog_frame_alloc(void)
 
     memset(frame, 0, sizeof(struct klog_frame));
 
-    if(__klog_boot_frames_used < CONFIG_KLOG_BOOT_FRAMES) {
-        frame->data = ((void*)__klog_boot_frames) + (CONFIG_KLOG_FRAMESIZE * __klog_boot_frames_used);
+    if(__klog_boot_frames_used < CONFIG_KLOG_BOOT_FRAMES)
+    {
+        frame->data = ((void *)__klog_boot_frames) +
+                      (CONFIG_KLOG_FRAMESIZE * __klog_boot_frames_used);
         __klog_boot_frames_used++;
-    } else {
+    }
+    else
+    {
         frame->data = kmalloc(CONFIG_KLOG_FRAMESIZE, KM_KERNEL);
     }
 
-    if(frame->data == NULL) {
+    if(frame->data == NULL)
+    {
         slab_free(klog_frame_slab_allocator, frame);
         klog_frame_slab_lock_release();
         return NULL;
@@ -85,23 +92,28 @@ klog_putc(char c)
 
     struct ptree_node *node = ptree_get_last(&klog_tree);
     struct klog_frame *frame;
-    if(node == NULL) {
+    if(node == NULL)
+    {
         struct klog_frame *first_frame = klog_frame_alloc();
-        if(first_frame == NULL) {
+        if(first_frame == NULL)
+        {
             klog_tree_lock_release();
             return -ENOMEM;
         }
         ptree_insert(&klog_tree, &first_frame->tree_node, 0);
         frame = first_frame;
     }
-    else {
+    else
+    {
         frame = container_of(node, struct klog_frame, tree_node);
     }
 
-    if(frame->total_len <= frame->filled_len) {
+    if(frame->total_len <= frame->filled_len)
+    {
         size_t offset = frame->tree_node.key + frame->total_len;
         struct klog_frame *new_frame = klog_frame_alloc();
-        if(new_frame == NULL) {
+        if(new_frame == NULL)
+        {
             klog_tree_lock_release();
             return -ENOMEM;
         }
@@ -128,11 +140,11 @@ static struct vfs_mount *klog_fs_mount = NULL;
 
 static struct fs_node_ops klog_fs_node_ops;
 static struct fs_file_ops klog_fs_file_ops;
-static struct vfs_node klog_fs_node = { 0 };
+static struct vfs_node klog_fs_node = {0};
 
 static struct fs_node_ops kmem_free_fs_node_ops;
 static struct fs_file_ops kmem_free_fs_file_ops;
-static struct vfs_node kmem_free_fs_node = { 0 };
+static struct vfs_node kmem_free_fs_node = {0};
 
 static int
 klog_init_fs_mount(void)
@@ -141,7 +153,8 @@ klog_init_fs_mount(void)
 
     struct vfs_mount *mnt;
     mnt = vfs_mount_create();
-    if(mnt == NULL) {
+    if(mnt == NULL)
+    {
         eprintk("Failed to create klog vfs mount!\n");
         return -ENOMEM;
     }
@@ -151,11 +164,9 @@ klog_init_fs_mount(void)
     klog_fs_node.fs_file_ops = &klog_fs_file_ops;
     klog_fs_node.fs_node_ops = &klog_fs_node_ops;
 
-    res = vfs_mount_insert_node_and_link_root(
-            mnt,
-            &klog_fs_node,
-            "klog");
-    if(res) {
+    res = vfs_mount_insert_node_and_link_root(mnt, &klog_fs_node, "klog");
+    if(res)
+    {
         vfs_mount_destroy(mnt);
         return res;
     }
@@ -163,17 +174,16 @@ klog_init_fs_mount(void)
     kmem_free_fs_node.fs_file_ops = &kmem_free_fs_file_ops;
     kmem_free_fs_node.fs_node_ops = &kmem_free_fs_node_ops;
 
-    res = vfs_mount_insert_node_and_link_root(
-            mnt,
-            &kmem_free_fs_node,
-            "free");
-    if(res) {
+    res = vfs_mount_insert_node_and_link_root(mnt, &kmem_free_fs_node, "free");
+    if(res)
+    {
         vfs_mount_destroy(mnt);
         return res;
     }
 
     res = sysfs_register_mount(&klog_fs_mount->fs_mount, "info");
-    if(res) {
+    if(res)
+    {
         vfs_mount_destroy(mnt);
         return res;
     }
@@ -182,18 +192,18 @@ klog_init_fs_mount(void)
 }
 declare_init_desc(fs, klog_init_fs_mount, "Registering klog Sysfs Mount");
 
-static ssize_t 
-klog_fs_file_read(
-        struct file *file,
-        void *buffer,
-        ssize_t amount,
-        unsigned long flags)
+static ssize_t
+klog_fs_file_read(struct file *file,
+                  void *buffer,
+                  ssize_t amount,
+                  unsigned long flags)
 {
     int res;
 
     struct fs_path *path = file->path;
     res = fs_path_get(path);
-    if(res) {
+    if(res)
+    {
         return res;
     }
 
@@ -202,19 +212,20 @@ klog_fs_file_read(
     klog_tree_lock_acquire();
 
     struct ptree_node *node = ptree_get_max_less_or_eq(&klog_tree, offset);
-    if(node == NULL) {
+    if(node == NULL)
+    {
         klog_tree_lock_release();
         fs_path_put(path);
         return 0;
     }
 
-    struct klog_frame *frame =
-        container_of(node, struct klog_frame, tree_node);
+    struct klog_frame *frame = container_of(node, struct klog_frame, tree_node);
 
     size_t rel_offset = offset - frame->tree_node.key;
     size_t room_left = frame->filled_len - rel_offset;
 
-    if(room_left < amount) {
+    if(room_left < amount)
+    {
         amount = room_left;
     }
 
@@ -227,15 +238,12 @@ klog_fs_file_read(
     return amount;
 }
 
-static struct fs_node_ops
-klog_fs_node_ops =
-{
+static struct fs_node_ops klog_fs_node_ops = {
     .flush = fs_node_flush_nop,
 };
 FS_NODE_OPS_INIT_UNDEF(klog_fs_node_ops);
 
-static struct fs_file_ops
-klog_fs_file_ops = {
+static struct fs_file_ops klog_fs_file_ops = {
     .read = klog_fs_file_read,
     .write = fs_file_cannot_write,
     .flush = fs_file_nop_flush,
@@ -243,34 +251,30 @@ klog_fs_file_ops = {
 };
 FS_FILE_OPS_INIT_UNDEF(klog_fs_file_ops);
 
-static ssize_t 
-kmem_free_fs_file_read(
-        struct file *file,
-        void *buffer,
-        ssize_t amount,
-        unsigned long flags)
+static ssize_t
+kmem_free_fs_file_read(struct file *file,
+                       void *buffer,
+                       ssize_t amount,
+                       unsigned long flags)
 {
-    if(file->seek_offset != 0) {
+    if(file->seek_offset != 0)
+    {
         return 0;
     }
     snprintk(buffer, amount, "%lu", (ul_t)page_alloc_amount_free());
-    ((char*)buffer)[amount-1] = '\0';
+    ((char *)buffer)[amount - 1] = '\0';
     return strlen(buffer);
 }
 
-static struct fs_node_ops
-kmem_free_fs_node_ops =
-{
+static struct fs_node_ops kmem_free_fs_node_ops = {
     .flush = fs_node_flush_nop,
 };
 FS_NODE_OPS_INIT_UNDEF(kmem_free_fs_node_ops);
 
-static struct fs_file_ops
-kmem_free_fs_file_ops = {
+static struct fs_file_ops kmem_free_fs_file_ops = {
     .read = kmem_free_fs_file_read,
     .write = fs_file_eof_write,
     .flush = fs_file_nop_flush,
     .seek = fs_file_seek_pinned_zero,
 };
 FS_FILE_OPS_INIT_UNDEF(kmem_free_fs_file_ops);
-

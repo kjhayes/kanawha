@@ -8,11 +8,10 @@ dump_page_alloc_amounts(void)
     size_t amt_free = page_alloc_amount_free();
 
     printk("Free Memory:   %ld MiB %ld KiB %ld Bytes\n",
-            amt_free >> 20,
-            (amt_free & ((1ULL<<20)-1)) >> 12,
-            (amt_free & ((1ULL<<12)-1)));
+           amt_free >> 20,
+           (amt_free & ((1ULL << 20) - 1)) >> 12,
+           (amt_free & ((1ULL << 12) - 1)));
 
     return 0;
 }
 declare_init(late, dump_page_alloc_amounts);
-

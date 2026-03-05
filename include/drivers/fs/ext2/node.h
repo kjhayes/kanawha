@@ -1,10 +1,10 @@
 #ifndef __KANAWHA__FS_EXT2_NODE_H__
 #define __KANAWHA__FS_EXT2_NODE_H__
 
-#include <kanawha/fs/node.h>
-#include <kanawha/fs/file.h>
 #include <drivers/fs/ext2/ext2.h>
 #include <drivers/fs/ext2/mount.h>
+#include <kanawha/fs/file.h>
+#include <kanawha/fs/node.h>
 
 struct ext2_fs_node
 {
@@ -23,48 +23,34 @@ extern struct fs_node_ops ext2_file_node_ops;
 extern struct fs_file_ops ext2_file_file_ops;
 
 size_t
-ext2_fs_node_to_group_num(
-        struct ext2_fs_node *node);
+ext2_fs_node_to_group_num(struct ext2_fs_node *node);
 
 int
-ext2_fs_node_read_page(
-        struct fs_node *node,
-        void *page,
-        uintptr_t pfn,
-        unsigned long flags);
+ext2_fs_node_read_page(struct fs_node *node,
+                       void *page,
+                       uintptr_t pfn,
+                       unsigned long flags);
 
 int
-ext2_fs_node_write_page(
-        struct fs_node *node,
-        void *page,
-        uintptr_t pfn,
-        unsigned long flags);
+ext2_fs_node_write_page(struct fs_node *node,
+                        void *page,
+                        uintptr_t pfn,
+                        unsigned long flags);
 
 int
-ext2_fs_node_getattr(
-        struct fs_node *node,
-        int attr,
-        size_t *value);
+ext2_fs_node_getattr(struct fs_node *node, int attr, size_t *value);
 
 int
-ext2_fs_node_setattr(
-        struct fs_node *node,
-        int attr,
-        size_t value);
+ext2_fs_node_setattr(struct fs_node *node, int attr, size_t value);
 
 int
-ext2_fs_node_flush(
-        struct fs_node *node,
-        unsigned long flags);
+ext2_fs_node_flush(struct fs_node *node, unsigned long flags);
 
-// Get the size of the node 
+// Get the size of the node
 size_t
-ext2_fs_node_inode_size(
-        struct ext2_fs_node *node);
+ext2_fs_node_inode_size(struct ext2_fs_node *node);
 
 int
-ext2_fs_node_resize(
-        struct ext2_fs_node *node,
-        size_t size);
+ext2_fs_node_resize(struct ext2_fs_node *node, size_t size);
 
 #endif

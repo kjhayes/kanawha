@@ -3,10 +3,7 @@
 #include <stdio.h>
 
 int
-fscanf(
-        FILE * restrict stream,
-        const char * restrict format,
-        ...)
+fscanf(FILE *restrict stream, const char *restrict format, ...)
 {
     int done;
     va_list arg;
@@ -15,4 +12,3 @@ fscanf(
     va_end(arg);
     return done;
 }
-

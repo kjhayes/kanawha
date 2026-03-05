@@ -2,23 +2,19 @@
 #define __KANAWHA__USB_XHCI_DEVICE_H__
 
 #include <drivers/usb/device.h>
-#include <drivers/usb/xhci/xhci.h>
 #include <drivers/usb/xhci/ctx.h>
 #include <drivers/usb/xhci/endpoint.h>
+#include <drivers/usb/xhci/xhci.h>
 
 int
-usb_xhci_init_scratchpads(
-        struct usb_xhci *dev);
+usb_xhci_init_scratchpads(struct usb_xhci *dev);
 int
-usb_xhci_deinit_scratchpads(
-        struct usb_xhci *dev);
+usb_xhci_deinit_scratchpads(struct usb_xhci *dev);
 
 int
-usb_xhci_init_device_contextes(
-        struct usb_xhci *dev);
+usb_xhci_init_device_contextes(struct usb_xhci *dev);
 int
-usb_xhci_deinit_device_contextes(
-        struct usb_xhci *dev);
+usb_xhci_deinit_device_contextes(struct usb_xhci *dev);
 
 struct usb_xhci_device
 {
@@ -41,7 +37,8 @@ struct usb_xhci_device
 
 struct usb_xhci;
 
-struct __packed usb_xhci_output_ctx {
+struct __packed usb_xhci_output_ctx
+{
     struct usb_xhci_slot_ctx slot_ctx;
     struct usb_xhci_endpoint_ctx ep_ctxs[31];
 };
@@ -55,25 +52,20 @@ struct __packed usb_xhci_dcbaa
 ASSERT_FIELD_OFFSET(struct usb_xhci_dcbaa, output_ctx_base_address, 8);
 
 struct usb_xhci_device *
-usb_xhci_create_device(
-        struct usb_xhci *xhci);
+usb_xhci_create_device(struct usb_xhci *xhci);
 
 int
-usb_xhci_destroy_device(
-        struct usb_xhci_device *dev);
+usb_xhci_destroy_device(struct usb_xhci_device *dev);
 
 int
-usb_xhci_address_root_hub_device(
-        struct usb_xhci_device *dev,
-        struct usb_xhci_port *port);
+usb_xhci_address_root_hub_device(struct usb_xhci_device *dev,
+                                 struct usb_xhci_port *port);
 
 int
-usb_xhci_register_root_hub_device(
-        struct usb_xhci_device *dev);
+usb_xhci_register_root_hub_device(struct usb_xhci_device *dev);
 
 int
-usb_xhci_device_notify_transfer_event(
-        struct usb_xhci_device *dev,
-        struct usb_xhci_trb *trb);
+usb_xhci_device_notify_transfer_event(struct usb_xhci_device *dev,
+                                      struct usb_xhci_trb *trb);
 
 #endif

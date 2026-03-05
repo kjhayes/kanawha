@@ -1,23 +1,24 @@
 
-#include <kanawha/init.h>
-#include <kanawha/kmalloc.h>
-#include <kanawha/string.h>
-#include <kanawha/stddef.h>
-#include <kanawha/irq.h>
-#include <kanawha/lock.h>
-#include <kanawha/dev/snd.h>
 #include <drivers/virtio/driver.h>
-#include <drivers/virtio/virtio.h>
 #include <drivers/virtio/queue.h>
 #include <drivers/virtio/request.h>
+#include <drivers/virtio/virtio.h>
+#include <kanawha/dev/snd.h>
 #include <kanawha/endian.h>
+#include <kanawha/init.h>
+#include <kanawha/irq.h>
+#include <kanawha/kmalloc.h>
+#include <kanawha/lock.h>
+#include <kanawha/stddef.h>
+#include <kanawha/string.h>
 
 #define VIRTIO_SND_STREAM_BUFLEN (0x1000)
 
 DEFINE_LOCAL_IRQ_LOCK(virtio_snd_tree_lock);
 static DECLARE_PTREE(virtio_snd_tree);
 
-enum {
+enum
+{
     /* jack control request types */
     VIRTIO_SND_R_JACK_INFO = 1,
     VIRTIO_SND_R_JACK_REMAP,
@@ -44,45 +45,53 @@ enum {
 };
 
 /* a common header */
-struct virtio_snd_hdr {
+struct virtio_snd_hdr
+{
     le32_t code;
 } __packed;
 
-struct virtio_snd_pcm_hdr {
+struct virtio_snd_pcm_hdr
+{
     struct virtio_snd_hdr hdr;
     le32_t stream_id;
 } __packed;
 
-struct virtio_snd_info {
+struct virtio_snd_info
+{
     le32_t hda_fn_nid;
 } __packed;
 
 /* an event notification */
-struct virtio_snd_event {
+struct virtio_snd_event
+{
     struct virtio_snd_hdr hdr;
     le32_t data;
 } __packed;
 
-enum {
+enum
+{
     VIRTIO_SND_D_OUTPUT = 0,
     VIRTIO_SND_D_INPUT
 };
 
-struct virtio_snd_query_info {
+struct virtio_snd_query_info
+{
     struct virtio_snd_hdr hdr;
     le32_t start_id;
     le32_t count;
     le32_t size;
 };
 
-struct virtio_snd_config {
+struct virtio_snd_config
+{
     le32_t jacks;
     le32_t streams;
     le32_t chmaps;
 } __packed;
 
 /* supported PCM stream features */
-enum {
+enum
+{
     VIRTIO_SND_PCM_F_SHMEM_HOST = 0,
     VIRTIO_SND_PCM_F_SHMEM_GUEST,
     VIRTIO_SND_PCM_F_MSG_POLLING,
@@ -91,118 +100,146 @@ enum {
 };
 
 /* supported PCM sample formats */
-enum {
+enum
+{
     /* analog formats (width / physical width) */
     VIRTIO_SND_PCM_FMT_IMA_ADPCM = 0, /* 4 / 4 bits */
-    VIRTIO_SND_PCM_FMT_MU_LAW, /* 8 / 8 bits */
-    VIRTIO_SND_PCM_FMT_A_LAW, /* 8 / 8 bits */
-    VIRTIO_SND_PCM_FMT_S8, /* 8 / 8 bits */
-    VIRTIO_SND_PCM_FMT_U8, /* 8 / 8 bits */
-    VIRTIO_SND_PCM_FMT_S16, /* 16 / 16 bits */
-    VIRTIO_SND_PCM_FMT_U16, /* 16 / 16 bits */
-    VIRTIO_SND_PCM_FMT_S18_3, /* 18 / 24 bits */
-    VIRTIO_SND_PCM_FMT_U18_3, /* 18 / 24 bits */
-    VIRTIO_SND_PCM_FMT_S20_3, /* 20 / 24 bits */
-    VIRTIO_SND_PCM_FMT_U20_3, /* 20 / 24 bits */
-    VIRTIO_SND_PCM_FMT_S24_3, /* 24 / 24 bits */
-    VIRTIO_SND_PCM_FMT_U24_3, /* 24 / 24 bits */
-    VIRTIO_SND_PCM_FMT_S20, /* 20 / 32 bits */
-    VIRTIO_SND_PCM_FMT_U20, /* 20 / 32 bits */
-    VIRTIO_SND_PCM_FMT_S24, /* 24 / 32 bits */
-    VIRTIO_SND_PCM_FMT_U24, /* 24 / 32 bits */
-    VIRTIO_SND_PCM_FMT_S32, /* 32 / 32 bits */
-    VIRTIO_SND_PCM_FMT_U32, /* 32 / 32 bits */
-    VIRTIO_SND_PCM_FMT_FLOAT, /* 32 / 32 bits */
-    VIRTIO_SND_PCM_FMT_FLOAT64, /* 64 / 64 bits */
+    VIRTIO_SND_PCM_FMT_MU_LAW,        /* 8 / 8 bits */
+    VIRTIO_SND_PCM_FMT_A_LAW,         /* 8 / 8 bits */
+    VIRTIO_SND_PCM_FMT_S8,            /* 8 / 8 bits */
+    VIRTIO_SND_PCM_FMT_U8,            /* 8 / 8 bits */
+    VIRTIO_SND_PCM_FMT_S16,           /* 16 / 16 bits */
+    VIRTIO_SND_PCM_FMT_U16,           /* 16 / 16 bits */
+    VIRTIO_SND_PCM_FMT_S18_3,         /* 18 / 24 bits */
+    VIRTIO_SND_PCM_FMT_U18_3,         /* 18 / 24 bits */
+    VIRTIO_SND_PCM_FMT_S20_3,         /* 20 / 24 bits */
+    VIRTIO_SND_PCM_FMT_U20_3,         /* 20 / 24 bits */
+    VIRTIO_SND_PCM_FMT_S24_3,         /* 24 / 24 bits */
+    VIRTIO_SND_PCM_FMT_U24_3,         /* 24 / 24 bits */
+    VIRTIO_SND_PCM_FMT_S20,           /* 20 / 32 bits */
+    VIRTIO_SND_PCM_FMT_U20,           /* 20 / 32 bits */
+    VIRTIO_SND_PCM_FMT_S24,           /* 24 / 32 bits */
+    VIRTIO_SND_PCM_FMT_U24,           /* 24 / 32 bits */
+    VIRTIO_SND_PCM_FMT_S32,           /* 32 / 32 bits */
+    VIRTIO_SND_PCM_FMT_U32,           /* 32 / 32 bits */
+    VIRTIO_SND_PCM_FMT_FLOAT,         /* 32 / 32 bits */
+    VIRTIO_SND_PCM_FMT_FLOAT64,       /* 64 / 64 bits */
     /* digital formats (width / physical width) */
-    VIRTIO_SND_PCM_FMT_DSD_U8, /* 8 / 8 bits */
-    VIRTIO_SND_PCM_FMT_DSD_U16, /* 16 / 16 bits */
-    VIRTIO_SND_PCM_FMT_DSD_U32, /* 32 / 32 bits */
+    VIRTIO_SND_PCM_FMT_DSD_U8,         /* 8 / 8 bits */
+    VIRTIO_SND_PCM_FMT_DSD_U16,        /* 16 / 16 bits */
+    VIRTIO_SND_PCM_FMT_DSD_U32,        /* 32 / 32 bits */
     VIRTIO_SND_PCM_FMT_IEC958_SUBFRAME /* 32 / 32 bits */
 };
 
 static inline const char *
-virtio_snd_pcm_format_to_string(
-        int format)
+virtio_snd_pcm_format_to_string(int format)
 {
-    switch(format) {
-        case VIRTIO_SND_PCM_FMT_IMA_ADPCM: return "VIRTIO_SND_PCM_FMT_IMA_ADPCM";
-        case VIRTIO_SND_PCM_FMT_MU_LAW: return "VIRTIO_SND_PCM_FMT_MU_LAW";
-        case VIRTIO_SND_PCM_FMT_A_LAW: return "VIRTIO_SND_PCM_FMT_A_LAW";
-        case VIRTIO_SND_PCM_FMT_S8: return "VIRTIO_SND_PCM_FMT_S8";
-        case VIRTIO_SND_PCM_FMT_U8: return "VIRTIO_SND_PCM_FMT_U8";
-        case VIRTIO_SND_PCM_FMT_S16: return "VIRTIO_SND_PCM_FMT_S16";
-        case VIRTIO_SND_PCM_FMT_U16: return "VIRTIO_SND_PCM_FMT_U16";
-        case VIRTIO_SND_PCM_FMT_S18_3: return "VIRTIO_SND_PCM_FMT_S18_3";
-        case VIRTIO_SND_PCM_FMT_U18_3: return "VIRTIO_SND_PCM_FMT_U18_3";
-        case VIRTIO_SND_PCM_FMT_S20_3: return "VIRTIO_SND_PCM_FMT_S20_3";
-        case VIRTIO_SND_PCM_FMT_U20_3: return "VIRTIO_SND_PCM_FMT_U20_3";
-        case VIRTIO_SND_PCM_FMT_S24_3: return "VIRTIO_SND_PCM_FMT_S24_3";
-        case VIRTIO_SND_PCM_FMT_U24_3: return "VIRTIO_SND_PCM_FMT_U24_3";
-        case VIRTIO_SND_PCM_FMT_S20: return "VIRTIO_SND_PCM_FMT_S20";
-        case VIRTIO_SND_PCM_FMT_U20: return "VIRTIO_SND_PCM_FMT_U20";
-        case VIRTIO_SND_PCM_FMT_S24: return "VIRTIO_SND_PCM_FMT_S24";
-        case VIRTIO_SND_PCM_FMT_U24: return "VIRTIO_SND_PCM_FMT_U24";
-        case VIRTIO_SND_PCM_FMT_S32: return "VIRTIO_SND_PCM_FMT_S32";
-        case VIRTIO_SND_PCM_FMT_U32: return "VIRTIO_SND_PCM_FMT_U32";
-        case VIRTIO_SND_PCM_FMT_FLOAT: return "VIRTIO_SND_PCM_FMT_FLOAT";
-        case VIRTIO_SND_PCM_FMT_FLOAT64: return "VIRTIO_SND_PCM_FMT_FLOAT64";
-        case VIRTIO_SND_PCM_FMT_DSD_U8: return "VIRTIO_SND_PCM_FMT_DSD_U8";
-        case VIRTIO_SND_PCM_FMT_DSD_U16: return "VIRTIO_SND_PCM_FMT_DSD_U16";
-        case VIRTIO_SND_PCM_FMT_DSD_U32: return "VIRTIO_SND_PCM_FMT_DSD_U32";
-        case VIRTIO_SND_PCM_FMT_IEC958_SUBFRAME: return "VIRTIO_SND_PCM_FMT_IEC958_SUBFRAME";
-        default: return "VIRTIO_SND_PCM_FMT_INVALID";
+    switch(format)
+    {
+    case VIRTIO_SND_PCM_FMT_IMA_ADPCM:
+        return "VIRTIO_SND_PCM_FMT_IMA_ADPCM";
+    case VIRTIO_SND_PCM_FMT_MU_LAW:
+        return "VIRTIO_SND_PCM_FMT_MU_LAW";
+    case VIRTIO_SND_PCM_FMT_A_LAW:
+        return "VIRTIO_SND_PCM_FMT_A_LAW";
+    case VIRTIO_SND_PCM_FMT_S8:
+        return "VIRTIO_SND_PCM_FMT_S8";
+    case VIRTIO_SND_PCM_FMT_U8:
+        return "VIRTIO_SND_PCM_FMT_U8";
+    case VIRTIO_SND_PCM_FMT_S16:
+        return "VIRTIO_SND_PCM_FMT_S16";
+    case VIRTIO_SND_PCM_FMT_U16:
+        return "VIRTIO_SND_PCM_FMT_U16";
+    case VIRTIO_SND_PCM_FMT_S18_3:
+        return "VIRTIO_SND_PCM_FMT_S18_3";
+    case VIRTIO_SND_PCM_FMT_U18_3:
+        return "VIRTIO_SND_PCM_FMT_U18_3";
+    case VIRTIO_SND_PCM_FMT_S20_3:
+        return "VIRTIO_SND_PCM_FMT_S20_3";
+    case VIRTIO_SND_PCM_FMT_U20_3:
+        return "VIRTIO_SND_PCM_FMT_U20_3";
+    case VIRTIO_SND_PCM_FMT_S24_3:
+        return "VIRTIO_SND_PCM_FMT_S24_3";
+    case VIRTIO_SND_PCM_FMT_U24_3:
+        return "VIRTIO_SND_PCM_FMT_U24_3";
+    case VIRTIO_SND_PCM_FMT_S20:
+        return "VIRTIO_SND_PCM_FMT_S20";
+    case VIRTIO_SND_PCM_FMT_U20:
+        return "VIRTIO_SND_PCM_FMT_U20";
+    case VIRTIO_SND_PCM_FMT_S24:
+        return "VIRTIO_SND_PCM_FMT_S24";
+    case VIRTIO_SND_PCM_FMT_U24:
+        return "VIRTIO_SND_PCM_FMT_U24";
+    case VIRTIO_SND_PCM_FMT_S32:
+        return "VIRTIO_SND_PCM_FMT_S32";
+    case VIRTIO_SND_PCM_FMT_U32:
+        return "VIRTIO_SND_PCM_FMT_U32";
+    case VIRTIO_SND_PCM_FMT_FLOAT:
+        return "VIRTIO_SND_PCM_FMT_FLOAT";
+    case VIRTIO_SND_PCM_FMT_FLOAT64:
+        return "VIRTIO_SND_PCM_FMT_FLOAT64";
+    case VIRTIO_SND_PCM_FMT_DSD_U8:
+        return "VIRTIO_SND_PCM_FMT_DSD_U8";
+    case VIRTIO_SND_PCM_FMT_DSD_U16:
+        return "VIRTIO_SND_PCM_FMT_DSD_U16";
+    case VIRTIO_SND_PCM_FMT_DSD_U32:
+        return "VIRTIO_SND_PCM_FMT_DSD_U32";
+    case VIRTIO_SND_PCM_FMT_IEC958_SUBFRAME:
+        return "VIRTIO_SND_PCM_FMT_IEC958_SUBFRAME";
+    default:
+        return "VIRTIO_SND_PCM_FMT_INVALID";
     }
 }
 
 static inline int
-virtio_snd_pcm_format_sample_size(
-        int format)
+virtio_snd_pcm_format_sample_size(int format)
 {
-    switch(format) {
-        case VIRTIO_SND_PCM_FMT_S8:
-            return 1;
-        case VIRTIO_SND_PCM_FMT_U8:
-            return 1;
-        case VIRTIO_SND_PCM_FMT_S16:
-            return 2;
-        case VIRTIO_SND_PCM_FMT_U16:
-            return 2;
-        case VIRTIO_SND_PCM_FMT_S32:
-            return 4;
-        case VIRTIO_SND_PCM_FMT_U32:
-            return 4;
-        case VIRTIO_SND_PCM_FMT_FLOAT:
-            return 4;
-        case VIRTIO_SND_PCM_FMT_FLOAT64:
-            return 8;
+    switch(format)
+    {
+    case VIRTIO_SND_PCM_FMT_S8:
+        return 1;
+    case VIRTIO_SND_PCM_FMT_U8:
+        return 1;
+    case VIRTIO_SND_PCM_FMT_S16:
+        return 2;
+    case VIRTIO_SND_PCM_FMT_U16:
+        return 2;
+    case VIRTIO_SND_PCM_FMT_S32:
+        return 4;
+    case VIRTIO_SND_PCM_FMT_U32:
+        return 4;
+    case VIRTIO_SND_PCM_FMT_FLOAT:
+        return 4;
+    case VIRTIO_SND_PCM_FMT_FLOAT64:
+        return 8;
 
-        case VIRTIO_SND_PCM_FMT_IMA_ADPCM:
-        case VIRTIO_SND_PCM_FMT_MU_LAW:
-        case VIRTIO_SND_PCM_FMT_A_LAW:
-        case VIRTIO_SND_PCM_FMT_S18_3:
-        case VIRTIO_SND_PCM_FMT_U18_3:
-        case VIRTIO_SND_PCM_FMT_S20_3:
-        case VIRTIO_SND_PCM_FMT_U20_3:
-        case VIRTIO_SND_PCM_FMT_S24_3:
-        case VIRTIO_SND_PCM_FMT_U24_3:
-        case VIRTIO_SND_PCM_FMT_S20:
-        case VIRTIO_SND_PCM_FMT_U20:
-        case VIRTIO_SND_PCM_FMT_S24:
-        case VIRTIO_SND_PCM_FMT_U24:
-        case VIRTIO_SND_PCM_FMT_DSD_U8:
-        case VIRTIO_SND_PCM_FMT_DSD_U16:
-        case VIRTIO_SND_PCM_FMT_DSD_U32:
-        case VIRTIO_SND_PCM_FMT_IEC958_SUBFRAME:
-            return -EUNIMPL;
+    case VIRTIO_SND_PCM_FMT_IMA_ADPCM:
+    case VIRTIO_SND_PCM_FMT_MU_LAW:
+    case VIRTIO_SND_PCM_FMT_A_LAW:
+    case VIRTIO_SND_PCM_FMT_S18_3:
+    case VIRTIO_SND_PCM_FMT_U18_3:
+    case VIRTIO_SND_PCM_FMT_S20_3:
+    case VIRTIO_SND_PCM_FMT_U20_3:
+    case VIRTIO_SND_PCM_FMT_S24_3:
+    case VIRTIO_SND_PCM_FMT_U24_3:
+    case VIRTIO_SND_PCM_FMT_S20:
+    case VIRTIO_SND_PCM_FMT_U20:
+    case VIRTIO_SND_PCM_FMT_S24:
+    case VIRTIO_SND_PCM_FMT_U24:
+    case VIRTIO_SND_PCM_FMT_DSD_U8:
+    case VIRTIO_SND_PCM_FMT_DSD_U16:
+    case VIRTIO_SND_PCM_FMT_DSD_U32:
+    case VIRTIO_SND_PCM_FMT_IEC958_SUBFRAME:
+        return -EUNIMPL;
 
-        default:
-            return -EINVAL;
+    default:
+        return -EINVAL;
     }
 }
 
 /* supported PCM frame rates */
-enum {
+enum
+{
     VIRTIO_SND_PCM_RATE_5512 = 0,
     VIRTIO_SND_PCM_RATE_8000,
     VIRTIO_SND_PCM_RATE_11025,
@@ -220,40 +257,57 @@ enum {
 };
 
 static inline hz_t
-virtio_snd_pcm_rate_to_hz(
-        unsigned int rate)
+virtio_snd_pcm_rate_to_hz(unsigned int rate)
 {
-    switch(rate) {
-        case VIRTIO_SND_PCM_RATE_5512:    return 5512;
-        case VIRTIO_SND_PCM_RATE_8000:    return 8000;
-        case VIRTIO_SND_PCM_RATE_11025:   return 11025;
-        case VIRTIO_SND_PCM_RATE_16000:   return 16000;
-        case VIRTIO_SND_PCM_RATE_22050:   return 22050;
-        case VIRTIO_SND_PCM_RATE_32000:   return 32000;
-        case VIRTIO_SND_PCM_RATE_44100:   return 44100;
-        case VIRTIO_SND_PCM_RATE_48000:   return 48000;
-        case VIRTIO_SND_PCM_RATE_64000:   return 64000;
-        case VIRTIO_SND_PCM_RATE_88200:   return 88200;
-        case VIRTIO_SND_PCM_RATE_96000:   return 96000;
-        case VIRTIO_SND_PCM_RATE_176400:  return 176400;
-        case VIRTIO_SND_PCM_RATE_192000:  return 192000;
-        case VIRTIO_SND_PCM_RATE_384000:  return 384000;
-        default: return 0;
+    switch(rate)
+    {
+    case VIRTIO_SND_PCM_RATE_5512:
+        return 5512;
+    case VIRTIO_SND_PCM_RATE_8000:
+        return 8000;
+    case VIRTIO_SND_PCM_RATE_11025:
+        return 11025;
+    case VIRTIO_SND_PCM_RATE_16000:
+        return 16000;
+    case VIRTIO_SND_PCM_RATE_22050:
+        return 22050;
+    case VIRTIO_SND_PCM_RATE_32000:
+        return 32000;
+    case VIRTIO_SND_PCM_RATE_44100:
+        return 44100;
+    case VIRTIO_SND_PCM_RATE_48000:
+        return 48000;
+    case VIRTIO_SND_PCM_RATE_64000:
+        return 64000;
+    case VIRTIO_SND_PCM_RATE_88200:
+        return 88200;
+    case VIRTIO_SND_PCM_RATE_96000:
+        return 96000;
+    case VIRTIO_SND_PCM_RATE_176400:
+        return 176400;
+    case VIRTIO_SND_PCM_RATE_192000:
+        return 192000;
+    case VIRTIO_SND_PCM_RATE_384000:
+        return 384000;
+    default:
+        return 0;
     }
 }
 
-struct virtio_snd_pcm_info {
+struct virtio_snd_pcm_info
+{
     struct virtio_snd_info hdr;
     le32_t features; /* 1 << VIRTIO_SND_PCM_F_XXX */
-    le64_t formats; /* 1 << VIRTIO_SND_PCM_FMT_XXX */
-    le64_t rates; /* 1 << VIRTIO_SND_PCM_RATE_XXX */
+    le64_t formats;  /* 1 << VIRTIO_SND_PCM_FMT_XXX */
+    le64_t rates;    /* 1 << VIRTIO_SND_PCM_RATE_XXX */
     uint8_t direction;
     uint8_t channels_min;
     uint8_t channels_max;
     uint8_t padding[5];
 } __packed;
 
-struct virtio_snd_pcm_set_params {
+struct virtio_snd_pcm_set_params
+{
     struct virtio_snd_pcm_hdr hdr; /* .code = VIRTIO_SND_R_PCM_SET_PARAMS */
     le32_t buffer_bytes;
     le32_t period_bytes;
@@ -264,11 +318,13 @@ struct virtio_snd_pcm_set_params {
     uint8_t padding;
 } __packed;
 
-struct virtio_snd_pcm_xfer {
+struct virtio_snd_pcm_xfer
+{
     le32_t stream_id;
 } __packed;
 /* an I/O status */
-struct virtio_snd_pcm_status {
+struct virtio_snd_pcm_status
+{
     le32_t status;
     le32_t latency_bytes;
 } __packed;
@@ -293,7 +349,8 @@ struct virtio_snd
     struct ptree stream_tree;
 };
 
-struct virtio_snd_stream {
+struct virtio_snd_stream
+{
     size_t index;
     struct virtio_snd *snd;
     struct ptree_node pnode;
@@ -326,9 +383,7 @@ struct virtio_snd_stream {
 };
 
 static int
-virtio_snd_probe(
-        struct virtio_driver *driver,
-        struct virtio_device *device)
+virtio_snd_probe(struct virtio_driver *driver, struct virtio_device *device)
 {
     int res;
     printk("virtio_snd_probe\n");
@@ -336,9 +391,7 @@ virtio_snd_probe(
 }
 
 static int
-virtio_snd_negotiate(
-        struct virtio_driver *driver,
-        struct virtio_device *device)
+virtio_snd_negotiate(struct virtio_driver *driver, struct virtio_device *device)
 {
     int res;
     printk("virtio_snd_negotiate\n");
@@ -346,32 +399,35 @@ virtio_snd_negotiate(
 }
 
 static int
-virtio_snd_stream_mode_pcm_info(
-        struct virtio_snd_stream *stream,
-        size_t mode,
-        unsigned int *format,
-        unsigned int *rate)
+virtio_snd_stream_mode_pcm_info(struct virtio_snd_stream *stream,
+                                size_t mode,
+                                unsigned int *format,
+                                unsigned int *rate)
 {
     size_t format_index = mode % stream->num_formats;
     size_t rate_index = mode / stream->num_formats;
 
     uint64_t format_bitmap = stream->format_bitmap;
     uint64_t rate_bitmap = stream->rate_bitmap;
-    while(format_index > 0) {
+    while(format_index > 0)
+    {
         DEBUG_ASSERT(format_bitmap != 0);
-        format_bitmap &= ~(1UL<<(63-__builtin_clzl((unsigned long)format_bitmap)));
+        format_bitmap &=
+            ~(1UL << (63 - __builtin_clzl((unsigned long)format_bitmap)));
         format_index--;
     }
     DEBUG_ASSERT(format_bitmap != 0);
-    while(rate_index > 0) {
+    while(rate_index > 0)
+    {
         DEBUG_ASSERT(rate_bitmap != 0);
-        rate_bitmap &= ~(1UL<<(63-__builtin_clzl((unsigned long)rate_bitmap)));
+        rate_bitmap &=
+            ~(1UL << (63 - __builtin_clzl((unsigned long)rate_bitmap)));
         rate_index--;
     }
     DEBUG_ASSERT(rate_bitmap != 0);
 
-    size_t format_bit = 63-__builtin_clzl((unsigned long)format_bitmap);
-    size_t rate_bit = 63-__builtin_clzl((unsigned long)rate_bitmap);
+    size_t format_bit = 63 - __builtin_clzl((unsigned long)format_bitmap);
+    size_t rate_bit = 63 - __builtin_clzl((unsigned long)rate_bitmap);
 
     *format = format_bit;
     *rate = rate_bit;
@@ -380,12 +436,12 @@ virtio_snd_stream_mode_pcm_info(
 }
 
 static int
-virtio_snd_stream_start_lockless(
-        struct virtio_snd_stream *stream)
+virtio_snd_stream_start_lockless(struct virtio_snd_stream *stream)
 {
     int res;
 
-    if(stream->started) {
+    if(stream->started)
+    {
         return 0;
     }
 
@@ -395,18 +451,19 @@ virtio_snd_stream_start_lockless(
     };
     struct virtio_snd_hdr resp;
 
-    res = virtio_transact_1_1(
-            stream->snd->control_queue,
-            &req,
-            sizeof(req),
-            &resp,
-            sizeof(resp));
-    if(res) {
+    res = virtio_transact_1_1(stream->snd->control_queue,
+                              &req,
+                              sizeof(req),
+                              &resp,
+                              sizeof(resp));
+    if(res)
+    {
         wprintk("virtio-snd: Failed to start stream!\n");
         return res;
     }
 
-    if(letoh32(resp.code) != VIRTIO_SND_S_OK) {
+    if(letoh32(resp.code) != VIRTIO_SND_S_OK)
+    {
         wprintk("virtio-snd: Failed to start stream!\n");
         return res;
     }
@@ -414,12 +471,12 @@ virtio_snd_stream_start_lockless(
     return 0;
 }
 static int
-virtio_snd_stream_stop_lockless(
-        struct virtio_snd_stream *stream)
+virtio_snd_stream_stop_lockless(struct virtio_snd_stream *stream)
 {
     int res;
 
-    if(!stream->started) {
+    if(!stream->started)
+    {
         return 0;
     }
 
@@ -429,18 +486,19 @@ virtio_snd_stream_stop_lockless(
     };
     struct virtio_snd_hdr resp;
 
-    res = virtio_transact_1_1(
-            stream->snd->control_queue,
-            &req,
-            sizeof(req),
-            &resp,
-            sizeof(resp));
-    if(res) {
+    res = virtio_transact_1_1(stream->snd->control_queue,
+                              &req,
+                              sizeof(req),
+                              &resp,
+                              sizeof(resp));
+    if(res)
+    {
         wprintk("virtio-snd: Failed to stop stream!\n");
         return res;
     }
 
-    if(letoh32(resp.code) != VIRTIO_SND_S_OK) {
+    if(letoh32(resp.code) != VIRTIO_SND_S_OK)
+    {
         wprintk("virtio-snd: Failed to stop stream!\n");
         return res;
     }
@@ -449,8 +507,7 @@ virtio_snd_stream_stop_lockless(
 }
 
 static int
-virtio_snd_stream_prepare_lockless(
-        struct virtio_snd_stream *stream)
+virtio_snd_stream_prepare_lockless(struct virtio_snd_stream *stream)
 {
     int res;
 
@@ -460,18 +517,19 @@ virtio_snd_stream_prepare_lockless(
     };
     struct virtio_snd_hdr resp;
 
-    res = virtio_transact_1_1(
-            stream->snd->control_queue,
-            &req,
-            sizeof(req),
-            &resp,
-            sizeof(resp));
-    if(res) {
+    res = virtio_transact_1_1(stream->snd->control_queue,
+                              &req,
+                              sizeof(req),
+                              &resp,
+                              sizeof(resp));
+    if(res)
+    {
         wprintk("virtio-snd: Failed to prepare stream!\n");
         return res;
     }
 
-    if(letoh32(resp.code) != VIRTIO_SND_S_OK) {
+    if(letoh32(resp.code) != VIRTIO_SND_S_OK)
+    {
         wprintk("virtio-snd: Failed to prepare stream!\n");
         return res;
     }
@@ -479,10 +537,8 @@ virtio_snd_stream_prepare_lockless(
     return 0;
 }
 
-__maybe_unused
-static int
-virtio_snd_stream_release_lockless(
-        struct virtio_snd_stream *stream)
+__maybe_unused static int
+virtio_snd_stream_release_lockless(struct virtio_snd_stream *stream)
 {
     int res;
 
@@ -492,18 +548,19 @@ virtio_snd_stream_release_lockless(
     };
     struct virtio_snd_hdr resp;
 
-    res = virtio_transact_1_1(
-            stream->snd->control_queue,
-            &req,
-            sizeof(req),
-            &resp,
-            sizeof(resp));
-    if(res) {
+    res = virtio_transact_1_1(stream->snd->control_queue,
+                              &req,
+                              sizeof(req),
+                              &resp,
+                              sizeof(resp));
+    if(res)
+    {
         wprintk("virtio-snd: Failed to release stream!\n");
         return res;
     }
 
-    if(letoh32(resp.code) != VIRTIO_SND_S_OK) {
+    if(letoh32(resp.code) != VIRTIO_SND_S_OK)
+    {
         wprintk("virtio-snd: Failed to release stream!\n");
         return res;
     }
@@ -512,20 +569,20 @@ virtio_snd_stream_release_lockless(
 }
 
 static int
-virtio_snd_stream_set_mode(
-        struct virtio_snd_stream *stream,
-        size_t mode)
+virtio_snd_stream_set_mode(struct virtio_snd_stream *stream, size_t mode)
 {
     int res;
 
-    if(mode >= stream->num_modes) {
+    if(mode >= stream->num_modes)
+    {
         return -EINVAL;
     }
 
     irq_lock_acquire(&stream->mode_lock);
 
     res = virtio_snd_stream_stop_lockless(stream);
-    if(res) {
+    if(res)
+    {
         irq_lock_release(&stream->mode_lock);
         return res;
     }
@@ -533,12 +590,14 @@ virtio_snd_stream_set_mode(
     unsigned int pcm_format, pcm_rate;
     virtio_snd_stream_mode_pcm_info(stream, mode, &pcm_format, &pcm_rate);
 
-    printk("virtio-snd: Stream(%d) setting mode(%lu) with format=\"%s\", rate=%lu (f=%ld,r=%ld)\n",
-            (int)stream->index,
-            (ul_t)mode,
-            virtio_snd_pcm_format_to_string(pcm_format),
-            (ul_t)virtio_snd_pcm_rate_to_hz(pcm_rate),
-            (sl_t)pcm_format, (sl_t)pcm_rate);
+    printk("virtio-snd: Stream(%d) setting mode(%lu) with format=\"%s\", "
+           "rate=%lu (f=%ld,r=%ld)\n",
+           (int)stream->index,
+           (ul_t)mode,
+           virtio_snd_pcm_format_to_string(pcm_format),
+           (ul_t)virtio_snd_pcm_rate_to_hz(pcm_rate),
+           (sl_t)pcm_format,
+           (sl_t)pcm_rate);
 
     struct virtio_snd_pcm_set_params req = {
         .hdr.hdr.code = VIRTIO_SND_R_PCM_SET_PARAMS,
@@ -552,20 +611,23 @@ virtio_snd_stream_set_mode(
     };
     struct virtio_snd_hdr resp;
 
-    res = virtio_transact_1_1(
-            stream->snd->control_queue,
-            &req,
-            sizeof(req),
-            &resp,
-            sizeof(resp));
-    if(res) {
+    res = virtio_transact_1_1(stream->snd->control_queue,
+                              &req,
+                              sizeof(req),
+                              &resp,
+                              sizeof(resp));
+    if(res)
+    {
         irq_lock_release(&stream->mode_lock);
-        wprintk("virtio-snd: failed to run virtio transaction to set up stream parameters! (err=%s)\n",
+        wprintk("virtio-snd: failed to run virtio transaction to set up "
+                "stream "
+                "parameters! (err=%s)\n",
                 errnostr(res));
         return res;
     }
 
-    if(letoh32(resp.code) != VIRTIO_SND_S_OK) {
+    if(letoh32(resp.code) != VIRTIO_SND_S_OK)
+    {
         wprintk("virtio-snd: Request to set stream parameters failed!\n");
         irq_lock_release(&stream->mode_lock);
         return -EFAULT;
@@ -575,7 +637,8 @@ virtio_snd_stream_set_mode(
     stream->sample_size = virtio_snd_pcm_format_sample_size(pcm_format);
 
     res = virtio_snd_stream_start_lockless(stream);
-    if(res) {
+    if(res)
+    {
         irq_lock_release(&stream->mode_lock);
         return res;
     }
@@ -586,8 +649,7 @@ virtio_snd_stream_set_mode(
 }
 
 static ssize_t
-virtio_snd_dev_get_mode(
-        struct snd_dev *snd)
+virtio_snd_dev_get_mode(struct snd_dev *snd)
 {
     struct virtio_snd_stream *stream =
         container_of(snd, struct virtio_snd_stream, snd_dev);
@@ -598,9 +660,7 @@ virtio_snd_dev_get_mode(
 }
 
 static int
-virtio_snd_dev_set_mode(
-        struct snd_dev *snd,
-        size_t mode)
+virtio_snd_dev_set_mode(struct snd_dev *snd, size_t mode)
 {
     struct virtio_snd_stream *stream =
         container_of(snd, struct virtio_snd_stream, snd_dev);
@@ -611,86 +671,83 @@ virtio_snd_dev_set_mode(
 }
 
 static struct snd_mode_info *
-virtio_snd_dev_get_mode_info(
-        struct snd_dev *snd,
-        size_t mode)
+virtio_snd_dev_get_mode_info(struct snd_dev *snd, size_t mode)
 {
     struct virtio_snd_stream *stream =
         container_of(snd, struct virtio_snd_stream, snd_dev);
 
     dprintk("virtio_snd_dev_get_mode_info\n");
 
-    if(mode >= stream->num_modes) {
+    if(mode >= stream->num_modes)
+    {
         return NULL;
     }
 
     struct snd_mode_info *info = kzmalloc(sizeof(*info), KM_KERNEL);
-    if(info == NULL) {
+    if(info == NULL)
+    {
         return NULL;
     }
 
     unsigned int pcm_format;
     unsigned int pcm_rate;
 
-    virtio_snd_stream_mode_pcm_info(
-            stream,
-            mode,
-            &pcm_format,
-            &pcm_rate);
+    virtio_snd_stream_mode_pcm_info(stream, mode, &pcm_format, &pcm_rate);
 
     unsigned long hz = (unsigned long)virtio_snd_pcm_rate_to_hz(pcm_rate);
 
     info->sampling_hz = pcm_rate;
     switch(pcm_format)
     {
-        case VIRTIO_SND_PCM_FMT_S8:
-            info->format = SND_FORMAT_PCM_S8;
-            break;
-        case VIRTIO_SND_PCM_FMT_S16:
-            info->format = SND_FORMAT_PCM_S16;
-            break;
-        case VIRTIO_SND_PCM_FMT_S32:
-            info->format = SND_FORMAT_PCM_S32;
-            break;
-        case VIRTIO_SND_PCM_FMT_U8:
-            info->format = SND_FORMAT_PCM_U8;
-            break;
-        case VIRTIO_SND_PCM_FMT_U16:
-            info->format = SND_FORMAT_PCM_U16;
-            break;
-        case VIRTIO_SND_PCM_FMT_U32:
-            info->format = SND_FORMAT_PCM_U32;
-            break;
+    case VIRTIO_SND_PCM_FMT_S8:
+        info->format = SND_FORMAT_PCM_S8;
+        break;
+    case VIRTIO_SND_PCM_FMT_S16:
+        info->format = SND_FORMAT_PCM_S16;
+        break;
+    case VIRTIO_SND_PCM_FMT_S32:
+        info->format = SND_FORMAT_PCM_S32;
+        break;
+    case VIRTIO_SND_PCM_FMT_U8:
+        info->format = SND_FORMAT_PCM_U8;
+        break;
+    case VIRTIO_SND_PCM_FMT_U16:
+        info->format = SND_FORMAT_PCM_U16;
+        break;
+    case VIRTIO_SND_PCM_FMT_U32:
+        info->format = SND_FORMAT_PCM_U32;
+        break;
 
-        case VIRTIO_SND_PCM_FMT_FLOAT:
-            info->format = SND_FORMAT_PCM_FLOAT32;
-            break;
-        case VIRTIO_SND_PCM_FMT_FLOAT64:
-            info->format = SND_FORMAT_PCM_FLOAT64;
-            break;
+    case VIRTIO_SND_PCM_FMT_FLOAT:
+        info->format = SND_FORMAT_PCM_FLOAT32;
+        break;
+    case VIRTIO_SND_PCM_FMT_FLOAT64:
+        info->format = SND_FORMAT_PCM_FLOAT64;
+        break;
 
-        // Unimplemented
-        case VIRTIO_SND_PCM_FMT_IMA_ADPCM:
-        case VIRTIO_SND_PCM_FMT_MU_LAW:
-        case VIRTIO_SND_PCM_FMT_A_LAW:
-        case VIRTIO_SND_PCM_FMT_S18_3:
-        case VIRTIO_SND_PCM_FMT_U18_3:
-        case VIRTIO_SND_PCM_FMT_S20_3:
-        case VIRTIO_SND_PCM_FMT_U20_3:
-        case VIRTIO_SND_PCM_FMT_S24_3:
-        case VIRTIO_SND_PCM_FMT_U24_3:
-        case VIRTIO_SND_PCM_FMT_S20:
-        case VIRTIO_SND_PCM_FMT_U20:
-        case VIRTIO_SND_PCM_FMT_S24:
-        case VIRTIO_SND_PCM_FMT_U24:
-        case VIRTIO_SND_PCM_FMT_DSD_U8:
-        case VIRTIO_SND_PCM_FMT_DSD_U16:
-        case VIRTIO_SND_PCM_FMT_DSD_U32:
-        case VIRTIO_SND_PCM_FMT_IEC958_SUBFRAME:
-        default: {
-            kfree(info);
-            return NULL;
-        }
+    // Unimplemented
+    case VIRTIO_SND_PCM_FMT_IMA_ADPCM:
+    case VIRTIO_SND_PCM_FMT_MU_LAW:
+    case VIRTIO_SND_PCM_FMT_A_LAW:
+    case VIRTIO_SND_PCM_FMT_S18_3:
+    case VIRTIO_SND_PCM_FMT_U18_3:
+    case VIRTIO_SND_PCM_FMT_S20_3:
+    case VIRTIO_SND_PCM_FMT_U20_3:
+    case VIRTIO_SND_PCM_FMT_S24_3:
+    case VIRTIO_SND_PCM_FMT_U24_3:
+    case VIRTIO_SND_PCM_FMT_S20:
+    case VIRTIO_SND_PCM_FMT_U20:
+    case VIRTIO_SND_PCM_FMT_S24:
+    case VIRTIO_SND_PCM_FMT_U24:
+    case VIRTIO_SND_PCM_FMT_DSD_U8:
+    case VIRTIO_SND_PCM_FMT_DSD_U16:
+    case VIRTIO_SND_PCM_FMT_DSD_U32:
+    case VIRTIO_SND_PCM_FMT_IEC958_SUBFRAME:
+    default:
+    {
+        kfree(info);
+        return NULL;
+    }
     }
 
     info->volume_format = SND_VOLUME_FORMAT_BINARY;
@@ -701,10 +758,9 @@ virtio_snd_dev_get_mode_info(
 }
 
 static int
-virtio_snd_dev_put_mode_info(
-        struct snd_dev *snd,
-        size_t mode,
-        struct snd_mode_info *info)
+virtio_snd_dev_put_mode_info(struct snd_dev *snd,
+                             size_t mode,
+                             struct snd_mode_info *info)
 {
     struct virtio_snd_stream *stream =
         container_of(snd, struct virtio_snd_stream, snd_dev);
@@ -719,8 +775,7 @@ virtio_snd_dev_put_mode_info(
 }
 
 static int
-virtio_snd_stream_flush_full_buffer_lockless(
-        struct virtio_snd_stream *stream)
+virtio_snd_stream_flush_full_buffer_lockless(struct virtio_snd_stream *stream)
 {
     int res;
 
@@ -746,20 +801,21 @@ virtio_snd_stream_flush_full_buffer_lockless(
         sizeof(resp),
     };
 
-    res = virtio_transact(
-            stream->snd->xmit_queue,
-            2,
-            input_datas,
-            input_sizes,
-            1,
-            output_datas,
-            output_sizes);
-    if(res) {
+    res = virtio_transact(stream->snd->xmit_queue,
+                          2,
+                          input_datas,
+                          input_sizes,
+                          1,
+                          output_datas,
+                          output_sizes);
+    if(res)
+    {
         DEBUG_ASSERT(res < 0);
         return res;
     }
 
-    if(letoh32(resp.status) != VIRTIO_SND_S_OK) {
+    if(letoh32(resp.status) != VIRTIO_SND_S_OK)
+    {
         return -EFAULT;
     }
 
@@ -769,11 +825,10 @@ virtio_snd_stream_flush_full_buffer_lockless(
 }
 
 static ssize_t
-virtio_snd_dev_write_samples(
-        struct snd_dev *snd,
-        void *buffer,
-        size_t buflen,
-        unsigned long flags)
+virtio_snd_dev_write_samples(struct snd_dev *snd,
+                             void *buffer,
+                             size_t buflen,
+                             unsigned long flags)
 {
     int res;
 
@@ -782,7 +837,8 @@ virtio_snd_dev_write_samples(
 
     dprintk("virtio_snd_dev_write_samples (buflen=0x%lx)\n", buflen);
 
-    if(stream->sample_size <= 0 || buflen < stream->sample_size) {
+    if(stream->sample_size <= 0 || buflen < stream->sample_size)
+    {
         return -EINVAL;
     }
     // Round down to a multiple of the sample size
@@ -791,33 +847,38 @@ virtio_snd_dev_write_samples(
     irq_lock_acquire(&stream->buffer_lock);
 
     size_t room_left = stream->buffer_bytes - stream->content_bytes;
-    if(room_left == 0) {
+    if(room_left == 0)
+    {
         // The buffer needs to be written
-        if(flags & SND_DEV_WRITE_SAMPLES_NON_BLOCKING) {
+        if(flags & SND_DEV_WRITE_SAMPLES_NON_BLOCKING)
+        {
             return -EWOULDBLOCK;
         }
         res = virtio_snd_stream_flush_full_buffer_lockless(stream);
-        if(res) {
+        if(res)
+        {
             irq_lock_release(&stream->buffer_lock);
         }
         room_left = stream->buffer_bytes - stream->content_bytes;
     }
 
     size_t to_write = room_left < buflen ? room_left : buflen;
-    memcpy(stream->buffer + stream->content_bytes,
-           buffer,
-           to_write);
+    memcpy(stream->buffer + stream->content_bytes, buffer, to_write);
     stream->content_bytes += to_write;
 
-    if(stream->content_bytes == stream->buffer_bytes) {
-        if(!(flags & SND_DEV_WRITE_SAMPLES_NON_BLOCKING)) {
+    if(stream->content_bytes == stream->buffer_bytes)
+    {
+        if(!(flags & SND_DEV_WRITE_SAMPLES_NON_BLOCKING))
+        {
             virtio_snd_stream_flush_full_buffer_lockless(stream);
-        } else {
+        }
+        else
+        {
             // TODO: The might just leave bytes buffered here forever
             // towards the end of a stream,
-            // the buffer is only about a page (a couple of microseconds of
-            // sound data at the most) so that's not a huge deal,
-            // but it is worth looking into.
+            // the buffer is only about a page (a couple of
+            // microseconds of sound data at the most) so that's not a
+            // huge deal, but it is worth looking into.
         }
     }
 
@@ -826,8 +887,7 @@ virtio_snd_dev_write_samples(
     return to_write;
 }
 
-static struct snd_driver
-virtio_snd_stream_snd_driver = {
+static struct snd_driver virtio_snd_stream_snd_driver = {
     .get_mode = virtio_snd_dev_get_mode,
     .set_mode = virtio_snd_dev_set_mode,
     .get_mode_info = virtio_snd_dev_get_mode_info,
@@ -836,15 +896,14 @@ virtio_snd_stream_snd_driver = {
 };
 
 static int
-virtio_snd_init_stream(
-        struct virtio_snd *snd,
-        size_t stream_id)
+virtio_snd_init_stream(struct virtio_snd *snd, size_t stream_id)
 {
     int res;
 
     struct virtio_snd_stream *stream;
     stream = kzmalloc(sizeof(*stream), KM_KERNEL);
-    if(stream == NULL) {
+    if(stream == NULL)
+    {
         return -ENOMEM;
     }
     stream->index = stream_id;
@@ -853,7 +912,8 @@ virtio_snd_init_stream(
     irq_lock_init(&stream->buffer_lock);
     stream->buffer_bytes = VIRTIO_SND_STREAM_BUFLEN;
     stream->buffer = kzmalloc(stream->buffer_bytes, KM_KERNEL);
-    if(stream->buffer == NULL) {
+    if(stream->buffer == NULL)
+    {
         kfree(stream);
         return -ENOMEM;
     }
@@ -862,10 +922,11 @@ virtio_snd_init_stream(
     stream->cur_mode = -1;
     stream->started = 0;
 
-    snprintk(stream->namebuf, VIRTIO_SND_STREAM_NAME_BUFLEN,
-            "virtio-snd-%lu-%lu",
-            (ul_t)snd->pnode.key,
-            (ul_t)stream->index);
+    snprintk(stream->namebuf,
+             VIRTIO_SND_STREAM_NAME_BUFLEN,
+             "virtio-snd-%lu-%lu",
+             (ul_t)snd->pnode.key,
+             (ul_t)stream->index);
 
     { // Query the stream info
         struct virtio_snd_query_info query_info;
@@ -891,22 +952,23 @@ virtio_snd_init_stream(
         query_info.count = htole32(1);
         query_info.size = htole32(sizeof(pcm_info));
 
-        res = virtio_transact(
-                snd->control_queue,
-                sizeof(input_datas)/sizeof(input_datas[0]),
-                input_datas,
-                input_sizes,
-                sizeof(output_datas)/sizeof(output_datas[0]),
-                output_datas,
-                output_sizes);
-        if(res) {
+        res = virtio_transact(snd->control_queue,
+                              sizeof(input_datas) / sizeof(input_datas[0]),
+                              input_datas,
+                              input_sizes,
+                              sizeof(output_datas) / sizeof(output_datas[0]),
+                              output_datas,
+                              output_sizes);
+        if(res)
+        {
             kfree(stream->buffer);
             kfree(stream);
             wprintk("virtio-snd: Failed to query stream %d's information!\n",
                     (int)stream_id);
             return res;
         }
-        if(letoh32(hdr.code) != VIRTIO_SND_S_OK) {
+        if(letoh32(hdr.code) != VIRTIO_SND_S_OK)
+        {
             kfree(stream->buffer);
             kfree(stream);
             wprintk("virtio-snd: Failed to query stream %d's information!\n",
@@ -931,43 +993,46 @@ virtio_snd_init_stream(
                (ul_t)stream->features_bitmap,
                (ul_t)stream->format_bitmap,
                (ul_t)stream->rate_bitmap,
-                 stream->direction == VIRTIO_SND_D_INPUT ?  "INPUT"
+               stream->direction == VIRTIO_SND_D_INPUT    ? "INPUT"
                : stream->direction == VIRTIO_SND_D_OUTPUT ? "OUTPUT"
-               : "INVALID",
+                                                          : "INVALID",
                (int)stream->channels_min,
-               (int)stream->channels_max
-              );
+               (int)stream->channels_max);
 
         stream->num_formats = __builtin_popcountl(stream->format_bitmap);
-        stream->num_rates = __builtin_popcountl(stream->rate_bitmap); 
+        stream->num_rates = __builtin_popcountl(stream->rate_bitmap);
         stream->num_modes = stream->num_formats * stream->num_rates;
 
-//        for(size_t i = 0; i < stream->num_modes; i++) {
-//            unsigned int pcm_format, pcm_rate;
-//            virtio_snd_stream_mode_pcm_info(stream, i, &pcm_format, &pcm_rate);
-//            printk("virtio-snd: Stream(%d) mode(%lu) has format=\"%s\", rate=%lu\n",
-//                (int)stream->index,
-//                (ul_t)i,
-//                virtio_snd_pcm_format_to_string(pcm_format),
-//                (ul_t)virtio_snd_pcm_rate_to_hz(pcm_rate),
-//                (sl_t)pcm_format, (sl_t)pcm_rate);
-//        }
+        //        for(size_t i = 0; i < stream->num_modes; i++) {
+        //            unsigned int pcm_format, pcm_rate;
+        //            virtio_snd_stream_mode_pcm_info(stream, i, &pcm_format,
+        //            &pcm_rate); printk("virtio-snd: Stream(%d) mode(%lu) has
+        //            format=\"%s\", rate=%lu\n",
+        //                (int)stream->index,
+        //                (ul_t)i,
+        //                virtio_snd_pcm_format_to_string(pcm_format),
+        //                (ul_t)virtio_snd_pcm_rate_to_hz(pcm_rate),
+        //                (sl_t)pcm_format, (sl_t)pcm_rate);
+        //        }
     }
 
     {
         res = virtio_snd_stream_prepare_lockless(stream);
-        if(res) {
+        if(res)
+        {
             kfree(stream->buffer);
             kfree(stream);
             return res;
         }
 
         size_t starting_mode = 25;
-        if(starting_mode >= stream->num_modes) {
+        if(starting_mode >= stream->num_modes)
+        {
             starting_mode = 0;
         }
         res = virtio_snd_stream_set_mode(stream, starting_mode);
-        if(res) {
+        if(res)
+        {
             kfree(stream->buffer);
             kfree(stream);
             return res;
@@ -981,8 +1046,10 @@ virtio_snd_init_stream(
     {
         stream->snd_dev.driver = &virtio_snd_stream_snd_driver;
         res = register_snd_dev(&stream->snd_dev, stream->namebuf);
-        if(res) {
-            wprintk("Failed to register virtio stream as a snd_dev! (err=%s)\n",
+        if(res)
+        {
+            wprintk("Failed to register virtio stream as a snd_dev! "
+                    "(err=%s)\n",
                     errnostr(res));
         }
     }
@@ -990,16 +1057,14 @@ virtio_snd_init_stream(
     return 0;
 }
 
-__maybe_unused
-static int
-virtio_snd_deinit_stream(
-        struct virtio_snd *snd,
-        size_t stream_id)
+__maybe_unused static int
+virtio_snd_deinit_stream(struct virtio_snd *snd, size_t stream_id)
 {
     thread_lock_acquire(&snd->stream_tree_lock);
     struct ptree_node *pnode = ptree_remove(&snd->stream_tree, stream_id);
     thread_lock_release(&snd->stream_tree_lock);
-    if(pnode == NULL) {
+    if(pnode == NULL)
+    {
         return -EINVAL;
     }
     struct virtio_snd_stream *stream;
@@ -1014,21 +1079,23 @@ virtio_snd_deinit_stream(
 }
 
 static int
-virtio_snd_init_device(
-        struct virtio_driver *driver,
-        struct virtio_device *device)
+virtio_snd_init_device(struct virtio_driver *driver,
+                       struct virtio_device *device)
 {
     int res;
     printk("virtio_snd_init_device\n");
 
-    if(device->num_queues < 4) {
-        wprintk("virtio-snd: Found virtio-snd device with an incorrect number of queues! (found=%d, required=4)\n",
+    if(device->num_queues < 4)
+    {
+        wprintk("virtio-snd: Found virtio-snd device with an incorrect number "
+                "of queues! (found=%d, required=4)\n",
                 (int)device->num_queues);
         return -EINVAL;
     }
 
     struct virtio_snd *snd = kzmalloc(sizeof(*snd), KM_KERNEL);
-    if(snd == NULL) {
+    if(snd == NULL)
+    {
         return -ENOMEM;
     }
     snd->virtio_dev = device;
@@ -1057,17 +1124,19 @@ virtio_snd_init_device(
     virtio_device_cfg_readl(device, 8, &snd->num_chmaps);
     snd->num_chmaps = letoh32(snd->num_chmaps);
 
-    printk("virtio-snd: (num-jacks=0x%lx) (num-streams=0x%lx) (num-chmaps=0x%lx)\n",
-            (ul_t)snd->num_jacks,
-            (ul_t)snd->num_streams,
-            (ul_t)snd->num_chmaps);
+    printk("virtio-snd: (num-jacks=0x%lx) (num-streams=0x%lx) "
+           "(num-chmaps=0x%lx)\n",
+           (ul_t)snd->num_jacks,
+           (ul_t)snd->num_streams,
+           (ul_t)snd->num_chmaps);
 
-    for(size_t stream_id = 0; stream_id < snd->num_streams; stream_id++) {
-        res = virtio_snd_init_stream(
-                snd,
-                stream_id);
-        if(res) {
-            wprintk("virtio-snd: Failed to initialize stream: %d\n", (int)stream_id);
+    for(size_t stream_id = 0; stream_id < snd->num_streams; stream_id++)
+    {
+        res = virtio_snd_init_stream(snd, stream_id);
+        if(res)
+        {
+            wprintk("virtio-snd: Failed to initialize stream: %d\n",
+                    (int)stream_id);
         }
     }
 
@@ -1075,28 +1144,24 @@ virtio_snd_init_device(
 }
 
 static int
-virtio_snd_deinit_device(
-        struct virtio_driver *driver,
-        struct virtio_device *device)
+virtio_snd_deinit_device(struct virtio_driver *driver,
+                         struct virtio_device *device)
 {
     return -EUNIMPL;
 }
 
-static struct virtio_driver_ops
-virtio_snd_virtio_driver_ops = {
+static struct virtio_driver_ops virtio_snd_virtio_driver_ops = {
     .probe = virtio_snd_probe,
     .negotiate = virtio_snd_negotiate,
     .init_device = virtio_snd_init_device,
     .deinit_device = virtio_snd_deinit_device,
 };
 
-static uint16_t
-virtio_snd_virtio_ids[] = {
+static uint16_t virtio_snd_virtio_ids[] = {
     25,
 };
 
-static struct virtio_driver
-virtio_snd_virtio_driver = {
+static struct virtio_driver virtio_snd_virtio_driver = {
     .ops = &virtio_snd_virtio_driver_ops,
     .num_ids = sizeof(virtio_snd_virtio_ids) / sizeof(uint16_t),
     .ids = virtio_snd_virtio_ids,
@@ -1107,4 +1172,6 @@ register_virtio_snd_driver(void)
 {
     return register_virtio_driver(&virtio_snd_virtio_driver);
 }
-declare_init_desc(device, register_virtio_snd_driver, "Registered Virtio Sound Driver");
+declare_init_desc(device,
+                  register_virtio_snd_driver,
+                  "Registered Virtio Sound Driver");

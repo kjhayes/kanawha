@@ -4,8 +4,6 @@
 #include <kanawha/time.h>
 
 int
-thread_sleep(
-        duration_t duration,
-        unsigned long flags);
+thread_sleep(duration_t duration, unsigned long flags);
 
 #endif

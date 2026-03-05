@@ -6,7 +6,8 @@
 
 struct usb_transfer;
 
-typedef enum {
+typedef enum
+{
     USB_TRANSFER_NORMAL,
     USB_TRANSFER_SETUP_STAGE,
     USB_TRANSFER_DATA_STAGE,
@@ -14,17 +15,17 @@ typedef enum {
     USB_TRANSFER_ISOCH,
 } usb_transfer_t;
 
-#define USB_TRANSFER_LAUNCH_SIG(RET,ARG,...)\
-RET(int)
+#define USB_TRANSFER_LAUNCH_SIG(RET, ARG, ...) RET(int)
 
-#define USB_TRANSFER_OP_LIST(OP, ...)\
-OP(launch, USB_TRANSFER_LAUNCH_SIG, ##__VA_ARGS__)\
+#define USB_TRANSFER_OP_LIST(OP, ...)                                          \
+    OP(launch, USB_TRANSFER_LAUNCH_SIG, ##__VA_ARGS__)
 
-struct usb_transfer_ops {
-DECLARE_OP_LIST_PTRS(USB_TRANSFER_OP_LIST, struct usb_transfer *);
+struct usb_transfer_ops
+{
+    DECLARE_OP_LIST_PTRS(USB_TRANSFER_OP_LIST, struct usb_transfer *);
 };
 
-#define USB_TRANSFER_STATUS_IDLE     (0)
+#define USB_TRANSFER_STATUS_IDLE (0)
 #define USB_TRANSFER_STATUS_LAUNCHED (1)
 #define USB_TRANSFER_STATUS_COMPLETE (2)
 
@@ -36,38 +37,31 @@ struct usb_transfer
     int status;
     struct waitqueue status_waitqueue;
 
-    void(*callback)(struct usb_transfer *);
-
+    void (*callback)(struct usb_transfer *);
 
     struct usb_transfer_ops *ops;
 };
 
 int
-usb_transfer_init_struct(
-        struct usb_transfer *xfer,
-        struct usb_device *device,
-        struct usb_transfer_ops *ops,
-        usb_transfer_t type);
+usb_transfer_init_struct(struct usb_transfer *xfer,
+                         struct usb_device *device,
+                         struct usb_transfer_ops *ops,
+                         usb_transfer_t type);
 
 int
-usb_transfer_deinit_struct(
-        struct usb_transfer *xfer);
+usb_transfer_deinit_struct(struct usb_transfer *xfer);
 
-DEFINE_OP_LIST_WRAPPERS(
-        USB_TRANSFER_OP_LIST,
-        static inline,
-        /* No Prefix */, 
-        usb_transfer,
-        OPS_STRUCT_PTR_ACCESSOR,
-        SELF_ACCESSOR)
+DEFINE_OP_LIST_WRAPPERS(USB_TRANSFER_OP_LIST,
+                        static inline,
+                        /* No Prefix */,
+                        usb_transfer,
+                        OPS_STRUCT_PTR_ACCESSOR,
+                        SELF_ACCESSOR)
 
 int
-usb_transfer_await(
-        struct usb_transfer *xfer);
+usb_transfer_await(struct usb_transfer *xfer);
 
 int
-usb_transfer_set_status(
-        struct usb_transfer *xfer,
-        int status);
+usb_transfer_set_status(struct usb_transfer *xfer, int status);
 
 #endif

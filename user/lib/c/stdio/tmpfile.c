@@ -1,11 +1,11 @@
 
-#include <stdio.h>
 #include <errno.h>
+#include <stdio.h>
 
-FILE *tmpfile(void)
+FILE *
+tmpfile(void)
 {
     // TODO
     errno = -ENOMEM;
     return NULL;
 }
-

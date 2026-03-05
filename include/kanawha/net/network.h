@@ -3,7 +3,8 @@
 
 #include <kanawha/registry.h>
 
-struct network {
+struct network
+{
     struct registry_node registry_node;
 };
 

@@ -1,13 +1,12 @@
 
 #include <drivers/fb/virtio_gpu.h>
 #include <drivers/virtio/request.h>
+#include <kanawha/dma.h>
 #include <kanawha/kmalloc.h>
 #include <kanawha/string.h>
-#include <kanawha/dma.h>
 
 int
-virtio_gpu_update_scanout_info(
-        struct virtio_gpu *gpu)
+virtio_gpu_update_scanout_info(struct virtio_gpu *gpu)
 {
     int res;
 
@@ -17,13 +16,13 @@ virtio_gpu_update_scanout_info(
 
     struct virtio_gpu_resp_display_info resp_data;
 
-    res = virtio_transact_1_1(
-            gpu->control_queue,
-            &req_data,
-            sizeof(req_data),
-            &resp_data,
-            sizeof(resp_data));
-    if(res) {
+    res = virtio_transact_1_1(gpu->control_queue,
+                              &req_data,
+                              sizeof(req_data),
+                              &resp_data,
+                              sizeof(resp_data));
+    if(res)
+    {
         return res;
     }
 
@@ -31,22 +30,28 @@ virtio_gpu_update_scanout_info(
     gpu->num_scanouts = VIRTIO_GPU_MAX_SCANOUTS;
     gpu->num_enabled_scanouts = 0;
 
-    if(gpu->scanouts != NULL) {
+    if(gpu->scanouts != NULL)
+    {
         kfree(gpu->scanouts);
     }
 
-    gpu->scanouts = kzmalloc(sizeof(struct virtio_gpu_scanout) * gpu->num_scanouts, KM_KERNEL);
-    if(gpu->scanouts == NULL) {
+    gpu->scanouts =
+        kzmalloc(sizeof(struct virtio_gpu_scanout) * gpu->num_scanouts,
+                 KM_KERNEL);
+    if(gpu->scanouts == NULL)
+    {
         return -ENOMEM;
     }
 
-    for(size_t i = 0; i < gpu->num_scanouts; i++) {
+    for(size_t i = 0; i < gpu->num_scanouts; i++)
+    {
         struct virtio_gpu_scanout *scanout = &gpu->scanouts[i];
         struct virtio_gpu_resp_display_info *resp = &resp_data;
         struct virtio_gpu_display_one *pmode = &resp->pmodes[i];
 
         scanout->enabled = pmode->enabled;
-        if(scanout->enabled) {
+        if(scanout->enabled)
+        {
             gpu->num_enabled_scanouts++;
         }
         scanout->pref_width = pmode->r.width;
@@ -59,12 +64,11 @@ virtio_gpu_update_scanout_info(
 }
 
 int
-virtio_gpu_set_scanout(
-        struct virtio_gpu *gpu,
-        int scanout_index,
-        size_t width,
-        size_t height,
-        struct virtio_gpu_resource *resource)
+virtio_gpu_set_scanout(struct virtio_gpu *gpu,
+                       int scanout_index,
+                       size_t width,
+                       size_t height,
+                       struct virtio_gpu_resource *resource)
 {
     int res;
 
@@ -81,21 +85,21 @@ virtio_gpu_set_scanout(
 
     struct virtio_gpu_ctrl_hdr resp_data;
 
-    res = virtio_transact_1_1(
-            gpu->control_queue,
-            &req_data,
-            sizeof(req_data),
-            &resp_data,
-            sizeof(resp_data));
+    res = virtio_transact_1_1(gpu->control_queue,
+                              &req_data,
+                              sizeof(req_data),
+                              &resp_data,
+                              sizeof(resp_data));
     dprintk("virtio_gpu_set_scanout after transact\n");
-    if(res) {
+    if(res)
+    {
         return res;
     }
 
-    if(letoh32(resp_data.type) != VIRTIO_GPU_RESP_OK_NODATA) {
+    if(letoh32(resp_data.type) != VIRTIO_GPU_RESP_OK_NODATA)
+    {
         return -EINVAL;
     }
 
     return 0;
 }
-

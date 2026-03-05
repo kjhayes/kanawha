@@ -8,27 +8,27 @@
 
 #undef fwrite_unlocked
 size_t
-fwrite_unlocked(
-        const void * restrict ptr,
-        size_t size,
-        size_t nmemb,
-        FILE * restrict stream)
+fwrite_unlocked(const void *restrict ptr,
+                size_t size,
+                size_t nmemb,
+                FILE *restrict stream)
 {
-    struct __sFILE *file = (struct __sFILE*)stream;
+    struct __sFILE *file = (struct __sFILE *)stream;
 
     size_t total_size = size * nmemb;
     ssize_t total_written = 0;
 
-    while(total_size > 0) {
-        ssize_t written = kanawha_sys_write(
-                stream->__fd,
-                ptr + total_written,
-                total_size);
-        if(written < 0) {
+    while(total_size > 0)
+    {
+        ssize_t written =
+            kanawha_sys_write(stream->__fd, ptr + total_written, total_size);
+        if(written < 0)
+        {
             stream->error = (int)written;
             break;
         }
-        if(written == 0) {
+        if(written == 0)
+        {
             stream->eof = 1;
             break;
         }
@@ -43,11 +43,10 @@ fwrite_unlocked(
 
 #undef fwrite
 size_t
-fwrite(
-        const void * restrict ptr,
-        size_t size,
-        size_t nmemb,
-        FILE * restrict stream)
+fwrite(const void *restrict ptr,
+       size_t size,
+       size_t nmemb,
+       FILE *restrict stream)
 {
     size_t ret;
     flockfile(stream);
@@ -55,4 +54,3 @@ fwrite(
     funlockfile(stream);
     return ret;
 }
-

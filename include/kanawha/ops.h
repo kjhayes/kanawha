@@ -1,10 +1,10 @@
 #ifndef __KERNEL__OPS_H__
 #define __KERNEL__OPS_H__
 
-#include <kanawha/printk.h>
 #include <kanawha/assert.h>
-#include <kanawha/vmem.h>
+#include <kanawha/printk.h>
 #include <kanawha/signature.h>
+#include <kanawha/vmem.h>
 
 /*
  * API Overview
@@ -91,12 +91,13 @@
 // static int my_file_write(struct file *, size_t, void *, size_t);
 
 /*
- * DEFINE_OP_LIST_WRAPPERS(OP_LIST, QUALIFIERS, NAMESPACE, STRUCT_NAME, OP_FIELD_ACCESSOR, THIS_FIELD_ACCESSOR)
+ * DEFINE_OP_LIST_WRAPPERS(OP_LIST, QUALIFIERS, NAMESPACE, STRUCT_NAME,
+ * OP_FIELD_ACCESSOR, THIS_FIELD_ACCESSOR)
  */
 // Defines the functions declared by DECLARE_OP_LIST_WRAPPERS
 //
-// The two new fields are OP_FIELD_ACCESSOR, which is the accessor used to go from a struct STRUCT_NAME pointer to
-// a specific OP_LIST function pointer.
+// The two new fields are OP_FIELD_ACCESSOR, which is the accessor used to go
+// from a struct STRUCT_NAME pointer to a specific OP_LIST function pointer.
 //
 // For some common patterns the following ACCESSOR(s) are defined
 #define INLINE_OPS_ACCESSOR(__self, __field) __self->__field
@@ -107,47 +108,82 @@
 #define STATE_ACCESSOR ->state
 
 // Single Function Pointer Declaration
-#define DECLARE_OP_PTR(FUNC, SIG, THIS_TYPE, ...)\
-    SIG_RETURN_TYPE(SIG) (*FUNC) (THIS_TYPE SIG_ARG_DECLS_LEADING_COMMA(SIG));
+#define DECLARE_OP_PTR(FUNC, SIG, THIS_TYPE, ...)                              \
+    SIG_RETURN_TYPE(SIG) (*FUNC)(THIS_TYPE SIG_ARG_DECLS_LEADING_COMMA(SIG));
 
 // Declare Function Pointers from an OP_LIST
-#define DECLARE_OP_LIST_PTRS(OP_LIST, THIS_TYPE)\
+#define DECLARE_OP_LIST_PTRS(OP_LIST, THIS_TYPE)                               \
     OP_LIST(DECLARE_OP_PTR, THIS_TYPE)
 
 // Single Wrapper Function Declaration
-#define DECLARE_OP_WRAPPER(FUNC, SIG, STRUCT_NAME, PREFIX, QUALIFIERS)\
-    QUALIFIERS SIG_RETURN_TYPE(SIG) PREFIX ## STRUCT_NAME ## _ ## FUNC (struct STRUCT_NAME* SIG_ARG_DECLS_LEADING_COMMA(SIG));
+#define DECLARE_OP_WRAPPER(FUNC, SIG, STRUCT_NAME, PREFIX, QUALIFIERS)         \
+    QUALIFIERS SIG_RETURN_TYPE(SIG) PREFIX##STRUCT_NAME##_##FUNC(              \
+        struct STRUCT_NAME *SIG_ARG_DECLS_LEADING_COMMA(SIG));
 
 // Declare Wrapper Functions for an OP_LIST on struct STRUCT_NAME
-#define DECLARE_OP_LIST_WRAPPERS(OP_LIST, QUALIFIERS, NAMESPACE, STRUCT_NAME)\
+#define DECLARE_OP_LIST_WRAPPERS(OP_LIST, QUALIFIERS, NAMESPACE, STRUCT_NAME)  \
     OP_LIST(DECLARE_OP_WRAPPER, STRUCT_NAME, NAMESPACE, QUALIFIERS)
-
 
 // Define a Single OP Wrapper
 
-#define DEFINE_OP_WRAPPER(FUNC, SIG, QUALIFIERS, NAMESPACE, STRUCT_NAME, OP_FIELD_ACCESSOR, THIS_FIELD_ACCESSOR, PRE_STATEMENT, POST_STATEMENT)\
-    QUALIFIERS \
-    SIG_RETURN_TYPE(SIG) \
-    NAMESPACE ## STRUCT_NAME ## _ ## FUNC(struct STRUCT_NAME * __ ## STRUCT_NAME SIG_ARG_DECLS_LEADING_COMMA(SIG)) \
-    {\
-        DEBUG_ASSERT(KERNEL_ADDR(__ ## STRUCT_NAME));\
-	PRE_STATEMENT((__ ## STRUCT_NAME));\
-        DEBUG_ASSERT(KERNEL_ADDR(OP_FIELD_ACCESSOR(__ ## STRUCT_NAME, FUNC)));\
-	SIG_RETURN_TYPE(SIG) __ret;\
-        __ret = (*(OP_FIELD_ACCESSOR(__ ## STRUCT_NAME, FUNC)))(\
-                __ ## STRUCT_NAME THIS_FIELD_ACCESSOR\
-                SIG_ARG_NAMES_LEADING_COMMA(SIG));\
-	POST_STATEMENT((__ ## STRUCT_NAME));\
-	return __ret;\
+#define DEFINE_OP_WRAPPER(FUNC,                                                \
+                          SIG,                                                 \
+                          QUALIFIERS,                                          \
+                          NAMESPACE,                                           \
+                          STRUCT_NAME,                                         \
+                          OP_FIELD_ACCESSOR,                                   \
+                          THIS_FIELD_ACCESSOR,                                 \
+                          PRE_STATEMENT,                                       \
+                          POST_STATEMENT)                                      \
+    QUALIFIERS                                                                 \
+    SIG_RETURN_TYPE(SIG)                                                       \
+    NAMESPACE##STRUCT_NAME##_##FUNC(                                           \
+        struct STRUCT_NAME *__##STRUCT_NAME SIG_ARG_DECLS_LEADING_COMMA(SIG))  \
+    {                                                                          \
+        DEBUG_ASSERT(KERNEL_ADDR(__##STRUCT_NAME));                            \
+        PRE_STATEMENT((__##STRUCT_NAME));                                      \
+        DEBUG_ASSERT(KERNEL_ADDR(OP_FIELD_ACCESSOR(__##STRUCT_NAME, FUNC)));   \
+        SIG_RETURN_TYPE(SIG) __ret;                                            \
+        __ret = (*(OP_FIELD_ACCESSOR(__##STRUCT_NAME, FUNC)))(                 \
+            __##STRUCT_NAME THIS_FIELD_ACCESSOR SIG_ARG_NAMES_LEADING_COMMA(   \
+                SIG));                                                         \
+        POST_STATEMENT((__##STRUCT_NAME));                                     \
+        return __ret;                                                          \
     }
 
 #define NOP_OP_FUNC(...)
 
 //  Define the Wrapper Functions for an OP_LIST
-#define DEFINE_OP_LIST_WRAPPERS(OP_LIST, QUALIFIERS, NAMESPACE, STRUCT_NAME, OP_FIELD_ACCESSOR, THIS_FIELD_ACCESSOR)\
-    OP_LIST(DEFINE_OP_WRAPPER, QUALIFIERS, NAMESPACE, STRUCT_NAME, OP_FIELD_ACCESSOR, THIS_FIELD_ACCESSOR, NOP_OP_FUNC, NOP_OP_FUNC)
+#define DEFINE_OP_LIST_WRAPPERS(OP_LIST,                                       \
+                                QUALIFIERS,                                    \
+                                NAMESPACE,                                     \
+                                STRUCT_NAME,                                   \
+                                OP_FIELD_ACCESSOR,                             \
+                                THIS_FIELD_ACCESSOR)                           \
+    OP_LIST(DEFINE_OP_WRAPPER,                                                 \
+            QUALIFIERS,                                                        \
+            NAMESPACE,                                                         \
+            STRUCT_NAME,                                                       \
+            OP_FIELD_ACCESSOR,                                                 \
+            THIS_FIELD_ACCESSOR,                                               \
+            NOP_OP_FUNC,                                                       \
+            NOP_OP_FUNC)
 
-#define DEFINE_OP_LIST_WRAPPERS_WITH_PRE_POST(OP_LIST, QUALIFIERS, NAMESPACE, STRUCT_NAME, OP_FIELD_ACCESSOR, THIS_FIELD_ACCESSOR, PRE_FUNC, POST_FUNC)\
-    OP_LIST(DEFINE_OP_WRAPPER, QUALIFIERS, NAMESPACE, STRUCT_NAME, OP_FIELD_ACCESSOR, THIS_FIELD_ACCESSOR, PRE_FUNC, POST_FUNC)
+#define DEFINE_OP_LIST_WRAPPERS_WITH_PRE_POST(OP_LIST,                         \
+                                              QUALIFIERS,                      \
+                                              NAMESPACE,                       \
+                                              STRUCT_NAME,                     \
+                                              OP_FIELD_ACCESSOR,               \
+                                              THIS_FIELD_ACCESSOR,             \
+                                              PRE_FUNC,                        \
+                                              POST_FUNC)                       \
+    OP_LIST(DEFINE_OP_WRAPPER,                                                 \
+            QUALIFIERS,                                                        \
+            NAMESPACE,                                                         \
+            STRUCT_NAME,                                                       \
+            OP_FIELD_ACCESSOR,                                                 \
+            THIS_FIELD_ACCESSOR,                                               \
+            PRE_FUNC,                                                          \
+            POST_FUNC)
 
 #endif

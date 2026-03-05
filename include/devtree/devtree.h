@@ -1,18 +1,18 @@
 #ifndef __KANAWHA_DEVTREE_DEVTREE_H__
 #define __KANAWHA_DEVTREE_DEVTREE_H__
 
-#include <kanawha/types.h>
 #include <kanawha/list.h>
-#include <kanawha/spinlock.h>
 #include <kanawha/ptree.h>
+#include <kanawha/spinlock.h>
+#include <kanawha/types.h>
 
 #include <devtree/node.h>
 
 struct devtree;
 struct dt_driver;
 
-#define DEVTREE_FLAG_UNFLATTENED   (1ULL<<0)
-#define DEVTREE_FLAG_PHYS_RESERVED (1ULL<<1)
+#define DEVTREE_FLAG_UNFLATTENED (1ULL << 0)
+#define DEVTREE_FLAG_PHYS_RESERVED (1ULL << 1)
 
 struct devtree
 {
@@ -29,8 +29,7 @@ struct devtree
 };
 
 int
-devtree_provide_fdt(
-        struct fdt *fdt);
+devtree_provide_fdt(struct fdt *fdt);
 
 // Returns the first provided device tree
 struct devtree *
@@ -38,13 +37,10 @@ devtree_get(void);
 
 // Returns a virtual pointer to "dt's" backing fdt
 struct fdt *
-devtree_get_fdt(
-        struct devtree *dt);
+devtree_get_fdt(struct devtree *dt);
 
 // Returns NULL if no node can be found
 struct dt_node *
-devtree_get_node_by_phandle(
-        struct devtree *dt,
-        fdt_phandle_t phandle);
+devtree_get_node_by_phandle(struct devtree *dt, fdt_phandle_t phandle);
 
 #endif

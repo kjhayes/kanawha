@@ -4,7 +4,8 @@
 #include <kanawha/stack.h>
 #include <kanawha/stddef.h>
 
-struct arch_thread_state {
+struct arch_thread_state
+{
     struct thread_stack stack;
 };
 

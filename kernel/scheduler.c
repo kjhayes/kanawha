@@ -1,12 +1,12 @@
 
-#include <kanawha/scheduler.h>
-#include <kanawha/stree.h>
-#include <kanawha/irq.h>
-#include <kanawha/stddef.h>
-#include <kanawha/percpu.h>
-#include <kanawha/string.h>
 #include <kanawha/init.h>
+#include <kanawha/irq.h>
 #include <kanawha/lock.h>
+#include <kanawha/percpu.h>
+#include <kanawha/scheduler.h>
+#include <kanawha/stddef.h>
+#include <kanawha/stree.h>
+#include <kanawha/string.h>
 
 static DECLARE_STREE(sched_type_tree);
 DEFINE_LOCAL_THREAD_LOCK(sched_type_tree_lock);
@@ -17,14 +17,14 @@ DEFINE_LOCAL_THREAD_LOCK(sched_instance_list_lock);
 DECLARE_STATIC_PERCPU_VAR(struct scheduler *, current_scheduler);
 
 int
-register_scheduler_type(
-        struct scheduler_type *type)
+register_scheduler_type(struct scheduler_type *type)
 {
     printk("Registering Scheduler Type: \"%s\"\n", type->name);
 
     sched_type_tree_lock_acquire();
     struct stree_node *node = stree_get(&sched_type_tree, type->name);
-    if(node != NULL) {
+    if(node != NULL)
+    {
         sched_type_tree_lock_release();
         eprintk("Scheduler with name \"%s\" has already been registered!\n");
         return -EEXIST;
@@ -46,23 +46,25 @@ create_scheduler(const char *type_name, const char *sched_name)
     struct scheduler_type *type;
     sched_type_tree_lock_acquire();
     struct stree_node *type_node = stree_get(&sched_type_tree, type_name);
-    if(type_node == NULL) {
+    if(type_node == NULL)
+    {
         sched_type_tree_lock_release();
         return NULL;
     }
-    type = container_of(
-            type_node, struct scheduler_type, tree_node);
+    type = container_of(type_node, struct scheduler_type, tree_node);
     sched_type_tree_lock_release();
 
     struct scheduler *sched = scheduler_type_alloc_instance(type);
-    if(sched == NULL) {
+    if(sched == NULL)
+    {
         return sched;
     }
 
     sched->num_cpus = 0;
     sched->type = type;
     sched->name = kstrdup(sched_name);
-    if(sched->name == NULL) {
+    if(sched->name == NULL)
+    {
         scheduler_type_free_instance(type, sched);
     }
     spinlock_init(&sched->lock);
@@ -75,27 +77,32 @@ create_scheduler(const char *type_name, const char *sched_name)
 }
 
 int
-assign_cpu_scheduler(
-        struct scheduler *sched,
-        cpu_id_t cpu)
+assign_cpu_scheduler(struct scheduler *sched, cpu_id_t cpu)
 {
-    struct scheduler *existing = *(struct scheduler**)percpu_ptr_specific(percpu_addr(current_scheduler), cpu);
-    if(existing == sched) {
+    struct scheduler *existing = *(struct scheduler **)percpu_ptr_specific(
+        percpu_addr(current_scheduler),
+        cpu);
+    if(existing == sched)
+    {
         return 0;
     }
 
-    if(existing != NULL) {
+    if(existing != NULL)
+    {
         // The locking here is questionable
         int flags = spin_lock_pair_irq_save(&existing->lock, &sched->lock);
         existing->num_cpus--;
         sched->num_cpus++;
-        (*(struct scheduler **)percpu_ptr_specific(percpu_addr(current_scheduler), cpu)) = sched;
+        (*(struct scheduler **)
+             percpu_ptr_specific(percpu_addr(current_scheduler), cpu)) = sched;
         spin_unlock_pair_irq_restore(&existing->lock, &sched->lock, flags);
-
-    } else {
+    }
+    else
+    {
         int flags = spin_lock_irq_save(&sched->lock);
         sched->num_cpus++;
-        (*(struct scheduler **)percpu_ptr_specific(percpu_addr(current_scheduler), cpu)) = sched;
+        (*(struct scheduler **)
+             percpu_ptr_specific(percpu_addr(current_scheduler), cpu)) = sched;
         spin_unlock_irq_restore(&sched->lock, flags);
     }
 
@@ -103,8 +110,10 @@ assign_cpu_scheduler(
 }
 
 struct scheduler *
-current_sched(void) {
-    struct scheduler ** current_sched_ptr = percpu_ptr(percpu_addr(current_scheduler));
+current_sched(void)
+{
+    struct scheduler **current_sched_ptr =
+        percpu_ptr(percpu_addr(current_scheduler));
 
     DEBUG_ASSERT(KERNEL_ADDR(current_sched_ptr));
 
@@ -112,25 +121,37 @@ current_sched(void) {
 }
 
 static int
-init_cpu_scheds(void) {
+init_cpu_scheds(void)
+{
     // Clear every CPU(s) scheduler to a NULL value
-    for(cpu_id_t cpu = 0; cpu < total_num_cpus(); cpu++) {
-        *(struct scheduler**)percpu_ptr_specific(percpu_addr(current_scheduler), cpu) = NULL;
+    for(cpu_id_t cpu = 0; cpu < total_num_cpus(); cpu++)
+    {
+        *(struct scheduler **)percpu_ptr_specific(
+            percpu_addr(current_scheduler),
+            cpu) = NULL;
     }
 
-    // If we have a default scheduler, create an instance, and assign it to every CPU
-    if(strlen(CONFIG_DEFAULT_SCHEDULER) != 0) {
-        struct scheduler *def_sched = create_scheduler(CONFIG_DEFAULT_SCHEDULER, "default");
-        if(def_sched == NULL) {
+    // If we have a default scheduler, create an instance, and assign it to
+    // every CPU
+    if(strlen(CONFIG_DEFAULT_SCHEDULER) != 0)
+    {
+        struct scheduler *def_sched =
+            create_scheduler(CONFIG_DEFAULT_SCHEDULER, "default");
+        if(def_sched == NULL)
+        {
             eprintk("Failed to create default scheduler of type \"%s\"\n",
                     CONFIG_DEFAULT_SCHEDULER);
             return -EINVAL;
         }
-        for(cpu_id_t cpu = 0; cpu < total_num_cpus(); cpu++) {
+        for(cpu_id_t cpu = 0; cpu < total_num_cpus(); cpu++)
+        {
             int res = assign_cpu_scheduler(def_sched, cpu);
-            if(res) {
-                eprintk("Failed to assign default scheduler to CPU %ld, (err=%s)\n",
-                        (sl_t)cpu, errnostr(res));
+            if(res)
+            {
+                eprintk("Failed to assign default scheduler to "
+                        "CPU %ld, (err=%s)\n",
+                        (sl_t)cpu,
+                        errnostr(res));
                 continue;
             }
         }
@@ -144,7 +165,8 @@ struct thread_state *
 query_resched(void)
 {
     struct scheduler *sched = current_sched();
-    if(sched == NULL) {
+    if(sched == NULL)
+    {
         return NULL;
     }
     return scheduler_query_resched(sched);
@@ -154,16 +176,16 @@ struct thread_state *
 force_resched(void)
 {
     struct scheduler *sched = current_sched();
-    if(sched == NULL) {
+    if(sched == NULL)
+    {
         return NULL;
     }
     return scheduler_force_resched(sched);
 }
 
 // Default Implementations
-int sched_debug_dump_no_info(
-        struct scheduler *sched,
-        printk_f *printer)
+int
+sched_debug_dump_no_info(struct scheduler *sched, printk_f *printer)
 {
     // Just don't print anything
     return 0;
@@ -172,19 +194,20 @@ int sched_debug_dump_no_info(
 // Debug Printing
 
 void
-dump_schedulers(printk_f *printer) {
+dump_schedulers(printk_f *printer)
+{
     sched_instance_list_lock_acquire();
     ilist_node_t *node;
     (*printer)("--- Scheduler Instances ---\n");
-    ilist_for_each(node, &sched_instance_list) {
-        struct scheduler *sched = container_of(node, struct scheduler, instance_list_node);
+    ilist_for_each(node, &sched_instance_list)
+    {
+        struct scheduler *sched =
+            container_of(node, struct scheduler, instance_list_node);
         (*printer)("\tSCHED(%s) type=\"%s\" num_cpus=%ld\n",
-                sched->name == NULL ? "UNNAMED" : sched->name,
-                sched->type->name,
-                (sl_t)sched->num_cpus
-                );
+                   sched->name == NULL ? "UNNAMED" : sched->name,
+                   sched->type->name,
+                   (sl_t)sched->num_cpus);
         scheduler_debug_dump(sched, printer);
     }
     sched_instance_list_lock_release();
 }
-

@@ -11,7 +11,8 @@ acpi_provide_xsdp(struct acpi_xsdp *xsdp);
 struct acpi_table *
 acpi_find_table(const char *signature);
 
-uint32_t acpi_revision(void);
+uint32_t
+acpi_revision(void);
 
 int
 acpi_register_raw_table(struct acpi_table_data *table);

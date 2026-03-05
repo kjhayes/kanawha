@@ -1,6 +1,6 @@
 
-#include <arch/riscv64/sbi_hsm.h>
 #include <arch/riscv64/sbi.h>
+#include <arch/riscv64/sbi_hsm.h>
 
 #include <kanawha/init.h>
 
@@ -13,7 +13,8 @@ sbi_probe_hsm_support(void)
 {
     int res;
     res = sbi_probe_extension(SBI_HSM_EXTID);
-    if(res) {
+    if(res)
+    {
         hsm_support = 0;
         hsm_support_errno = res;
         return 0;
@@ -23,30 +24,30 @@ sbi_probe_hsm_support(void)
     hsm_support_errno = 0;
     return 0;
 }
-declare_init_desc(post_topo, sbi_probe_hsm_support, "Probing SBI HSM Extension Support");
+declare_init_desc(post_topo,
+                  sbi_probe_hsm_support,
+                  "Probing SBI HSM Extension Support");
 
 int
-sbi_hart_start(
-        hartid_t hartid,
-        void __phys *start_addr,
-        uint64_t opaque)
+sbi_hart_start(hartid_t hartid, void __phys *start_addr, uint64_t opaque)
 {
-    if(!hsm_support) {
+    if(!hsm_support)
+    {
         return hsm_support_errno;
     }
 
     struct sbiret ret;
-    ret = sbi_ecall(
-            SBI_HSM_EXTID,
-            0x0, // function id
-            hartid,
-            (uintptr_t)start_addr,
-            opaque,
-            0,
-            0,
-            0);
+    ret = sbi_ecall(SBI_HSM_EXTID,
+                    0x0, // function id
+                    hartid,
+                    (uintptr_t)start_addr,
+                    opaque,
+                    0,
+                    0,
+                    0);
     int res = sbiret_to_errno(&ret);
-    if(res) {
+    if(res)
+    {
         return res;
     }
 
@@ -54,28 +55,27 @@ sbi_hart_start(
 }
 
 int
-sbi_hart_get_status(
-        hartid_t hartid)
+sbi_hart_get_status(hartid_t hartid)
 {
-    if(!hsm_support) {
+    if(!hsm_support)
+    {
         return hsm_support_errno;
     }
 
     struct sbiret ret;
-    ret = sbi_ecall(
-            SBI_HSM_EXTID,
-            0x2, // function id
-            hartid,
-            0,
-            0,
-            0,
-            0,
-            0);
+    ret = sbi_ecall(SBI_HSM_EXTID,
+                    0x2, // function id
+                    hartid,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0);
     int res = sbiret_to_errno(&ret);
-    if(res < 0) {
+    if(res < 0)
+    {
         return res;
     }
 
     return ret.value;
 }
-

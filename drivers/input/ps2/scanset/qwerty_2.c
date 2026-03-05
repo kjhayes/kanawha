@@ -1,10 +1,10 @@
 
+#include <drivers/input/ps2/scanset.h>
 #include <kanawha/dev/input.h>
 #include <kanawha/errno.h>
-#include <drivers/input/ps2/scanset.h>
 
-#define FLAG_F0 (1ULL<<0)
-#define FLAG_E0 (1ULL<<1)
+#define FLAG_F0 (1ULL << 0)
+#define FLAG_E0 (1ULL << 1)
 
 input_key_t simple_key_set[256] = {
     [0x01] = INPUT_KEY_F9,
@@ -102,36 +102,46 @@ input_key_t e0_key_set[256] = {
 };
 
 static int
-qwerty_2_scanset_handler(
-        uint8_t next_byte,
-        unsigned long *flags,
-        struct input_event *out)
+qwerty_2_scanset_handler(uint8_t next_byte,
+                         unsigned long *flags,
+                         struct input_event *out)
 {
-    if(next_byte == 0xF0) {
+    if(next_byte == 0xF0)
+    {
         *flags |= FLAG_F0;
         return -EAGAIN;
     }
-    if(next_byte == 0xE0) {
+    if(next_byte == 0xE0)
+    {
         *flags |= FLAG_E0;
         return -EAGAIN;
     }
 
     out->type = INPUT_EVT_KEY;
 
-    if(((*flags & FLAG_E0) == 0) && (simple_key_set[next_byte] != 0)) {
+    if(((*flags & FLAG_E0) == 0) && (simple_key_set[next_byte] != 0))
+    {
         out->key = simple_key_set[next_byte];
-        if(*flags & FLAG_F0) {
+        if(*flags & FLAG_F0)
+        {
             out->motion = INPUT_MOTION_RELEASED;
-        } else {
+        }
+        else
+        {
             out->motion = INPUT_MOTION_PRESSED;
         }
         *flags = 0;
         return 0;
-    } else if (((*flags & FLAG_E0) != 0) && (e0_key_set[next_byte] != 0)) {
+    }
+    else if(((*flags & FLAG_E0) != 0) && (e0_key_set[next_byte] != 0))
+    {
         out->key = e0_key_set[next_byte];
-        if(*flags & FLAG_F0) {
+        if(*flags & FLAG_F0)
+        {
             out->motion = INPUT_MOTION_RELEASED;
-        } else {
+        }
+        else
+        {
             out->motion = INPUT_MOTION_PRESSED;
         }
         *flags = 0;
@@ -144,8 +154,6 @@ qwerty_2_scanset_handler(
     return -EINVAL;
 }
 
-struct ps2_kbd_scanset
-qwerty_scanset_2 = {
+struct ps2_kbd_scanset qwerty_scanset_2 = {
     .handle_scancode = qwerty_2_scanset_handler,
 };
-

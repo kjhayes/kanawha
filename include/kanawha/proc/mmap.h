@@ -1,30 +1,31 @@
 #ifndef __KANAWHA__MMAP_H__
 #define __KANAWHA__MMAP_H__
 
-#include <kanawha/syscall.h>
-#include <kanawha/uapi/syscall.h>
-#include <kanawha/proc/file_table.h>
-#include <kanawha/uapi/mmap.h>
 #include <kanawha/list.h>
+#include <kanawha/proc/file_table.h>
+#include <kanawha/syscall.h>
+#include <kanawha/uapi/mmap.h>
+#include <kanawha/uapi/syscall.h>
 
 struct process;
 struct mmap_region;
 
 // This page is mapped in
-#define MMAP_PAGE_MAPPED  (1ULL<<0)
+#define MMAP_PAGE_MAPPED (1ULL << 0)
 // This page is not backed by the region file_descriptor,
 // reclaiming it would require terminating the process (OOM)
-#define MMAP_PAGE_ANON (1ULL<<1)
+#define MMAP_PAGE_ANON (1ULL << 1)
 // Make an anonymous copy of this page when we write it
-#define MMAP_PAGE_COPY_ON_WRITE (1ULL<<2)
+#define MMAP_PAGE_COPY_ON_WRITE (1ULL << 2)
 struct mmap_page
 {
-    void __phys * phys_addr;
+    void __phys *phys_addr;
     order_t order;
 
     unsigned long flags;
 
-    union {
+    union
+    {
         // Non-anonymous page
         struct fs_page *fs_page;
 
@@ -80,99 +81,73 @@ int
 mmap_deattach(struct mmap *map, struct process *process);
 
 int
-mmap_map_region(
-        struct process *process,
-        fd_t file,
-        uintptr_t file_offset,
-        uintptr_t *hint_offset,
-        size_t size,
-        unsigned long mmap_flags);
+mmap_map_region(struct process *process,
+                fd_t file,
+                uintptr_t file_offset,
+                uintptr_t *hint_offset,
+                size_t size,
+                unsigned long mmap_flags);
 
 int
-mmap_map_region_exact(
-        struct process *process,
-        fd_t file,
-        uintptr_t file_offset,
-        uintptr_t mmap_offset,
-        size_t size,
-        unsigned long mmap_flags);
+mmap_map_region_exact(struct process *process,
+                      fd_t file,
+                      uintptr_t file_offset,
+                      uintptr_t mmap_offset,
+                      size_t size,
+                      unsigned long mmap_flags);
 
 int
-mmap_find_free_region(
-	struct process *process,
-	uintptr_t *hint_offset,
-	size_t size);
+mmap_find_free_region(struct process *process,
+                      uintptr_t *hint_offset,
+                      size_t size);
 
 int
-mmap_unmap_region(
-        struct process *process,
-        uintptr_t mmap_offset);
+mmap_unmap_region(struct process *process, uintptr_t mmap_offset);
 
 const char *
-mmap_region_get_name(
-	struct mmap_region *region);
+mmap_region_get_name(struct mmap_region *region);
 
 int
-mmap_read(
-        struct process *process,
-        uintptr_t offset,
-        void *dst,
-        size_t length);
+mmap_read(struct process *process, uintptr_t offset, void *dst, size_t length);
 
 int
-mmap_write(
-        struct process *process,
-        uintptr_t offset,
-        void *dst,
-        size_t length);
+mmap_write(struct process *process, uintptr_t offset, void *dst, size_t length);
 
 int
-mmap_memset(
-        struct process *process,
-        uintptr_t offset,
-        uint8_t value,
-        size_t length);
+mmap_memset(struct process *process,
+            uintptr_t offset,
+            uint8_t value,
+            size_t length);
 
 int
-mmap_user_strlen(
-        struct process *process,
-        uintptr_t offset,
-        size_t max_strlen,
-        size_t *strlen);
+mmap_user_strlen(struct process *process,
+                 uintptr_t offset,
+                 size_t max_strlen,
+                 size_t *strlen);
 
 int
-mmap_region_load_page(
-        struct mmap_region *region,
-        uintptr_t page_offset,
-        struct mmap_page **out);
+mmap_region_load_page(struct mmap_region *region,
+                      uintptr_t page_offset,
+                      struct mmap_page **out);
 
 int
-mmap_region_map_page(
-        struct mmap_region *region,
-        struct mmap_page *page);
+mmap_region_map_page(struct mmap_region *region, struct mmap_page *page);
 
 int
-mmap_page_do_copy_on_write(
-        struct mmap_region *region,
-        struct mmap_page *page);
+mmap_page_do_copy_on_write(struct mmap_region *region, struct mmap_page *page);
 
 int
-mmap_page_fault_handler(
-        struct excp_state *state,
-        struct vmem_region_ref *ref,
-        uintptr_t offset,
-        unsigned long flags,
-        void *priv_state);
+mmap_page_fault_handler(struct excp_state *state,
+                        struct vmem_region_ref *ref,
+                        uintptr_t offset,
+                        unsigned long flags,
+                        void *priv_state);
 
 // Cloning
 int
-mmap_clone(
-        struct mmap *from,
-        struct process *onto);
+mmap_clone(struct mmap *from, struct process *onto);
 
 int
-mmap_dump(
-        printk_f *printer,
-        struct mmap *mmap);
+mmap_dump(printk_f *printer, struct mmap *mmap);
 
 #endif

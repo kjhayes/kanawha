@@ -1,9 +1,9 @@
 
 #include <arch/x64/pic.h>
-#include <kanawha/pio.h>
-#include <kanawha/irq.h>
 #include <kanawha/init.h>
+#include <kanawha/irq.h>
 #include <kanawha/irq_domain.h>
+#include <kanawha/pio.h>
 
 // We need to remap these in-case a spurrious
 // interrupt leaks through the mask
@@ -11,14 +11,14 @@
 #define PIC0_VECTOR_BASE 0x32
 #define PIC1_VECTOR_BASE 0x3A
 
-#define PIC0_CMD  0x20
+#define PIC0_CMD 0x20
 #define PIC0_DATA 0x21
-#define PIC1_CMD  0xA0
+#define PIC1_CMD 0xA0
 #define PIC1_DATA 0xA1
 
 #define PIC_OCW_EOI 0x20
 
-#define PIC_ICW1      0x10
+#define PIC_ICW1 0x10
 #define PIC_ICW1_ICW4 0x01
 
 #define PIC_ICW4_8086 0x01
@@ -40,7 +40,6 @@ x64_init_and_disable_pic(void)
     piodelay();
     outb(PIC1_DATA, PIC1_VECTOR_BASE);
     piodelay();
-
 
     // ICW3 (cascade info)
     outb(PIC0_DATA, 4);
@@ -77,13 +76,14 @@ x64_pic_irq_domain(void)
 static int
 x64_pic_create_irq_domain(void)
 {
-    __pic_irq_domain = 
-        alloc_irq_domain_linear(0, 16);
-    if(__pic_irq_domain == NULL) {
+    __pic_irq_domain = alloc_irq_domain_linear(0, 16);
+    if(__pic_irq_domain == NULL)
+    {
         return -ENOMEM;
     }
 
     return 0;
 }
-declare_init_desc(dynamic, x64_pic_create_irq_domain, "Creating 8259 PIC IRQ Domain");
-
+declare_init_desc(dynamic,
+                  x64_pic_create_irq_domain,
+                  "Creating 8259 PIC IRQ Domain");

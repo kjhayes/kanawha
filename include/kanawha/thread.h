@@ -1,14 +1,14 @@
 #ifndef __KANAWHA__THREAD_H__
 #define __KANAWHA__THREAD_H__
 
-#include <kanawha/types.h>
-#include <kanawha/spinlock.h>
-#include <kanawha/ptree.h>
-#include <kanawha/printk.h>
-#include <kanawha/cpu.h>
-#include <kanawha/vmem.h>
-#include <kanawha/percpu.h>
 #include <kanawha/attribute.h>
+#include <kanawha/cpu.h>
+#include <kanawha/percpu.h>
+#include <kanawha/printk.h>
+#include <kanawha/ptree.h>
+#include <kanawha/spinlock.h>
+#include <kanawha/types.h>
+#include <kanawha/vmem.h>
 
 #if defined(CONFIG_X64)
 #include <arch/x64/thread.h>
@@ -28,9 +28,9 @@ typedef uint32_t thread_status_t;
 
 /*
  * Valid THREAD_STATUS Transitions
- * 
+ *
  * // thread_schedule
- * READY -> SCHEDULED 
+ * READY -> SCHEDULED
  *
  * // thread_switch or thread_abandon (to the argument)
  * SCHEDULED -> RUNNING // done on thread switch
@@ -41,7 +41,7 @@ typedef uint32_t thread_status_t;
  *
  * // thread_abandon (to the current thread)
  * RUNNING -> ABANDONED
- * 
+ *
  * // thread_tire
  * RUNNING -> TIRED
  * READY -> SLEEPING
@@ -53,15 +53,17 @@ typedef uint32_t thread_status_t;
  */
 
 #define THREAD_STATUS_PREPARING 0 // Still in the process of being created
-#define THREAD_STATUS_READY     1 // Not currently running but may be scheduled
+#define THREAD_STATUS_READY 1     // Not currently running but may be scheduled
 #define THREAD_STATUS_SCHEDULED 2 // (transition stage from READY -> RUNNING)
-#define THREAD_STATUS_RUNNING   3 // Currently running on some processor
-#define THREAD_STATUS_TIRED     4 // Currently running, will go to sleep on next thread switch
-#define THREAD_STATUS_SLEEPING  5 // Sleeping cannot be scheduled
-#define THREAD_STATUS_ABANDONED 6 // Can never be run again without reinitialization
+#define THREAD_STATUS_RUNNING 3   // Currently running on some processor
+#define THREAD_STATUS_TIRED                                                    \
+    4 // Currently running, will go to sleep on next thread switch
+#define THREAD_STATUS_SLEEPING 5 // Sleeping cannot be scheduled
+#define THREAD_STATUS_ABANDONED                                                \
+    6 // Can never be run again without reinitialization
 
-#define THREAD_FLAG_IDLE    (1ULL<<0)
-#define THREAD_FLAG_PROCESS (1ULL<<1)
+#define THREAD_FLAG_IDLE (1ULL << 0)
+#define THREAD_FLAG_PROCESS (1ULL << 1)
 
 struct thread_state
 {
@@ -81,7 +83,7 @@ struct thread_state
     cpu_id_t pinned_to;
     size_t pin_refs;
 
-    void * in;
+    void *in;
 
     struct vmem_map *mem_map;
 
@@ -90,18 +92,17 @@ struct thread_state
 };
 
 int
-thread_init(
-        struct thread_state *state,
-        thread_f *func,
-        void *in,
-        unsigned long flags);
+thread_init(struct thread_state *state,
+            thread_f *func,
+            void *in,
+            unsigned long flags);
 
 int
-thread_deinit(
-        struct thread_state *state);
+thread_deinit(struct thread_state *state);
 
 // Assumes preemption is already disabled
-struct thread_state *current_thread(void);
+struct thread_state *
+current_thread(void);
 
 // Ensure that this thread does not change CPU(s)
 int
@@ -110,20 +111,20 @@ int
 unpin_thread(struct thread_state *thread);
 
 int
-pin_thread_specific(
-        struct thread_state *thread,
-        cpu_id_t cpu);
+pin_thread_specific(struct thread_state *thread, cpu_id_t cpu);
 
 // Assumes preemption is already disabled
 // Returns NULL if the idle thread has not been created on the current CPU
-struct thread_state *idle_thread(void);
+struct thread_state *
+idle_thread(void);
 
 // To be called from within a scheduler, checks to make sure that a thread
 // can be run on the current processor, and changes the threads status
 // to THREAD_STATUS_SCHEDULED atomically.
 //
 // Returns 0 on success, else, Returns negative errno
-int thread_schedule(struct thread_state *to_schedule);
+int
+thread_schedule(struct thread_state *to_schedule);
 
 // Transition the current thread from "RUNNING" to "TIRED"
 // or "READY" to "SLEEPING"
@@ -131,24 +132,25 @@ int thread_schedule(struct thread_state *to_schedule);
 // Does nothing if the thread is already "TIRED" or "SLEEPING"
 //
 // Returns 0 on success, else, Returns negative errno
-int thread_tire(struct thread_state *thread);
+int
+thread_tire(struct thread_state *thread);
 
 // Same as thread_tire but provide a format string and arguments which
 // can be used to generate a "reason" message for debugging
-int thread_tire_with_reason(
-        struct thread_state *state,
-        const char *fmt,
-        ...);
+int
+thread_tire_with_reason(struct thread_state *state, const char *fmt, ...);
 
 // Does the opposite of thread_tire, going from "TIRED" to "RUNNING"
 // or "SLEEPING" to "READY"
 //
 // Returns 0 on success, else, Returns negative errno
-int thread_wake(struct thread_state *thread);
+int
+thread_wake(struct thread_state *thread);
 
 // Switch to a scheduled thread, saving the state of the calling thread
 // (returns negative errno if we fail to switch threads at all)
-int thread_switch(struct thread_state *scheduled);
+int
+thread_switch(struct thread_state *scheduled);
 
 // Abandon the current thread and begin running
 // "scheduled", making it impossible to safely return to running
@@ -156,30 +158,34 @@ int thread_switch(struct thread_state *scheduled);
 //
 // If "scheduled == NULL", then we will begin running the current CPU's
 // idle thread.
-__noreturn
-void thread_abandon(struct thread_state *scheduled);
+__noreturn void
+thread_abandon(struct thread_state *scheduled);
 
 // Start threading on the current CPU (assumes preemption is disabled)
-__noreturn
-void cpu_start_threading(thread_f *func, void *state);
+__noreturn void
+cpu_start_threading(thread_f *func, void *state);
 
-int arch_init_thread_state(struct thread_state *thread);
-int arch_deinit_thread_state(struct thread_state *thread);
+int
+arch_init_thread_state(struct thread_state *thread);
+int
+arch_deinit_thread_state(struct thread_state *thread);
 
 // If we have a current thread, we need to checkpoint it, and then run "func"
 // without a thread, this may block, as "func" could switch from "threadless"
 // to running a different thread
-// 
+//
 // From the perspective of the calling thread, this should run normally,
 // but really what must happen is the thread will have all of it's state saved,
 // such that when "arch_thread_run_thread" is next called on the thread,
-// it will be restored as if it just returned from the call to "arch_thread_become_threadless"
-void arch_thread_run_threadless(threadless_f *func, void *in);
+// it will be restored as if it just returned from the call to
+// "arch_thread_become_threadless"
+void
+arch_thread_run_threadless(threadless_f *func, void *in);
 
 // Restore the state of "to_run" and begin executing it
 // (Does not save state, so it should be run from a "threadless" context
-__noreturn
-void arch_thread_run_thread(struct thread_state *to_run);
+__noreturn void
+arch_thread_run_thread(struct thread_state *to_run);
 
 int
 arch_dump_thread(printk_f *printer, struct thread_state *state);
@@ -187,29 +193,27 @@ arch_dump_thread(printk_f *printer, struct thread_state *state);
 int
 dump_threads(printk_f *printer);
 
-__noreturn
-void
+__noreturn void
 idle_loop(void);
 
 // Global Thread Virtual Memory Regions
 
-// Forces "region" to be mapped in a virtual_addr in every thread's virtual address
-// space. This is can be done lazily, but after returning (and synchronization if
-// we are a multiprocessor), then any thread which is running should be able to access
-// "region" at virtual_addr safely.
+// Forces "region" to be mapped in a virtual_addr in every thread's virtual
+// address space. This is can be done lazily, but after returning (and
+// synchronization if we are a multiprocessor), then any thread which is
+// running should be able to access "region" at virtual_addr safely.
 int
-thread_force_mapping(struct vmem_region *region, void * virtual_addr);
+thread_force_mapping(struct vmem_region *region, void *virtual_addr);
 
 // Stops forcing the vmem region containing "virtual_addr" to
 // be mapped in all threads, (does not undo the mapping in
 // threads which contain it already though)
 int
-thread_relax_mapping(void * virtual_addr);
+thread_relax_mapping(void *virtual_addr);
 
 DECLARE_EXTERN_PERCPU_VAR(struct thread_state *, __current_thread);
 
 const char *
-thread_status_to_string(
-        thread_status_t status);
+thread_status_to_string(thread_status_t status);
 
 #endif

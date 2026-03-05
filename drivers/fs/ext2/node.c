@@ -1,20 +1,20 @@
 
-#include <kanawha/fs/node.h>
-#include <kanawha/fs/file.h>
 #include <drivers/fs/ext2/ext2.h>
 #include <drivers/fs/ext2/node.h>
+#include <kanawha/fs/file.h>
+#include <kanawha/fs/node.h>
 #include <kanawha/stddef.h>
 #include <kanawha/string.h>
 
 static int
-ext2_node_pfn_to_block(
-        struct ext2_fs_node *node,
-        uintptr_t pfn,
-        size_t *block_no)
+ext2_node_pfn_to_block(struct ext2_fs_node *node,
+                       uintptr_t pfn,
+                       size_t *block_no)
 {
     int res;
 
-    if(pfn < EXT2_INODE_DIRECT_BLOCKS) {
+    if(pfn < EXT2_INODE_DIRECT_BLOCKS)
+    {
         *block_no = node->inode.block[pfn];
         return 0;
     }
@@ -22,18 +22,20 @@ ext2_node_pfn_to_block(
     size_t entries_per_block = node->mount->block_size / sizeof(le32_t);
 
     size_t num_singly_indirect = entries_per_block + EXT2_INODE_DIRECT_BLOCKS;
-    if(pfn < num_singly_indirect) {
+    if(pfn < num_singly_indirect)
+    {
         le32_t indirect_block = node->inode.block[EXT2_INODE_INDIRECT_BLOCK];
         le32_t entry;
 
         res = fs_node_paged_read(
-                node->mount->backing_node,
-                EXT2_BLOCK_OFFSET(indirect_block, node->mount->block_size)
-                    + (sizeof(le32_t) * (pfn-EXT2_INODE_DIRECT_BLOCKS)),
-                &entry,
-                sizeof(le32_t),
-                0);
-        if(res) {
+            node->mount->backing_node,
+            EXT2_BLOCK_OFFSET(indirect_block, node->mount->block_size) +
+                (sizeof(le32_t) * (pfn - EXT2_INODE_DIRECT_BLOCKS)),
+            &entry,
+            sizeof(le32_t),
+            0);
+        if(res)
+        {
             return res;
         }
 
@@ -47,14 +49,14 @@ ext2_node_pfn_to_block(
 }
 
 static int
-ext2_node_set_pfn_block(
-        struct ext2_fs_node *node,
-        uintptr_t pfn,
-        size_t block_no)
+ext2_node_set_pfn_block(struct ext2_fs_node *node,
+                        uintptr_t pfn,
+                        size_t block_no)
 {
     int res;
 
-    if(pfn < EXT2_INODE_DIRECT_BLOCKS) {
+    if(pfn < EXT2_INODE_DIRECT_BLOCKS)
+    {
         node->inode.block[pfn] = block_no;
         node->inode_dirty = 1;
         return 0;
@@ -63,17 +65,20 @@ ext2_node_set_pfn_block(
     size_t entries_per_block = node->mount->block_size / sizeof(le32_t);
 
     size_t num_singly_indirect = entries_per_block + EXT2_INODE_DIRECT_BLOCKS;
-    if(pfn < num_singly_indirect) { 
+    if(pfn < num_singly_indirect)
+    {
 
         size_t indirect_block = node->inode.block[EXT2_INODE_INDIRECT_BLOCK];
         if(indirect_block == 0)
         {
-            res = ext2_mount_alloc_block(
-                    node->mount,
-                    ext2_fs_node_to_group_num(node),
-                    &indirect_block);
-            if(res) {
-                eprintk("ext2_fs_node_write_page: failed to allocate block (err=%s)\n",
+            res = ext2_mount_alloc_block(node->mount,
+                                         ext2_fs_node_to_group_num(node),
+                                         &indirect_block);
+            if(res)
+            {
+                eprintk("ext2_fs_node_write_page: failed to "
+                        "allocate block "
+                        "(err=%s)\n",
                         errnostr(res));
                 return res;
             }
@@ -85,13 +90,14 @@ ext2_node_set_pfn_block(
 
         le32_t entry = block_no;
         res = fs_node_paged_write(
-                node->mount->backing_node,
-                EXT2_BLOCK_OFFSET(indirect_block, node->mount->block_size)
-                    + (sizeof(le32_t) * (pfn-EXT2_INODE_DIRECT_BLOCKS)),
-                &entry,
-                sizeof(le32_t),
-                0);
-        if(res) {
+            node->mount->backing_node,
+            EXT2_BLOCK_OFFSET(indirect_block, node->mount->block_size) +
+                (sizeof(le32_t) * (pfn - EXT2_INODE_DIRECT_BLOCKS)),
+            &entry,
+            sizeof(le32_t),
+            0);
+        if(res)
+        {
             return res;
         }
 
@@ -100,27 +106,25 @@ ext2_node_set_pfn_block(
 
         return 0;
     }
- 
+
     // TODO Doubly and Triply Indirect Blocks
 
     return -EINVAL;
 }
 
 size_t
-ext2_fs_node_to_group_num(
-        struct ext2_fs_node *node)
+ext2_fs_node_to_group_num(struct ext2_fs_node *node)
 {
     struct ext2_mount *mnt = node->mount;
 
-    return (node->inode_index-1) / mnt->inodes_per_group;
+    return (node->inode_index - 1) / mnt->inodes_per_group;
 }
 
 int
-ext2_fs_node_read_page(
-        struct fs_node *fs_node,
-        void *page,
-        uintptr_t pfn,
-        unsigned long flags)
+ext2_fs_node_read_page(struct fs_node *fs_node,
+                       void *page,
+                       uintptr_t pfn,
+                       unsigned long flags)
 {
     int res;
 
@@ -128,35 +132,41 @@ ext2_fs_node_read_page(
 
     size_t block_no;
     res = ext2_node_pfn_to_block(node, pfn, &block_no);
-    if(res) {
+    if(res)
+    {
         return res;
     }
 
-    if(block_no == 0 && (flags & FS_NODE_READ_PAGE_MAY_CREATE)) {
+    if(block_no == 0 && (flags & FS_NODE_READ_PAGE_MAY_CREATE))
+    {
         memset(page, 0, node->mount->block_size);
         return 0;
-    } else if(block_no != 0) {
+    }
+    else if(block_no != 0)
+    {
         res = fs_node_paged_read(
-                node->mount->backing_node,
-                EXT2_BLOCK_OFFSET(block_no, node->mount->block_size),
-                page,
-                node->mount->block_size,
-                0);
-        if(res) {
+            node->mount->backing_node,
+            EXT2_BLOCK_OFFSET(block_no, node->mount->block_size),
+            page,
+            node->mount->block_size,
+            0);
+        if(res)
+        {
             return res;
         }
         return 0;
-    } else {
+    }
+    else
+    {
         return -ENXIO;
     }
 }
 
 int
-ext2_fs_node_write_page(
-        struct fs_node *fs_node,
-        void *page,
-        uintptr_t pfn,
-        unsigned long flags)
+ext2_fs_node_write_page(struct fs_node *fs_node,
+                        void *page,
+                        uintptr_t pfn,
+                        unsigned long flags)
 {
     int res;
 
@@ -166,26 +176,33 @@ ext2_fs_node_write_page(
 
     size_t block_no;
     res = ext2_node_pfn_to_block(node, pfn, &block_no);
-    if(res) {
-        eprintk("ext2_fs_node_write_page: Failed to get block_no of pfn=%p! (err=%s)\n",
-                pfn, errnostr(res));
+    if(res)
+    {
+        eprintk("ext2_fs_node_write_page: Failed to get block_no of pfn=%p! "
+                "(err=%s)\n",
+                pfn,
+                errnostr(res));
         return res;
     }
 
-    if(block_no == 0 && (flags & FS_NODE_WRITE_PAGE_MAY_CREATE)) {
-        res = ext2_mount_alloc_block(
-                node->mount,
-                ext2_fs_node_to_group_num(node),
-                &block_no);
-        if(res) {
-            eprintk("ext2_fs_node_write_page: failed to allocate block (err=%s)\n",
+    if(block_no == 0 && (flags & FS_NODE_WRITE_PAGE_MAY_CREATE))
+    {
+        res = ext2_mount_alloc_block(node->mount,
+                                     ext2_fs_node_to_group_num(node),
+                                     &block_no);
+        if(res)
+        {
+            eprintk("ext2_fs_node_write_page: failed to allocate "
+                    "block (err=%s)\n",
                     errnostr(res));
             return res;
         }
 
         res = ext2_node_set_pfn_block(node, pfn, block_no);
-        if(res) {
-            eprintk("ext2_fs_node_write_page: failed to set block %ld, to pfn=0x%lx in inode (err=%s)\n",
+        if(res)
+        {
+            eprintk("ext2_fs_node_write_page: failed to set block %ld, to "
+                    "pfn=0x%lx in inode (err=%s)\n",
                     block_no,
                     pfn,
                     errnostr(res));
@@ -195,80 +212,79 @@ ext2_fs_node_write_page(
         dprintk("Allocated new block(0x%llx) for ext2_fs_node(%p)\n",
                 (ull_t)block_no,
                 node);
-    } else if(block_no == 0) {
+    }
+    else if(block_no == 0)
+    {
         return -ENXIO;
     }
 
     res = fs_node_paged_write(
-            node->mount->backing_node,
-            EXT2_BLOCK_OFFSET(block_no, node->mount->block_size),
-            page,
-            node->mount->block_size,
-            0);
-    if(res) {
-        eprintk("ext2_fs_node_write_page: failed to write to backing fs_node (err=%s)\n",
-            errnostr(res));
+        node->mount->backing_node,
+        EXT2_BLOCK_OFFSET(block_no, node->mount->block_size),
+        page,
+        node->mount->block_size,
+        0);
+    if(res)
+    {
+        eprintk("ext2_fs_node_write_page: failed to write to backing fs_node "
+                "(err=%s)\n",
+                errnostr(res));
         return res;
     }
     return 0;
 }
 
 int
-ext2_fs_node_getattr(
-        struct fs_node *fs_node,
-        int attr,
-        size_t *value)
+ext2_fs_node_getattr(struct fs_node *fs_node, int attr, size_t *value)
 {
     struct ext2_fs_node *node = fs_node->backing.priv_state;
 
-    switch(attr) {
-        case FS_NODE_ATTR_DATA_SIZE:
-            *value = ext2_fs_node_inode_size(node);
-            break;
-        case FS_NODE_ATTR_PAGE_ORDER:
-            *value = node->mount->block_order;
-            break;
-        case FS_NODE_ATTR_TYPES:
-            *value = FS_NODE_TYPE_REGULAR;
-            break;
-        default:
-            return -EINVAL;
+    switch(attr)
+    {
+    case FS_NODE_ATTR_DATA_SIZE:
+        *value = ext2_fs_node_inode_size(node);
+        break;
+    case FS_NODE_ATTR_PAGE_ORDER:
+        *value = node->mount->block_order;
+        break;
+    case FS_NODE_ATTR_TYPES:
+        *value = FS_NODE_TYPE_REGULAR;
+        break;
+    default:
+        return -EINVAL;
     }
 
     return 0;
 }
 
 int
-ext2_fs_node_setattr(
-        struct fs_node *fs_node,
-        int attr,
-        size_t value)
+ext2_fs_node_setattr(struct fs_node *fs_node, int attr, size_t value)
 {
     struct ext2_fs_node *node = fs_node->backing.priv_state;
 
-    switch(attr) {
-        case FS_NODE_ATTR_DATA_SIZE:
-            return ext2_fs_node_resize(node, value);
+    switch(attr)
+    {
+    case FS_NODE_ATTR_DATA_SIZE:
+        return ext2_fs_node_resize(node, value);
     }
 
     return -EINVAL;
 }
 
 int
-ext2_fs_node_flush(
-        struct fs_node *fs_node,
-        unsigned long flags)
+ext2_fs_node_flush(struct fs_node *fs_node, unsigned long flags)
 {
     int res;
 
     struct ext2_fs_node *node = fs_node->backing.priv_state;
 
-    if(node->inode_dirty) {
-        res = ext2_mount_write_inode_data(
-                node->mount,
-                node->inode_index,
-                &node->inode);
-        if(res) {
+    if(node->inode_dirty)
+    {
+        res = ext2_mount_write_inode_data(node->mount,
+                                          node->inode_index,
+                                          &node->inode);
+        if(res)
+        {
             return res;
         }
         node->inode_dirty = 0;
@@ -278,8 +294,7 @@ ext2_fs_node_flush(
 }
 
 size_t
-__ext2_fs_node_inode_size_lockless(
-        struct ext2_fs_node *node)
+__ext2_fs_node_inode_size_lockless(struct ext2_fs_node *node)
 {
     size_t size;
     size = letoh32(node->inode.size);
@@ -288,8 +303,7 @@ __ext2_fs_node_inode_size_lockless(
 }
 
 size_t
-ext2_fs_node_inode_size(
-        struct ext2_fs_node *node)
+ext2_fs_node_inode_size(struct ext2_fs_node *node)
 {
     size_t size;
     spin_lock(&node->lock);
@@ -299,9 +313,7 @@ ext2_fs_node_inode_size(
 }
 
 static int
-__ext2_fs_node_set_inode_size_lockless(
-        struct ext2_fs_node *node,
-        size_t size)
+__ext2_fs_node_set_inode_size_lockless(struct ext2_fs_node *node, size_t size)
 {
     node->inode.size = htole32(size & 0xFFFFFFFFULL);
     node->inode.dir_acl = htole32(size >> 32);
@@ -310,9 +322,7 @@ __ext2_fs_node_set_inode_size_lockless(
 }
 
 int
-ext2_fs_node_set_inode_size(
-        struct ext2_fs_node *node,
-        size_t size)
+ext2_fs_node_set_inode_size(struct ext2_fs_node *node, size_t size)
 {
     int res;
     spin_lock(&node->lock);
@@ -322,39 +332,37 @@ ext2_fs_node_set_inode_size(
 }
 
 int
-ext2_fs_node_resize(
-        struct ext2_fs_node *node,
-        size_t size)
+ext2_fs_node_resize(struct ext2_fs_node *node, size_t size)
 {
     int res;
     spin_lock(&node->lock);
 
     size_t inode_size = __ext2_fs_node_inode_size_lockless(node);
 
-    dprintk("ext2_fs_node_resize(%p -> %p)\n",
-            inode_size ,size);
+    dprintk("ext2_fs_node_resize(%p -> %p)\n", inode_size, size);
 
-    if(inode_size == size) {
+    if(inode_size == size)
+    {
         spin_unlock(&node->lock);
         return 0;
     }
 
-    size_t current_blocks =
-        (inode_size / node->mount->block_size)
-        + ((inode_size % node->mount->block_size) > 0);
-    size_t blocks_needed =
-        (size / node->mount->block_size)
-        + ((size % node->mount->block_size) > 0);
+    size_t current_blocks = (inode_size / node->mount->block_size) +
+                            ((inode_size % node->mount->block_size) > 0);
+    size_t blocks_needed = (size / node->mount->block_size) +
+                           ((size % node->mount->block_size) > 0);
 
     res = __ext2_fs_node_set_inode_size_lockless(node, size);
-    if(res) {
+    if(res)
+    {
         spin_unlock(&node->lock);
         return res;
     }
 
     // Because we allocate blocks lazily this is actually
     // all we need to do to increase the size
-    if(current_blocks <= blocks_needed) {
+    if(current_blocks <= blocks_needed)
+    {
         spin_unlock(&node->lock);
         return 0;
     }
@@ -362,10 +370,14 @@ ext2_fs_node_resize(
     // We need to shrink the allocation
 
     // Free any direct blocks
-    for(size_t i = current_blocks; i < blocks_needed && i < EXT2_INODE_DIRECT_BLOCKS; i++) {
+    for(size_t i = current_blocks;
+        i < blocks_needed && i < EXT2_INODE_DIRECT_BLOCKS;
+        i++)
+    {
         size_t blk_no = node->inode.block[i];
         node->inode.block[i] = 0;
-        if(blk_no != 0) {
+        if(blk_no != 0)
+        {
             ext2_mount_free_block(node->mount, blk_no);
         }
     }
@@ -375,64 +387,79 @@ ext2_fs_node_resize(
 
     // Free any singly indirect blocks
     {
-    size_t singly_indirect_block = (size_t)letoh32(node->inode.block[EXT2_INODE_INDIRECT_BLOCK]);
+        size_t singly_indirect_block =
+            (size_t)letoh32(node->inode.block[EXT2_INODE_INDIRECT_BLOCK]);
 
-    if(singly_indirect_block != 0 &&
-      (blocks_needed < EXT2_INODE_DIRECT_BLOCKS + num_singly_indirect))
-    {
-        size_t starting_index;
-        if(blocks_needed < EXT2_INODE_DIRECT_BLOCKS) {
-            starting_index = 0;
-        } else {
-            starting_index = blocks_needed - EXT2_INODE_DIRECT_BLOCKS;
-        }
-        
-        for(size_t i = starting_index; i < singly_indirect_block; i++) {
-            le32_t leentry;
-            uint32_t entry;
-            res = fs_node_paged_read(
+        if(singly_indirect_block != 0 &&
+           (blocks_needed < EXT2_INODE_DIRECT_BLOCKS + num_singly_indirect))
+        {
+            size_t starting_index;
+            if(blocks_needed < EXT2_INODE_DIRECT_BLOCKS)
+            {
+                starting_index = 0;
+            }
+            else
+            {
+                starting_index = blocks_needed - EXT2_INODE_DIRECT_BLOCKS;
+            }
+
+            for(size_t i = starting_index; i < singly_indirect_block; i++)
+            {
+                le32_t leentry;
+                uint32_t entry;
+                res = fs_node_paged_read(
                     node->mount->backing_node,
-                    EXT2_BLOCK_OFFSET(singly_indirect_block, node->mount->block_size)
-                        + (sizeof(le32_t) * i),
+                    EXT2_BLOCK_OFFSET(singly_indirect_block,
+                                      node->mount->block_size) +
+                        (sizeof(le32_t) * i),
                     &leentry,
                     sizeof(le32_t),
                     0);
-            if(res) {
-                panic("Failed to read EXT2 indirect block!\n");
-            }
+                if(res)
+                {
+                    panic("Failed to read EXT2 indirect block!\n");
+                }
 
-            entry = letoh32(leentry);
+                entry = letoh32(leentry);
 
-            if(entry == 0) {
-                continue;
-            }
+                if(entry == 0)
+                {
+                    continue;
+                }
 
-            res = ext2_mount_free_block(node->mount, entry);
-            if(res) {
-                panic("Failed to free EXT2 block!\n");
-            }
+                res = ext2_mount_free_block(node->mount, entry);
+                if(res)
+                {
+                    panic("Failed to free EXT2 block!\n");
+                }
 
-            leentry = htole32(0);
-            res = fs_node_paged_write(
+                leentry = htole32(0);
+                res = fs_node_paged_write(
                     node->mount->backing_node,
-                    EXT2_BLOCK_OFFSET(singly_indirect_block, node->mount->block_size)
-                        + (sizeof(le32_t) * i),
+                    EXT2_BLOCK_OFFSET(singly_indirect_block,
+                                      node->mount->block_size) +
+                        (sizeof(le32_t) * i),
                     &leentry,
                     sizeof(le32_t),
                     0);
-            if(res) {
-                panic("Failed to write to EXT2 indirect block!\n");
+                if(res)
+                {
+                    panic("Failed to write to EXT2 indirect "
+                          "block!\n");
+                }
             }
-        }
 
-        if(starting_index == 0) {
-            res = ext2_mount_free_block(node->mount, singly_indirect_block);
-            if(res) {
-                panic("Failed to free singly indirect EXT2 block!\n");
+            if(starting_index == 0)
+            {
+                res = ext2_mount_free_block(node->mount, singly_indirect_block);
+                if(res)
+                {
+                    panic("Failed to free singly indirect EXT2 "
+                          "block!\n");
+                }
+                node->inode.block[EXT2_INODE_INDIRECT_BLOCK] = 0;
             }
-            node->inode.block[EXT2_INODE_INDIRECT_BLOCK] = 0;
         }
-    }
     }
 
     // TODO Doubly and Triply Indirect Blocks
@@ -440,4 +467,3 @@ ext2_fs_node_resize(
     spin_unlock(&node->lock);
     return 0;
 }
-

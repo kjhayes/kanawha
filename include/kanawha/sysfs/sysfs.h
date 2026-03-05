@@ -5,16 +5,12 @@
 
 // Does not keep a reference to id
 int
-sysfs_register_mount(
-        struct fs_mount *mnt,
-        const char *id);
+sysfs_register_mount(struct fs_mount *mnt, const char *id);
 
 int
-sysfs_unregister_mount(
-        const char *id);
+sysfs_unregister_mount(const char *id);
 
 struct fs_mount *
-sysfs_mount_find(
-        const char *id);
+sysfs_mount_find(const char *id);
 
 #endif

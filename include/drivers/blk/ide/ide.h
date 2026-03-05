@@ -8,14 +8,12 @@ struct ide_dev;
 
 // Keeps a reference to "name"
 int
-ide_dev_register(
-	pio_t io_base,
-	pio_t ctrl_base,
-	const char *name,
-	struct ide_dev **out);
+ide_dev_register(pio_t io_base,
+                 pio_t ctrl_base,
+                 const char *name,
+                 struct ide_dev **out);
 
 int
-ide_dev_unregister(
-	struct ide_dev *dev);
+ide_dev_unregister(struct ide_dev *dev);
 
 #endif

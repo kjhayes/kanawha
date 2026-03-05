@@ -1,12 +1,15 @@
 
-#include <unistd.h>
 #include <stdio.h>
+#include <unistd.h>
 
-int main(int argc, const char **argv)
+int
+main(int argc, const char **argv)
 {
     size_t index = 0;
-    while(1) {
-        if(environ[index] == NULL) {
+    while(1)
+    {
+        if(environ[index] == NULL)
+        {
             break;
         }
         printf("%s\n", environ[index]);
@@ -14,4 +17,3 @@ int main(int argc, const char **argv)
     }
     return 0;
 }
-

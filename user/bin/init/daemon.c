@@ -1,41 +1,43 @@
 
 #include "daemon.h"
-#include <kanawha/sys-wrappers.h>
 #include <errno.h>
+#include <kanawha/sys-wrappers.h>
 #include <stdlib.h>
 #include <unistd.h>
 
 #include "log.h"
 
-int start_daemon(struct daemon *daemon)
-{ 
+int
+start_daemon(struct daemon *daemon)
+{
     int res;
 
-    if(daemon->status == DAEMON_UNINIT) {
+    if(daemon->status == DAEMON_UNINIT)
+    {
         // Setup the sockets
-        for(int i = 0; i < daemon->num_sockets; i++) {
+        for(int i = 0; i < daemon->num_sockets; i++)
+        {
             struct daemon_socket *sock = &daemon->sockets[i];
             int file;
-            res = kanawha_sys_socket(
-                    0,
-                    0,
-                    &file);
-            if(res) {
+            res = kanawha_sys_socket(0, 0, &file);
+            if(res)
+            {
                 return res;
             }
             sock->socket = file;
             char SOCK_NUM_BUFFER[64];
             snprintf(SOCK_NUM_BUFFER, 64, "%d", file);
-            SOCK_NUM_BUFFER[64-1] = '\0';
+            SOCK_NUM_BUFFER[64 - 1] = '\0';
             setenv(sock->env, SOCK_NUM_BUFFER, 1);
         }
     }
-    
+
     int fork_pid = fork();
-    if(fork_pid == 0) {
+    if(fork_pid == 0)
+    {
         // We are the child
-        INFO("running daemon: %s\n", daemon->command); 
-        execvp(daemon->command, (char**)daemon->args);
+        INFO("running daemon: %s\n", daemon->command);
+        execvp(daemon->command, (char **)daemon->args);
         ERROR("Failed to run daemon \"%s\"!\n", daemon->command);
         perror("execvp");
         exit(-1);
@@ -45,4 +47,3 @@ int start_daemon(struct daemon *daemon)
     daemon->status = DAEMON_RUNNING;
     return 0;
 }
-

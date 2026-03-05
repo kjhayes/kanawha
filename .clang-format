@@ -1,0 +1,24 @@
+---
+
+IndentWidth: 4
+ColumnLimit: 80
+UseTab: Never
+
+BreakBeforeBraces: Allman
+
+PointerAlignment: Right
+
+BinPackParameters: false
+AllowAllParametersOfDeclarationOnNextLine: false
+BinPackArguments: false
+AllowAllArgumentsOnNextLine: false
+
+# For definitions always place the return type
+# on its own line, for declarations, don't do it
+# if not needed, but do it before other options.
+PenaltyReturnTypeOnItsOwnLine: 0
+BreakAfterReturnType: All
+
+SpaceBeforeParens: false
+
+---

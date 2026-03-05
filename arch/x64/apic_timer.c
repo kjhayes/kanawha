@@ -1,16 +1,16 @@
 
-#include <kanawha/stddef.h>
-#include <kanawha/types.h>
-#include <kanawha/printk.h>
-#include <arch/x64/lapic.h>
 #include <arch/x64/cpu.h>
-#include <kanawha/timer_dev.h>
+#include <arch/x64/lapic.h>
+#include <kanawha/clk.h>
+#include <kanawha/cpu.h>
+#include <kanawha/dev/clk.h>
 #include <kanawha/init.h>
 #include <kanawha/irq_domain.h>
-#include <kanawha/cpu.h>
-#include <kanawha/clk.h>
-#include <kanawha/dev/clk.h>
+#include <kanawha/printk.h>
+#include <kanawha/stddef.h>
 #include <kanawha/timer.h>
+#include <kanawha/timer_dev.h>
+#include <kanawha/types.h>
 #include <kanawha/xcall.h>
 
 #define APIC_TIMER_MIN_NUM_CALIBRATIONS 8
@@ -22,14 +22,18 @@ apic_timer_handler(struct excp_state *excp_state, struct irq_action *action)
 {
     struct lapic_timer *apic_timer = action->handler_data.priv_data;
 
-    if(apic_timer->alarm_func) {
+    if(apic_timer->alarm_func)
+    {
         alarm_f *func = apic_timer->alarm_func;
         dprintk("APIC Timer Running %p\n", func);
-        if(!apic_timer->periodic) {
+        if(!apic_timer->periodic)
+        {
             apic_timer->alarm_func = NULL;
         }
         (*func)();
-    } else {
+    }
+    else
+    {
         dprintk("APIC Timer without callback!\n");
     }
 
@@ -37,16 +41,18 @@ apic_timer_handler(struct excp_state *excp_state, struct irq_action *action)
 }
 
 static void
-lapic_timer_set_mode_oneshot(struct lapic *apic) {
+lapic_timer_set_mode_oneshot(struct lapic *apic)
+{
     uint32_t timer_lvt = lapic_read_reg(apic, LAPIC_REG_LVT_TIMER);
-    timer_lvt &= ~(1ULL<<17);
+    timer_lvt &= ~(1ULL << 17);
     lapic_write_reg(apic, LAPIC_REG_LVT_TIMER, timer_lvt);
 }
 
 static void
-lapic_timer_set_mode_periodic(struct lapic *apic) {
+lapic_timer_set_mode_periodic(struct lapic *apic)
+{
     uint32_t timer_lvt = lapic_read_reg(apic, LAPIC_REG_LVT_TIMER);
-    timer_lvt |= 1ULL<<17;
+    timer_lvt |= 1ULL << 17;
     lapic_write_reg(apic, LAPIC_REG_LVT_TIMER, timer_lvt);
 }
 
@@ -56,7 +62,8 @@ apic_timer_init_current(void)
     int res;
 
     dprintk("Initializing APIC Timer on CPU %ld\n", (long)current_cpu_id());
-    if(!clk_mono_valid()) {
+    if(!clk_mono_valid())
+    {
         eprintk("Cannot calibrate APIC timer without a clock-source!\n");
         return -ENODEV;
     }
@@ -68,23 +75,25 @@ apic_timer_init_current(void)
     struct lapic_timer *apic_timer = &cpu->apic_timer;
 
     irq_t timer_irq = lapic_lvt_irq(current_cpu_id(), LAPIC_LVT_TIMER_HWIRQ);
-    if(timer_irq == NULL_IRQ) {
+    if(timer_irq == NULL_IRQ)
+    {
         eprintk("Failed to get local APIC Timer IRQ\n");
         return -ENXIO;
     }
     res = mask_irq(timer_irq);
-    if(res) {
+    if(res)
+    {
         eprintk("Failed to mask APIC Timer IRQ before calibration!\n");
         return res;
     }
 
     struct irq_action *timer_action =
-        irq_install_handler(
-            irq_to_desc(timer_irq),
-            &cpu->apic_timer,
-            apic_timer_handler);
+        irq_install_handler(irq_to_desc(timer_irq),
+                            &cpu->apic_timer,
+                            apic_timer_handler);
 
-    if(timer_action == NULL) {
+    if(timer_action == NULL)
+    {
         eprintk("Failed to add handler to APIC Timer interrupt!\n");
         return -EINVAL;
     }
@@ -102,14 +111,17 @@ apic_timer_init_current(void)
 
     // Unmask the IRQ
     res = unmask_irq(timer_irq);
-    if(res) {
-        eprintk("Failed to unmask APIC Timer IRQ before calibration (err=%s)!\n",
+    if(res)
+    {
+        eprintk("Failed to unmask APIC Timer IRQ before calibration "
+                "(err=%s)!\n",
                 errnostr(res));
         irq_uninstall_action(timer_action);
         return res;
     }
 
-    for(size_t trial = 0; trial < APIC_TIMER_MAX_NUM_CALIBRATION_ATTEMPTS; trial++)
+    for(size_t trial = 0; trial < APIC_TIMER_MAX_NUM_CALIBRATION_ATTEMPTS;
+        trial++)
     {
         lapic_write_reg(apic, LAPIC_REG_TMR_ICR, 0xFFFFFFFF);
 
@@ -117,24 +129,38 @@ apic_timer_init_current(void)
         cycles_t cycles_base = lapic_read_reg(apic, LAPIC_REG_TMR_CCR);
 
         // Spin so we don't have too few cycles
-        for(volatile size_t spin_cntr = 0; spin_cntr < APIC_CALIBRATION_SPIN_MULTIPLIER * (trial+1); spin_cntr++) {}
+        for(volatile size_t spin_cntr = 0;
+            spin_cntr < APIC_CALIBRATION_SPIN_MULTIPLIER * (trial + 1);
+            spin_cntr++)
+        {
+        }
 
         duration_t mono_end = clk_mono_current();
         cycles_t cycles_end = lapic_read_reg(apic, LAPIC_REG_TMR_CCR);
 
-        if(mono_base >= mono_end) {
-            eprintk("Failed APIC Calibration Attempt (Clock Error) clk-base = 0x%llx, clock-end = 0x%llx (trial = %d)\n",
-                    (unsigned long long)mono_base, (unsigned long long)mono_end, (int)trial);
+        if(mono_base >= mono_end)
+        {
+            eprintk("Failed APIC Calibration Attempt (Clock Error) "
+                    "clk-base = "
+                    "0x%llx, clock-end = 0x%llx (trial = %d)\n",
+                    (unsigned long long)mono_base,
+                    (unsigned long long)mono_end,
+                    (int)trial);
             continue;
         }
 
-        if(cycles_base <= cycles_end || (cycles_end == 0)) {
-            eprintk("Failed APIC Calibration Attempt (Timer Error) cycles-base = 0x%llx, cycles-end = 0x%llx (trial = %d)\n",
-                    (unsigned long long)cycles_base, (unsigned long long)cycles_end, (int)trial);
+        if(cycles_base <= cycles_end || (cycles_end == 0))
+        {
+            eprintk("Failed APIC Calibration Attempt (Timer Error) "
+                    "cycles-base "
+                    "= 0x%llx, cycles-end = 0x%llx (trial = %d)\n",
+                    (unsigned long long)cycles_base,
+                    (unsigned long long)cycles_end,
+                    (int)trial);
             continue;
         }
 
-        duration_t elapsed_time = mono_end - mono_base; // Counting Up
+        duration_t elapsed_time = mono_end - mono_base;     // Counting Up
         cycles_t elapsed_cycles = cycles_base - cycles_end; // Counting Down
 
         freq_t freq = timed_cycles_to_freq(elapsed_time, elapsed_cycles);
@@ -142,21 +168,25 @@ apic_timer_init_current(void)
         measured_freq[num_successful_trials] = freq;
         num_successful_trials++;
 
-        if(num_successful_trials >= APIC_TIMER_MIN_NUM_CALIBRATIONS) {
+        if(num_successful_trials >= APIC_TIMER_MIN_NUM_CALIBRATIONS)
+        {
             break;
         }
     }
 
     // TODO: A Less Overflow Prone Averaging
     freq_t avg = 0;
-    for(size_t i = 0; i < num_successful_trials; i++) {
+    for(size_t i = 0; i < num_successful_trials; i++)
+    {
         avg += measured_freq[i];
         dprintk("Trial(%d) : %llu Mhz\n",
-                (int)i, (unsigned long long)freq_to_mhz(measured_freq[i]));
+                (int)i,
+                (unsigned long long)freq_to_mhz(measured_freq[i]));
     }
     calibrated_freq = avg / num_successful_trials;
 
-    if(num_successful_trials < APIC_TIMER_MIN_NUM_CALIBRATIONS) {
+    if(num_successful_trials < APIC_TIMER_MIN_NUM_CALIBRATIONS)
+    {
         eprintk("Failed to calibrate the APIC timer!\n");
         irq_uninstall_action(timer_action);
         return -EIMPREC;
@@ -165,7 +195,8 @@ apic_timer_init_current(void)
     apic_timer->freq = calibrated_freq;
 
     res = mask_irq(timer_irq);
-    if(res) {
+    if(res)
+    {
         wprintk("Failed to re-mask APIC Timer IRQ after calibration!\n");
     }
 
@@ -181,38 +212,37 @@ lapic_timer_clear_xcall(void *state)
     struct cpu *gen_cpu = cpu_from_id(current_cpu_id());
     struct x64_cpu *cpu = container_of(gen_cpu, struct x64_cpu, cpu);
 
-    irq_t timer_irq = irq_domain_revmap(cpu->apic.lvt_domain, LAPIC_LVT_TIMER_HWIRQ);
+    irq_t timer_irq =
+        irq_domain_revmap(cpu->apic.lvt_domain, LAPIC_LVT_TIMER_HWIRQ);
     mask_irq(timer_irq);
 
     return;
 }
 
 static int
-lapic_timer_clear_alarm(
-        struct timer_dev *timer_dev,
-        size_t alarm)
+lapic_timer_clear_alarm(struct timer_dev *timer_dev, size_t alarm)
 {
-    if(alarm != 0) {
+    if(alarm != 0)
+    {
         return -ENXIO;
     }
 
     struct lapic_timer *lapic_timer =
         container_of(timer_dev, struct lapic_timer, timer_dev);
-    struct x64_cpu *cpu =
-        container_of(lapic_timer, struct x64_cpu, apic_timer);
+    struct x64_cpu *cpu = container_of(lapic_timer, struct x64_cpu, apic_timer);
 
     return xcall_run(cpu->cpu.id, lapic_timer_clear_xcall, NULL);
 }
 
 static inline void
-lapic_local_timer_set_for_duration(
-        struct lapic *lapic,
-        struct lapic_timer *timer,
-        duration_t duration)
+lapic_local_timer_set_for_duration(struct lapic *lapic,
+                                   struct lapic_timer *timer,
+                                   duration_t duration)
 {
     // We assume the DCR is set to divide by 1 still
     cycles_t cycles = cycles_from_duration(duration, timer->freq);
-    dprintk("CPU (%ld) lapic_local_timer_set_for_duration(duration = %ld ms, cycles = 0x%llx)\n",
+    dprintk("CPU (%ld) lapic_local_timer_set_for_duration(duration = %ld ms, "
+            "cycles = 0x%llx)\n",
             (sl_t)current_cpu_id(),
             (sl_t)duration_to_msec(duration),
             cycles);
@@ -230,8 +260,9 @@ lapic_timer_set_oneshot_xcall(void *__duration)
     struct lapic *lapic = &cpu->apic;
     struct lapic_timer *timer = &cpu->apic_timer;
 
-    irq_t timer_irq = irq_domain_revmap(lapic->lvt_domain, LAPIC_LVT_TIMER_HWIRQ);
-    
+    irq_t timer_irq =
+        irq_domain_revmap(lapic->lvt_domain, LAPIC_LVT_TIMER_HWIRQ);
+
     mask_irq(timer_irq);
 
     lapic_timer_set_mode_oneshot(lapic);
@@ -254,7 +285,8 @@ lapic_timer_set_periodic_xcall(void *__duration)
     struct lapic *lapic = &cpu->apic;
     struct lapic_timer *timer = &cpu->apic_timer;
 
-    irq_t timer_irq = irq_domain_revmap(lapic->lvt_domain, LAPIC_LVT_TIMER_HWIRQ);
+    irq_t timer_irq =
+        irq_domain_revmap(lapic->lvt_domain, LAPIC_LVT_TIMER_HWIRQ);
 
     mask_irq(timer_irq);
 
@@ -267,13 +299,13 @@ lapic_timer_set_periodic_xcall(void *__duration)
 }
 
 static int
-lapic_timer_set_alarm_oneshot(
-        struct timer_dev *timer_dev,
-        size_t alarm,
-        duration_t wait_for,
-        alarm_f *func)
+lapic_timer_set_alarm_oneshot(struct timer_dev *timer_dev,
+                              size_t alarm,
+                              duration_t wait_for,
+                              alarm_f *func)
 {
-    if(alarm != 0) {
+    if(alarm != 0)
+    {
         return -ENXIO;
     }
 
@@ -283,22 +315,23 @@ lapic_timer_set_alarm_oneshot(
     lapic_timer->alarm_func = func;
     lapic_timer->periodic = 0;
 
-    struct x64_cpu *cpu =
-        container_of(lapic_timer, struct x64_cpu, apic_timer);
+    struct x64_cpu *cpu = container_of(lapic_timer, struct x64_cpu, apic_timer);
 
     printk("lapic_timer_set_alarm_oneshot\n");
 
-    return xcall_run(cpu->cpu.id, lapic_timer_set_oneshot_xcall, (void*)(uintptr_t)wait_for);
+    return xcall_run(cpu->cpu.id,
+                     lapic_timer_set_oneshot_xcall,
+                     (void *)(uintptr_t)wait_for);
 }
 
 static int
-lapic_timer_set_alarm_periodic(
-        struct timer_dev *timer_dev,
-        size_t alarm,
-        duration_t period,
-        alarm_f *func)
+lapic_timer_set_alarm_periodic(struct timer_dev *timer_dev,
+                               size_t alarm,
+                               duration_t period,
+                               alarm_f *func)
 {
-    if(alarm != 0) {
+    if(alarm != 0)
+    {
         return -ENXIO;
     }
 
@@ -308,14 +341,14 @@ lapic_timer_set_alarm_periodic(
     lapic_timer->alarm_func = func;
     lapic_timer->periodic = 1;
 
-    struct x64_cpu *cpu =
-        container_of(lapic_timer, struct x64_cpu, apic_timer);
+    struct x64_cpu *cpu = container_of(lapic_timer, struct x64_cpu, apic_timer);
 
-    return xcall_run(cpu->cpu.id, lapic_timer_set_periodic_xcall, (void*)(uintptr_t)period);
+    return xcall_run(cpu->cpu.id,
+                     lapic_timer_set_periodic_xcall,
+                     (void *)(uintptr_t)period);
 }
 
-static struct timer_driver
-lapic_timer_driver = {
+static struct timer_driver lapic_timer_driver = {
     .clear_alarm = lapic_timer_clear_alarm,
     .set_alarm_oneshot = lapic_timer_set_alarm_oneshot,
     .set_alarm_periodic = lapic_timer_set_alarm_periodic,
@@ -342,37 +375,35 @@ lapic_clk_mono_cycles_xcall(void *__cycles_out)
 
     cycles_t cycles = lapic_read_reg(lapic, LAPIC_REG_TMR_CCR);
 
-    *(cycles_t*)__cycles_out = cycles;
+    *(cycles_t *)__cycles_out = cycles;
 }
 
-static cycles_t 
+static cycles_t
 lapic_clk_mono_cycles(struct clk_dev *clk_dev)
 {
     int res;
 
     struct lapic_timer *lapic_timer =
         container_of(clk_dev, struct lapic_timer, clk_dev);
-    struct x64_cpu *cpu =
-        container_of(lapic_timer, struct x64_cpu, apic_timer);
+    struct x64_cpu *cpu = container_of(lapic_timer, struct x64_cpu, apic_timer);
     cycles_t cycles;
-    
-    res = xcall_run(cpu->cpu.id, lapic_clk_mono_cycles_xcall, (void*)&cycles);
-    if(res) {
+
+    res = xcall_run(cpu->cpu.id, lapic_clk_mono_cycles_xcall, (void *)&cycles);
+    if(res)
+    {
         return 0;
     }
 
     return cycles;
 }
 
-static struct clk_driver
-lapic_clk_driver = {
+static struct clk_driver lapic_clk_driver = {
     .freq = lapic_clk_freq,
     .mono_cycles = lapic_clk_mono_cycles,
 };
 
 int
-register_cpu_lapic_timer(
-        struct x64_cpu *cpu)
+register_cpu_lapic_timer(struct x64_cpu *cpu)
 {
     int res;
 
@@ -382,9 +413,10 @@ register_cpu_lapic_timer(
 #define NAMEBUFLEN 128
         char namebuf[NAMEBUFLEN];
         snprintk(namebuf, NAMEBUFLEN, "lapic-timer-%ld", cpu->cpu.id);
-        namebuf[NAMEBUFLEN-1] = '\0';
+        namebuf[NAMEBUFLEN - 1] = '\0';
         timer->name = kstrdup(namebuf);
-        if(timer->name == NULL) {
+        if(timer->name == NULL)
+        {
             return -ENOMEM;
         }
 #undef NAMEBUFLEN
@@ -393,9 +425,11 @@ register_cpu_lapic_timer(
     timer->clk_dev.driver = &lapic_clk_driver;
     timer->clk_dev.flags = CLK_DEV_FLAG_PERCPU;
     res = register_clk_dev(&timer->clk_dev, timer->name);
-    if(res) {
+    if(res)
+    {
         eprintk("Failed to register LAPIC %lu as a clk device! (err=%s)\n",
-                (ul_t)cpu->apic.id, errnostr(res));
+                (ul_t)cpu->apic.id,
+                errnostr(res));
     }
 
     timer->timer_dev.driver = &lapic_timer_driver;
@@ -404,7 +438,8 @@ register_cpu_lapic_timer(
     timer->periodic = 0;
 
     res = provide_timer(&timer->timer_dev, 0);
-    if(res) {
+    if(res)
+    {
         eprintk("Failed to provide APIC Timer %ld as timer source! (err=%s)\n",
                 (sl_t)cpu->apic.id,
                 errnostr(res));
@@ -412,4 +447,3 @@ register_cpu_lapic_timer(
 
     return res;
 }
-

@@ -1,12 +1,12 @@
 
+#include <drivers/vga/fb.h>
+#include <drivers/vga/vga.h>
 #include <kanawha/dev/fb.h>
+#include <kanawha/endian.h>
 #include <kanawha/init.h>
 #include <kanawha/kmalloc.h>
-#include <kanawha/string.h>
 #include <kanawha/page_alloc.h>
-#include <kanawha/endian.h>
-#include <drivers/vga/vga.h>
-#include <drivers/vga/fb.h>
+#include <kanawha/string.h>
 
 extern struct vga_fb_mode vga_fb_mode_text_80_25;
 extern struct vga_fb_mode vga_fb_mode_text_80_50;
@@ -27,26 +27,28 @@ static struct vga_fb_mode *vga_fb_modes[] = {
 
 // Must be called with the mode lock held
 static int
-__vga_fb_set_buffer_size(
-        struct vga_fb *fb,
-        size_t size)
+__vga_fb_set_buffer_size(struct vga_fb *fb, size_t size)
 {
     int res;
 
-    if(size == 0) {
+    if(size == 0)
+    {
         return -EINVAL;
     }
 
     order_t new_buffer_order = 64 - __builtin_clzl(size);
     void __phys *new_buffer;
     res = page_alloc(new_buffer_order, &new_buffer, 0);
-    if(res) {
+    if(res)
+    {
         return res;
     }
 
-    if(fb->buffer_exists) {
+    if(fb->buffer_exists)
+    {
         res = page_free(fb->buffer_order, fb->buffer);
-        if(res) {
+        if(res)
+        {
             page_free(new_buffer_order, new_buffer);
             return res;
         }
@@ -57,24 +59,20 @@ __vga_fb_set_buffer_size(
     fb->buffer_exists = 1;
 
     // Clear the buffer
-    memset_p(fb->buffer, 0, 1ULL<<fb->buffer_order);
+    memset_p(fb->buffer, 0, 1ULL << fb->buffer_order);
 
     return 0;
 }
 
 #define VGA_FB_BASE_ADDR (void __phys *)0xA0000
 
-
-
 static struct fb_mode_info *
-vga_fb_get_mode_info(
-        struct fb_dev *dev,
-        size_t index)
+vga_fb_get_mode_info(struct fb_dev *dev, size_t index)
 {
-    struct vga_fb *fb =
-        container_of(dev, struct vga_fb, fb_dev);
+    struct vga_fb *fb = container_of(dev, struct vga_fb, fb_dev);
 
-    if(index >= VGA_FB_NUM_MODES) {
+    if(index >= VGA_FB_NUM_MODES)
+    {
         return NULL;
     }
 
@@ -82,14 +80,12 @@ vga_fb_get_mode_info(
 }
 
 static int
-vga_fb_put_mode_info(
-        struct fb_dev *dev,
-        size_t index)
+vga_fb_put_mode_info(struct fb_dev *dev, size_t index)
 {
-    struct vga_fb *fb =
-        container_of(dev, struct vga_fb, fb_dev);
+    struct vga_fb *fb = container_of(dev, struct vga_fb, fb_dev);
 
-    if(index >= VGA_FB_NUM_MODES) {
+    if(index >= VGA_FB_NUM_MODES)
+    {
         return -EINVAL;
     }
 
@@ -97,14 +93,12 @@ vga_fb_put_mode_info(
 }
 
 static int
-vga_fb_set_mode(
-        struct fb_dev *dev,
-        size_t index)
+vga_fb_set_mode(struct fb_dev *dev, size_t index)
 {
-    struct vga_fb *fb =
-        container_of(dev, struct vga_fb, fb_dev);
+    struct vga_fb *fb = container_of(dev, struct vga_fb, fb_dev);
 
-    if(index >= VGA_FB_NUM_MODES) {
+    if(index >= VGA_FB_NUM_MODES)
+    {
         return -ENXIO;
     }
 
@@ -114,7 +108,8 @@ vga_fb_set_mode(
     struct vga_fb_mode *mode = vga_fb_modes[index];
 
     res = __vga_fb_set_buffer_size(fb, mode->mode_info->buffer_size);
-    if(res) {
+    if(res)
+    {
         thread_lock_release(&fb->mode_lock);
         return res;
     }
@@ -136,7 +131,8 @@ vga_fb_set_mode(
     memset_p((void __phys *)0xA0000, 0x0, 0x10000);
 
     res = (mode->setup)(fb);
-    if(res) {
+    if(res)
+    {
         thread_lock_release(&fb->mode_lock);
         return res;
     }
@@ -148,23 +144,18 @@ vga_fb_set_mode(
 }
 
 static ssize_t
-vga_fb_get_mode(
-        struct fb_dev *dev)
+vga_fb_get_mode(struct fb_dev *dev)
 {
-    struct vga_fb *fb =
-        container_of(dev, struct vga_fb, fb_dev);
+    struct vga_fb *fb = container_of(dev, struct vga_fb, fb_dev);
 
     return fb->current_mode;
 }
 
 static int
-vga_fb_load_buffer(
-        struct fb_dev *dev,
-        void __phys ** base_out)
+vga_fb_load_buffer(struct fb_dev *dev, void __phys **base_out)
 {
     int res;
-    struct vga_fb *fb =
-        container_of(dev, struct vga_fb, fb_dev);
+    struct vga_fb *fb = container_of(dev, struct vga_fb, fb_dev);
 
     size_t buffer_size;
 
@@ -178,36 +169,34 @@ vga_fb_load_buffer(
     return 0;
 }
 static int
-vga_fb_unload_buffer(
-        struct fb_dev *dev,
-        void __phys * base_out)
+vga_fb_unload_buffer(struct fb_dev *dev, void __phys *base_out)
 {
-    struct vga_fb *fb =
-        container_of(dev, struct vga_fb, fb_dev);
+    struct vga_fb *fb = container_of(dev, struct vga_fb, fb_dev);
 
     int res;
 
-    // Don't need to do anything, we allocate and deallocate the buffer on mode switch
+    // Don't need to do anything, we allocate and deallocate the buffer on mode
+    // switch
 
     return 0;
 }
 
 static int
-vga_fb_flush_buffer(
-        struct fb_dev *dev)
+vga_fb_flush_buffer(struct fb_dev *dev)
 {
     int res;
-    struct vga_fb *fb =
-        container_of(dev, struct vga_fb, fb_dev);
+    struct vga_fb *fb = container_of(dev, struct vga_fb, fb_dev);
 
     thread_lock_acquire(&fb->mode_lock);
 
-    if(!fb->buffer_exists) {
+    if(!fb->buffer_exists)
+    {
         thread_lock_release(&fb->mode_lock);
         return 0;
     }
 
-    if(fb->current_mode >= VGA_FB_NUM_MODES) {
+    if(fb->current_mode >= VGA_FB_NUM_MODES)
+    {
         thread_lock_release(&fb->mode_lock);
         return -EINVAL;
     }
@@ -217,11 +206,13 @@ vga_fb_flush_buffer(
     // Wait for VSYNC for a maximum of 10ms
     duration_t max_vsync_wait = msec_to_duration(10);
     time_t start = current_timestamp();
-    while(!vga_read_field(fb->vga_dev, VerticalRetrace)) {
-	duration_t elapsed = duration_between(start, current_timestamp());
-	if(elapsed < 0 || elapsed >= max_vsync_wait) {
-	    break;
-	}
+    while(!vga_read_field(fb->vga_dev, VerticalRetrace))
+    {
+        duration_t elapsed = duration_between(start, current_timestamp());
+        if(elapsed < 0 || elapsed >= max_vsync_wait)
+        {
+            break;
+        }
     }
 
     res = (*mode->flush)(fb);
@@ -240,21 +231,20 @@ static struct fb_driver vga_fb_driver = {
     .flush_buffer = vga_fb_flush_buffer,
 };
 
-static int 
-vga_fb_probe_vga_dev(
-        struct vga_dev *dev)
+static int
+vga_fb_probe_vga_dev(struct vga_dev *dev)
 {
     return 0;
 }
 
-static int 
-vga_fb_receive_vga_dev(
-        struct vga_dev *dev)
+static int
+vga_fb_receive_vga_dev(struct vga_dev *dev)
 {
     int res;
 
     struct vga_fb *fb = kzmalloc(sizeof(struct vga_fb), KM_KERNEL);
-    if(fb == NULL) {
+    if(fb == NULL)
+    {
         return -ENOMEM;
     }
 
@@ -265,19 +255,18 @@ vga_fb_receive_vga_dev(
     fb->buffer_exists = 0;
     fb->current_mode = 0;
     res = vga_fb_set_mode(&fb->fb_dev, VGA_FB_DEFAULT_MODE);
-    if(res) {
+    if(res)
+    {
         kfree(fb);
         return res;
     }
 
     fb->fb_dev.driver = &vga_fb_driver;
 
-    res = register_fb_dev(
-            &fb->fb_dev,
-            "vga");
-    if(res) {
-        eprintk("register_fb_dev returned %s\n",
-                errnostr(res));
+    res = register_fb_dev(&fb->fb_dev, "vga");
+    if(res)
+    {
+        eprintk("register_fb_dev returned %s\n", errnostr(res));
         kfree(fb);
         return res;
     }
@@ -286,19 +275,22 @@ vga_fb_receive_vga_dev(
 }
 
 static int
-vga_fb_revoke_vga_dev(
-        struct vga_dev *dev)
+vga_fb_revoke_vga_dev(struct vga_dev *dev)
 {
     int res;
     struct vga_fb *fb = dev->registry_node.owner_priv_data;
     res = unregister_fb_dev(&fb->fb_dev);
-    if(res) {
+    if(res)
+    {
         return res;
     }
-    if(fb->buffer_exists) {
+    if(fb->buffer_exists)
+    {
         res = page_free(fb->buffer_order, fb->buffer);
-        if(res) {
-            eprintk("Failed to free VGA framebuffer backing page! (err=%s)\n",
+        if(res)
+        {
+            eprintk("Failed to free VGA framebuffer backing page! "
+                    "(err=%s)\n",
                     errnostr(res));
         }
     }
@@ -306,8 +298,7 @@ vga_fb_revoke_vga_dev(
     return 0;
 }
 
-static struct vga_dev_owner
-vga_fb_vga_dev_owner = {
+static struct vga_dev_owner vga_fb_vga_dev_owner = {
     .probe = vga_fb_probe_vga_dev,
     .receive = vga_fb_receive_vga_dev,
     .revoke = vga_fb_revoke_vga_dev,
@@ -318,54 +309,55 @@ vga_fb_install_vga_dev_owner(void)
 {
     int res;
     res = register_vga_dev_owner(&vga_fb_vga_dev_owner);
-    if(res) {
+    if(res)
+    {
         return res;
     }
     return 0;
 }
 declare_init(device, vga_fb_install_vga_dev_owner);
 
-//static int
-//register_legacy_vga_fb_dev(void)
+// static int
+// register_legacy_vga_fb_dev(void)
 //{
-//    int res;
+//     int res;
 //
-//    struct vga_fb *fb = kzmalloc(sizeof(struct vga_fb), KM_KERNEL);
-//    if(fb == NULL) {
-//        return -ENOMEM;
-//    }
+//     struct vga_fb *fb = kzmalloc(sizeof(struct vga_fb), KM_KERNEL);
+//     if(fb == NULL) {
+//         return -ENOMEM;
+//     }
 //
-//    unsigned long dac_order = VGA_DAC_ORDER_DEFAULT;
+//     unsigned long dac_order = VGA_DAC_ORDER_DEFAULT;
 //
-//    res = vga_dev_init(&fb->vga_dev, dac_order);
-//    if(res) {
-//        kfree(fb);
-//        return res;
-//    }
+//     res = vga_dev_init(&fb->vga_dev, dac_order);
+//     if(res) {
+//         kfree(fb);
+//         return res;
+//     }
 //
-//    thread_lock_init(&fb->mode_lock);
-//    fb->buffer_exists = 0;
-//    fb->current_mode = 0;
-//    res = vga_fb_set_mode(&fb->fb_dev, 0);
-//    if(res) {
-//        kfree(fb);
-//        return res;
-//    }
+//     thread_lock_init(&fb->mode_lock);
+//     fb->buffer_exists = 0;
+//     fb->current_mode = 0;
+//     res = vga_fb_set_mode(&fb->fb_dev, 0);
+//     if(res) {
+//         kfree(fb);
+//         return res;
+//     }
 //
-//    fb->fb_dev.driver = &vga_fb_driver;
+//     fb->fb_dev.driver = &vga_fb_driver;
 //
-//    res = register_fb_dev(
-//            &fb->fb_dev,
-//            "vga");
-//    if(res) {
-//        printk("register_fb_dev returned %s\n",
-//                errnostr(res));
-//        kfree(fb);
-//        return res;
-//    }
+//     res = register_fb_dev(
+//             &fb->fb_dev,
+//             "vga");
+//     if(res) {
+//         printk("register_fb_dev returned %s\n",
+//                 errnostr(res));
+//         kfree(fb);
+//         return res;
+//     }
 //
-//    return 0;
-//}
+//     return 0;
+// }
 
-// declare_init_desc(device, register_vga_fb_dev, "Registering VGA Framebuffer Device");
-
+// declare_init_desc(device, register_vga_fb_dev, "Registering VGA Framebuffer
+// Device");

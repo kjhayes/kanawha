@@ -8,6 +8,6 @@
  * process' address space being wiped, and the process almost
  * certainly being killed.
  */
-#define EXEC_PERMISSIVE (1ULL<<0)
+#define EXEC_PERMISSIVE (1ULL << 0)
 
 #endif

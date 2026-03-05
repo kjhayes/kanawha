@@ -3,7 +3,7 @@
 
 #ifdef CONFIG_TOOLCHAIN_SUPPORTS_NODEREF_ATTRIBUTE
 #define __noreturn __attribute__((noreturn))
-#else 
+#else
 #define __noreturn
 #endif
 
@@ -19,12 +19,10 @@
 #define __address_space(_N)
 #endif // CONFIG_TOOLCHAIN_SUPPORTS_ADDRESS_SPACE_ATTRIBUTE
 
-
 #ifdef CONFIG_DISABLE_NORETURN_ATTRIBUTE
 #undef __noreturn
 #define __noreturn
 #endif
-
 
 #define __user __address_space(3)
 

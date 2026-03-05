@@ -1,11 +1,12 @@
 
-#include <kanawha/sys-wrappers.h>
-#include <kanawha/file.h>
 #include <errno.h>
+#include <kanawha/file.h>
+#include <kanawha/sys-wrappers.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-struct pci_config_space {
+struct pci_config_space
+{
     uint16_t vendor_id;
     uint16_t device_id;
     uint16_t command;
@@ -26,22 +27,20 @@ dump_pci_file(fd_t file)
 
     ssize_t total_read = 0;
 
-    while(total_read < sizeof(struct pci_config_space)) {
+    while(total_read < sizeof(struct pci_config_space))
+    {
         ssize_t read =
-            kanawha_sys_read(
-                    file,
-                    ((void*)&hdr)+total_read,
-                    sizeof(struct pci_config_space)-total_read);
-        if(read <= 0) {
+            kanawha_sys_read(file,
+                             ((void *)&hdr) + total_read,
+                             sizeof(struct pci_config_space) - total_read);
+        if(read <= 0)
+        {
             return -EINVAL;
         }
         total_read += read;
     }
 
-    printf("[%x:%x] {\n",
-            hdr.vendor_id,
-            hdr.device_id
-            );
+    printf("[%x:%x] {\n", hdr.vendor_id, hdr.device_id);
     printf("\tcommand=0x%x\n", hdr.command);
     printf("\tstatus=0x%x\n", hdr.status);
     printf("\tclass=0x%x\n", hdr.class);
@@ -53,4 +52,3 @@ dump_pci_file(fd_t file)
 
     return 0;
 }
-

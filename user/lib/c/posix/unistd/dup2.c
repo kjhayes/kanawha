@@ -1,6 +1,6 @@
 
-#include <unistd.h>
 #include <fcntl.h>
+#include <unistd.h>
 
 int
 dup2(int filedes1, int filedes2)

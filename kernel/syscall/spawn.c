@@ -1,17 +1,16 @@
 
-#include <kanawha/uapi/syscall.h>
-#include <kanawha/uapi/spawn.h>
-#include <kanawha/proc/process.h>
 #include <kanawha/proc/mmap.h>
+#include <kanawha/proc/process.h>
 #include <kanawha/types.h>
+#include <kanawha/uapi/spawn.h>
+#include <kanawha/uapi/syscall.h>
 #include <kanawha/usermode.h>
 
 int
-syscall_spawn(
-        void __user *child_func,
-        void *arg,
-        unsigned long flags,
-        pid_t __user *child_pid)
+syscall_spawn(void __user *child_func,
+              void *arg,
+              unsigned long flags,
+              pid_t __user *child_pid)
 {
     int res;
 
@@ -20,26 +19,23 @@ syscall_spawn(
     dprintk("syscall_spawn: child_pid=%p\n", child_pid);
 
     struct process *child =
-        process_spawn_child(
-                process,
-                child_func,
-                arg,
-                flags);
+        process_spawn_child(process, child_func, arg, flags);
 
-    if(child == NULL) {
+    if(child == NULL)
+    {
         eprintk("syscall_spawn: process_spawn_child failed!\n");
         return -ENOMEM;
     }
 
-    dprintk("spawned child %lld of parent %lld child_func=%p\n", (sll_t)child->id, (sll_t)process->id, child_func);
+    dprintk("spawned child %lld of parent %lld child_func=%p\n",
+            (sll_t)child->id,
+            (sll_t)process->id,
+            child_func);
 
     dprintk("Writing PID to user address %p\n", child_pid);
-    res = process_write_usermem(
-            process,
-            child_pid,
-            &child->id,
-            sizeof(pid_t));
-    if(res) {
+    res = process_write_usermem(process, child_pid, &child->id, sizeof(pid_t));
+    if(res)
+    {
         wprintk("sys_spawn: Failed to write PID to user memory! (err=%s)\n",
                 errnostr(res));
         // Still return zero because we spawned the process
@@ -49,4 +45,3 @@ syscall_spawn(
 
     return 0;
 }
-

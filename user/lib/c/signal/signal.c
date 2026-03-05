@@ -1,25 +1,33 @@
 
+#include <errno.h>
 #include <signal.h>
 #include <stdint.h>
-#include <errno.h>
 
-void(*signal(int sig, void(*func)(int)))(int)
+void (*signal(int sig, void (*func)(int)))(int)
 {
-    if(func == SIG_DFL) {
+    if(func == SIG_DFL)
+    {
         errno = -EUNIMPL;
         return SIG_ERR;
-    } else if(func == SIG_ERR) {
+    }
+    else if(func == SIG_ERR)
+    {
         errno = -EUNIMPL;
         return SIG_ERR;
-    } else if(func == SIG_HOLD) {
+    }
+    else if(func == SIG_HOLD)
+    {
         errno = -EUNIMPL;
         return SIG_ERR;
-    } else if(func == SIG_IGN) {
+    }
+    else if(func == SIG_IGN)
+    {
         errno = -EUNIMPL;
         return SIG_ERR;
-    } else {
+    }
+    else
+    {
         errno = -EUNIMPL;
-        return SIG_ERR;       
+        return SIG_ERR;
     }
 }
-

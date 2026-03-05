@@ -1,7 +1,7 @@
 
-#include <stdio.h>
 #include "elk-libc-internal/FILE.h"
 #include "elk-libc-internal/__sFILE.h"
+#include <stdio.h>
 
 struct __sFILE __ELK_stdin = {
     .__fd = 0,
@@ -30,10 +30,9 @@ __elk_crt__init_stdstreams(void)
     __ELK_stdout.__fd = 1;
     __ELK_stderr.__fd = 2;
 
-    stdin  = (FILE *)&__ELK_stdin;
+    stdin = (FILE *)&__ELK_stdin;
     stdout = (FILE *)&__ELK_stdout;
     stderr = (FILE *)&__ELK_stderr;
 
     return 0;
 }
-

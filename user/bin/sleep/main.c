@@ -1,29 +1,30 @@
 
-#include <stdio.h>
-#include <stdlib.h>
 #include <getopt.h>
-#include <string.h>
 #include <kanawha/sleep.h>
 #include <kanawha/sys-wrappers.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 const char *progname = "sleep";
 
-__attribute__((noreturn))
-static void
-panic_usage(void) {
-    fprintf(stderr, "Usage: %s [MS]\n",
-            progname);
+__attribute__((noreturn)) static void
+panic_usage(void)
+{
+    fprintf(stderr, "Usage: %s [MS]\n", progname);
     exit(EXIT_FAILURE);
 }
 
 int
 main(int argc, const char **argv)
 {
-    if(argc > 0) {
+    if(argc > 0)
+    {
         progname = argv[0];
     }
 
-    if(argc != 2) {
+    if(argc != 2)
+    {
         panic_usage();
     }
 
@@ -32,4 +33,3 @@ main(int argc, const char **argv)
 
     return 0;
 }
-

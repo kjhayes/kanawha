@@ -2,7 +2,8 @@
 #include <stdarg.h>
 #include <stdio.h>
 
-int sprintf(char * restrict s, const char * restrict format, ...)
+int
+sprintf(char *restrict s, const char *restrict format, ...)
 {
     va_list arg;
     int done;
@@ -13,4 +14,3 @@ int sprintf(char * restrict s, const char * restrict format, ...)
 
     return done;
 }
-

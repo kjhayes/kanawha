@@ -1,8 +1,8 @@
 #ifndef __ELK_LIBC_INTERNAL__DIR_H__
 #define __ELK_LIBC_INTERNAL__DIR_H__
 
-#include <kanawha/file.h>
 #include <dirent.h>
+#include <kanawha/file.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -18,7 +18,8 @@ static inline DIR *
 __elk_libc_internal__alloc_DIR(void)
 {
     DIR *dir = malloc(sizeof(*dir));
-    if(dir == NULL) {
+    if(dir == NULL)
+    {
         return NULL;
     }
 
@@ -29,8 +30,7 @@ __elk_libc_internal__alloc_DIR(void)
 }
 
 static inline void
-__elk_libc_internal__free_DIR(
-        DIR *dir)
+__elk_libc_internal__free_DIR(DIR *dir)
 {
     free(dir->dirent);
     free(dir);

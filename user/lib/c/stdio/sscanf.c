@@ -1,12 +1,9 @@
 
-#include <stdio.h>
 #include <stdarg.h>
+#include <stdio.h>
 
 int
-sscanf(
-        const char * restrict s,
-        const char * restrict format,
-        ...)
+sscanf(const char *restrict s, const char *restrict format, ...)
 {
     int done;
     va_list arg;
@@ -15,4 +12,3 @@ sscanf(
     va_end(arg);
     return done;
 }
-

@@ -1,10 +1,10 @@
 
-#include <signal.h>
 #include <errno.h>
+#include <signal.h>
 
-int sigsuspend(const sigset_t *)
+int
+sigsuspend(const sigset_t *)
 {
     errno = -EUNIMPL;
     return -1;
 }
-

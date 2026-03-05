@@ -4,11 +4,9 @@
 #include <acpi/interp/state.h>
 
 ssize_t
-acpi_interp_pkglength(
-        struct acpi_interp_state *state);
+acpi_interp_pkglength(struct acpi_interp_state *state);
 
 int
-acpi_interp_push_pkg_frame(
-	struct acpi_interp_state *state);
+acpi_interp_push_pkg_frame(struct acpi_interp_state *state);
 
 #endif

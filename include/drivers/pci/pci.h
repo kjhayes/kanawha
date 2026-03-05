@@ -1,22 +1,22 @@
 #ifndef __KANAWHA__PCI_PCI_H__
 #define __KANAWHA__PCI_PCI_H__
 
-#include <kanawha/types.h>
 #include <kanawha/list.h>
 #include <kanawha/ops.h>
 #include <kanawha/ptree.h>
+#include <kanawha/types.h>
 
 #include <drivers/pci/bar.h>
-#include <kanawha/irq_domain.h>
 #include <kanawha/dev/irq.h>
+#include <kanawha/irq_domain.h>
 
 #ifdef CONFIG_SYSFS_PCI
 #include <kanawha/sysfs/vfs.h>
 #endif
 
-#define PCI_MAX_BUSES_PER_SEGMENT (1ULL<<8)
-#define PCI_MAX_DEVICES_PER_BUS  (1ULL<<5)
-#define PCI_MAX_FUNC_PER_DEVICE  (1ULL<<3)
+#define PCI_MAX_BUSES_PER_SEGMENT (1ULL << 8)
+#define PCI_MAX_DEVICES_PER_BUS (1ULL << 5)
+#define PCI_MAX_FUNC_PER_DEVICE (1ULL << 3)
 
 struct pci_cam;
 
@@ -74,7 +74,8 @@ struct pci_func
 
     struct pci_bar bars[6];
 
-    enum {
+    enum
+    {
         PCI_IRQ_MODE_NONE = 0,
         PCI_IRQ_MODE_INTX,
         PCI_IRQ_MODE_MSI,
@@ -95,11 +96,11 @@ struct pci_func
 };
 
 // By default pci_ids only match against "vendor" and "device"
-#define PCI_ID_CHECK_CLASS    (1ULL<<0)
-#define PCI_ID_CHECK_SUBCLASS (1ULL<<1)
-#define PCI_ID_CHECK_PROG_IF  (1ULL<<2)
-#define PCI_ID_IGNORE_VENDOR  (1ULL<<3)
-#define PCI_ID_IGNORE_DEVICE  (1ULL<<4)
+#define PCI_ID_CHECK_CLASS (1ULL << 0)
+#define PCI_ID_CHECK_SUBCLASS (1ULL << 1)
+#define PCI_ID_CHECK_PROG_IF (1ULL << 2)
+#define PCI_ID_IGNORE_VENDOR (1ULL << 3)
+#define PCI_ID_IGNORE_DEVICE (1ULL << 4)
 
 struct pci_id
 {
@@ -115,31 +116,32 @@ struct pci_id
 
 // Returns zero if this driver can control the device
 // (Should assume pci_id(s) have been matched already)
-#define PCI_DRIVER_PROBE_SIG(RET,ARG,...)\
-RET(int)\
-ARG(struct pci_func *, dev)
+#define PCI_DRIVER_PROBE_SIG(RET, ARG, ...)                                    \
+    RET(int)                                                                   \
+    ARG(struct pci_func *, dev)
 
 // Called to initialize the device after a successful probe
 // Returns 0 on success
-#define PCI_DRIVER_INIT_DEVICE_SIG(RET,ARG,...)\
-RET(int)\
-ARG(struct pci_func *, dev)
+#define PCI_DRIVER_INIT_DEVICE_SIG(RET, ARG, ...)                              \
+    RET(int)                                                                   \
+    ARG(struct pci_func *, dev)
 
 // Called after a successful "init" to deinitialize the device
 // Returns 0 on success
-#define PCI_DRIVER_DEINIT_DEVICE_SIG(RET,ARG,...)\
-RET(int)\
-ARG(struct pci_func *, dev)
+#define PCI_DRIVER_DEINIT_DEVICE_SIG(RET, ARG, ...)                            \
+    RET(int)                                                                   \
+    ARG(struct pci_func *, dev)
 
-#define PCI_DRIVER_OP_LIST(OP, ...)\
-OP(probe, PCI_DRIVER_PROBE_SIG, ##__VA_ARGS__)\
-OP(init_device, PCI_DRIVER_INIT_DEVICE_SIG, ##__VA_ARGS__)\
-OP(deinit_device, PCI_DRIVER_DEINIT_DEVICE_SIG, ##__VA_ARGS__)
+#define PCI_DRIVER_OP_LIST(OP, ...)                                            \
+    OP(probe, PCI_DRIVER_PROBE_SIG, ##__VA_ARGS__)                             \
+    OP(init_device, PCI_DRIVER_INIT_DEVICE_SIG, ##__VA_ARGS__)                 \
+    OP(deinit_device, PCI_DRIVER_DEINIT_DEVICE_SIG, ##__VA_ARGS__)
 
 struct pci_driver;
 
-struct pci_driver_ops {
-DECLARE_OP_LIST_PTRS(PCI_DRIVER_OP_LIST, struct pci_driver *)
+struct pci_driver_ops
+{
+    DECLARE_OP_LIST_PTRS(PCI_DRIVER_OP_LIST, struct pci_driver *)
 };
 
 struct pci_driver
@@ -154,13 +156,12 @@ struct pci_driver
     struct pci_id *ids;
 };
 
-DEFINE_OP_LIST_WRAPPERS(
-        PCI_DRIVER_OP_LIST,
-        static inline,
-        /* No Prefix */,
-        pci_driver,
-        OPS_STRUCT_PTR_ACCESSOR,
-        SELF_ACCESSOR)
+DEFINE_OP_LIST_WRAPPERS(PCI_DRIVER_OP_LIST,
+                        static inline,
+                        /* No Prefix */,
+                        pci_driver,
+                        OPS_STRUCT_PTR_ACCESSOR,
+                        SELF_ACCESSOR)
 
 #undef PCI_DRIVER_PROBE_SIG
 #undef PCI_DRIVER_INIT_DEVICE_SIG
@@ -168,29 +169,19 @@ DEFINE_OP_LIST_WRAPPERS(
 #undef PCI_DRIVER_OP_LIST
 
 int
-pci_probe_bus(
-        struct pci_segment *segment,
-        uint8_t bus_index);
+pci_probe_bus(struct pci_segment *segment, uint8_t bus_index);
 int
-pci_probe_device(
-        struct pci_bus *bus,
-        uint8_t device_index);
+pci_probe_device(struct pci_bus *bus, uint8_t device_index);
 int
-pci_probe_func(
-        struct pci_device *device,
-        uint8_t function);
+pci_probe_func(struct pci_device *device, uint8_t function);
 
 int
-register_pci_cam(
-        struct pci_cam *cam,
-        unsigned long flags);
+register_pci_cam(struct pci_cam *cam, unsigned long flags);
 
 int
-register_pci_driver(
-        struct pci_driver *driver);
+register_pci_driver(struct pci_driver *driver);
 
 int
-register_pci_func(
-        struct pci_func *func);
+register_pci_func(struct pci_func *func);
 
 #endif

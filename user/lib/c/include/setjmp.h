@@ -22,13 +22,17 @@ typedef void *sigjmp_buf[0];
 typedef void *jmp_buf[__JMP_BUFSIZE];
 typedef void *sigjmp_buf[__SIGJMP_BUFSIZE];
 
-void   longjmp(jmp_buf, int);
-void   siglongjmp(sigjmp_buf, int);
-void  _longjmp(jmp_buf, int);
+void
+longjmp(jmp_buf, int);
+void
+siglongjmp(sigjmp_buf, int);
+void
+_longjmp(jmp_buf, int);
 
-int    setjmp(jmp_buf);
-int    sigsetjmp(sigjmp_buf, int);
-int   _setjmp(jmp_buf);
+int setjmp(jmp_buf);
+int
+sigsetjmp(sigjmp_buf, int);
+int _setjmp(jmp_buf);
 
 #endif
 #endif

@@ -1,19 +1,19 @@
 
-#include <kanawha/spinlock.h>
-#include <kanawha/pio.h>
-#include <kanawha/kmalloc.h>
-#include <kanawha/string.h>
+#include <arch/x64/pic.h>
+#include <drivers/ps2/port.h>
+#include <kanawha/assert.h>
 #include <kanawha/init.h>
 #include <kanawha/irq.h>
 #include <kanawha/irq_domain.h>
-#include <kanawha/assert.h>
+#include <kanawha/kmalloc.h>
+#include <kanawha/pio.h>
+#include <kanawha/spinlock.h>
+#include <kanawha/string.h>
 #include <kanawha/vmem.h>
-#include <arch/x64/pic.h>
-#include <drivers/ps2/port.h>
 
-#define PS2_8042_STANDARD_DATA_PORT    0x60
+#define PS2_8042_STANDARD_DATA_PORT 0x60
 #define PS2_8042_STANDARD_COMMAND_PORT 0x64
-#define PS2_8042_STANDARD_STATUS_PORT  0x64
+#define PS2_8042_STANDARD_STATUS_PORT 0x64
 
 struct ps2_8042;
 struct ps2_8042_port;
@@ -41,12 +41,13 @@ struct ps2_8042_port
 
 #define PS2_WAIT_COUNT 0x100000
 static int
-ps2_8042_wait_input_buf(
-        struct ps2_8042 *ps2)
+ps2_8042_wait_input_buf(struct ps2_8042 *ps2)
 {
-    for(uint32_t i = 0; i < PS2_WAIT_COUNT; i++) {
+    for(uint32_t i = 0; i < PS2_WAIT_COUNT; i++)
+    {
         uint8_t status = inb(ps2->status_port);
-        if((status & 0b10) == 0) {
+        if((status & 0b10) == 0)
+        {
             return 0;
         }
     }
@@ -54,13 +55,14 @@ ps2_8042_wait_input_buf(
 }
 
 static int
-ps2_8042_wait_output_buf(
-        struct ps2_8042 *ps2)
+ps2_8042_wait_output_buf(struct ps2_8042 *ps2)
 {
     // TODO: Add a timeout
-    for(uint32_t i = 0; i < PS2_WAIT_COUNT; i++) {
+    for(uint32_t i = 0; i < PS2_WAIT_COUNT; i++)
+    {
         uint8_t status = inb(ps2->status_port);
-        if((status & 0b01) != 0) {
+        if((status & 0b01) != 0)
+        {
             return 0;
         }
     }
@@ -68,14 +70,13 @@ ps2_8042_wait_output_buf(
 }
 
 static int
-ps2_8042_cmd(
-        struct ps2_8042 *ps2,
-        uint8_t cmd)
+ps2_8042_cmd(struct ps2_8042 *ps2, uint8_t cmd)
 {
     int res;
     spin_lock(&ps2->lock);
     res = ps2_8042_wait_input_buf(ps2);
-    if(res) {
+    if(res)
+    {
         spin_unlock(&ps2->lock);
         return res;
     }
@@ -85,14 +86,13 @@ ps2_8042_cmd(
 }
 
 static int
-ps2_8042_data(
-        struct ps2_8042 *ps2,
-        uint8_t data)
+ps2_8042_data(struct ps2_8042 *ps2, uint8_t data)
 {
     int res;
     spin_lock(&ps2->lock);
     res = ps2_8042_wait_input_buf(ps2);
-    if(res) {
+    if(res)
+    {
         spin_unlock(&ps2->lock);
         return res;
     }
@@ -102,21 +102,20 @@ ps2_8042_data(
 }
 
 static int
-ps2_8042_cmd_data(
-        struct ps2_8042 *ps2,
-        uint8_t cmd,
-        uint8_t data)
+ps2_8042_cmd_data(struct ps2_8042 *ps2, uint8_t cmd, uint8_t data)
 {
     int res;
     spin_lock(&ps2->lock);
     res = ps2_8042_wait_input_buf(ps2);
-    if(res) {
+    if(res)
+    {
         spin_unlock(&ps2->lock);
         return res;
-    } 
+    }
     outb(ps2->command_port, cmd);
     res = ps2_8042_wait_input_buf(ps2);
-    if(res) {
+    if(res)
+    {
         spin_unlock(&ps2->lock);
         return res;
     }
@@ -126,21 +125,20 @@ ps2_8042_cmd_data(
 }
 
 static int
-ps2_8042_cmd_resp(
-        struct ps2_8042 *ps2,
-        uint8_t cmd,
-        uint8_t *resp)
+ps2_8042_cmd_resp(struct ps2_8042 *ps2, uint8_t cmd, uint8_t *resp)
 {
     int res;
     spin_lock(&ps2->lock);
     res = ps2_8042_wait_input_buf(ps2);
-    if(res) {
+    if(res)
+    {
         spin_unlock(&ps2->lock);
         return res;
     }
     outb(ps2->command_port, cmd);
     res = ps2_8042_wait_output_buf(ps2);
-    if(res) {
+    if(res)
+    {
         spin_unlock(&ps2->lock);
         return res;
     }
@@ -149,30 +147,31 @@ ps2_8042_cmd_resp(
     return 0;
 }
 
-__maybe_unused
-static int
-ps2_8042_cmd_data_resp(
-        struct ps2_8042 *ps2,
-        uint8_t cmd,
-        uint8_t data,
-        uint8_t *resp)
+__maybe_unused static int
+ps2_8042_cmd_data_resp(struct ps2_8042 *ps2,
+                       uint8_t cmd,
+                       uint8_t data,
+                       uint8_t *resp)
 {
     int res;
     spin_lock(&ps2->lock);
     res = ps2_8042_wait_input_buf(ps2);
-    if(res) {
+    if(res)
+    {
         spin_unlock(&ps2->lock);
         return res;
     }
     outb(ps2->command_port, cmd);
     res = ps2_8042_wait_input_buf(ps2);
-    if(res) {
+    if(res)
+    {
         spin_unlock(&ps2->lock);
         return res;
     }
     outb(ps2->data_port, data);
     res = ps2_8042_wait_output_buf(ps2);
-    if(res) {
+    if(res)
+    {
         spin_unlock(&ps2->lock);
         return res;
     }
@@ -182,51 +181,52 @@ ps2_8042_cmd_data_resp(
 }
 
 static int
-ps2_8042_read_cfg(
-        struct ps2_8042 *ps2,
-        uint8_t *cfg)
+ps2_8042_read_cfg(struct ps2_8042 *ps2, uint8_t *cfg)
 {
     return ps2_8042_cmd_resp(ps2, 0x20, cfg);
 }
 
 static int
-ps2_8042_write_cfg(
-        struct ps2_8042 *ps2,
-        uint8_t cfg)
+ps2_8042_write_cfg(struct ps2_8042 *ps2, uint8_t cfg)
 {
     return ps2_8042_cmd_data(ps2, 0x60, cfg);
 }
 
 // Returns 0 on success
 static int
-ps2_8042_self_test(
-        struct ps2_8042 *ps2)
+ps2_8042_self_test(struct ps2_8042 *ps2)
 {
     int res;
     uint8_t resp;
     res = ps2_8042_cmd_resp(ps2, 0xAA, &resp);
-    if(res) {
+    if(res)
+    {
         return res;
     }
-    if(resp == 0x55) {
+    if(resp == 0x55)
+    {
         return 0;
-    } else if(resp == 0xFC) {
+    }
+    else if(resp == 0xFC)
+    {
         // "proper" failure
         return -EFAULT;
-    } else {
+    }
+    else
+    {
         return -EINVAL;
     }
 }
 
 static int
-ps2_8042_flush_output_buf(
-        struct ps2_8042 *ps2)
+ps2_8042_flush_output_buf(struct ps2_8042 *ps2)
 {
     int res;
     spin_lock(&ps2->lock);
     uint8_t status;
     status = inb(ps2->status_port);
-    if(status & 0b01) {
+    if(status & 0b01)
+    {
         uint8_t val = inb(ps2->data_port);
     }
     spin_unlock(&ps2->lock);
@@ -234,16 +234,16 @@ ps2_8042_flush_output_buf(
 }
 
 static int
-ps2_8042_port_irq_handler(
-        struct excp_state *excp_state,
-        struct irq_action *action)
+ps2_8042_port_irq_handler(struct excp_state *excp_state,
+                          struct irq_action *action)
 {
     dprintk("8042 IRQ\n");
     struct ps2_8042_port *port = action->handler_data.priv_data;
     DEBUG_ASSERT(KERNEL_ADDR(port));
     DEBUG_ASSERT(KERNEL_ADDR(port->controller));
-    uint8_t data = inb(port->controller->data_port); 
-    if(port->port.callback != NULL) {
+    uint8_t data = inb(port->controller->data_port);
+    if(port->port.callback != NULL)
+    {
         DEBUG_ASSERT(KERNEL_ADDR(port->port.callback));
         (*port->port.callback)(&port->port, port->port.callback_data, data);
     }
@@ -252,9 +252,7 @@ ps2_8042_port_irq_handler(
 }
 
 static int
-ps2_8042_first_port_send(
-        struct ps2_port *port,
-        uint8_t data)
+ps2_8042_first_port_send(struct ps2_port *port, uint8_t data)
 {
     DEBUG_ASSERT(KERNEL_ADDR(port));
     struct ps2_8042_port *ps2_port =
@@ -263,9 +261,7 @@ ps2_8042_first_port_send(
 }
 
 static int
-ps2_8042_second_port_send(
-        struct ps2_port *port,
-        uint8_t data)
+ps2_8042_second_port_send(struct ps2_port *port, uint8_t data)
 {
     DEBUG_ASSERT(KERNEL_ADDR(port));
     struct ps2_8042_port *ps2_port =
@@ -273,13 +269,11 @@ ps2_8042_second_port_send(
     return ps2_8042_cmd_data(ps2_port->controller, 0xD4, data);
 }
 
-static struct ps2_port_ops
-ps2_8042_first_port_ops = {
+static struct ps2_port_ops ps2_8042_first_port_ops = {
     .send = ps2_8042_first_port_send,
 };
 
-static struct ps2_port_ops
-ps2_8042_second_port_ops = {
+static struct ps2_port_ops ps2_8042_second_port_ops = {
     .send = ps2_8042_second_port_send,
 };
 
@@ -289,63 +283,71 @@ ps2_8042_probe(void)
     int res;
 
     struct ps2_8042 *ps2 = kzmalloc(sizeof(struct ps2_8042), KM_KERNEL);
-    if(ps2 == NULL) {
+    if(ps2 == NULL)
+    {
         res = -ENOMEM;
         goto err0;
     }
 
     spinlock_init(&ps2->lock);
-    ps2->data_port    = PS2_8042_STANDARD_DATA_PORT;
+    ps2->data_port = PS2_8042_STANDARD_DATA_PORT;
     ps2->command_port = PS2_8042_STANDARD_COMMAND_PORT;
-    ps2->status_port  = PS2_8042_STANDARD_STATUS_PORT;
+    ps2->status_port = PS2_8042_STANDARD_STATUS_PORT;
 
     // Disable Both (ignored if only one) Ports
     res = ps2_8042_cmd(ps2, 0xAD);
-    if(res) {
+    if(res)
+    {
         goto err1;
     }
     res = ps2_8042_cmd(ps2, 0xA7);
-    if(res) {
+    if(res)
+    {
         goto err1;
     }
 
     res = ps2_8042_flush_output_buf(ps2);
-    if(res) {
+    if(res)
+    {
         goto err1;
     }
 
     uint8_t cfg;
     res = ps2_8042_read_cfg(ps2, &cfg);
-    if(res) {
+    if(res)
+    {
         goto err1;
     }
 
-    cfg &= ~(1ULL<<0); // Disable First Port IRQ
-    cfg &= ~(1ULL<<4); // Enable First Port Clock
-    cfg &= ~(1ULL<<6); // Disable First Port Translation
+    cfg &= ~(1ULL << 0); // Disable First Port IRQ
+    cfg &= ~(1ULL << 4); // Enable First Port Clock
+    cfg &= ~(1ULL << 6); // Disable First Port Translation
 
     res = ps2_8042_write_cfg(ps2, cfg);
-    if(res) {
+    if(res)
+    {
         goto err1;
     }
 
     res = ps2_8042_self_test(ps2);
-    if(res) {
-        wprintk("PS2 8042: Failed Self Test! (err=%s)\n",
-                errnostr(res));
+    if(res)
+    {
+        wprintk("PS2 8042: Failed Self Test! (err=%s)\n", errnostr(res));
         goto err1;
     }
 
     // Write the config byte again incase the
     // hardware reset during the self test.
     res = ps2_8042_write_cfg(ps2, cfg);
-    if(res) {
+    if(res)
+    {
         goto err1;
     }
 
     // Allocate the first port struct / buffer
     ps2->first_port = kzmalloc(sizeof(struct ps2_8042_port), KM_KERNEL);
-    if(ps2->first_port == NULL) {
+    if(ps2->first_port == NULL)
+    {
         res = -ENOMEM;
         goto err1;
     }
@@ -357,45 +359,54 @@ ps2_8042_probe(void)
 
     // Try to detect the secnd port
     res = ps2_8042_cmd(ps2, 0xA8);
-    if(res) {
+    if(res)
+    {
         goto err2;
     }
 
     res = ps2_8042_read_cfg(ps2, &cfg);
-    if(res) {
+    if(res)
+    {
         goto err2;
     }
 
-    if(cfg & (1<<5)) {
+    if(cfg & (1 << 5))
+    {
         // Second port is not present
         ps2->second_port = NULL;
-    } else {
+    }
+    else
+    {
         // The second port exists, disable it again
         res = ps2_8042_cmd(ps2, 0xA7);
-        if(res) {
+        if(res)
+        {
             ps2->second_port = NULL;
             goto err2;
         }
 
         uint8_t cfg;
         res = ps2_8042_read_cfg(ps2, &cfg);
-        if(res) {
+        if(res)
+        {
             ps2->second_port = NULL;
             goto err2;
         }
-    
-        cfg &= ~(1ULL<<1); // Disable Second Port IRQ
-        cfg &= ~(1ULL<<5); // Enable Second Port Clock
-    
+
+        cfg &= ~(1ULL << 1); // Disable Second Port IRQ
+        cfg &= ~(1ULL << 5); // Enable Second Port Clock
+
         res = ps2_8042_write_cfg(ps2, cfg);
-        if(res) {
+        if(res)
+        {
             ps2->second_port = NULL;
             goto err2;
         }
 
         // Allocate the second port struct / buffer
         ps2->second_port = kzmalloc(sizeof(struct ps2_8042_port), KM_KERNEL);
-        if(ps2->second_port == NULL) {
+        if(ps2->second_port == NULL)
+        {
             res = -ENOMEM;
             ps2->second_port = NULL;
             goto err2;
@@ -412,57 +423,62 @@ ps2_8042_probe(void)
 
     // Testing first port
     res = ps2_8042_cmd_resp(ps2, 0xAB, &port_test_result);
-    if(res || port_test_result != 0) {
+    if(res || port_test_result != 0)
+    {
         wprintk("8042 PS/2: First Port Failed Test\n");
         kfree(ps2->first_port);
         ps2->first_port = NULL;
     }
 
     res = ps2_8042_cmd_resp(ps2, 0xA9, &port_test_result);
-    if(res || port_test_result != 0) {
+    if(res || port_test_result != 0)
+    {
         wprintk("8042 PS/2: Second Port Failed Test\n");
         kfree(ps2->second_port);
         ps2->second_port = NULL;
     }
 
     // At-least one port must be working
-    if(ps2->first_port != NULL) {
+    if(ps2->first_port != NULL)
+    {
         irq_t irq = x64_pic_irq(1);
-        if(irq == NULL_IRQ) {
+        if(irq == NULL_IRQ)
+        {
             kfree(ps2->first_port);
             ps2->first_port = NULL;
             goto first_port_init;
         }
 
         ps2->first_port->action =
-            irq_install_handler(
-                    irq_to_desc(irq),
-                    (void*)ps2->first_port,
-                    ps2_8042_port_irq_handler);
-        dprintk("Installed First PS/2 Port Handler on IRQ (%ld)\n",
-                irq);
+            irq_install_handler(irq_to_desc(irq),
+                                (void *)ps2->first_port,
+                                ps2_8042_port_irq_handler);
+        dprintk("Installed First PS/2 Port Handler on IRQ (%ld)\n", irq);
 
-        if(ps2->first_port->action == NULL) {
+        if(ps2->first_port->action == NULL)
+        {
             kfree(ps2->first_port);
             ps2->first_port = NULL;
             goto first_port_init;
-        } 
+        }
         unmask_irq(irq);
 
         uint8_t cfg;
         res = ps2_8042_read_cfg(ps2, &cfg);
-        if(res) {
+        if(res)
+        {
             mask_irq(irq);
             irq_uninstall_action(ps2->first_port->action);
             kfree(ps2->first_port);
             ps2->first_port = NULL;
             goto first_port_init;
         }
-    
-        cfg |= (1ULL<<0); // Enable First Port IRQ
-    
+
+        cfg |= (1ULL << 0); // Enable First Port IRQ
+
         res = ps2_8042_write_cfg(ps2, cfg);
-        if(res) {
+        if(res)
+        {
             mask_irq(irq);
             irq_uninstall_action(ps2->first_port->action);
             kfree(ps2->first_port);
@@ -471,7 +487,8 @@ ps2_8042_probe(void)
         }
 
         res = ps2_register_port(&ps2->first_port->port);
-        if(res) {
+        if(res)
+        {
             mask_irq(irq);
             irq_uninstall_action(ps2->first_port->action);
             kfree(ps2->first_port);
@@ -483,23 +500,24 @@ ps2_8042_probe(void)
     }
 first_port_init:
 
-    if(ps2->second_port != NULL) {
+    if(ps2->second_port != NULL)
+    {
         irq_t irq = x64_pic_irq(12);
-        if(irq == NULL_IRQ) {
+        if(irq == NULL_IRQ)
+        {
             kfree(ps2->second_port);
             ps2->second_port = NULL;
             goto second_port_init;
         }
 
         ps2->second_port->action =
-            irq_install_handler(
-                    irq_to_desc(irq),
-                    (void*)ps2->second_port,
-                    ps2_8042_port_irq_handler);
-        dprintk("Installed Second PS/2 Port Handler on IRQ (%ld)\n",
-                irq);
+            irq_install_handler(irq_to_desc(irq),
+                                (void *)ps2->second_port,
+                                ps2_8042_port_irq_handler);
+        dprintk("Installed Second PS/2 Port Handler on IRQ (%ld)\n", irq);
 
-        if(ps2->second_port->action == NULL) {
+        if(ps2->second_port->action == NULL)
+        {
             kfree(ps2->second_port);
             ps2->second_port = NULL;
             goto second_port_init;
@@ -508,18 +526,20 @@ first_port_init:
 
         uint8_t cfg;
         res = ps2_8042_read_cfg(ps2, &cfg);
-        if(res) {
+        if(res)
+        {
             mask_irq(irq);
             irq_uninstall_action(ps2->second_port->action);
             kfree(ps2->second_port);
             ps2->second_port = NULL;
             goto second_port_init;
         }
-    
-        cfg |= (1ULL<<1); // Enable Second Port IRQ
-    
+
+        cfg |= (1ULL << 1); // Enable Second Port IRQ
+
         res = ps2_8042_write_cfg(ps2, cfg);
-        if(res) {
+        if(res)
+        {
             mask_irq(irq);
             irq_uninstall_action(ps2->second_port->action);
             kfree(ps2->second_port);
@@ -528,39 +548,45 @@ first_port_init:
         }
 
         res = ps2_register_port(&ps2->second_port->port);
-        if(res) {
+        if(res)
+        {
             mask_irq(irq);
             irq_uninstall_action(ps2->second_port->action);
             kfree(ps2->second_port);
             ps2->second_port = NULL;
             goto second_port_init;
         }
-        
+
         dprintk("8042 PS/2: Registered Second Port\n");
     }
 second_port_init:
 
-    if(ps2->first_port == NULL && ps2->second_port == NULL) {
+    if(ps2->first_port == NULL && ps2->second_port == NULL)
+    {
         res = 0;
         printk("8042 PS/2: Neither Port Functional\n");
         goto err3;
     }
 
-    if(ps2->first_port) {
+    if(ps2->first_port)
+    {
         printk("8042 PS/2: First Port Functional\n");
     }
-    if(ps2->second_port) {
+    if(ps2->second_port)
+    {
         printk("8042 PS/2: Second Port Functional\n");
     }
 
     return 0;
 
 err3:
-    if(ps2->second_port) {
+    if(ps2->second_port)
+    {
         kfree(ps2->second_port);
     }
 err2:
-    if(ps2->first_port) {
+    if(ps2->first_port)
+    {
         kfree(ps2->first_port);
     }
 err1:
@@ -570,4 +596,3 @@ err0:
               // this isn't a "failure" to probe
 }
 declare_init_desc(bus, ps2_8042_probe, "Probing 8042 PS/2 Controller");
-

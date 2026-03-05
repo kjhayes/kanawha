@@ -1,7 +1,7 @@
 
-#include <kanawha/syscall.h>
 #include <kanawha/fs/file.h>
 #include <kanawha/fs/mount.h>
+#include <kanawha/syscall.h>
 
 #ifdef CONFIG_DEBUG_SYSCALL_FLUSH
 #define LOG(...) printk(__VA_ARGS__)
@@ -10,25 +10,20 @@
 #endif
 
 int
-syscall_flush(
-        fd_t file,
-        unsigned long flags) 
+syscall_flush(fd_t file, unsigned long flags)
 {
     int res;
 
     struct process *process = current_process();
 
     LOG("PID(%ld) syscall_flush: file=%ld, flags=0x%lx\n",
-            (sl_t)process->id,
-            (sl_t)file,
-            (ul_t)flags);
+        (sl_t)process->id,
+        (sl_t)file,
+        (ul_t)flags);
 
-    struct file *desc
-        = file_table_get_file(
-                process->file_table,
-                process,
-                file);
-    if(desc == NULL) {
+    struct file *desc = file_table_get_file(process->file_table, process, file);
+    if(desc == NULL)
+    {
         LOG("syscall_flush: failed to get file!\n");
         return -ENXIO;
     }
@@ -41,20 +36,23 @@ syscall_flush(
     // }
 
     res = direct_file_flush(desc, flags);
-    if(res) {
+    if(res)
+    {
         LOG("syscall_flush: direct_file_flush failed!\n");
         file_table_put_file(process->file_table, process, desc);
         return res;
     }
 
     struct fs_node *fs_node = fs_path_get_fs_node(desc->path);
-    if(fs_node == NULL) {
+    if(fs_node == NULL)
+    {
         file_table_put_file(process->file_table, process, desc);
         return -EINVAL;
     }
 
     res = fs_node_flush(fs_node, 0);
-    if(res) {
+    if(res)
+    {
         LOG("syscall_flush: failed to flush fs_node!\n");
         file_table_put_file(process->file_table, process, desc);
         return res;
@@ -64,9 +62,11 @@ syscall_flush(
     // This is just here until I add a better method to
     // sync mounts with the disk (this syncs the entire mount
     // every time that any file is flushed: THIS IS BAD)
-    if(fs_node && fs_node->mount) {
+    if(fs_node && fs_node->mount)
+    {
         res = fs_mount_sync(fs_node->mount);
-        if(res) {
+        if(res)
+        {
             LOG("syscall_flush: failed to sync file mount!\n");
             file_table_put_file(process->file_table, process, desc);
             return res;
@@ -77,4 +77,3 @@ syscall_flush(
 
     return 0;
 }
-

@@ -1,18 +1,19 @@
 
+#include <arch/x64/cpu.h>
 #include <arch/x64/gdt.h>
-#include <kanawha/init.h>
-#include <kanawha/stddef.h>
-#include <kanawha/types.h>
+#include <kanawha/atomic.h>
 #include <kanawha/cpu.h>
+#include <kanawha/init.h>
 #include <kanawha/kmalloc.h>
+#include <kanawha/stddef.h>
 #include <kanawha/string.h>
 #include <kanawha/thread.h>
+#include <kanawha/types.h>
 #include <kanawha/xcall.h>
-#include <kanawha/atomic.h>
-#include <arch/x64/cpu.h>
 
 #ifdef CONFIG_X64_ENABLE_CALL_GATE_SYSCALL
-extern void x64_syscall_call_gate_entry(void);
+extern void
+x64_syscall_call_gate_entry(void);
 #endif
 
 // Some versions of GCC incorrectly
@@ -20,122 +21,132 @@ extern void x64_syscall_call_gate_entry(void);
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wmissing-braces"
 
-__attribute__((used))
-struct gdt64 x64_bsp_gdt64 = {
-    .null = { 0 }, // Null
-    .kernel_code = { // Kernel Code
-        .limit_low_16 = 0xFFFF,
-        .base_low_24 = 0x0,
-        .accessed = 1,
-        .read_write = 1,
-        .conforming = 0,
-        .executable = 1,
-        .mb1 = 1,
-        .ring = 0,
-        .present = 1,
-        .limit_middle_4 = 0xF,
-        .avail = 0,
-        .long_mode = 1,
-        .sz_32 = 0,
-        .granularity = 1,
-        .base_high_8 = 0x0,
-    }, 
-    .kernel_data = { // Kernel Data
-        .limit_low_16 = 0xFFFF,
-        .base_low_24 = 0x0,
-        .accessed = 1,
-        .read_write = 1,
-        .conforming = 0,
-        .executable = 0,
-        .mb1 = 1,
-        .ring = 0,
-        .present = 1,
-        .limit_middle_4 = 0xF,
-        .avail = 0,
-        .long_mode = 0,
-        .sz_32 = 1,
-        .granularity = 1,
-        .base_high_8 = 0x0,
-    },
-    .tss = {
-        .limit_low_16 = X64_TSS_SEGMENT_SIZE & 0xFFFF,
-        .base_low_24 = 0x0, // Some code will need to patch the TSS base at boot
-                            // (This code will need to be modified if the layout of our GDT changes)
-        .type = X64_GDT_SYSTEM_SEGMENT_TYPE_TSS,
-        .mb0 = 0,
-        .ring = 0,
-        .present = 1,
-        .limit_middle_4 = (X64_TSS_SEGMENT_SIZE>>16) & 0xF,
-        .avail = 0,
-        .__resv0_0 = 0,
-        .granularity = 0,
-        .base_high_40 = 0x0, // Needs to be patched
-        .__resv0_1 = 0,
-    }, 
-    .user_data = { // User Data
-        .limit_low_16 = 0xFFFF,
-        .base_low_24 = 0x0,
-        .accessed = 1,
-        .read_write = 1,
-        .conforming = 0,
-        .executable = 0,
-        .mb1 = 1,
-        .ring = 3,
-        .present = 1,
-        .limit_middle_4 = 0xF,
-        .avail = 0,
-        .long_mode = 0,
-        .sz_32 = 1,
-        .granularity = 1,
-        .base_high_8 = 0x0,
-    },
-    .user_code = { // User Code
-        .limit_low_16 = 0xFFFF,
-        .base_low_24 = 0x0,
-        .accessed = 1,
-        .read_write = 1,
-        .conforming = 0,
-        .executable = 1,
-        .mb1 = 1,
-        .ring = 3,
-        .present = 1,
-        .limit_middle_4 = 0xF,
-        .avail = 0,
-        .long_mode = 1,
-        .sz_32 = 0,
-        .granularity = 1,
-        .base_high_8 = 0x0,
-    },
+__attribute__((used)) struct gdt64 x64_bsp_gdt64 = {
+    .null = {0}, // Null
+    .kernel_code =
+        {
+            // Kernel Code
+            .limit_low_16 = 0xFFFF,
+            .base_low_24 = 0x0,
+            .accessed = 1,
+            .read_write = 1,
+            .conforming = 0,
+            .executable = 1,
+            .mb1 = 1,
+            .ring = 0,
+            .present = 1,
+            .limit_middle_4 = 0xF,
+            .avail = 0,
+            .long_mode = 1,
+            .sz_32 = 0,
+            .granularity = 1,
+            .base_high_8 = 0x0,
+        },
+    .kernel_data =
+        {
+            // Kernel Data
+            .limit_low_16 = 0xFFFF,
+            .base_low_24 = 0x0,
+            .accessed = 1,
+            .read_write = 1,
+            .conforming = 0,
+            .executable = 0,
+            .mb1 = 1,
+            .ring = 0,
+            .present = 1,
+            .limit_middle_4 = 0xF,
+            .avail = 0,
+            .long_mode = 0,
+            .sz_32 = 1,
+            .granularity = 1,
+            .base_high_8 = 0x0,
+        },
+    .tss =
+        {
+            .limit_low_16 = X64_TSS_SEGMENT_SIZE & 0xFFFF,
+            .base_low_24 = 0x0, // Some code will need to patch the TSS base at
+                                // boot (This code will need to be modified if
+                                // the layout of our GDT changes)
+            .type = X64_GDT_SYSTEM_SEGMENT_TYPE_TSS,
+            .mb0 = 0,
+            .ring = 0,
+            .present = 1,
+            .limit_middle_4 = (X64_TSS_SEGMENT_SIZE >> 16) & 0xF,
+            .avail = 0,
+            .__resv0_0 = 0,
+            .granularity = 0,
+            .base_high_40 = 0x0, // Needs to be patched
+            .__resv0_1 = 0,
+        },
+    .user_data =
+        {
+            // User Data
+            .limit_low_16 = 0xFFFF,
+            .base_low_24 = 0x0,
+            .accessed = 1,
+            .read_write = 1,
+            .conforming = 0,
+            .executable = 0,
+            .mb1 = 1,
+            .ring = 3,
+            .present = 1,
+            .limit_middle_4 = 0xF,
+            .avail = 0,
+            .long_mode = 0,
+            .sz_32 = 1,
+            .granularity = 1,
+            .base_high_8 = 0x0,
+        },
+    .user_code =
+        {
+            // User Code
+            .limit_low_16 = 0xFFFF,
+            .base_low_24 = 0x0,
+            .accessed = 1,
+            .read_write = 1,
+            .conforming = 0,
+            .executable = 1,
+            .mb1 = 1,
+            .ring = 3,
+            .present = 1,
+            .limit_middle_4 = 0xF,
+            .avail = 0,
+            .long_mode = 1,
+            .sz_32 = 0,
+            .granularity = 1,
+            .base_high_8 = 0x0,
+        },
 #ifdef CONFIG_X64_ENABLE_CALL_GATE_SYSCALL
-    .syscall_call_gate = {
-	.type = X64_SEGMENT_TYPE_CALL_GATE,
-	.ring = 3,
-	.present = 1,
-	.target_selector = X64_SEGMENT_SELECTOR(
-		X64_KERNEL_CODE_GDT_SEGMENT_OFFSET,
-		0,
-		0),
-    },
+    .syscall_call_gate =
+        {
+            .type = X64_SEGMENT_TYPE_CALL_GATE,
+            .ring = 3,
+            .present = 1,
+            .target_selector =
+                X64_SEGMENT_SELECTOR(X64_KERNEL_CODE_GDT_SEGMENT_OFFSET, 0, 0),
+        },
 #endif
 };
 
 #pragma GCC diagnostic pop
 
-__attribute__((used))
-uint8_t x64_bsp_tss_data[X64_TSS_SEGMENT_SIZE] = { 0 };
+__attribute__((used)) uint8_t x64_bsp_tss_data[X64_TSS_SEGMENT_SIZE] = {0};
 
 static void
-x64_init_gdt_runtime_patch(void) {
+x64_init_gdt_runtime_patch(void)
+{
 
 #ifdef CONFIG_X64_ENABLE_CALL_GATE_SYSCALL
     // The compiler doesn't have support for generating this
     // statically, so we need to do a patch early during boot
     void *target_ptr = (&x64_syscall_call_gate_entry);
-    x64_bsp_gdt64.syscall_call_gate.target_offset_15_0 = (0xFFFF & (((uint64_t)(void*)target_ptr)>>0));
-    x64_bsp_gdt64.syscall_call_gate.target_offset_31_16 = (0xFFFF & (((uint64_t)(void*)target_ptr)>>16));
-    x64_bsp_gdt64.syscall_call_gate.target_offset_63_32 = (0xFFFFFFFF & (((uint64_t)(void*)target_ptr)>>32));
+    x64_bsp_gdt64.syscall_call_gate.target_offset_15_0 =
+        (0xFFFF & (((uint64_t)(void *)target_ptr) >> 0));
+    x64_bsp_gdt64.syscall_call_gate.target_offset_31_16 =
+        (0xFFFF & (((uint64_t)(void *)target_ptr) >> 16));
+    x64_bsp_gdt64.syscall_call_gate.target_offset_63_32 =
+        (0xFFFFFFFF & (((uint64_t)(void *)target_ptr) >> 32));
 #endif
-
 }
 
 void
@@ -149,15 +160,16 @@ x64_init_gdt_bsp(void)
     struct gdt64_descriptor gdtr;
     gdtr.address = (uint64_t)&x64_bsp_gdt64;
     gdtr.limit = sizeof(struct gdt64) - 1;
-    asm volatile ("lgdtq (%0)" :: "r" (&gdtr) : "memory");
+    asm volatile("lgdtq (%0)" ::"r"(&gdtr) : "memory");
 }
 
 void
-x64_init_gdt_ap(void) {
+x64_init_gdt_ap(void)
+{
     struct gdt64_descriptor gdtr;
     gdtr.address = (uint64_t)&x64_bsp_gdt64;
     gdtr.limit = sizeof(struct gdt64) - 1;
-    asm volatile ("lgdtq (%0)" :: "r" (&gdtr) : "memory");
+    asm volatile("lgdtq (%0)" ::"r"(&gdtr) : "memory");
 }
 
 static void
@@ -173,7 +185,7 @@ x64_set_own_gdt_xcall(void *state)
     struct gdt64_descriptor gdtr;
     gdtr.address = (uint64_t)cpu->gdt;
     gdtr.limit = sizeof(struct gdt64) - 1;
-    asm volatile ("lgdtq (%0)" :: "r" (&gdtr) : "memory");
+    asm volatile("lgdtq (%0)" ::"r"(&gdtr) : "memory");
 
     *done = 1;
 }
@@ -190,69 +202,88 @@ x64_setup_tss_xcall(void *state)
     struct cpu *gen_cpu = cpu_from_id(current_cpu_id());
     struct x64_cpu *cpu = container_of(gen_cpu, struct x64_cpu, cpu);
 
-    *(uint64_t*)(cpu->tss_segment + 0x4) = ((uintptr_t)stack + X64_USERMODE_TRANSITION_STACK_SIZE);
+    *(uint64_t *)(cpu->tss_segment + 0x4) =
+        ((uintptr_t)stack + X64_USERMODE_TRANSITION_STACK_SIZE);
 
-    printk("CPU (%ld) set user-mode to kernel mode stack %p\n", (sl_t)current_cpu_id(), stack);
+    printk("CPU (%ld) set user-mode to kernel mode stack %p\n",
+           (sl_t)current_cpu_id(),
+           stack);
 
-    asm volatile ("movw %w0, %%ax; ltr %%ax;" :: "r" (X64_TSS_GDT_SEGMENT_OFFSET) : "rax", "memory");
+    asm volatile("movw %w0, %%ax; ltr %%ax;" ::"r"(X64_TSS_GDT_SEGMENT_OFFSET)
+                 : "rax", "memory");
     printk("CPU (%ld) loaded TSS segment\n", (sl_t)current_cpu_id());
 
-    atomic_fetch_inc((atomic_t*)counter);
+    atomic_fetch_inc((atomic_t *)counter);
 }
 
 static int
 x64_gdt_init_smp(void)
 {
     pin_thread(current_thread());
-    for(cpu_id_t id = 0; id < total_num_cpus(); id++) {
+    for(cpu_id_t id = 0; id < total_num_cpus(); id++)
+    {
         struct cpu *gen_cpu = cpu_from_id(id);
         struct x64_cpu *cpu = container_of(gen_cpu, struct x64_cpu, cpu);
 
-        if(gen_cpu->flags & CPU_FLAG_IS_BSP) {
+        if(gen_cpu->flags & CPU_FLAG_IS_BSP)
+        {
             cpu->gdt = &x64_bsp_gdt64;
             cpu->tss_segment = &x64_bsp_tss_data;
-        } else {
+        }
+        else
+        {
             cpu->gdt = kmalloc(sizeof(struct gdt64), KM_KERNEL);
-            if(cpu->gdt == NULL) {
+            if(cpu->gdt == NULL)
+            {
                 return -ENOMEM;
             }
             memcpy(cpu->gdt, &x64_bsp_gdt64, sizeof(struct gdt64));
 
             cpu->tss_segment = kmalloc(X64_TSS_SEGMENT_SIZE, KM_KERNEL);
-            if(cpu->tss_segment == NULL) {
+            if(cpu->tss_segment == NULL)
+            {
                 return -ENOMEM;
             }
             memset(cpu->tss_segment, 0, X64_TSS_SEGMENT_SIZE);
 
-            cpu->gdt->tss.base_low_24 = ((uintptr_t)cpu->tss_segment) & 0xFFFFFF;
+            cpu->gdt->tss.base_low_24 =
+                ((uintptr_t)cpu->tss_segment) & 0xFFFFFF;
             cpu->gdt->tss.base_high_40 = ((uintptr_t)cpu->tss_segment) >> 24;
 
             // Here we assume other CPU's can access our stack,
             // which might be an assumption we want to avoid long term
             volatile int done = 0;
-            int res = xcall_run(id, x64_set_own_gdt_xcall, (void*)&done);
-            if(res) {
-                eprintk("Failed to xcall CPU (%ld) to reset local GDT! (err=%s)\n",
-                        (sl_t)id, errnostr(res));
+            int res = xcall_run(id, x64_set_own_gdt_xcall, (void *)&done);
+            if(res)
+            {
+                eprintk("Failed to xcall CPU (%ld) to reset "
+                        "local GDT! (err=%s)\n",
+                        (sl_t)id,
+                        errnostr(res));
             }
 
-            while(!done) {}
+            while(!done)
+            {
+            }
         }
     }
 
     unpin_thread(current_thread());
 
     // Set up the user -> kernel mode transition stack on each CPU
-    x64_usermode_transition_stack = percpu_alloc(X64_USERMODE_TRANSITION_STACK_SIZE);
-    if(x64_usermode_transition_stack == PERCPU_NULL) {
+    x64_usermode_transition_stack =
+        percpu_alloc(X64_USERMODE_TRANSITION_STACK_SIZE);
+    if(x64_usermode_transition_stack == PERCPU_NULL)
+    {
         return -ENOMEM;
     }
 
     volatile atomic_t counter = 0;
-    xcall_broadcast(x64_setup_tss_xcall, (void*)&counter);
-    while(counter < total_num_cpus()) {}
+    xcall_broadcast(x64_setup_tss_xcall, (void *)&counter);
+    while(counter < total_num_cpus())
+    {
+    }
 
     return 0;
 }
 declare_init_desc(smp, x64_gdt_init_smp, "Setting Up percpu GDT TSS Segments");
-

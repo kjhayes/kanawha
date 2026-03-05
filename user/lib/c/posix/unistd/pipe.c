@@ -1,7 +1,7 @@
 
-#include <unistd.h>
 #include <kanawha/file.h>
 #include <kanawha/sys-wrappers.h>
+#include <unistd.h>
 
 int
 pipe(int fd_out[2])
@@ -12,13 +12,15 @@ pipe(int fd_out[2])
     int res;
 
     res = kanawha_sys_pipe(0, 0, &read_end);
-    if(res) {
+    if(res)
+    {
         // TODO set errno
         return -1;
     }
 
     res = kanawha_sys_fmove(read_end, 0, FMOVE_DUP, &write_end);
-    if(res) {
+    if(res)
+    {
         // TODO set errno
         return -1;
     }
@@ -27,4 +29,3 @@ pipe(int fd_out[2])
     fd_out[1] = write_end;
     return 0;
 }
-

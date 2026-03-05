@@ -1,9 +1,9 @@
 
-#include <stdlib.h>
 #include <ctype.h>
+#include <stdlib.h>
 
-double atof(const char *__nptr)
+double
+atof(const char *__nptr)
 {
-    return strtod(__nptr, (char**)NULL);
+    return strtod(__nptr, (char **)NULL);
 }
-

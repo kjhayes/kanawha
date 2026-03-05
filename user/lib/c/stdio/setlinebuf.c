@@ -2,10 +2,8 @@
 #include <stdio.h>
 
 void
-setlinebuf(
-	FILE *stream)
+setlinebuf(FILE *stream)
 {
     // TODO
     return;
 }
-

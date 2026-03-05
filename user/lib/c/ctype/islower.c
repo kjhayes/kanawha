@@ -1,7 +1,7 @@
 
-int islower(int i)
+int
+islower(int i)
 {
     char c = i;
     return ((c >= 'a' && c <= 'z'));
 }
-

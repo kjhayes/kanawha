@@ -3,15 +3,14 @@
 
 #include <kanawha/sysfs/vfs.h>
 
-struct procfs_process_data {
+struct procfs_process_data
+{
     struct vfs_struct_node *vfs_struct_node;
 };
 
 int
-procfs_register_process(
-        struct process *process);
+procfs_register_process(struct process *process);
 int
-procfs_deregister_process(
-        struct process *process);
+procfs_deregister_process(struct process *process);
 
 #endif

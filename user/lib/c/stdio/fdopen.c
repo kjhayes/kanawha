@@ -1,17 +1,16 @@
 
-#include <stdio.h>
 #include <elk-libc-internal/__sFILE.h>
 #include <elk-libc-internal/dofopen.h>
+#include <stdio.h>
 
 FILE *
-fdopen(
-    int filedes,
-    const char * restrict mode)
+fdopen(int filedes, const char *restrict mode)
 {
     int res;
 
     struct __sFILE *file = malloc(sizeof(struct __sFILE));
-    if(file == NULL) {
+    if(file == NULL)
+    {
         errno = -ENOMEM;
         return NULL;
     }
@@ -22,4 +21,3 @@ fdopen(
 
     return file;
 }
-

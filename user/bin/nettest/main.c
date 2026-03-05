@@ -1,19 +1,18 @@
 
-#include <stdio.h>
+#include <endian.h>
+#include <fcntl.h>
+#include <getopt.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <fcntl.h>
-#include <endian.h>
-#include <getopt.h>
 
 static const char *progname = "nettest";
-__attribute__((noreturn))
-static void
-panic_usage(void) {
-    fprintf(stderr, "Usage: %s [DEVICE]\n",
-            progname);
+__attribute__((noreturn)) static void
+panic_usage(void)
+{
+    fprintf(stderr, "Usage: %s [DEVICE]\n", progname);
     exit(EXIT_FAILURE);
 }
 
@@ -22,24 +21,26 @@ panic_usage(void) {
 
 #define ETH_TYPE_IPV4 0x0800
 
-struct eth_mac_addr {
+struct eth_mac_addr
+{
     uint8_t data[ETH_MAC_ADDR_LEN];
 } __attribute__((packed));
 
-struct eth_frame_header{
+struct eth_frame_header
+{
     struct eth_mac_addr dst_addr;
     struct eth_mac_addr src_addr;
     uint16_t type;
 } __attribute__((packed));
 
-struct eth_frame {
+struct eth_frame
+{
     struct eth_frame_header hdr;
     uint8_t data[];
 };
 
 void
-send_ethernet_packet(
-        const char *eth_dev_path)
+send_ethernet_packet(const char *eth_dev_path)
 {
     size_t datalen = 16;
     size_t framelen = sizeof(struct eth_frame) + datalen;
@@ -48,7 +49,7 @@ send_ethernet_packet(
 
     struct eth_frame *frame = (struct eth_frame *)buffer;
     memset(frame->hdr.dst_addr.data, 0xFF, 6);
-    memset(frame->hdr.src_addr.data, 0x00, 6); 
+    memset(frame->hdr.src_addr.data, 0x00, 6);
     frame->hdr.type = htobe16(ETH_TYPE_IPV4);
 
     int fd = open(eth_dev_path, O_RDWR);
@@ -58,8 +59,7 @@ send_ethernet_packet(
 }
 
 void
-send_ping(
-        const char *ip_dev_path)
+send_ping(const char *ip_dev_path)
 {
     printf("Unimplemented!\n");
     return;
@@ -68,15 +68,20 @@ send_ping(
 int
 main(int argc, const char **argv)
 {
-    if(argc > 0) {progname = argv[0];}
+    if(argc > 0)
+    {
+        progname = argv[0];
+    }
 
     int ethernet = 0;
     int ping = 0;
 
     {
-    int opt;
-    while((opt = getopt(argc, (char**)argv, "ep")) != -1) {
-        switch(opt) {
+        int opt;
+        while((opt = getopt(argc, (char **)argv, "ep")) != -1)
+        {
+            switch(opt)
+            {
             // Handle Any Short Options
             case 'e':
                 ethernet = 1;
@@ -86,30 +91,35 @@ main(int argc, const char **argv)
                 break;
             default:
                 panic_usage();
+            }
         }
-    }
     }
 
     const char *device_path = NULL;
 
     {
-    int pos_argc = argc - optind;
-    if(pos_argc < 0) {pos_argc = 0;}
-    const char **pos_argv = argv + optind;
+        int pos_argc = argc - optind;
+        if(pos_argc < 0)
+        {
+            pos_argc = 0;
+        }
+        const char **pos_argv = argv + optind;
 
-    if(pos_argc != 1) {
-        panic_usage();
-    }
-    device_path = pos_argv[0];
+        if(pos_argc != 1)
+        {
+            panic_usage();
+        }
+        device_path = pos_argv[0];
     }
 
-    if(ethernet) {
+    if(ethernet)
+    {
         send_ethernet_packet(device_path);
     }
-    else if(ping) {
+    else if(ping)
+    {
         send_ping(device_path);
     }
 
     return 0;
 }
-

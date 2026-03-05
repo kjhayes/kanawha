@@ -1,9 +1,9 @@
 
 #include <unistd.h>
 
-unsigned alarm(unsigned seconds)
+unsigned
+alarm(unsigned seconds)
 {
     // TODO
     return 0;
 }
-

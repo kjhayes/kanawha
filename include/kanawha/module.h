@@ -1,12 +1,12 @@
 #ifndef __KANAWHA__MODULE_H__
 #define __KANAWHA__MODULE_H__
 
+#include <kanawha/fs/node.h>
 #include <kanawha/refcount.h>
 #include <kanawha/stree.h>
-#include <kanawha/fs/node.h>
 #include <kanawha/vmem.h>
 
-#define MODULE_FLAG_FIXED (1ULL<<0) // This module cannot be unloaded
+#define MODULE_FLAG_FIXED (1ULL << 0) // This module cannot be unloaded
 
 struct module_section
 {
@@ -14,7 +14,8 @@ struct module_section
     void *data;
 };
 
-struct module_dependency {
+struct module_dependency
+{
     struct module *mod;
     struct ptree_node tree_node;
 };
@@ -24,7 +25,7 @@ struct module
     const char *name;
     unsigned long flags;
 
-    refcount_t refcount; 
+    refcount_t refcount;
     spinlock_t lock;
 
     size_t symtab_count;
@@ -50,10 +51,7 @@ int
 module_put(struct module *mod);
 
 struct module *
-load_module(
-        struct fs_node *module_node,
-        const char *name,
-        unsigned long flags);
+load_module(struct fs_node *module_node, const char *name, unsigned long flags);
 int
 unload_module(struct module *mod);
 
@@ -61,15 +59,11 @@ unload_module(struct module *mod);
 // can also create a dependency from "mod" to the module
 // which owns "symbol"
 struct ksymbol *
-module_link_symbol(
-        struct module *mod,
-        const char *symbol);
+module_link_symbol(struct module *mod, const char *symbol);
 
 // Check if "dependant" depends on "other"
 // Returns 1 if dependency exists, 0 if not
 int
-check_module_dependency(
-        struct module *dependant,
-        struct module *other);
+check_module_dependency(struct module *dependant, struct module *other);
 
 #endif

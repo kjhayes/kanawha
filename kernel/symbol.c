@@ -1,21 +1,22 @@
 
-#include <kanawha/symbol.h>
-#include <kanawha/module.h>
 #include <kanawha/init.h>
 #include <kanawha/lock.h>
+#include <kanawha/module.h>
 #include <kanawha/stddef.h>
+#include <kanawha/symbol.h>
 
 static DECLARE_STREE(symbol_tree);
 DEFINE_LOCAL_THREAD_LOCK(symbol_tree_lock);
 
-struct ksymbol*
+struct ksymbol *
 ksymbol_get(const char *symbol)
 {
     struct stree_node *node;
 
     symbol_tree_lock_acquire();
     node = stree_get(&symbol_tree, symbol);
-    if(node == NULL) {
+    if(node == NULL)
+    {
         symbol_tree_lock_release();
         return NULL;
     }
@@ -25,7 +26,8 @@ ksymbol_get(const char *symbol)
     int refs = refcount_inc(&sym->mod->refcount);
     symbol_tree_lock_release();
 
-    if(refs == 0) {
+    if(refs == 0)
+    {
         // We couldn't get a reference to the symbol's
         // module (it might be in the process of being unloaded)
         return NULL;
@@ -42,12 +44,9 @@ ksymbol_put(struct ksymbol *symbol)
 }
 
 int
-register_kernel_symbol(
-        struct ksymbol *symbol,
-        struct module *mod)
+register_kernel_symbol(struct ksymbol *symbol, struct module *mod)
 {
-    dprintk("Trying to Register Kernel Symbol: \"%s\"\n",
-            symbol->symbol);
+    dprintk("Trying to Register Kernel Symbol: \"%s\"\n", symbol->symbol);
     symbol_tree_lock_acquire();
     symbol->mod = mod;
     symbol->symbol_node.key = symbol->symbol;
@@ -57,27 +56,25 @@ register_kernel_symbol(
 }
 
 int
-unregister_kernel_symbol(
-        struct ksymbol *symbol)
+unregister_kernel_symbol(struct ksymbol *symbol)
 {
-    dprintk("Trying to Unregister Kernel Symbol: \"%s\"\n",
-            symbol->symbol);
+    dprintk("Trying to Unregister Kernel Symbol: \"%s\"\n", symbol->symbol);
 
-    if(!refcount_reapable(&symbol->mod->refcount)) {
+    if(!refcount_reapable(&symbol->mod->refcount))
+    {
         // Cannot unload the symbol of a module which is not reapable
         return -EINVAL;
     }
 
     int res = 0;
     symbol_tree_lock_acquire();
-    struct stree_node *removed
-        = stree_remove(&symbol_tree, symbol->symbol_node.key);
-    if(removed != &symbol->symbol_node) {
+    struct stree_node *removed =
+        stree_remove(&symbol_tree, symbol->symbol_node.key);
+    if(removed != &symbol->symbol_node)
+    {
         stree_insert(&symbol_tree, removed);
         res = -EINVAL;
     }
     symbol_tree_lock_release();
     return res;
 }
-
-

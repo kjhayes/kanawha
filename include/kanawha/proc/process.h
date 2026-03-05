@@ -1,30 +1,30 @@
 #ifndef __KANAWHA__PROCESS_H__
 #define __KANAWHA__PROCESS_H__
 
-#include <kanawha/thread.h>
-#include <kanawha/types.h>
-#include <kanawha/vmem.h>
-#include <kanawha/time.h>
 #include <kanawha/lock.h>
-#include <kanawha/scheduler.h>
 #include <kanawha/proc/env.h>
-#include <kanawha/usermode.h>
-#include <kanawha/waitqueue.h>
+#include <kanawha/proc/signal.h>
+#include <kanawha/scheduler.h>
+#include <kanawha/thread.h>
+#include <kanawha/time.h>
+#include <kanawha/types.h>
 #include <kanawha/uapi/process.h>
 #include <kanawha/uapi/signal.h>
-#include <kanawha/proc/signal.h>
+#include <kanawha/usermode.h>
+#include <kanawha/vmem.h>
+#include <kanawha/waitqueue.h>
 
 #ifdef CONFIG_PROCFS
 #include <kanawha/proc/procfs.h>
 #endif
 
-#define PROCESS_LOWMEM_SIZE (1ULL<<32)
+#define PROCESS_LOWMEM_SIZE (1ULL << 32)
 
-#define PROCESS_FLAG_INIT (1ULL<<0)
+#define PROCESS_FLAG_INIT (1ULL << 0)
 
 #define PROCESS_STATUS_SCHEDULED 0
-#define PROCESS_STATUS_SUSPEND   1
-#define PROCESS_STATUS_ZOMBIE    2
+#define PROCESS_STATUS_SUSPEND 1
+#define PROCESS_STATUS_ZOMBIE 2
 
 #define INIT_UID (ROOT_UID)
 #define INIT_GID ((gid_t)0)
@@ -73,7 +73,7 @@ struct process
     ilist_node_t mmap_list_node;
 
     // File Descriptor Table
-    struct file_table* file_table;
+    struct file_table *file_table;
     ilist_node_t file_table_node;
 
     // Environment Variables
@@ -102,99 +102,76 @@ int
 process_exists(pid_t id);
 
 int
-process_id_to_user_id(
-        pid_t id,
-        uid_t *user_id_out);
+process_id_to_user_id(pid_t id, uid_t *user_id_out);
 
 int
-process_id_to_group_id(
-        pid_t id,
-        gid_t *group_id_out);
+process_id_to_group_id(pid_t id, gid_t *group_id_out);
 
 static inline pid_t
-process_get_id(
-        struct process *process)
+process_get_id(struct process *process)
 {
     return process->id;
 }
 
 static inline uid_t
-process_get_uid(
-        struct process *process)
+process_get_uid(struct process *process)
 {
     return process->user_id;
 }
 
 static inline gid_t
-process_get_gid(
-        struct process *process)
+process_get_gid(struct process *process)
 {
     return process->group_id;
 }
 
 int
-process_get_parent_id(
-        struct process *proc,
-        pid_t *parent_id_out);
+process_get_parent_id(struct process *proc, pid_t *parent_id_out);
 
 struct process *
-process_spawn_child(
-        struct process *parent,
-        void __user *entry,
-        void *arg,
-        unsigned long spawn_flags);
+process_spawn_child(struct process *parent,
+                    void __user *entry,
+                    void *arg,
+                    unsigned long spawn_flags);
 
 int
-process_schedule(
-        struct process *process);
+process_schedule(struct process *process);
 
 int
-process_suspend(
-        struct process *process);
+process_suspend(struct process *process);
 
 int
-process_set_scheduler(
-        struct process *process,
-        struct scheduler *sched);
+process_set_scheduler(struct process *process, struct scheduler *sched);
 
 int
-process_set_root_directory(
-        struct process *process,
-        struct fs_path *root);
+process_set_root_directory(struct process *process, struct fs_path *root);
 
 int
-process_set_working_directory(
-        struct process *process,
-        struct fs_path *root);
+process_set_working_directory(struct process *process, struct fs_path *root);
 
 int
-process_write_usermem(
-        struct process *process,
-        void __user *dst,
-        void * src,
-        size_t length);
+process_write_usermem(struct process *process,
+                      void __user *dst,
+                      void *src,
+                      size_t length);
 
 int
-process_memset_usermem(
-        struct process *process,
-        void __user *dst,
-        uint8_t val,
-        size_t length);
+process_memset_usermem(struct process *process,
+                       void __user *dst,
+                       uint8_t val,
+                       size_t length);
 
 int
-process_read_usermem(
-        struct process *process,
-        void *dst,
-        const void __user * src,
-        size_t length);
+process_read_usermem(struct process *process,
+                     void *dst,
+                     const void __user *src,
+                     size_t length);
 
 int
-process_strlen_usermem(
-        struct process *process,
-        const char __user *str,
-        size_t max_len,
-        size_t *len);
-
+process_strlen_usermem(struct process *process,
+                       const char __user *str,
+                       size_t max_len,
+                       size_t *len);
 
 // Terminate the process without signalling,
 // IRQ's will be disabled on return so that we will
@@ -204,16 +181,17 @@ process_terminate(int exitcode);
 
 // De-allocate a process and get the exitcode
 //
-// Returns 0, populates exitcode, and invalidates the process pointer on success,
-// else Returns a negative errno, exitcode is undefined, and process should still be valid
+// Returns 0, populates exitcode, and invalidates the process pointer on
+// success, else Returns a negative errno, exitcode is undefined, and process
+// should still be valid
 //
-// If process is not a ZOMBIE, and nowait is non-zero then process_reap returns -EWOULDBLOCK
+// If process is not a ZOMBIE, and nowait is non-zero then process_reap returns
+// -EWOULDBLOCK
 int
-process_reap_child(
-        struct process *process,
-        pid_t child_id,
-        int *exitcode,
-        int nowait);
+process_reap_child(struct process *process,
+                   pid_t child_id,
+                   int *exitcode,
+                   int nowait);
 
 // Find a child of this process which is able to be reaped without waiting,
 //
@@ -221,37 +199,31 @@ process_reap_child(
 // if nowait is 1, no such child exists, returns -EWOULDBLOCK
 // On success, returns 0, and sets child_out to such a child
 int
-process_get_reapable_child(
-        struct process *process,
-        int nowait,
-        pid_t *child_id_out);
+process_get_reapable_child(struct process *process,
+                           int nowait,
+                           pid_t *child_id_out);
 
 int
-process_clear_forced_ip(
-        struct process *process);
+process_clear_forced_ip(struct process *process);
 
 static inline int
-process_is_root(
-        struct process *proc)
+process_is_root(struct process *proc)
 {
     return proc->user_id == ROOT_UID;
 }
 
 int
-process_send_signal(
-        pid_t proc_id,
-        signal_id_t id,
-        unsigned long flags);
+process_send_signal(pid_t proc_id, signal_id_t id, unsigned long flags);
 
 int
-process_force_awake(
-	pid_t proc_id);
+process_force_awake(pid_t proc_id);
 
 // Debugging "Dump" Processes
 void
 dump_processes(printk_f *printer);
 
 // Allows for architecture specific initialization of a process thread
-int arch_on_process_entry(void);
+int
+arch_on_process_entry(void);
 
 #endif

@@ -1,10 +1,9 @@
 #ifndef __KANAWHA__FS_CPIO_DIR_H__
 #define __KANAWHA__FS_CPIO_DIR_H__
 
-
-#include <kanawha/fs/node.h>
-#include <kanawha/fs/file.h>
 #include <drivers/fs/cpio/cpio.h>
+#include <kanawha/fs/file.h>
+#include <kanawha/fs/node.h>
 
 extern struct fs_file_ops cpio_dir_file_ops;
 extern struct fs_node_ops cpio_dir_node_ops;
@@ -15,6 +14,5 @@ struct cpio_dir_node
 {
     struct cpio_mount *mnt;
 };
-
 
 #endif

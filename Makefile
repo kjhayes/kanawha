@@ -135,6 +135,7 @@ modules: $(KERNEL_MOD_RULES) FORCE
 -include $(MK_SCRIPTS_DIR)/initrd.mk
 -include $(MK_SCRIPTS_DIR)/isoimage.mk
 -include $(MK_SCRIPTS_DIR)/qemu.mk
+-include $(MK_SCRIPTS_DIR)/format.mk
 
 clean: FORCE
 	$(Q)find $(OUTPUT_DIR) -name "*.o" -delete $(QPIPE) $(QIGNORE)

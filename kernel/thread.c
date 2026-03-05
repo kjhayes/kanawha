@@ -1,23 +1,23 @@
 
-#include <kanawha/thread.h>
-#include <kanawha/printk.h>
-#include <kanawha/errno.h>
-#include <kanawha/kmalloc.h>
-#include <kanawha/string.h>
-#include <kanawha/irq.h>
-#include <kanawha/percpu.h>
-#include <kanawha/init.h>
-#include <kanawha/ptree.h>
-#include <kanawha/spinlock.h>
-#include <kanawha/lock.h>
-#include <kanawha/atomic.h>
-#include <kanawha/scheduler.h>
-#include <kanawha/vmem.h>
-#include <kanawha/slab.h>
-#include <kanawha/proc/process.h>
 #include <kanawha/assert.h>
+#include <kanawha/atomic.h>
 #include <kanawha/attribute.h>
+#include <kanawha/errno.h>
 #include <kanawha/event.h>
+#include <kanawha/init.h>
+#include <kanawha/irq.h>
+#include <kanawha/kmalloc.h>
+#include <kanawha/lock.h>
+#include <kanawha/percpu.h>
+#include <kanawha/printk.h>
+#include <kanawha/proc/process.h>
+#include <kanawha/ptree.h>
+#include <kanawha/scheduler.h>
+#include <kanawha/slab.h>
+#include <kanawha/spinlock.h>
+#include <kanawha/string.h>
+#include <kanawha/thread.h>
+#include <kanawha/vmem.h>
 
 static DECLARE_PTREE(thread_tree);
 DEFINE_LOCAL_IRQ_LOCK(thread_tree_lock);
@@ -28,11 +28,12 @@ static thread_id_t __next_thread_id = 0;
 static DECLARE_ILIST(global_vmem_regions);
 static struct slab_allocator *global_vmem_region_slab_allocator = NULL;
 #define GLOBAL_VMEM_REGIONS_SLAB_BUFFER_SIZE PAGE_SIZE_4KB
-static uint8_t global_vmem_regions_slab_buffer[GLOBAL_VMEM_REGIONS_SLAB_BUFFER_SIZE];
+static uint8_t
+    global_vmem_regions_slab_buffer[GLOBAL_VMEM_REGIONS_SLAB_BUFFER_SIZE];
 
 struct thread_global_vmem_region
 {
-    void * virtual_addr;
+    void *virtual_addr;
     struct vmem_region *region;
     ilist_node_t list_node;
 };
@@ -50,16 +51,19 @@ get_thread_id(struct thread_state *state)
      * but overflow will almost certainly never happen
      * with a 64-bit thread_id_t
      */
-    while(1) {
+    while(1)
+    {
         id = __next_thread_id;
         __next_thread_id++;
         // Signed Overflow
-        if(__next_thread_id < 0) {
+        if(__next_thread_id < 0)
+        {
             __next_thread_id = 0;
         }
         dprintk("get_thread_id: checking %ld\n", id);
         struct ptree_node *node = ptree_get(&thread_tree, id);
-        if(node == NULL) {
+        if(node == NULL)
+        {
             dprintk("get_thread_id: using %ld\n", id);
             state->id = id;
             ptree_insert(&thread_tree, &state->tree_node, state->id);
@@ -67,7 +71,8 @@ get_thread_id(struct thread_state *state)
         }
         dprintk("get_thread_id: %ld already taken\n", id);
         num_loops++;
-        if(num_loops < 0) {
+        if(num_loops < 0)
+        {
             // Overflow,
             // we've been searching for way too long,
             // if it's come to this we've somehow exhausted
@@ -81,24 +86,24 @@ get_thread_id(struct thread_state *state)
 DECLARE_PERCPU_VAR(struct thread_state *, __current_thread);
 DECLARE_STATIC_PERCPU_VAR(struct thread_state *, __idle_thread);
 
-__noreturn
-void
-idle_loop(void) {
+__noreturn void
+idle_loop(void)
+{
     printk("Entered Idle Thread On CPU %d\n", current_cpu_id());
     enable_irqs();
-    while(1) {
-        //if(current_cpu_id() == 0 && clk_mono_valid()) {
-        //    printk("clk_mono = 0x%lx\n",
-        //            clk_mono_current());
-        //}
+    while(1)
+    {
+        // if(current_cpu_id() == 0 && clk_mono_valid()) {
+        //     printk("clk_mono = 0x%lx\n",
+        //             clk_mono_current());
+        // }
     }
 }
 
 struct thread_state *
 current_thread(void)
 {
-    struct thread_state **ptr = 
-        percpu_ptr(percpu_addr(__current_thread));
+    struct thread_state **ptr = percpu_ptr(percpu_addr(__current_thread));
 
     return *ptr;
 }
@@ -108,13 +113,18 @@ pin_thread(struct thread_state *thread)
 {
     int res;
     int irq_state = spin_lock_irq_save(&thread->lock);
-    if(thread->pin_refs > 0) {
+    if(thread->pin_refs > 0)
+    {
         thread->pin_refs++;
-        if(thread->status == THREAD_STATUS_RUNNING || thread->status == THREAD_STATUS_TIRED) {
+        if(thread->status == THREAD_STATUS_RUNNING ||
+           thread->status == THREAD_STATUS_TIRED)
+        {
             thread->pinned_to = thread->running_on;
         }
         res = 0;
-    } else {
+    }
+    else
+    {
         res = -EINVAL;
     }
     spin_unlock_irq_restore(&thread->lock, irq_state);
@@ -126,13 +136,17 @@ unpin_thread(struct thread_state *thread)
 {
     int res;
     int irq_state = spin_lock_irq_save(&thread->lock);
-    if(thread->pin_refs > 0) {
+    if(thread->pin_refs > 0)
+    {
         thread->pin_refs--;
         res = 0;
-    } else {
+    }
+    else
+    {
         res = -EINVAL;
     }
-    if(thread->pin_refs == 0) {
+    if(thread->pin_refs == 0)
+    {
         thread->pinned_to = NULL_CPU_ID;
     }
     spin_unlock_irq_restore(&thread->lock, irq_state);
@@ -140,20 +154,24 @@ unpin_thread(struct thread_state *thread)
 }
 
 int
-pin_thread_specific(
-        struct thread_state *state,
-        cpu_id_t cpu)
+pin_thread_specific(struct thread_state *state, cpu_id_t cpu)
 {
     int res;
     int irq_state = spin_lock_irq_save(&state->lock);
-    if(state->pin_refs > 0) {
-        if(state->pinned_to != cpu) {
+    if(state->pin_refs > 0)
+    {
+        if(state->pinned_to != cpu)
+        {
             res = -EALREADY;
-        } else {
+        }
+        else
+        {
             state->pin_refs++;
             res = 0;
         }
-    } else {
+    }
+    else
+    {
         state->pinned_to = cpu;
         state->pin_refs++;
         res = 0;
@@ -165,17 +183,15 @@ pin_thread_specific(
 struct thread_state *
 idle_thread(void)
 {
-    struct thread_state **ptr = 
-        percpu_ptr(percpu_addr(__idle_thread));
+    struct thread_state **ptr = percpu_ptr(percpu_addr(__idle_thread));
     return *ptr;
 }
 
 int
-thread_init(
-        struct thread_state *state,
-        thread_f *func,
-        void *in,
-        unsigned long flags)
+thread_init(struct thread_state *state,
+            thread_f *func,
+            void *in,
+            unsigned long flags)
 {
     int res;
 
@@ -190,7 +206,8 @@ thread_init(
     state->waitqueue = NULL;
 
     state->mem_map = vmem_map_create();
-    if(state->mem_map == NULL) {
+    if(state->mem_map == NULL)
+    {
         return -ENOMEM;
     }
 
@@ -199,7 +216,8 @@ thread_init(
     thread_tree_lock_acquire();
 
     get_thread_id(state);
-    if(state->id == NULL_THREAD_ID) {
+    if(state->id == NULL_THREAD_ID)
+    {
         // We somehow ran out of thread_id_t
         eprintk("thread_init: Ran out of unique thread_id_t!\n");
         thread_tree_lock_release();
@@ -207,32 +225,39 @@ thread_init(
         return -ENOMEM;
     }
 
-
     ilist_node_t *node;
-    ilist_for_each(node, &global_vmem_regions) {
+    ilist_for_each(node, &global_vmem_regions)
+    {
 
         struct thread_global_vmem_region *global_region =
             container_of(node, struct thread_global_vmem_region, list_node);
 
-        dprintk("Mapping global vmem region into thread (region virt-base = %p)\n", global_region->virtual_addr);
-        res = vmem_map_map_region(state->mem_map, global_region->region, global_region->virtual_addr);
-        if(res) {
-            eprintk("thread_init: Failed to map in global thread vmem region at virtual address %p (err=%s)\n",
-                    global_region->virtual_addr, errnostr(res));
+        dprintk(
+            "Mapping global vmem region into thread (region virt-base = %p)\n",
+            global_region->virtual_addr);
+        res = vmem_map_map_region(state->mem_map,
+                                  global_region->region,
+                                  global_region->virtual_addr);
+        if(res)
+        {
+            eprintk("thread_init: Failed to map in global thread vmem "
+                    "region at "
+                    "virtual address %p (err=%s)\n",
+                    global_region->virtual_addr,
+                    errnostr(res));
             thread_tree_lock_release();
             vmem_map_destroy(state->mem_map);
             return res;
         }
         dprintk("Mapped\n");
-
     }
 
     thread_tree_lock_release();
 
     res = arch_init_thread_state(state);
-    if(res) {
-        eprintk("arch_init_thread_state failed (err=%s)!\n",
-                errnostr(res));
+    if(res)
+    {
+        eprintk("arch_init_thread_state failed (err=%s)!\n", errnostr(res));
         vmem_map_destroy(state->mem_map);
         return res;
     }
@@ -243,8 +268,7 @@ thread_init(
 }
 
 int
-thread_deinit(
-        struct thread_state *state)
+thread_deinit(struct thread_state *state)
 {
     int res;
 
@@ -254,11 +278,13 @@ thread_deinit(
     thread_tree_lock_release();
 
     res = arch_deinit_thread_state(state);
-    if(res) {
+    if(res)
+    {
         return res;
     }
     res = vmem_map_destroy(state->mem_map);
-    if(res) {
+    if(res)
+    {
         return res;
     }
     return 0;
@@ -272,27 +298,36 @@ thread_schedule(struct thread_state *state)
 
     int irq_flags = disable_save_irqs();
 
-    if(state->flags & THREAD_FLAG_IDLE) {
+    if(state->flags & THREAD_FLAG_IDLE)
+    {
         DEBUG_ASSERT(state->pinned_to == current_cpu_id());
         // If it's the idle thread, then we should have exclusive access
         enable_restore_irqs(irq_flags);
         irq_flags = spin_lock_irq_save(&state->lock);
-    } else { 
-        if(spin_try_lock(&state->lock)) {
+    }
+    else
+    {
+        if(spin_try_lock(&state->lock))
+        {
             enable_restore_irqs(irq_flags);
             return -EBUSY;
         }
     }
 
-    if(state->status != THREAD_STATUS_READY) {
+    if(state->status != THREAD_STATUS_READY)
+    {
         spin_unlock_irq_restore(&state->lock, irq_flags);
         return -EINVAL;
     }
 
-    if(state->pin_refs && state->pinned_to != current_cpu_id()) {
+    if(state->pin_refs && state->pinned_to != current_cpu_id())
+    {
         spin_unlock_irq_restore(&state->lock, irq_flags);
-        eprintk("Tried to schedule thread %lld on CPU(%ld) but thread is pinned to CPU (%ld)\n",
-                state->id, (sl_t)current_cpu_id(), (sl_t)state->pinned_to); 
+        eprintk("Tried to schedule thread %lld on CPU(%ld) but thread is "
+                "pinned to CPU (%ld)\n",
+                state->id,
+                (sl_t)current_cpu_id(),
+                (sl_t)state->pinned_to);
         return -EINVAL;
     }
 
@@ -302,27 +337,31 @@ thread_schedule(struct thread_state *state)
     return 0;
 }
 
-static __noreturn void 
+static __noreturn void
 __thread_switch_threadless(void *in)
 {
-    // We should be running with IRQ(s) disabled, and thus pinned to the current CPU
+    // We should be running with IRQ(s) disabled, and thus pinned to the
+    // current CPU
     struct thread_state *switching_from = current_thread();
     struct thread_state *switching_to = (struct thread_state *)in;
 
     DEBUG_ASSERT(KERNEL_ADDR(switching_to));
 
     // TIRED -> SLEEPING or RUNNING -> READY transition
-    switch(switching_from->status) {
-        case THREAD_STATUS_TIRED:
-            switching_from->status = THREAD_STATUS_SLEEPING;
-            break;
-        case THREAD_STATUS_RUNNING:
-            switching_from->status = THREAD_STATUS_READY;
-            break;
-        default:
-            // This should be caught earlier
-            panic("__thread_switch_threadless: switching from non-RUNNING or TIRED thread!\n");
-            break;
+    switch(switching_from->status)
+    {
+    case THREAD_STATUS_TIRED:
+        switching_from->status = THREAD_STATUS_SLEEPING;
+        break;
+    case THREAD_STATUS_RUNNING:
+        switching_from->status = THREAD_STATUS_READY;
+        break;
+    default:
+        // This should be caught earlier
+        panic("__thread_switch_threadless: switching from non-RUNNING or "
+              "TIRED "
+              "thread!\n");
+        break;
     }
 
     // SCHEDULED -> RUNNING transition
@@ -331,7 +370,8 @@ __thread_switch_threadless(void *in)
 
     switching_to->running_on = current_cpu_id();
     dprintk("setting current_thread=%p\n", switching_to);
-    *(struct thread_state **)percpu_ptr(percpu_addr(__current_thread)) = switching_to;
+    *(struct thread_state **)percpu_ptr(percpu_addr(__current_thread)) =
+        switching_to;
     DEBUG_ASSERT(current_thread() == switching_to);
 
     dprintk("activating vmem_map of new thread!\n");
@@ -344,33 +384,33 @@ __thread_switch_threadless(void *in)
     dprintk("running new thread\n");
 
     arch_thread_run_thread(switching_to);
-    
+
     panic("Returned from arch_thread_run_thread!\n");
 }
 
-//static __noreturn void 
+// static __noreturn void
 //__thread_sleep_threadless(void *in)
 //{
-//    // We should be running with IRQ(s) disabled, and thus pinned to the current CPU
-//    struct thread_state *sleeping = current_thread();
-//    struct thread_state *switching_to = (struct thread_state *)in;
+//     // We should be running with IRQ(s) disabled, and thus pinned to the
+//     current CPU struct thread_state *sleeping = current_thread(); struct
+//     thread_state *switching_to = (struct thread_state *)in;
 //
-//    sleeping->status = THREAD_STATUS_SLEEPING;
-//    switching_to->status = THREAD_STATUS_RUNNING;
-//    switching_to->running_on = current_cpu_id();
-//    dprintk("setting current_thread=%p\n", switching_to);
-//    *(struct thread_state **)percpu_ptr(percpu_addr(__current_thread)) = switching_to;
-//    DEBUG_ASSERT(current_thread() == switching_to);
+//     sleeping->status = THREAD_STATUS_SLEEPING;
+//     switching_to->status = THREAD_STATUS_RUNNING;
+//     switching_to->running_on = current_cpu_id();
+//     dprintk("setting current_thread=%p\n", switching_to);
+//     *(struct thread_state **)percpu_ptr(percpu_addr(__current_thread)) =
+//     switching_to; DEBUG_ASSERT(current_thread() == switching_to);
 //
-//    vmem_map_activate(switching_to->mem_map);
+//     vmem_map_activate(switching_to->mem_map);
 //
-//    spin_unlock(&sleeping->lock);
-//    spin_unlock(&switching_to->lock);
+//     spin_unlock(&sleeping->lock);
+//     spin_unlock(&switching_to->lock);
 //
-//    arch_thread_run_thread(switching_to);
-//    
-//    panic("Returned from arch_thread_run_thread!\n");
-//}
+//     arch_thread_run_thread(switching_to);
+//
+//     panic("Returned from arch_thread_run_thread!\n");
+// }
 
 int
 thread_switch(struct thread_state *state)
@@ -383,15 +423,18 @@ thread_switch(struct thread_state *state)
     cur_thread = current_thread();
 
     int irq_flags = spin_lock_pair_irq_save(&cur_thread->lock, &state->lock);
-    dprintk("thread_switch %p -> %p\n", cur_thread, state); 
+    dprintk("thread_switch %p -> %p\n", cur_thread, state);
 
     DEBUG_ASSERT(state->status == THREAD_STATUS_SCHEDULED);
     DEBUG_ASSERT(state->pin_refs == 0 || state->pinned_to == current_cpu_id());
 
     // This will unlock the locks
-    if(cur_thread != NULL) {
+    if(cur_thread != NULL)
+    {
         arch_thread_run_threadless(__thread_switch_threadless, state);
-    } else {
+    }
+    else
+    {
         __thread_switch_threadless(state);
     }
 
@@ -407,20 +450,21 @@ thread_tire(struct thread_state *thread)
 {
     int irq_flags = spin_lock_irq_save(&thread->lock);
 
-    switch(thread->status) {
-        case THREAD_STATUS_RUNNING:
-            thread->status = THREAD_STATUS_TIRED;
-            break;
-        case THREAD_STATUS_READY:
-            thread->status = THREAD_STATUS_SLEEPING;
-            break;
-        case THREAD_STATUS_SLEEPING:
-        case THREAD_STATUS_TIRED:
-            // We're already in the right state
-            break;
-        default:
-            spin_unlock_irq_restore(&thread->lock, irq_flags);
-            return -EINVAL;
+    switch(thread->status)
+    {
+    case THREAD_STATUS_RUNNING:
+        thread->status = THREAD_STATUS_TIRED;
+        break;
+    case THREAD_STATUS_READY:
+        thread->status = THREAD_STATUS_SLEEPING;
+        break;
+    case THREAD_STATUS_SLEEPING:
+    case THREAD_STATUS_TIRED:
+        // We're already in the right state
+        break;
+    default:
+        spin_unlock_irq_restore(&thread->lock, irq_flags);
+        return -EINVAL;
     }
 
     spin_unlock_irq_restore(&thread->lock, irq_flags);
@@ -433,20 +477,21 @@ thread_wake(struct thread_state *thread)
 {
     int irq_flags = spin_lock_irq_save(&thread->lock);
 
-    switch(thread->status) {
-        case THREAD_STATUS_TIRED:
-            thread->status = THREAD_STATUS_RUNNING;
-            break;
-        case THREAD_STATUS_SLEEPING:
-            thread->status = THREAD_STATUS_READY;
-            break;
-        case THREAD_STATUS_READY:
-        case THREAD_STATUS_RUNNING:
-            // We're already in the right state
-            break;
-        default:
-            spin_unlock_irq_restore(&thread->lock, irq_flags);
-            return -EINVAL;
+    switch(thread->status)
+    {
+    case THREAD_STATUS_TIRED:
+        thread->status = THREAD_STATUS_RUNNING;
+        break;
+    case THREAD_STATUS_SLEEPING:
+        thread->status = THREAD_STATUS_READY;
+        break;
+    case THREAD_STATUS_READY:
+    case THREAD_STATUS_RUNNING:
+        // We're already in the right state
+        break;
+    default:
+        spin_unlock_irq_restore(&thread->lock, irq_flags);
+        return -EINVAL;
     }
 
     spin_unlock_irq_restore(&thread->lock, irq_flags);
@@ -461,8 +506,9 @@ thread_switch(struct thread_state *state)
     int res;
 
     struct thread_state *cur_thread;
-    cur_thread = *(struct thread_state**)percpu_ptr(percpu_addr(__current_thread));
-    struct thread_state *to_restore = cur_thread;
+    cur_thread = *(struct
+thread_state**)percpu_ptr(percpu_addr(__current_thread)); struct thread_state
+*to_restore = cur_thread;
 
     // We switch threads with IRQ(s) disabled
     int irq_flags = disable_save_irqs();
@@ -481,7 +527,7 @@ thread_switch(struct thread_state *state)
             return -EINVAL;
     }
     spin_unlock(&state->lock);
-    
+
     // Weird state from the perspective of another CPU
     // (two threads claim to be running on the current CPU?)
     // but because interrupts are disabled, we should always
@@ -496,11 +542,14 @@ thread_switch(struct thread_state *state)
             cur_thread->status = THREAD_STATUS_READY;
             break;
         default:
-            panic("thread_switch: current_thread->status != THREAD_STATUS_RUNNING");
+            panic("thread_switch: current_thread->status !=
+THREAD_STATUS_RUNNING");
     }
 
-    // If we assume that all thread switches go through this function, then this isn't necessary,
-    // but to be safe, we won't make that assumption for now, and possibly set the "current_thread"
+    // If we assume that all thread switches go through this function, then
+this isn't necessary,
+    // but to be safe, we won't make that assumption for now, and possibly set
+the "current_thread"
     // more than is strictly necessary.
     *(struct thread_state **)percpu_ptr(percpu_addr(current_thread)) = state;
 
@@ -511,8 +560,10 @@ thread_switch(struct thread_state *state)
 
     res = arch_thread_switch(state, to_restore);
 
-    // We are now back from running the other thread, restore our "current_thread" pointer
-    *(struct thread_state **)percpu_ptr(percpu_addr(current_thread)) = to_restore;
+    // We are now back from running the other thread, restore our
+"current_thread" pointer
+    *(struct thread_state **)percpu_ptr(percpu_addr(current_thread)) =
+to_restore;
 
     // Restore our IRQ state
     enable_restore_irqs(irq_flags);
@@ -521,110 +572,134 @@ thread_switch(struct thread_state *state)
 }
 */
 
-__noreturn
-void thread_abandon(struct thread_state *scheduled)
+__noreturn void
+thread_abandon(struct thread_state *scheduled)
 {
     int res;
 
     // We won't return, so we don't need to save the irq state
     disable_irqs();
 
-    if(scheduled == NULL) {
+    if(scheduled == NULL)
+    {
         scheduled = idle_thread();
         res = thread_schedule(scheduled);
-        if(res) {
-            panic("Failed to schedule idle thread during thread_abandon(NULL)! (err=%s)\n",
-                    errnostr(res));
+        if(res)
+        {
+            panic("Failed to schedule idle thread during "
+                  "thread_abandon(NULL)! "
+                  "(err=%s)\n",
+                  errnostr(res));
         }
     }
 
     DEBUG_ASSERT(KERNEL_ADDR(scheduled));
     DEBUG_ASSERT(scheduled->status == THREAD_STATUS_SCHEDULED);
-   
-    struct thread_state *cur_thread = *(struct thread_state**)percpu_ptr(percpu_addr(__current_thread));
+
+    struct thread_state *cur_thread =
+        *(struct thread_state **)percpu_ptr(percpu_addr(__current_thread));
 
     DEBUG_ASSERT(KERNEL_ADDR(cur_thread));
 
     spin_lock(&cur_thread->lock);
-    if(cur_thread->flags & THREAD_FLAG_IDLE) {
+    if(cur_thread->flags & THREAD_FLAG_IDLE)
+    {
         panic("Tried to abandon CPU (%ld) idle thread!\n",
-                (sl_t)current_cpu_id());
+              (sl_t)current_cpu_id());
     }
-    switch(cur_thread->status) {
-        case THREAD_STATUS_RUNNING:
-        case THREAD_STATUS_TIRED:
-            cur_thread->status = THREAD_STATUS_ABANDONED;
-            cur_thread->running_on = NULL_CPU_ID;
-            break;
-        default:
-            panic("thread_abandon: switching from suspended thread!\n");
+    switch(cur_thread->status)
+    {
+    case THREAD_STATUS_RUNNING:
+    case THREAD_STATUS_TIRED:
+        cur_thread->status = THREAD_STATUS_ABANDONED;
+        cur_thread->running_on = NULL_CPU_ID;
+        break;
+    default:
+        panic("thread_abandon: switching from suspended thread!\n");
     }
     spin_unlock(&cur_thread->lock);
 
     spin_lock(&scheduled->lock);
-    switch(scheduled->status) {
-        case THREAD_STATUS_SCHEDULED:
-            scheduled->status = THREAD_STATUS_RUNNING;
-            scheduled->running_on = current_cpu_id();
-            break;
-        default:
-            spin_unlock(&scheduled->lock);
-            panic("CPU (%ld) new thread %p was not SCHEDULED during thread_abandon!\n",
-                    (sl_t)current_cpu_id(), scheduled);
+    switch(scheduled->status)
+    {
+    case THREAD_STATUS_SCHEDULED:
+        scheduled->status = THREAD_STATUS_RUNNING;
+        scheduled->running_on = current_cpu_id();
+        break;
+    default:
+        spin_unlock(&scheduled->lock);
+        panic("CPU (%ld) new thread %p was not SCHEDULED during "
+              "thread_abandon!\n",
+              (sl_t)current_cpu_id(),
+              scheduled);
     }
     spin_unlock(&scheduled->lock);
 
     dprintk("setting current_thread=%p\n", scheduled);
-    *(struct thread_state **)percpu_ptr(percpu_addr(__current_thread)) = scheduled;
+    *(struct thread_state **)percpu_ptr(percpu_addr(__current_thread)) =
+        scheduled;
     DEBUG_ASSERT(current_thread() == scheduled);
 
     dprintk("Abandoning thread %p for thread %p\n", cur_thread, scheduled);
 
     res = vmem_map_activate(scheduled->mem_map);
-    if(res) {
-        panic("Failed to activate new thread vmem_map during thread_abandon! (err=%s)\n",
-                errnostr(res));
+    if(res)
+    {
+        panic("Failed to activate new thread vmem_map during "
+              "thread_abandon! "
+              "(err=%s)\n",
+              errnostr(res));
     }
 
     arch_thread_run_thread(scheduled);
 }
 
-__noreturn
-void cpu_start_threading(thread_f *func, void *state)
+__noreturn void
+cpu_start_threading(thread_f *func, void *state)
 {
     int res;
 
-    // We won't return this this "thread" because it doesn't really exist, so we
-    // can just leave IRQ(s) disabled
+    // We won't return this this "thread" because it doesn't really exist, so
+    // we can just leave IRQ(s) disabled
     disable_irqs();
 
     dprintk("cpu_start_threading (CPU %ld)\n", (sl_t)current_cpu_id());
 
-    if(current_thread() != NULL) {
-        while(1) {
-        panic("Called cpu_start_threading() while current_thread() != NULL!\n");
+    if(current_thread() != NULL)
+    {
+        while(1)
+        {
+            panic("Called cpu_start_threading() while "
+                  "current_thread() != "
+                  "NULL!\n");
         }
     }
-    if(idle_thread() != NULL) {
-        while(1) {
-        panic("Called cpu_start_threading() while idle_thread() != NULL!\n");
+    if(idle_thread() != NULL)
+    {
+        while(1)
+        {
+            panic("Called cpu_start_threading() while idle_thread() "
+                  "!= NULL!\n");
         }
     }
 
     // Create the initial thread for this CPU
-    struct thread_state *current = kmalloc(sizeof(struct thread_state), KM_KERNEL);
-    if(current == NULL) {
+    struct thread_state *current =
+        kmalloc(sizeof(struct thread_state), KM_KERNEL);
+    if(current == NULL)
+    {
         panic("Ran out of memory during cpu_start_threading!\n");
     }
-    
+
     res = thread_init(current, func, state, THREAD_FLAG_IDLE);
-    if(res) {
+    if(res)
+    {
         panic("Failed to create initial thread on CPU (%ld) (err=%s)\n",
-                (long)current_cpu_id(), errnostr(res));
+              (long)current_cpu_id(),
+              errnostr(res));
     }
 
-    printk("Created initial thread on CPU (%ld)\n",
-        (long)current_cpu_id());
+    printk("Created initial thread on CPU (%ld)\n", (long)current_cpu_id());
 
     pin_thread_specific(current, current_cpu_id());
 
@@ -637,7 +712,8 @@ void cpu_start_threading(thread_f *func, void *state)
     current->status = THREAD_STATUS_RUNNING;
     current->running_on = current_cpu_id();
     dprintk("setting current_thread=%p\n", current);
-    *(struct thread_state **)percpu_ptr(percpu_addr(__current_thread)) = current;
+    *(struct thread_state **)percpu_ptr(percpu_addr(__current_thread)) =
+        current;
     DEBUG_ASSERT(current_thread() == current);
     spin_unlock(&current->lock);
 
@@ -649,19 +725,27 @@ void cpu_start_threading(thread_f *func, void *state)
 }
 
 static void
-dump_thread_flags(struct thread_state *thread, unsigned long flags, printk_f *printer) {
-    if(flags == 0) {
+dump_thread_flags(struct thread_state *thread,
+                  unsigned long flags,
+                  printk_f *printer)
+{
+    if(flags == 0)
+    {
         return;
     }
     (*printer)(" ");
-    if(flags & THREAD_FLAG_IDLE) {(*printer)("[IDLE]");}
-    if(flags & THREAD_FLAG_PROCESS) {
-        struct process *process =
-            container_of(thread, struct process, thread);
+    if(flags & THREAD_FLAG_IDLE)
+    {
+        (*printer)("[IDLE]");
+    }
+    if(flags & THREAD_FLAG_PROCESS)
+    {
+        struct process *process = container_of(thread, struct process, thread);
         (*printer)("[PROCESS(%ld)]", (sl_t)process->id);
 #ifdef CONFIG_DEBUG_TRACK_PROCESS_EXEC
         (*printer)("[EXEC(%s)]",
-                process->tracked_exec != NULL ? process->tracked_exec : "UNKNOWN");
+                   process->tracked_exec != NULL ? process->tracked_exec
+                                                 : "UNKNOWN");
 #endif
     }
 }
@@ -673,28 +757,35 @@ dump_threads(printk_f *printer)
 
     (*printer)("--- Threads ---\n");
     struct ptree_node *node = ptree_get_first(&thread_tree);
-    for(; node != NULL; node = ptree_get_next(node)) {
+    for(; node != NULL; node = ptree_get_next(node))
+    {
         struct thread_state *thread =
             container_of(node, struct thread_state, tree_node);
         (*printer)("\tThread(%ld): %s",
-                (sl_t)thread->id,
-                thread_status_to_string(thread->status));
+                   (sl_t)thread->id,
+                   thread_status_to_string(thread->status));
 
         dump_thread_flags(thread, thread->flags, printer);
 
-        if(thread->status == THREAD_STATUS_RUNNING) {
+        if(thread->status == THREAD_STATUS_RUNNING)
+        {
             (*printer)(" CPU(%ld)", (sl_t)thread->running_on);
         }
-        if(thread->pin_refs) {
-            (*printer)(" PINNED(%ld) PIN-REFS(%ld)", (sl_t)thread->pinned_to, (sl_t)thread->pin_refs);
+        if(thread->pin_refs)
+        {
+            (*printer)(" PINNED(%ld) PIN-REFS(%ld)",
+                       (sl_t)thread->pinned_to,
+                       (sl_t)thread->pin_refs);
         }
-	if(thread->waitqueue != NULL) {
-	    // There is a race condition here, but this dump is for debugging
-	    // (usually during a panic) so we just want to get as much information as possible.
-	    DEBUG_ASSERT(KERNEL_ADDR(thread->waitqueue));
-	    DEBUG_ASSERT(KERNEL_ADDR(thread->waitqueue->name));
-	    (*printer)(" WAITING-ON(%s)", thread->waitqueue->name);
-	}
+        if(thread->waitqueue != NULL)
+        {
+            // There is a race condition here, but this dump is for
+            // debugging (usually during a panic) so we just want to
+            // get as much information as possible.
+            DEBUG_ASSERT(KERNEL_ADDR(thread->waitqueue));
+            DEBUG_ASSERT(KERNEL_ADDR(thread->waitqueue->name));
+            (*printer)(" WAITING-ON(%s)", thread->waitqueue->name);
+        }
 
         (*printer)("\n");
     }
@@ -707,18 +798,20 @@ dump_threads(printk_f *printer)
 #ifdef CONFIG_DEBUG_DUMP_THREADS_PERIODICALLY
 static struct periodic_event *debug_dump_threads_event = NULL;
 static void
-debug_dump_threads_periodically(void *state) {
+debug_dump_threads_periodically(void *state)
+{
     dump_threads(do_printk);
 }
 static int
 init_debug_dump_threads_periodically(void)
 {
     debug_dump_threads_event = create_periodic_event(
-	    sec_to_duration(CONFIG_DEBUG_DUMP_THREADS_PERIODICALLY_PERIOD),
-	    NULL,
-	    debug_dump_threads_periodically);
-    if(debug_dump_threads_event == NULL) {
-	return -EINVAL;
+        sec_to_duration(CONFIG_DEBUG_DUMP_THREADS_PERIODICALLY_PERIOD),
+        NULL,
+        debug_dump_threads_periodically);
+    if(debug_dump_threads_event == NULL)
+    {
+        return -EINVAL;
     }
     return 0;
 }
@@ -726,18 +819,20 @@ declare_init(launch, init_debug_dump_threads_periodically);
 #endif
 
 static int
-global_vmem_region_slab_alloc_static_init(void) {
-    if(global_vmem_region_slab_allocator != NULL) {
+global_vmem_region_slab_alloc_static_init(void)
+{
+    if(global_vmem_region_slab_allocator != NULL)
+    {
         return -EINVAL;
     }
 
     global_vmem_region_slab_allocator =
-        create_static_slab_allocator(
-                global_vmem_regions_slab_buffer,
-                GLOBAL_VMEM_REGIONS_SLAB_BUFFER_SIZE, 
-                sizeof(struct thread_global_vmem_region),
-                orderof(struct thread_global_vmem_region));
-    if(global_vmem_region_slab_allocator == NULL) {
+        create_static_slab_allocator(global_vmem_regions_slab_buffer,
+                                     GLOBAL_VMEM_REGIONS_SLAB_BUFFER_SIZE,
+                                     sizeof(struct thread_global_vmem_region),
+                                     orderof(struct thread_global_vmem_region));
+    if(global_vmem_region_slab_allocator == NULL)
+    {
         return -ENOMEM;
     }
 
@@ -746,46 +841,58 @@ global_vmem_region_slab_alloc_static_init(void) {
 declare_init(static, global_vmem_region_slab_alloc_static_init);
 
 static struct thread_global_vmem_region *
-alloc_thread_global_vmem_region(void) {
-    struct thread_global_vmem_region *region = slab_alloc(global_vmem_region_slab_allocator);
-    dprintk("alloc_thread_global_vmem_region() -> %p (list_node=%p)\n", &region, &region->list_node);
+alloc_thread_global_vmem_region(void)
+{
+    struct thread_global_vmem_region *region =
+        slab_alloc(global_vmem_region_slab_allocator);
+    dprintk("alloc_thread_global_vmem_region() -> %p (list_node=%p)\n",
+            &region,
+            &region->list_node);
     return region;
 }
 
-//static void
-//free_thread_global_vmem_region(struct thread_global_vmem_region *region) {
-//    dprintk("free_thread_global_vmem_region() -> %p (list_node=%p)\n", &region, &region->list_node);
-//    slab_free(global_vmem_region_slab_allocator, region);
-//}
+// static void
+// free_thread_global_vmem_region(struct thread_global_vmem_region *region) {
+//     dprintk("free_thread_global_vmem_region() -> %p (list_node=%p)\n",
+//     &region, &region->list_node);
+//     slab_free(global_vmem_region_slab_allocator, region);
+// }
 
 static void
 thread_force_mapping_visitor(struct ptree_node *node, void *state)
 {
-    struct thread_state *thread = container_of(node, struct thread_state, tree_node);
+    struct thread_state *thread =
+        container_of(node, struct thread_state, tree_node);
     struct thread_global_vmem_region *global_region = state;
 
-    int res = vmem_map_map_region(thread->mem_map, global_region->region, global_region->virtual_addr);
-    if(res) {
-        eprintk("thread_force_mapping_visitor: Failed to map region into thread %p (err=%s)\n",
-                thread, errnostr(res));
+    int res = vmem_map_map_region(thread->mem_map,
+                                  global_region->region,
+                                  global_region->virtual_addr);
+    if(res)
+    {
+        eprintk("thread_force_mapping_visitor: Failed to map region into "
+                "thread %p (err=%s)\n",
+                thread,
+                errnostr(res));
     }
 }
 
 int
-thread_force_mapping(
-        struct vmem_region *region,
-        void * virtual_addr)
+thread_force_mapping(struct vmem_region *region, void *virtual_addr)
 {
     int res;
 
     dprintk("Thread Force Mapping [%p-%p) -> %p\n",
-            virtual_addr, virtual_addr + region->size, region);
+            virtual_addr,
+            virtual_addr + region->size,
+            region);
 
     thread_tree_lock_acquire();
 
     struct thread_global_vmem_region *global_region =
         alloc_thread_global_vmem_region();
-    if(region == NULL) {
+    if(region == NULL)
+    {
         thread_tree_lock_release();
         return -ENOMEM;
     }
@@ -804,131 +911,131 @@ thread_force_mapping(
 }
 
 int
-thread_relax_mapping(void * virtual_addr)
+thread_relax_mapping(void *virtual_addr)
 {
     return -EUNIMPL;
 }
 
 // Testing
 
-//static void
-//thread_test_thread_switch(void *in)
+// static void
+// thread_test_thread_switch(void *in)
 //{
-//    printk("thread_test_thread_switch (current_thread=%p)\n",
-//            current_thread());
+//     printk("thread_test_thread_switch (current_thread=%p)\n",
+//             current_thread());
 //
-//    struct thread_state *next_thread = in;
-//    int res = thread_schedule(next_thread);
-//    if(res) {
-//        eprintk("thread_test_thread_switch: Failed to schedule next thread! (err=%s)\n",
-//                errnostr(res));
-//    }
-//    thread_switch(next_thread);
-//}
+//     struct thread_state *next_thread = in;
+//     int res = thread_schedule(next_thread);
+//     if(res) {
+//         eprintk("thread_test_thread_switch: Failed to schedule next thread!
+//         (err=%s)\n",
+//                 errnostr(res));
+//     }
+//     thread_switch(next_thread);
+// }
 //
-//static void
-//thread_test_thread_abandon(void *in)
+// static void
+// thread_test_thread_abandon(void *in)
 //{
-//    printk("thread_test_thread_abandon (current_thread=%p)\n",
-//            current_thread());
+//     printk("thread_test_thread_abandon (current_thread=%p)\n",
+//             current_thread());
 //
-//    struct thread_state *next_thread = in;
-//    int res = thread_schedule(next_thread);
-//    if(res) {
-//        eprintk("thread_test_thread_abandon: Failed to schedule next thread! (err=%s)\n",
-//                errnostr(res));
-//    }
-//    thread_abandon(next_thread);
-//}
+//     struct thread_state *next_thread = in;
+//     int res = thread_schedule(next_thread);
+//     if(res) {
+//         eprintk("thread_test_thread_abandon: Failed to schedule next thread!
+//         (err=%s)\n",
+//                 errnostr(res));
+//     }
+//     thread_abandon(next_thread);
+// }
 //
-//static int
-//thread_test(void)
+// static int
+// thread_test(void)
 //{
-//    int res;
+//     int res;
 //
-//    struct thread_state thread_1;
-//    struct thread_state thread_2;
+//     struct thread_state thread_1;
+//     struct thread_state thread_2;
 //
-//    int irq_flags = disable_save_irqs();
+//     int irq_flags = disable_save_irqs();
 //
-//    res = thread_init(
-//            &thread_1,
-//            thread_test_thread_switch,
-//            current_thread(),
-//            0);
-//    if(res) {
-//        enable_restore_irqs(irq_flags);
-//        return res;
-//    }
+//     res = thread_init(
+//             &thread_1,
+//             thread_test_thread_switch,
+//             current_thread(),
+//             0);
+//     if(res) {
+//         enable_restore_irqs(irq_flags);
+//         return res;
+//     }
 //
-//    res = thread_init(
-//            &thread_2,
-//            thread_test_thread_abandon,
-//            current_thread(),
-//            0);
-//    if(res) {
-//        enable_restore_irqs(irq_flags);
-//        return res;
-//    }
+//     res = thread_init(
+//             &thread_2,
+//             thread_test_thread_abandon,
+//             current_thread(),
+//             0);
+//     if(res) {
+//         enable_restore_irqs(irq_flags);
+//         return res;
+//     }
 //
-//    printk("Scheduling thread1\n");
-//    res = thread_schedule(&thread_1);
-//    if(res) {
-//        enable_restore_irqs(irq_flags);
-//        return res;
-//    }
-//    printk("Switching to thread1\n");
-//    res = thread_switch(&thread_1);
-//    if(res) {
-//        enable_restore_irqs(irq_flags);
-//        return res;
-//    }
-//    printk("Returned from thread1\n");
+//     printk("Scheduling thread1\n");
+//     res = thread_schedule(&thread_1);
+//     if(res) {
+//         enable_restore_irqs(irq_flags);
+//         return res;
+//     }
+//     printk("Switching to thread1\n");
+//     res = thread_switch(&thread_1);
+//     if(res) {
+//         enable_restore_irqs(irq_flags);
+//         return res;
+//     }
+//     printk("Returned from thread1\n");
 //
-//    printk("Scheduling thread2\n");
-//    res = thread_schedule(&thread_2);
-//    if(res) {
-//        enable_restore_irqs(irq_flags);
-//        return res;
-//    }
-//    printk("Switching to thread2\n");
-//    res = thread_switch(&thread_2);
-//    if(res) {
-//        enable_restore_irqs(irq_flags);
-//        return res;
-//    }
-//    printk("Returned from thread2\n");
+//     printk("Scheduling thread2\n");
+//     res = thread_schedule(&thread_2);
+//     if(res) {
+//         enable_restore_irqs(irq_flags);
+//         return res;
+//     }
+//     printk("Switching to thread2\n");
+//     res = thread_switch(&thread_2);
+//     if(res) {
+//         enable_restore_irqs(irq_flags);
+//         return res;
+//     }
+//     printk("Returned from thread2\n");
 //
-//    if(thread_1.status != THREAD_STATUS_READY)
-//    {
-//        eprintk("thread_test FAIL: thread_1 is not ready!\n");
-//        return -EINVAL;
-//    }
-//    if(thread_2.status != THREAD_STATUS_ABANDONED)
-//    {
-//        eprintk("thread_test FAIL: thread_2 was not abandoned!\n");
-//        return -EINVAL;
-//    }
+//     if(thread_1.status != THREAD_STATUS_READY)
+//     {
+//         eprintk("thread_test FAIL: thread_1 is not ready!\n");
+//         return -EINVAL;
+//     }
+//     if(thread_2.status != THREAD_STATUS_ABANDONED)
+//     {
+//         eprintk("thread_test FAIL: thread_2 was not abandoned!\n");
+//         return -EINVAL;
+//     }
 //
-//    thread_deinit(&thread_1);
-//    thread_deinit(&thread_2);
+//     thread_deinit(&thread_1);
+//     thread_deinit(&thread_2);
 //
-//    enable_restore_irqs(irq_flags);
-//    return 0;
-//}
-//declare_init_desc(smp, thread_test, "Running Thread Test(s)");
+//     enable_restore_irqs(irq_flags);
+//     return 0;
+// }
+// declare_init_desc(smp, thread_test, "Running Thread Test(s)");
 
 const char *
-thread_status_to_string(
-        thread_status_t status)
+thread_status_to_string(thread_status_t status)
 {
-        return status == THREAD_STATUS_RUNNING ? "RUNNING" :
-               status == THREAD_STATUS_SCHEDULED ? "SCHEDULED" :
-               status == THREAD_STATUS_READY ? "READY" :
-               status == THREAD_STATUS_TIRED ? "TIRED" :
-               status == THREAD_STATUS_SLEEPING ? "SLEEPING" :
-               status == THREAD_STATUS_PREPARING ? "PREPARING" :
-               status == THREAD_STATUS_ABANDONED ? "ABANDONED" :
-               "ERROR-INVALID-STATUS";
+    return status == THREAD_STATUS_RUNNING     ? "RUNNING"
+           : status == THREAD_STATUS_SCHEDULED ? "SCHEDULED"
+           : status == THREAD_STATUS_READY     ? "READY"
+           : status == THREAD_STATUS_TIRED     ? "TIRED"
+           : status == THREAD_STATUS_SLEEPING  ? "SLEEPING"
+           : status == THREAD_STATUS_PREPARING ? "PREPARING"
+           : status == THREAD_STATUS_ABANDONED ? "ABANDONED"
+                                               : "ERROR-INVALID-STATUS";
 }
-

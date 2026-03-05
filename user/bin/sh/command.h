@@ -5,13 +5,14 @@
 #include <kanawha/file.h>
 #include <kanawha/process.h>
 
-struct cmd_arg {
+struct cmd_arg
+{
     struct cmd_arg *next;
     struct cmd_arg *prev;
     char *value;
 };
 
-struct simple_cmd 
+struct simple_cmd
 {
     char *command;
 
@@ -24,12 +25,13 @@ struct simple_cmd
     int bg;
 };
 
-struct cmd 
+struct cmd
 {
     struct simple_cmd *primary;
     struct cmd *secondary;
 
-    enum {
+    enum
+    {
         CMD_SIMPLE,
         CMD_SECONDARY_INPUT,
         CMD_SECONDARY_OR,
@@ -43,16 +45,13 @@ parse_simple_cmd(const char *raw);
 int
 destroy_simple_cmd(struct simple_cmd *cmd);
 
-
 // Consumes cmd even on failure
 int
 exec_cmd(struct cmd *cmd);
 
 // Consumes cmd even on failure
 int
-fork_cmd(
-        struct cmd *cmd,
-        pid_t *pid);
+fork_cmd(struct cmd *cmd, pid_t *pid);
 
 // Consumes simple
 struct cmd *

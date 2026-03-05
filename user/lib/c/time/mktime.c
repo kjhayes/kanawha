@@ -29,4 +29,3 @@ mktime(struct tm *tm)
 
     return (time_t)value;
 }
-

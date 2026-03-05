@@ -1,18 +1,17 @@
 
-#include <kanawha/uapi/syscall.h>
-#include <kanawha/uapi/environ.h>
+#include <kanawha/assert.h>
+#include <kanawha/kmalloc.h>
 #include <kanawha/proc/env.h>
 #include <kanawha/proc/process.h>
-#include <kanawha/kmalloc.h>
 #include <kanawha/string.h>
-#include <kanawha/assert.h>
+#include <kanawha/uapi/environ.h>
+#include <kanawha/uapi/syscall.h>
 
 #define USER_ENV_MAX_KEYLEN 128
 #define USER_ENV_MAX_VALLEN 0x1000
 
 static int
-env_get(
-        struct process *process,
+env_get(struct process *process,
         const char __user *key,
         char __user *dst,
         size_t len)
@@ -20,25 +19,23 @@ env_get(
     int res;
 
     size_t keylen;
-    res = process_strlen_usermem(
-            process, key, USER_ENV_MAX_KEYLEN, &keylen);
-    if(res) {
+    res = process_strlen_usermem(process, key, USER_ENV_MAX_KEYLEN, &keylen);
+    if(res)
+    {
         return res;
     }
 
     dprintk("keylen=0x%lx\n", keylen);
 
     char *key_buf = kmalloc(keylen + 1, KM_KERNEL);
-    if(key_buf == NULL) {
+    if(key_buf == NULL)
+    {
         return -ENOMEM;
     }
 
-    res = process_read_usermem(
-            process,
-            key_buf,
-            (void __user *)key,
-            keylen);
-    if(res) {
+    res = process_read_usermem(process, key_buf, (void __user *)key, keylen);
+    if(res)
+    {
         kfree(key_buf);
         return res;
     }
@@ -47,11 +44,10 @@ env_get(
 
     dprintk("key=%s\n", key_buf);
 
-    const char *value =
-        environment_get_var(
-                process->environ, key_buf);
+    const char *value = environment_get_var(process->environ, key_buf);
 
-    if(value == NULL) {
+    if(value == NULL)
+    {
         kfree(key_buf);
         return -ENXIO;
     }
@@ -63,14 +59,11 @@ env_get(
 #endif
 
     size_t value_len = strlen(value);
-    size_t min_len = (value_len+1) <= len ? value_len + 1 : len;
+    size_t min_len = (value_len + 1) <= len ? value_len + 1 : len;
 
-    res = process_write_usermem(
-            process,
-            dst,
-            (void*)value,
-            min_len);
-    if(res) {
+    res = process_write_usermem(process, dst, (void *)value, min_len);
+    if(res)
+    {
         environment_put_var(process->environ);
         kfree(key_buf);
         return res;
@@ -82,54 +75,47 @@ env_get(
 }
 
 static int
-env_set(
-        struct process *process,
-        const char __user *key,
-        char __user *value)
+env_set(struct process *process, const char __user *key, char __user *value)
 {
     int res;
 
     size_t keylen;
-    res = process_strlen_usermem(
-            process, key, USER_ENV_MAX_KEYLEN, &keylen);
-    if(res) {
+    res = process_strlen_usermem(process, key, USER_ENV_MAX_KEYLEN, &keylen);
+    if(res)
+    {
         return res;
     }
 
     size_t vallen;
-    res = process_strlen_usermem(
-            process, value, USER_ENV_MAX_VALLEN, &vallen);
-    if(res) {
+    res = process_strlen_usermem(process, value, USER_ENV_MAX_VALLEN, &vallen);
+    if(res)
+    {
         return res;
     }
 
     char *key_buf = kmalloc(keylen + 1, KM_KERNEL);
-    if(key_buf == NULL) {
+    if(key_buf == NULL)
+    {
         return -ENOMEM;
     }
     char *val_buf = kmalloc(vallen + 1, KM_KERNEL);
-    if(val_buf == NULL) {
+    if(val_buf == NULL)
+    {
         kfree(key_buf);
         return -ENOMEM;
     }
 
-    res = process_read_usermem(
-            process,
-            key_buf,
-            (void __user *)key,
-            keylen);
-    if(res) {
+    res = process_read_usermem(process, key_buf, (void __user *)key, keylen);
+    if(res)
+    {
         kfree(key_buf);
         kfree(val_buf);
         return res;
     }
 
-    res = process_read_usermem(
-            process,
-            val_buf,
-            (void __user *)value,
-            vallen);
-    if(res) {
+    res = process_read_usermem(process, val_buf, (void __user *)value, vallen);
+    if(res)
+    {
         kfree(key_buf);
         kfree(val_buf);
         return res;
@@ -138,11 +124,9 @@ env_set(
     key_buf[keylen] = '\0';
     val_buf[vallen] = '\0';
 
-    res = environment_set(
-            process->environ,
-            key_buf,
-            val_buf);
-    if(res) {
+    res = environment_set(process->environ, key_buf, val_buf);
+    if(res)
+    {
         kfree(key_buf);
         kfree(val_buf);
         return res;
@@ -158,35 +142,30 @@ env_set(
 }
 
 static int
-env_clear(
-        struct process *process,
-        const char __user *key)
+env_clear(struct process *process, const char __user *key)
 {
     int res;
 
     DEBUG_ASSERT(KERNEL_ADDR(process->environ));
 
     size_t keylen;
-    res = process_strlen_usermem(
-            process, key, USER_ENV_MAX_KEYLEN, &keylen);
-    if(res) {
+    res = process_strlen_usermem(process, key, USER_ENV_MAX_KEYLEN, &keylen);
+    if(res)
+    {
         return res;
     }
 
-    dprintk("syscall_env: ENV_CLEAR keylen=%p\n",
-            keylen);
+    dprintk("syscall_env: ENV_CLEAR keylen=%p\n", keylen);
 
-    char *buffer = kmalloc(keylen+1, KM_KERNEL);
-    if(buffer == NULL) {
+    char *buffer = kmalloc(keylen + 1, KM_KERNEL);
+    if(buffer == NULL)
+    {
         return -ENOMEM;
     }
 
-    res = process_read_usermem(
-            process,
-            buffer,
-            (void __user *)key,
-            keylen);
-    if(res) {
+    res = process_read_usermem(process, buffer, (void __user *)key, keylen);
+    if(res)
+    {
         kfree(buffer);
         return res;
     }
@@ -197,9 +176,9 @@ env_clear(
     printk("syscall_env: ENV_CLEAR key=%s\n", buffer);
 #endif
 
-    res = environment_clear_var(
-            process->environ, buffer);
-    if(res) {
+    res = environment_clear_var(process->environ, buffer);
+    if(res)
+    {
         kfree(buffer);
         return res;
     }
@@ -213,16 +192,14 @@ env_dump(struct process *process, char __user *buffer, size_t buflen)
 {
     int res;
 
-    if(process->environ == NULL) {
+    if(process->environ == NULL)
+    {
         return -ENXIO;
     }
 
-    res = environment_user_dump(
-            process,
-            process->environ,
-            buffer,
-            buflen);
-    if(res) {
+    res = environment_user_dump(process, process->environ, buffer, buflen);
+    if(res)
+    {
         return res;
     }
 
@@ -234,12 +211,14 @@ env_wipe(struct process *process)
 {
     int res;
 
-    if(process->environ == NULL) {
+    if(process->environ == NULL)
+    {
         return -ENXIO;
     }
 
     res = environment_clear_all(process->environ);
-    if(res) {
+    if(res)
+    {
         return res;
     }
 
@@ -247,32 +226,31 @@ env_wipe(struct process *process)
 }
 
 int
-syscall_environ(
-        const char __user *key,
-        char __user *value,
-        size_t len,
-        int opcode)
+syscall_environ(const char __user *key,
+                char __user *value,
+                size_t len,
+                int opcode)
 {
     struct process *process = current_process();
 
-    switch(opcode) {
-        case ENV_GET:
-            return env_get(process, key, value, len);
-            break;
-        case ENV_SET:
-            return env_set(process, key, value);
-            break;
-        case ENV_CLEAR:
-            return env_clear(process, key);
-            break;
-        case ENV_DUMP:
-            return env_dump(process, value, len);
-            break;
-        case ENV_WIPE:
-            return env_wipe(process);
-            break;
-        default:
-            return -EINVAL;
+    switch(opcode)
+    {
+    case ENV_GET:
+        return env_get(process, key, value, len);
+        break;
+    case ENV_SET:
+        return env_set(process, key, value);
+        break;
+    case ENV_CLEAR:
+        return env_clear(process, key);
+        break;
+    case ENV_DUMP:
+        return env_dump(process, value, len);
+        break;
+    case ENV_WIPE:
+        return env_wipe(process);
+        break;
+    default:
+        return -EINVAL;
     }
 }
-

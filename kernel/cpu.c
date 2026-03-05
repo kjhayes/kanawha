@@ -1,13 +1,13 @@
 
 #include <kanawha/cpu.h>
-#include <kanawha/spinlock.h>
-#include <kanawha/string.h>
-#include <kanawha/printk.h>
-#include <kanawha/stddef.h>
-#include <kanawha/percpu.h>
 #include <kanawha/lock.h>
+#include <kanawha/percpu.h>
+#include <kanawha/printk.h>
+#include <kanawha/spinlock.h>
+#include <kanawha/stddef.h>
+#include <kanawha/string.h>
 
-static struct cpu * system_cpus[CONFIG_MAX_CPUS] = { 0 };
+static struct cpu *system_cpus[CONFIG_MAX_CPUS] = {0};
 static size_t __num_cpus = 0;
 
 DEFINE_LOCAL_THREAD_LOCK(system_cpus_lock);
@@ -18,8 +18,10 @@ bsp_register_smp_cpu(struct cpu *cpu, int is_bsp)
     system_cpus_lock_acquire();
     int found = 0;
 
-    if(is_bsp) {
-        if(system_cpus[0] != NULL) {
+    if(is_bsp)
+    {
+        if(system_cpus[0] != NULL)
+        {
             panic("Tried to register multiple BSP(s)!\n");
         }
         found = 1;
@@ -27,9 +29,12 @@ bsp_register_smp_cpu(struct cpu *cpu, int is_bsp)
         cpu->id = 0;
         cpu->flags = CPU_FLAG_IS_BSP;
     }
-    else {
-        for(cpu_id_t id = 1; id < CONFIG_MAX_CPUS; id++) {
-            if(system_cpus[id] == NULL) {
+    else
+    {
+        for(cpu_id_t id = 1; id < CONFIG_MAX_CPUS; id++)
+        {
+            if(system_cpus[id] == NULL)
+            {
                 found = 1;
                 system_cpus[id] = cpu;
                 cpu->id = id;
@@ -39,17 +44,19 @@ bsp_register_smp_cpu(struct cpu *cpu, int is_bsp)
         }
     }
 
-    if(!found) {
-        eprintk("Tried to register too many CPU(s)! (Try increasing the value of CONFIG_MAX_CPUS)\n");
+    if(!found)
+    {
+        eprintk("Tried to register too many CPU(s)! (Try increasing the value "
+                "of CONFIG_MAX_CPUS)\n");
         system_cpus_lock_release();
         return -ENOMEM;
     }
     __num_cpus++;
     system_cpus_lock_release();
 
-
     int res = init_cpu_percpu_data(cpu);
-    if(res) {
+    if(res)
+    {
         eprintk("Failed to setup percpu data for CPU %ld\n", cpu->id);
         return res;
     }
@@ -68,13 +75,16 @@ unregister_smp_cpu(struct cpu *cpu)
 }
 
 size_t
-total_num_cpus(void) {
+total_num_cpus(void)
+{
     return __num_cpus;
 }
 
 struct cpu *
-cpu_from_id(cpu_id_t id) {
-    if(id < 0 || id >= CONFIG_MAX_CPUS) {
+cpu_from_id(cpu_id_t id)
+{
+    if(id < 0 || id >= CONFIG_MAX_CPUS)
+    {
         return NULL;
     }
     return system_cpus[id];
@@ -83,14 +93,14 @@ cpu_from_id(cpu_id_t id) {
 DECLARE_STATIC_PERCPU_VAR(cpu_id_t, __current_cpu_id);
 
 cpu_id_t
-current_cpu_id(void) {
-    return *(cpu_id_t*)percpu_ptr(percpu_addr(__current_cpu_id));
+current_cpu_id(void)
+{
+    return *(cpu_id_t *)percpu_ptr(percpu_addr(__current_cpu_id));
 }
 
 int
 set_current_cpu_id(cpu_id_t id)
 {
-    *(cpu_id_t*)percpu_ptr(percpu_addr(__current_cpu_id)) = id;
+    *(cpu_id_t *)percpu_ptr(percpu_addr(__current_cpu_id)) = id;
     return 0;
 }
-

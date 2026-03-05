@@ -78,7 +78,7 @@
 #define EOVERFLOW (75)
 #define ENOTUNIQ (76)
 #define EBADFD (77)
-#define EREMCHG  (78)
+#define EREMCHG (78)
 #define ELIBACC (79)
 #define ELIBBAD (80)
 #define ELIBSCN (81)
@@ -128,7 +128,8 @@
 #define EDEFER (515)
 #define EIMPREC (516)
 
-extern int * __elk_errno(void);
+extern int *
+__elk_errno(void);
 #define errno (*__elk_errno())
 
 #endif

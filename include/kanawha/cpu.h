@@ -8,7 +8,7 @@ typedef int cpu_id_t;
 
 #define NULL_CPU_ID (cpu_id_t)(-1)
 
-#define CPU_FLAG_IS_BSP (1UL<<0)
+#define CPU_FLAG_IS_BSP (1UL << 0)
 
 struct cpu
 {
@@ -35,7 +35,8 @@ cpu_from_id(cpu_id_t id);
 cpu_id_t
 current_cpu_id(void);
 
-// Should only be used once during initialization (assumes preemption is disabled)
+// Should only be used once during initialization (assumes preemption is
+// disabled)
 int
 set_current_cpu_id(cpu_id_t id);
 

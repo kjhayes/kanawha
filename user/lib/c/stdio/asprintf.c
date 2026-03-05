@@ -2,7 +2,8 @@
 #include <stdarg.h>
 #include <stdio.h>
 
-int asprintf(char **out, const char * restrict format, ...)
+int
+asprintf(char **out, const char *restrict format, ...)
 {
     va_list arg;
     int done;
@@ -13,4 +14,3 @@ int asprintf(char **out, const char * restrict format, ...)
 
     return done;
 }
-

@@ -16,19 +16,13 @@ snd_dev_deinit(struct snd_dev *dev)
     return 0;
 }
 
-DEFINE_DEV_TYPE(
-        snd_dev,
-        dev,
-        snd_dev_init,
-        snd_dev_deinit
-        );
+DEFINE_DEV_TYPE(snd_dev, dev, snd_dev_init, snd_dev_deinit);
 
 #ifdef CONFIG_LOG_SNDDEV_REGISTRY_ON_LAUNCH
 static int
-dump_snd_dev_on_launch(void) {
+dump_snd_dev_on_launch(void)
+{
     return dump_snd_dev_registry(do_printk);
 }
 declare_init(launch, dump_snd_dev_on_launch);
 #endif
-
-

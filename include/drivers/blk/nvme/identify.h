@@ -1,17 +1,18 @@
 #ifndef __KANAWHA__NVME_IDENTIFY_H__
 #define __KANAWHA__NVME_IDENTIFY_H__
 
-#include <stdint.h>
 #include <kanawha/endian.h>
+#include <stdint.h>
 
 #define NVME_IDENTIFY_BUFLEN (0x1000)
 
-#define NVME_CNS_IDENTIFY_NAMESPACE  (0x0)
+#define NVME_CNS_IDENTIFY_NAMESPACE (0x0)
 #define NVME_CNS_IDENTIFY_CONTROLLER (0x1)
 
-struct nvme_identify_namespace_data {
-    le64_t namespace_size; // num LBA
-    le64_t namespace_capacity; // max num LBA possible
+struct nvme_identify_namespace_data
+{
+    le64_t namespace_size;        // num LBA
+    le64_t namespace_capacity;    // max num LBA possible
     le64_t namespace_utilization; // num LBA allocated
     uint8_t namespace_features;
     uint8_t num_lba_formats;
@@ -52,26 +53,36 @@ struct nvme_identify_namespace_data {
     le16_t endurance_group_id;
     uint8_t namespace_guid[16];
     le64_t ieee_eui64;
-    union {
-        struct {
+    union
+    {
+        struct
+        {
             le16_t metadata_size;
             uint8_t lba_order;
             uint8_t relative_performance : 2;
         } __packed;
         le32_t raw;
-    } __packed
-    lba_formats[64];
+    } __packed lba_formats[64];
 
     // Many many more...
 } __packed;
 ASSERT_FIELD_OFFSET(struct nvme_identify_namespace_data, nvm_capacity_low, 48);
-ASSERT_FIELD_OFFSET(struct nvme_identify_namespace_data, preferred_write_granularity, 64);
-ASSERT_FIELD_OFFSET(struct nvme_identify_namespace_data, optimal_write_size, 72);
-ASSERT_FIELD_OFFSET(struct nvme_identify_namespace_data, num_unique_attribute_lba_formats, 82);
-ASSERT_FIELD_OFFSET(struct nvme_identify_namespace_data, namespace_attributes, 99);
+ASSERT_FIELD_OFFSET(struct nvme_identify_namespace_data,
+                    preferred_write_granularity,
+                    64);
+ASSERT_FIELD_OFFSET(struct nvme_identify_namespace_data,
+                    optimal_write_size,
+                    72);
+ASSERT_FIELD_OFFSET(struct nvme_identify_namespace_data,
+                    num_unique_attribute_lba_formats,
+                    82);
+ASSERT_FIELD_OFFSET(struct nvme_identify_namespace_data,
+                    namespace_attributes,
+                    99);
 ASSERT_FIELD_OFFSET(struct nvme_identify_namespace_data, lba_formats, 128);
 
-struct nvme_identify_controller_data {
+struct nvme_identify_controller_data
+{
     le16_t pci_vendor;
     le16_t pci_subsystem_vendor;
     uint8_t serial_number[20];
@@ -101,8 +112,8 @@ struct nvme_identify_controller_data {
     uint8_t controller_reachability_capabilities;
     uint8_t controller_instance_uniquifier;
     le64_t controller_instance_random_number;
-    uint8_t __resv2[(239-144)+1];
-    uint8_t __resv3[(252-240)+1];
+    uint8_t __resv2[(239 - 144) + 1];
+    uint8_t __resv3[(252 - 240) + 1];
     uint8_t nvm_subsystem_report;
     uint8_t vpd_write_cycle_info;
     uint8_t management_endpoint_capabilities;
@@ -146,13 +157,21 @@ struct nvme_identify_controller_data {
     // There are so many more...
     // I give up... -KJH
 } __packed;
-ASSERT_FIELD_OFFSET(struct nvme_identify_controller_data, controller_instance_random_number, 136);
-ASSERT_FIELD_OFFSET(struct nvme_identify_controller_data, nvm_subsystem_report, 253);
-ASSERT_FIELD_OFFSET(struct nvme_identify_controller_data, firmware_updates, 260);
-ASSERT_FIELD_OFFSET(struct nvme_identify_controller_data, total_nvm_capacity_low, 280);
-ASSERT_FIELD_OFFSET(struct nvme_identify_controller_data, keep_alive_support, 320);
+ASSERT_FIELD_OFFSET(struct nvme_identify_controller_data,
+                    controller_instance_random_number,
+                    136);
+ASSERT_FIELD_OFFSET(struct nvme_identify_controller_data,
+                    nvm_subsystem_report,
+                    253);
+ASSERT_FIELD_OFFSET(struct nvme_identify_controller_data,
+                    firmware_updates,
+                    260);
+ASSERT_FIELD_OFFSET(struct nvme_identify_controller_data,
+                    total_nvm_capacity_low,
+                    280);
+ASSERT_FIELD_OFFSET(struct nvme_identify_controller_data,
+                    keep_alive_support,
+                    320);
 ASSERT_FIELD_OFFSET(struct nvme_identify_controller_data, domain_id, 356);
-
-
 
 #endif

@@ -1,7 +1,7 @@
 
-#include <stdlib.h>
-#include <kanawha/sys-wrappers.h>
 #include <elk-libc-internal/atexit.h>
+#include <kanawha/sys-wrappers.h>
+#include <stdlib.h>
 
 void
 exit(int status)
@@ -15,4 +15,3 @@ _exit(int status)
 {
     kanawha_sys_exit(status);
 }
-

@@ -1,13 +1,13 @@
 
-#include <kanawha/timer.h>
-#include <kanawha/time.h>
-#include <kanawha/timer_dev.h>
-#include <kanawha/list.h>
-#include <kanawha/kmalloc.h>
-#include <kanawha/string.h>
-#include <kanawha/stddef.h>
 #include <kanawha/irq.h>
+#include <kanawha/kmalloc.h>
+#include <kanawha/list.h>
 #include <kanawha/lock.h>
+#include <kanawha/stddef.h>
+#include <kanawha/string.h>
+#include <kanawha/time.h>
+#include <kanawha/timer.h>
+#include <kanawha/timer_dev.h>
 
 DEFINE_LOCAL_IRQ_LOCK(timers_lock);
 static DECLARE_ILIST(available_timers);
@@ -25,7 +25,8 @@ int
 provide_timer(struct timer_dev *dev, size_t alarm)
 {
     struct timer *timer = kmalloc(sizeof(struct timer), KM_KERNEL);
-    if(timer == NULL) {
+    if(timer == NULL)
+    {
         return -ENOMEM;
     }
     memset(timer, 0, sizeof(struct timer));
@@ -51,14 +52,13 @@ struct timer *
 reserve_timer(void)
 {
     timers_lock_acquire();
-    ilist_node_t *node =
-        ilist_pop_head(&available_timers);
-    if(node == NULL) {
+    ilist_node_t *node = ilist_pop_head(&available_timers);
+    if(node == NULL)
+    {
         timers_lock_release();
         return NULL;
     }
-    struct timer *timer =
-        container_of(node, struct timer, list_node);
+    struct timer *timer = container_of(node, struct timer, list_node);
     ilist_push_tail(&reserved_timers, node);
     timers_lock_release();
     return timer;
@@ -81,29 +81,19 @@ timer_clear(struct timer *timer)
 }
 
 int
-timer_set_periodic(
-        struct timer *timer,
-        duration_t period,
-        alarm_f *callback)
+timer_set_periodic(struct timer *timer, duration_t period, alarm_f *callback)
 {
-    return timer_dev_set_alarm_periodic(
-            timer->dev,
-            timer->alarm,
-            period,
-            callback);
+    return timer_dev_set_alarm_periodic(timer->dev,
+                                        timer->alarm,
+                                        period,
+                                        callback);
 }
 
 int
-timer_set_oneshot(
-        struct timer *timer,
-        duration_t wait_for,
-        alarm_f *callback)
+timer_set_oneshot(struct timer *timer, duration_t wait_for, alarm_f *callback)
 {
-    return timer_dev_set_alarm_oneshot(
-            timer->dev,
-            timer->alarm,
-            wait_for,
-            callback);
+    return timer_dev_set_alarm_oneshot(timer->dev,
+                                       timer->alarm,
+                                       wait_for,
+                                       callback);
 }
-
-

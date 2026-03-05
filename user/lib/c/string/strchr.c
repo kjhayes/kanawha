@@ -1,15 +1,17 @@
 
 #include <string.h>
 
-char *strchr(
-        const char *s,
-        int c)
+char *
+strchr(const char *s, int c)
 {
-    do {
-        if(*s == c) {
-            return (char*)s;
+    do
+    {
+        if(*s == c)
+        {
+            return (char *)s;
         }
-        if(*s == '\0') {
+        if(*s == '\0')
+        {
             break;
         }
         s++;
@@ -17,4 +19,3 @@ char *strchr(
 
     return NULL;
 }
-

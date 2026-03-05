@@ -15,11 +15,9 @@ struct cpio_mount
     struct cpio_dir_node root_node;
 };
 
-
 int
-cpio_read_header(
-        struct cpio_mount *mnt,
-        size_t offset,
-        struct cpio_header *hdr);
+cpio_read_header(struct cpio_mount *mnt,
+                 size_t offset,
+                 struct cpio_header *hdr);
 
 #endif

@@ -1,8 +1,8 @@
 #ifndef __KANAWHA__GFX_IMAGE_H__
 #define __KANAWHA__GFX_IMAGE_H__
 
-#include <stdint.h>
 #include <kanawha/gfx/layout.h>
+#include <stdint.h>
 
 #ifdef CONFIG_LOGO_DATA
 #define KANAWHA_LOGO_HEIGHT 78

@@ -1,24 +1,23 @@
 
-#include <kanawha/module.h>
-#include <kanawha/stddef.h>
-#include <kanawha/stree.h>
-#include <kanawha/spinlock.h>
-#include <kanawha/lock.h>
-#include <kanawha/init.h>
-#include <kanawha/printk.h>
-#include <kanawha/symbol.h>
-#include <kanawha/kmalloc.h>
-#include <kanawha/arch.h>
-#include <kanawha/fs/node.h>
-#include <kanawha/fs/mount.h>
-#include <kanawha/types.h>
-#include <kanawha/errno.h>
-#include <kanawha/string.h>
-#include <kanawha/arch.h>
 #include <elf/elf.h>
+#include <elf/elf_string.h>
 #include <elf/module.h>
 #include <elf/reloc.h>
-#include <elf/elf_string.h>
+#include <kanawha/arch.h>
+#include <kanawha/errno.h>
+#include <kanawha/fs/mount.h>
+#include <kanawha/fs/node.h>
+#include <kanawha/init.h>
+#include <kanawha/kmalloc.h>
+#include <kanawha/lock.h>
+#include <kanawha/module.h>
+#include <kanawha/printk.h>
+#include <kanawha/spinlock.h>
+#include <kanawha/stddef.h>
+#include <kanawha/stree.h>
+#include <kanawha/string.h>
+#include <kanawha/symbol.h>
+#include <kanawha/types.h>
 
 DEFINE_LOCAL_THREAD_LOCK(module_tree_lock);
 static DECLARE_STREE(module_tree);
@@ -39,13 +38,12 @@ __free_module_struct(struct module *mod)
 
 // Keeps a reference to name
 static int
-__init_module(struct module *module,
-              const char *name,
-              unsigned long flags)
+__init_module(struct module *module, const char *name, unsigned long flags)
 {
     int res;
     module->name = kstrdup(name);
-    if(module->name == NULL) {
+    if(module->name == NULL)
+    {
         return -ENOMEM;
     }
     module->tree_node.key = name;
@@ -57,31 +55,36 @@ __init_module(struct module *module,
     module_tree_lock_acquire();
     {
         struct stree_node *node;
-        for(node = stree_get_first(&module_tree); node != NULL; node = stree_get_next(node))
+        for(node = stree_get_first(&module_tree); node != NULL;
+            node = stree_get_next(node))
         {
             printk("MODULE: \"%s\"\n", node->key);
         }
     }
-    struct stree_node *existing = stree_get(&module_tree,name);
-    if(existing == NULL) {
+    struct stree_node *existing = stree_get(&module_tree, name);
+    if(existing == NULL)
+    {
         module->tree_node.key = module->name;
         res = stree_insert(&module_tree, &module->tree_node);
-    } else {
+    }
+    else
+    {
         res = -EEXIST;
     }
     module_tree_lock_release();
 
     ptree_init(&module->dependency_tree);
 
-    if(res) {
+    if(res)
+    {
         eprintk("Failed to Initialize Module \"%s\" (err=%s)\n",
-            name, errnostr(res));
-        kfree((void*)module->name);
+                name,
+                errnostr(res));
+        kfree((void *)module->name);
         return res;
     }
 
-    printk("Initialized Module \"%s\"\n",
-            name);
+    printk("Initialized Module \"%s\"\n", name);
     return 0;
 }
 
@@ -90,15 +93,20 @@ load_builtin_ksymbols(void)
 {
     extern struct ksymbol __ksymtab_start[];
     extern struct ksymbol __ksymtab_end[];
-    size_t num_symbols = ((void*)__ksymtab_end - (void*)__ksymtab_start) / sizeof(struct ksymbol);
+    size_t num_symbols = ((void *)__ksymtab_end - (void *)__ksymtab_start) /
+                         sizeof(struct ksymbol);
     dprintk("Kernel has %lu builtin symbols\n", (unsigned long)num_symbols);
 
-    for(size_t i = 0; i < num_symbols; i++) {
+    for(size_t i = 0; i < num_symbols; i++)
+    {
         struct ksymbol *sym = &__ksymtab_start[i];
         int res = register_kernel_symbol(sym, core_kernel_module());
-        if(res) {
-            eprintk("Failed to register builtin kernel symbol \"%s\" (err=%s)\n",
-                    sym->symbol, errnostr(res));
+        if(res)
+        {
+            eprintk("Failed to register builtin kernel symbol \"%s\" "
+                    "(err=%s)\n",
+                    sym->symbol,
+                    errnostr(res));
             return res;
         }
     }
@@ -107,12 +115,11 @@ load_builtin_ksymbols(void)
 }
 
 struct ksymbol *
-module_link_symbol(
-        struct module *mod,
-        const char *name)
+module_link_symbol(struct module *mod, const char *name)
 {
     struct ksymbol *sym = ksymbol_get(name);
-    if(sym == NULL) {
+    if(sym == NULL)
+    {
         eprintk("Failed to link module symbol which does not exist: \"%s\"\n",
                 name);
         return sym;
@@ -121,9 +128,11 @@ module_link_symbol(
     struct module *owner = sym->mod;
 
     spin_lock(&mod->lock);
-    struct ptree_node *dep_node = ptree_get(&mod->dependency_tree, (uintptr_t)owner);
+    struct ptree_node *dep_node =
+        ptree_get(&mod->dependency_tree, (uintptr_t)owner);
 
-    if(dep_node != NULL) {
+    if(dep_node != NULL)
+    {
         // The dependency already exists,
         // decrement "put" the symbol to avoid extra
         // refs to the owning module
@@ -131,17 +140,26 @@ module_link_symbol(
         // This looks bad, but if we maintain dependencies correctly,
         // the symbol should still exist even if we "put" it.
         ksymbol_put(sym);
-    } else {
+    }
+    else
+    {
         // We need to add the owning module to our dependency tree,
-        struct module_dependency *dep = kzmalloc(sizeof(struct module_dependency), KM_KERNEL);
-        if(dep == NULL) {
-            eprintk("Failed to allocate module dependency struct during module_link_symbol!\n");
+        struct module_dependency *dep =
+            kzmalloc(sizeof(struct module_dependency), KM_KERNEL);
+        if(dep == NULL)
+        {
+            eprintk("Failed to allocate module dependency struct during "
+                    "module_link_symbol!\n");
             ksymbol_put(sym);
             sym = NULL;
-        } else {
+        }
+        else
+        {
             dep->mod = owner;
             dep->tree_node.key = (uintptr_t)owner;
-            ptree_insert(&mod->dependency_tree, &dep->tree_node, (uintptr_t)owner);
+            ptree_insert(&mod->dependency_tree,
+                         &dep->tree_node,
+                         (uintptr_t)owner);
         }
     }
     spin_unlock(&mod->lock);
@@ -151,17 +169,17 @@ module_link_symbol(
 static int
 module_framework_init(void)
 {
-    int res = __init_module(&__core_kernel_module,
-                  "kanawha",
-                  MODULE_FLAG_FIXED);
-    if(res) {
+    int res =
+        __init_module(&__core_kernel_module, "kanawha", MODULE_FLAG_FIXED);
+    if(res)
+    {
         return res;
     }
     refcount_inc(&__core_kernel_module.refcount);
 
-    
     res = load_builtin_ksymbols();
-    if(res) {
+    if(res)
+    {
         return res;
     }
 
@@ -186,17 +204,17 @@ module_get(const char *name)
     node = stree_get(&module_tree, name);
     module_tree_lock_release();
 
-    if(node == NULL) {
-        wprintk("Tried to get module which does not exist: \"%s\"\n",
-                name);
+    if(node == NULL)
+    {
+        wprintk("Tried to get module which does not exist: \"%s\"\n", name);
         return NULL;
     }
     mod = container_of(node, struct module, tree_node);
 
     res = refcount_inc(&mod->refcount);
-    if(res <= 0) {
-        wprintk("Tried to get dead module: \"%s\"\n",
-                name);
+    if(res <= 0)
+    {
+        wprintk("Tried to get dead module: \"%s\"\n", name);
         return NULL;
     }
     return mod;
@@ -211,38 +229,45 @@ module_put(struct module *mod)
 }
 
 static int
-elf64_check_header(
-        Elf64_Ehdr *hdr)
+elf64_check_header(Elf64_Ehdr *hdr)
 {
-    if(hdr->e_ident[EI_MAG0] != EI_MAG0_VALID) {
+    if(hdr->e_ident[EI_MAG0] != EI_MAG0_VALID)
+    {
         eprintk("ELF64 File has invalid EI_MAG0!\n");
         return -EINVAL;
     }
-    if(hdr->e_ident[EI_MAG1] != EI_MAG1_VALID) {
+    if(hdr->e_ident[EI_MAG1] != EI_MAG1_VALID)
+    {
         eprintk("ELF64 File has invalid EI_MAG1!\n");
         return -EINVAL;
     }
-    if(hdr->e_ident[EI_MAG2] != EI_MAG2_VALID) {
+    if(hdr->e_ident[EI_MAG2] != EI_MAG2_VALID)
+    {
         eprintk("ELF64 File has invalid EI_MAG2!\n");
         return -EINVAL;
     }
-    if(hdr->e_ident[EI_MAG3] != EI_MAG3_VALID) {
+    if(hdr->e_ident[EI_MAG3] != EI_MAG3_VALID)
+    {
         eprintk("ELF64 File has invalid EI_MAG3!\n");
         return -EINVAL;
     }
 
-    if(hdr->e_ident[EI_CLASS] != ELFCLASS64) {
+    if(hdr->e_ident[EI_CLASS] != ELFCLASS64)
+    {
         eprintk("ELF File is not 64-bit!\n");
         return -EINVAL;
     }
 
-    if(hdr->e_entry != 0) {
+    if(hdr->e_entry != 0)
+    {
         eprintk("ELF64 File has an entry point!\n");
         return -EINVAL;
     }
 
-    if(hdr->e_type != ET_REL) {
-        eprintk("ELF64 File has type = \"%s\"!\n", elf_get_type_string(hdr->e_type));
+    if(hdr->e_type != ET_REL)
+    {
+        eprintk("ELF64 File has type = \"%s\"!\n",
+                elf_get_type_string(hdr->e_type));
         return -EINVAL;
     }
 
@@ -250,38 +275,45 @@ elf64_check_header(
 }
 
 static int
-elf64_load_module_alloc_sections(
-        struct module *mod,
-        struct fs_node *node,
-        struct elf64_module_state *state)
+elf64_load_module_alloc_sections(struct module *mod,
+                                 struct fs_node *node,
+                                 struct elf64_module_state *state)
 {
     int res;
 
     mod->section_count = 0;
-    for(size_t i = 0; i < state->hdr.e_shnum; i++) {
+    for(size_t i = 0; i < state->hdr.e_shnum; i++)
+    {
         Elf64_Shdr *shdr = &state->shdrs[i];
-        if(shdr->sh_type == SHT_NULL) {
+        if(shdr->sh_type == SHT_NULL)
+        {
             continue;
         }
-        if(shdr->sh_flags & SHF_ALLOC) {
+        if(shdr->sh_flags & SHF_ALLOC)
+        {
             mod->section_count++;
         }
     }
-    if(mod->section_count == 0) {
+    if(mod->section_count == 0)
+    {
         eprintk("Module has no loadable sections? (aborting)\n");
         return -EINVAL;
     }
 
-    mod->sections = kzmalloc(sizeof(struct module_section) * mod->section_count, KM_KERNEL);
-    if(mod->sections == NULL && mod->section_count > 0) {
+    mod->sections =
+        kzmalloc(sizeof(struct module_section) * mod->section_count, KM_KERNEL);
+    if(mod->sections == NULL && mod->section_count > 0)
+    {
         eprintk("Failed to allocate module memory section table!\n");
         return -ENOMEM;
     }
 
     size_t sections_initialized = 0;
-    for(size_t i = 0; i < state->hdr.e_shnum; i++) {
+    for(size_t i = 0; i < state->hdr.e_shnum; i++)
+    {
         Elf64_Shdr *shdr = &state->shdrs[i];
-        if(shdr->sh_type == SHT_NULL || !(shdr->sh_flags & SHF_ALLOC)) {
+        if(shdr->sh_type == SHT_NULL || !(shdr->sh_flags & SHF_ALLOC))
+        {
             continue;
         }
         struct module_section *sec = &mod->sections[sections_initialized];
@@ -289,23 +321,42 @@ elf64_load_module_alloc_sections(
 
         sec->size = shdr->sh_size;
         sec->data = kmalloc(sec->size, KM_KERNEL);
-        if(sec->data == NULL) {
-            eprintk("Failed to allocate space for SHF_ALLOC section \"%s\", size=0x%lx\n",
-                    (char*)(state->shstrtab + shdr->sh_name), sec->size);
-            for(size_t unmap_i = 0; unmap_i < sections_initialized-1; unmap_i++) {
+        if(sec->data == NULL)
+        {
+            eprintk("Failed to allocate space for SHF_ALLOC section "
+                    "\"%s\", "
+                    "size=0x%lx\n",
+                    (char *)(state->shstrtab + shdr->sh_name),
+                    sec->size);
+            for(size_t unmap_i = 0; unmap_i < sections_initialized - 1;
+                unmap_i++)
+            {
                 kfree(mod->sections[unmap_i].data);
             }
             return -ENOMEM;
         }
 
-        if(shdr->sh_type == SHT_NOBITS) {
+        if(shdr->sh_type == SHT_NOBITS)
+        {
             memset(sec->data, 0, sec->size);
-        } else {
-            res = fs_node_paged_read(node, shdr->sh_offset, sec->data, sec->size, 0);
-            if(res) {
-                eprintk("Failed to read data from SHF_ALLOC section \"%s\", size=0x%lx\n",
-                        (char*)(state->shstrtab + shdr->sh_name), sec->size);
-                for(size_t unmap_i = 0; unmap_i < sections_initialized; unmap_i++) {
+        }
+        else
+        {
+            res = fs_node_paged_read(node,
+                                     shdr->sh_offset,
+                                     sec->data,
+                                     sec->size,
+                                     0);
+            if(res)
+            {
+                eprintk("Failed to read data from SHF_ALLOC "
+                        "section \"%s\", "
+                        "size=0x%lx\n",
+                        (char *)(state->shstrtab + shdr->sh_name),
+                        sec->size);
+                for(size_t unmap_i = 0; unmap_i < sections_initialized;
+                    unmap_i++)
+                {
                     kfree(mod->sections[unmap_i].data);
                 }
                 return -EINVAL;
@@ -317,12 +368,16 @@ elf64_load_module_alloc_sections(
         shdr->sh_addr = (uintptr_t)sec->data;
 
         dprintk("Loaded Section: \"%s\" size=0x%lx\n",
-                (char*)(state->shstrtab + shdr->sh_name), sec->size);
+                (char *)(state->shstrtab + shdr->sh_name),
+                sec->size);
     }
-    if(sections_initialized != mod->section_count) {
+    if(sections_initialized != mod->section_count)
+    {
         eprintk("Section count mismatch? (initialized=%d, sections=%d)\n",
-                sections_initialized, mod->section_count);
-        for(size_t unmap_i = 0; unmap_i < sections_initialized; unmap_i++) {
+                sections_initialized,
+                mod->section_count);
+        for(size_t unmap_i = 0; unmap_i < sections_initialized; unmap_i++)
+        {
             kfree(mod->sections[unmap_i].data);
         }
         return -EINVAL;
@@ -332,110 +387,120 @@ elf64_load_module_alloc_sections(
 }
 
 static int
-elf64_handle_reloc_section(
-        struct module *mod,
-        struct fs_node *node,
-        struct elf64_module_state *state,
-        Elf64_Shdr *shdr)
+elf64_handle_reloc_section(struct module *mod,
+                           struct fs_node *node,
+                           struct elf64_module_state *state,
+                           Elf64_Shdr *shdr)
 {
     int res;
 
     size_t entry_size = 0;
-    switch(shdr->sh_type) {
-        case SHT_REL:
-            entry_size = sizeof(Elf64_Rel);
-            break;
-        case SHT_RELA:
-            entry_size = sizeof(Elf64_Rela);
-            break;
-        default:
-            eprintk("Passed non SHT_REL or SHT_RELA section to elf64_handle_reloc_section!\n");
-            return -EINVAL;
+    switch(shdr->sh_type)
+    {
+    case SHT_REL:
+        entry_size = sizeof(Elf64_Rel);
+        break;
+    case SHT_RELA:
+        entry_size = sizeof(Elf64_Rela);
+        break;
+    default:
+        eprintk("Passed non SHT_REL or SHT_RELA section to "
+                "elf64_handle_reloc_section!\n");
+        return -EINVAL;
     }
 
     size_t num_rel = shdr->sh_size / entry_size;
-    if(num_rel == 0) {
+    if(num_rel == 0)
+    {
         eprintk("Found Relocation section with zero entries? (ignoring)\n");
         return 0;
     }
 
     size_t target_shndx = shdr->sh_info;
 
-    switch(target_shndx) {
-        case SHN_UNDEF:
-            eprintk("Found Relocation section referring to SHN_UNDEF!\n");
-            return -EINVAL;
-        case SHN_ABS:
-            eprintk("Found Relocation section referring to SHN_ABS!\n");
-            return -EINVAL;
-        case SHN_COMMON:
-            eprintk("Found Relocation section referring to SHN_COMMON!\n");
-            return -EINVAL;
+    switch(target_shndx)
+    {
+    case SHN_UNDEF:
+        eprintk("Found Relocation section referring to SHN_UNDEF!\n");
+        return -EINVAL;
+    case SHN_ABS:
+        eprintk("Found Relocation section referring to SHN_ABS!\n");
+        return -EINVAL;
+    case SHN_COMMON:
+        eprintk("Found Relocation section referring to SHN_COMMON!\n");
+        return -EINVAL;
     }
 
     Elf64_Shdr *target_hdr = &state->shdrs[target_shndx];
 
-    if(!(target_hdr->sh_flags & SHF_ALLOC)) {
-        dprintk("Ignoring relocation section for section without SHF_ALLOC flag\n");
+    if(!(target_hdr->sh_flags & SHF_ALLOC))
+    {
+        dprintk("Ignoring relocation section for section without "
+                "SHF_ALLOC flag\n");
         dprintk("Relocation Section: \"%s\" Target: \"%s\"\n",
-                (const char*)(state->shstrtab + shdr->sh_name),
-                (const char*)(state->shstrtab + target_hdr->sh_name));
+                (const char *)(state->shstrtab + shdr->sh_name),
+                (const char *)(state->shstrtab + target_hdr->sh_name));
         return 0;
     }
 
-    void *sec_data = (void*)target_hdr->sh_addr;
+    void *sec_data = (void *)target_hdr->sh_addr;
     size_t sec_size = target_hdr->sh_size;
 
     void *rel_data = kmalloc(shdr->sh_size, KM_KERNEL);
-    if(rel_data == NULL) {
+    if(rel_data == NULL)
+    {
         res = -ENOMEM;
         goto exit0;
     }
     res = fs_node_paged_read(node, shdr->sh_offset, rel_data, shdr->sh_size, 0);
-    if(res) {
+    if(res)
+    {
         eprintk("Failed to read SHT_REL section!\n");
         res = -EINVAL;
         goto exit1;
     }
 
-    for(size_t i = 0; i < num_rel; i++) {
+    for(size_t i = 0; i < num_rel; i++)
+    {
 
         uint32_t type;
         uint32_t symbol;
         Elf64_Addr offset;
         int64_t addend;
 
-        if(shdr->sh_type == SHT_REL) {
-            Elf64_Rel *rel = &((Elf64_Rel*)rel_data)[i];
+        if(shdr->sh_type == SHT_REL)
+        {
+            Elf64_Rel *rel = &((Elf64_Rel *)rel_data)[i];
             type = ELF64_R_TYPE(rel->r_info);
             symbol = ELF64_R_SYM(rel->r_info);
             offset = rel->r_offset;
             addend = 0;
-        } else { //SHT_RELA
-            Elf64_Rela *rela = &((Elf64_Rela*)rel_data)[i];
+        }
+        else
+        { // SHT_RELA
+            Elf64_Rela *rela = &((Elf64_Rela *)rel_data)[i];
             type = ELF64_R_TYPE(rela->r_info);
             symbol = ELF64_R_SYM(rela->r_info);
             offset = rela->r_offset;
             addend = rela->r_addend;
         }
 
-        res = elf64_apply_reloc(
-                mod,
-                node,
-                state,
-                sec_size,
-                sec_data,
-                type,
-                symbol,
-                offset,
-                addend);
+        res = elf64_apply_reloc(mod,
+                                node,
+                                state,
+                                sec_size,
+                                sec_data,
+                                type,
+                                symbol,
+                                offset,
+                                addend);
 
-        if(res) {
+        if(res)
+        {
             eprintk("Failed to resolve Elf64 Relocation!\n");
             goto exit1;
         }
     }
-
 
     res = 0;
 exit1:
@@ -445,24 +510,23 @@ exit0:
 }
 
 static int
-elf64_load_module_reloc(
-        struct module *mod,
-        struct fs_node *node,
-        struct elf64_module_state *state)
+elf64_load_module_reloc(struct module *mod,
+                        struct fs_node *node,
+                        struct elf64_module_state *state)
 {
     int res;
 
-    for(size_t i = 0; i < state->hdr.e_shnum; i++) {
+    for(size_t i = 0; i < state->hdr.e_shnum; i++)
+    {
         Elf64_Shdr *shdr = &state->shdrs[i];
 
-        if(shdr->sh_type == SHT_REL || shdr->sh_type == SHT_RELA) {
-            res = elf64_handle_reloc_section(
-                    mod,
-                    node,
-                    state,
-                    shdr);
-            if(res) {
-                eprintk("Failed to resolve module relocation section!\n");
+        if(shdr->sh_type == SHT_REL || shdr->sh_type == SHT_RELA)
+        {
+            res = elf64_handle_reloc_section(mod, node, state, shdr);
+            if(res)
+            {
+                eprintk("Failed to resolve module relocation "
+                        "section!\n");
                 return res;
             }
         }
@@ -472,21 +536,26 @@ elf64_load_module_reloc(
 }
 
 static int
-elf64_load_module_read_hdrs(
-        struct fs_node *node,
-        struct elf64_module_state *state)
+elf64_load_module_read_hdrs(struct fs_node *node,
+                            struct elf64_module_state *state)
 {
     int res;
     size_t read;
 
     state->phdrs_size = state->hdr.e_phentsize * state->hdr.e_phnum;
     state->phdrs = kmalloc(state->phdrs_size, KM_KERNEL);
-    if(state->phdrs == NULL && state->hdr.e_phnum > 0) {
+    if(state->phdrs == NULL && state->hdr.e_phnum > 0)
+    {
         res = -ENOMEM;
         goto err0;
     }
-    res = fs_node_paged_read(node, state->hdr.e_phoff, state->phdrs, state->phdrs_size, 0);
-    if(res) {
+    res = fs_node_paged_read(node,
+                             state->hdr.e_phoff,
+                             state->phdrs,
+                             state->phdrs_size,
+                             0);
+    if(res)
+    {
         eprintk("Failed to read ELF Program Header Table!\n");
         res = -EINVAL;
         goto err1;
@@ -494,18 +563,25 @@ elf64_load_module_read_hdrs(
 
     state->shdrs_size = state->hdr.e_shentsize * state->hdr.e_shnum;
     state->shdrs = kmalloc(state->shdrs_size, KM_KERNEL);
-    if(state->shdrs == NULL && state->hdr.e_shnum > 0) {
+    if(state->shdrs == NULL && state->hdr.e_shnum > 0)
+    {
         res = -ENOMEM;
         goto err1;
     }
-    res = fs_node_paged_read(node, state->hdr.e_shoff, state->shdrs, state->shdrs_size, 0);
-    if(res) {
+    res = fs_node_paged_read(node,
+                             state->hdr.e_shoff,
+                             state->shdrs,
+                             state->shdrs_size,
+                             0);
+    if(res)
+    {
         eprintk("Failed to read ELF Section Header Table!\n");
         res = -EINVAL;
         goto err2;
     }
 
-    if(state->hdr.e_shnum <= 0) {
+    if(state->hdr.e_shnum <= 0)
+    {
         eprintk("Module must have at least 1 section!\n");
         res = -EINVAL;
         goto err2;
@@ -522,9 +598,8 @@ err0:
 }
 
 static int
-elf64_load_module_read_tables(
-        struct fs_node *node,
-        struct elf64_module_state *state)
+elf64_load_module_read_tables(struct fs_node *node,
+                              struct elf64_module_state *state)
 {
     int res;
     size_t read;
@@ -533,12 +608,18 @@ elf64_load_module_read_tables(
     Elf64_Shdr *shstrtab_hdr = &state->shdrs[state->hdr.e_shstrndx];
     state->shstrtab_size = shstrtab_hdr->sh_size;
     state->shstrtab = kmalloc(state->shstrtab_size, KM_KERNEL);
-    if(state->shstrtab == NULL) {
+    if(state->shstrtab == NULL)
+    {
         res = -ENOMEM;
         goto err0;
     }
-    res = fs_node_paged_read(node, shstrtab_hdr->sh_offset, state->shstrtab, state->shstrtab_size, 0);
-    if(res) {
+    res = fs_node_paged_read(node,
+                             shstrtab_hdr->sh_offset,
+                             state->shstrtab,
+                             state->shstrtab_size,
+                             0);
+    if(res)
+    {
         eprintk("Failed to read ELF String Table!\n");
         res = -EINVAL;
         goto err1;
@@ -546,13 +627,16 @@ elf64_load_module_read_tables(
 
     // Find and Read the Symbol Table
     Elf64_Shdr *symtab_hdr = NULL;
-    for(size_t i = 0; i < state->hdr.e_shnum; i++) {
+    for(size_t i = 0; i < state->hdr.e_shnum; i++)
+    {
         symtab_hdr = &state->shdrs[i];
-        if(symtab_hdr->sh_type == SHT_SYMTAB) {
+        if(symtab_hdr->sh_type == SHT_SYMTAB)
+        {
             break;
         }
     }
-    if(symtab_hdr == NULL || symtab_hdr->sh_type != SHT_SYMTAB) {
+    if(symtab_hdr == NULL || symtab_hdr->sh_type != SHT_SYMTAB)
+    {
         eprintk("Could not find module ELF symbol table!\n");
         res = -EINVAL;
         goto err1;
@@ -560,37 +644,55 @@ elf64_load_module_read_tables(
 
     state->symtab_size = symtab_hdr->sh_size;
     state->symtab = kmalloc(state->symtab_size, KM_KERNEL);
-    if(state->symtab == NULL) {
+    if(state->symtab == NULL)
+    {
         res = -ENOMEM;
         goto err1;
     }
-    res = fs_node_paged_read(node, symtab_hdr->sh_offset, state->symtab, state->symtab_size, 0);
-    if(res) {
+    res = fs_node_paged_read(node,
+                             symtab_hdr->sh_offset,
+                             state->symtab,
+                             state->symtab_size,
+                             0);
+    if(res)
+    {
         res = -EINVAL;
         goto err2;
     }
 
     // Load the Symbol Table String Section
-    if(symtab_hdr->sh_link != SHN_UNDEF) {
+    if(symtab_hdr->sh_link != SHN_UNDEF)
+    {
         Elf64_Shdr *symstrtab_hdr = &state->shdrs[symtab_hdr->sh_link];
-        if(symstrtab_hdr->sh_type != SHT_STRTAB) {
-            eprintk("ELF Module symbol table links to a non-STRTAB section!\n");
+        if(symstrtab_hdr->sh_type != SHT_STRTAB)
+        {
+            eprintk("ELF Module symbol table links to a non-STRTAB "
+                    "section!\n");
             res = -EINVAL;
             goto err2;
         }
         state->symstrtab_size = symstrtab_hdr->sh_size;
         state->symstrtab = kmalloc(state->symstrtab_size, KM_KERNEL);
-        if(state->symstrtab == NULL) {
+        if(state->symstrtab == NULL)
+        {
             res = -ENOMEM;
             goto err2;
         }
-        res = fs_node_paged_read(node, symstrtab_hdr->sh_offset, state->symstrtab, state->symstrtab_size, 0);
-        if(res) {
-            eprintk("Failed to read module ELF symbol table string section!\n");
+        res = fs_node_paged_read(node,
+                                 symstrtab_hdr->sh_offset,
+                                 state->symstrtab,
+                                 state->symstrtab_size,
+                                 0);
+        if(res)
+        {
+            eprintk("Failed to read module ELF symbol table string "
+                    "section!\n");
             res = -EINVAL;
             goto err3;
         }
-    } else {
+    }
+    else
+    {
         state->symstrtab = NULL;
         state->symstrtab_size = 0;
     }
@@ -608,149 +710,163 @@ err0:
 }
 
 static int
-elf64_load_module_run_init_section(
-        struct module *mod,
-        struct fs_node *node,
-        struct elf64_module_state *state,
-        const char *section_name,
-        const char *init_stage_name)
+elf64_load_module_run_init_section(struct module *mod,
+                                   struct fs_node *node,
+                                   struct elf64_module_state *state,
+                                   const char *section_name,
+                                   const char *init_stage_name)
 {
-    dprintk("Trying to run init section: %s\n",
-            section_name);
-    for(size_t i = 0; i < state->hdr.e_shnum; i++) {
+    dprintk("Trying to run init section: %s\n", section_name);
+    for(size_t i = 0; i < state->hdr.e_shnum; i++)
+    {
         Elf64_Shdr *shdr = &state->shdrs[i];
-        if(shdr->sh_type == SHT_NULL) {
+        if(shdr->sh_type == SHT_NULL)
+        {
             continue;
         }
         char *name = state->shstrtab + shdr->sh_name;
         dprintk("Checking %s with %s\n", name, section_name);
-        if(strcmp(name, section_name) != 0) {
+        if(strcmp(name, section_name) != 0)
+        {
             continue;
         }
         // Found it!
-        if(!(shdr->sh_flags & SHF_ALLOC)) {
-            eprintk("Found init stage section \"%s\" without SHF_ALLOC set!\n");
+        if(!(shdr->sh_flags & SHF_ALLOC))
+        {
+            eprintk("Found init stage section \"%s\" without "
+                    "SHF_ALLOC set!\n");
             return -EINVAL;
         }
         dprintk("Running Module init stage section: \"%s\"\n", name);
-        struct init_stage_event *events = (void*)shdr->sh_addr;
+        struct init_stage_event *events = (void *)shdr->sh_addr;
         size_t num_events = shdr->sh_size / sizeof(struct init_stage_event);
 
-        return handle_init_stage_generic(
-                init_stage_name,
-                num_events,
-                events);
+        return handle_init_stage_generic(init_stage_name, num_events, events);
     }
 
     return 0; // It just doesn't exist
 }
 
 static int
-elf64_load_module_run_init_stages(
-        struct module *mod,
-        struct fs_node *node,
-        struct elf64_module_state *state)
+elf64_load_module_run_init_stages(struct module *mod,
+                                  struct fs_node *node,
+                                  struct elf64_module_state *state)
 {
     int res;
 
-#define RUN_MODULE_INIT_STAGE(__stage)\
-    res = elf64_load_module_run_init_section(\
-            mod, node, state, \
-            ".kinit." #__stage ".init", \
-            #__stage);\
-    if(res) {\
-        eprintk("Failed to handle module init stage: \"" #__stage "\" (err=%s)\n",\
-                errnostr(res));\
-        return res;\
+#define RUN_MODULE_INIT_STAGE(__stage)                                         \
+    res = elf64_load_module_run_init_section(mod,                              \
+                                             node,                             \
+                                             state,                            \
+                                             ".kinit." #__stage ".init",       \
+                                             #__stage);                        \
+    if(res)                                                                    \
+    {                                                                          \
+        eprintk("Failed to handle module init stage: \"" #__stage              \
+                "\" (err=%s)\n",                                               \
+                errnostr(res));                                                \
+        return res;                                                            \
     }
 
-XFOR_INIT_STAGE(RUN_MODULE_INIT_STAGE)
+    XFOR_INIT_STAGE(RUN_MODULE_INIT_STAGE)
 #undef RUN_MODULE_INIT_STAGE
 
     return res;
 }
 
-
 static int
-elf64_load_module(
-        struct module *mod,
-        struct fs_node *node)
+elf64_load_module(struct module *mod, struct fs_node *node)
 {
     int res;
     struct elf64_module_state state;
     res = fs_node_paged_read(node, 0, &state.hdr, sizeof(state.hdr), 0);
-    if(res) {
+    if(res)
+    {
         res = -EINVAL;
         goto exit0;
     }
 
     res = elf64_check_header(&state.hdr);
-    if(res) {
+    if(res)
+    {
         eprintk("ELF64 file has invalid header!\n");
         goto exit0;
     }
 
-    dprintk("Class = \"%s\"\n", elf_get_class_string(state.hdr.e_ident[EI_CLASS]));
+    dprintk("Class = \"%s\"\n",
+            elf_get_class_string(state.hdr.e_ident[EI_CLASS]));
     dprintk("Data = \"%s\"\n", elf_get_data_string(state.hdr.e_ident[EI_DATA]));
-    dprintk("Version = \"%s\"\n", elf_get_version_string(state.hdr.e_ident[EI_VERSION]));
-    dprintk("OS ABI = \"%s\"\n", elf_get_osabi_string(state.hdr.e_ident[EI_OSABI]));
-    dprintk("ABI Version = \"%s\"\n", elf_get_abi_version_string(state.hdr.e_ident[EI_ABIVERSION]));
+    dprintk("Version = \"%s\"\n",
+            elf_get_version_string(state.hdr.e_ident[EI_VERSION]));
+    dprintk("OS ABI = \"%s\"\n",
+            elf_get_osabi_string(state.hdr.e_ident[EI_OSABI]));
+    dprintk("ABI Version = \"%s\"\n",
+            elf_get_abi_version_string(state.hdr.e_ident[EI_ABIVERSION]));
     dprintk("Type = \"%s\"\n", elf_get_type_string(state.hdr.e_type));
     dprintk("Machine = \"%s\"\n", elf_get_machine_string(state.hdr.e_machine));
 
     arch_t arch = ARCH_UNKNOWN;
-    switch(state.hdr.e_machine) {
-        case EM_X86_64: arch = ARCH_X64; break;
-        case EM_386:    arch = ARCH_X86; break;
+    switch(state.hdr.e_machine)
+    {
+    case EM_X86_64:
+        arch = ARCH_X64;
+        break;
+    case EM_386:
+        arch = ARCH_X86;
+        break;
     }
-    if(arch != kernel_arch) {
-	goto exit0;
-    }
-
-    endian_t endian = ENDIAN_UNKNOWN;
-    switch(state.hdr.e_ident[EI_DATA]) {
-        case ELFDATA2LSB: endian = ENDIAN_LITTLE; break;
-        case ELFDATA2MSB: endian = ENDIAN_BIG; break;
-    }
-    if(endian != kernel_endian) {
-	goto exit0;
-    }
-
-    res = elf64_load_module_read_hdrs(
-            node, &state);
-    if(res) {
+    if(arch != kernel_arch)
+    {
         goto exit0;
     }
 
-    res = elf64_load_module_read_tables(
-            node, &state);
-    if(res) {
+    endian_t endian = ENDIAN_UNKNOWN;
+    switch(state.hdr.e_ident[EI_DATA])
+    {
+    case ELFDATA2LSB:
+        endian = ENDIAN_LITTLE;
+        break;
+    case ELFDATA2MSB:
+        endian = ENDIAN_BIG;
+        break;
+    }
+    if(endian != kernel_endian)
+    {
+        goto exit0;
+    }
+
+    res = elf64_load_module_read_hdrs(node, &state);
+    if(res)
+    {
+        goto exit0;
+    }
+
+    res = elf64_load_module_read_tables(node, &state);
+    if(res)
+    {
         goto exit1;
     }
 
-    // Allocate room for and load the module into memory 
-    res = elf64_load_module_alloc_sections(
-            mod,
-            node,
-            &state);
-    if(res) {
+    // Allocate room for and load the module into memory
+    res = elf64_load_module_alloc_sections(mod, node, &state);
+    if(res)
+    {
         eprintk("Failed to handle module SHF_ALLOC sections! (err=%s)\n",
                 errnostr(res));
         goto exit2;
     }
 
     // Now we need to deal with relocations
-    res = elf64_load_module_reloc(
-            mod,
-            node,
-            &state);
-    if(res) {
+    res = elf64_load_module_reloc(mod, node, &state);
+    if(res)
+    {
         eprintk("Failed to resolve all module relocations! (err=%s)\n",
                 errnostr(res));
 
         // We need to free the sections we allocated
         // in elf64_load_module_alloc_sections
-        for(size_t i = 0; i < mod->section_count; i++) {
+        for(size_t i = 0; i < mod->section_count; i++)
+        {
             kfree(mod->sections[i].data);
         }
 
@@ -758,23 +874,21 @@ elf64_load_module(
     }
 
     // Run .kinit functions
-    res = elf64_load_module_run_init_stages(
-            mod,
-            node,
-            &state);
-    if(res) {
+    res = elf64_load_module_run_init_stages(mod, node, &state);
+    if(res)
+    {
         eprintk("Failed to run module init functions! (err=%s)\n",
                 errnostr(res));
 
         // We need to free the sections we allocated
         // in elf64_load_module_alloc_sections
-        for(size_t i = 0; i < mod->section_count; i++) {
+        for(size_t i = 0; i < mod->section_count; i++)
+        {
             kfree(mod->sections[i].data);
         }
 
         goto exit2;
     }
-
 
     // We made it!
     res = 0;
@@ -791,37 +905,42 @@ exit0:
     return res;
 }
 
-
 struct module *
-load_module(struct fs_node *module_node,
-            const char *name,
-            unsigned long flags)
+load_module(struct fs_node *module_node, const char *name, unsigned long flags)
 {
     int res;
 
     struct module *mod = __alloc_module_struct();
-    if(mod == NULL) {
+    if(mod == NULL)
+    {
         return mod;
     }
 
     res = __init_module(mod, name, flags);
-    if(res) {
+    if(res)
+    {
         kfree(mod);
         return NULL;
     }
 
     res = elf64_load_module(mod, module_node);
-    if(res) {
+    if(res)
+    {
         kfree(mod);
         return NULL;
     }
 
-    for(size_t i = 0; i < mod->symtab_count; i++) {
+    for(size_t i = 0; i < mod->symtab_count; i++)
+    {
         struct ksymbol *sym = &mod->symtab[i];
         int res = register_kernel_symbol(sym, mod);
-        if(res) {
-            eprintk("Failed to register module \"%s\" symbol \"%s\" (err=%s)\n",
-                    name, sym->symbol, errnostr(res));
+        if(res)
+        {
+            eprintk("Failed to register module \"%s\" symbol \"%s\" "
+                    "(err=%s)\n",
+                    name,
+                    sym->symbol,
+                    errnostr(res));
             unload_module(mod);
             return NULL;
         }
@@ -835,7 +954,8 @@ unload_module(struct module *mod)
 {
     int res;
 
-    if(refcount_euthanize(&mod->refcount) == 0) {
+    if(refcount_euthanize(&mod->refcount) == 0)
+    {
         return -EBUSY;
     }
 
@@ -845,8 +965,7 @@ unload_module(struct module *mod)
 
     // Decrement dependencies to other modules
     struct ptree_node *pnode;
-    for(pnode = ptree_get_first(&mod->dependency_tree);
-        pnode != NULL;
+    for(pnode = ptree_get_first(&mod->dependency_tree); pnode != NULL;
         pnode = ptree_get_next(pnode))
     {
         struct module_dependency *dep =
@@ -855,9 +974,11 @@ unload_module(struct module *mod)
     }
 
     // Delete all of the dependency structs
-    while(1) {
+    while(1)
+    {
         struct ptree_node *node = ptree_get_first(&mod->dependency_tree);
-        if(node == NULL) {
+        if(node == NULL)
+        {
             break;
         }
         ptree_remove(&mod->dependency_tree, node->key);
@@ -867,25 +988,27 @@ unload_module(struct module *mod)
     }
 
     // Free symbols
-    for(size_t i = 0; i < mod->symtab_count; i++) {
+    for(size_t i = 0; i < mod->symtab_count; i++)
+    {
         struct ksymbol *sym = &mod->symtab[i];
         res = unregister_kernel_symbol(sym);
-        if(res) {
+        if(res)
+        {
             return -EINVAL;
         }
     }
     kfree(mod->symtab);
 
     // Free all of the memory allocated to this module's sections
-    for(size_t i = 0; i < mod->section_count; i++) {
+    for(size_t i = 0; i < mod->section_count; i++)
+    {
         struct module_section *sec = &mod->sections[i];
         kfree(sec->data);
     }
     kfree(mod->sections);
 
-    kfree((void*)mod->name);
+    kfree((void *)mod->name);
     __free_module_struct(mod);
 
     return 0;
 }
-

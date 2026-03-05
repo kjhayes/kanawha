@@ -1,50 +1,49 @@
 
-#include <kanawha/proc/file_table.h>
-#include <kanawha/string.h>
-#include <kanawha/page_alloc.h>
-#include <kanawha/stddef.h>
-#include <kanawha/vmem.h>
 #include <kanawha/assert.h>
-#include <kanawha/kmalloc.h>
-#include <kanawha/fs/path.h>
 #include <kanawha/fs/node.h>
+#include <kanawha/fs/path.h>
+#include <kanawha/kmalloc.h>
+#include <kanawha/page_alloc.h>
+#include <kanawha/proc/file_table.h>
+#include <kanawha/stddef.h>
+#include <kanawha/string.h>
+#include <kanawha/vmem.h>
 
 #ifdef CONFIG_DEBUG
 /*
  * Handy to keep this function compiled in if we are debugging with GDB
  */
 
-__maybe_unused
-static void
-file_table_dump_lockless(
-        struct file_table *table)
+__maybe_unused static void
+file_table_dump_lockless(struct file_table *table)
 {
-    printk("File Table: %p, attachments=%ld\n", table, (sl_t)ilist_count(&table->process_list));
+    printk("File Table: %p, attachments=%ld\n",
+           table,
+           (sl_t)ilist_count(&table->process_list));
 
     struct ptree_node *node = ptree_get_first(&table->descriptor_tree);
-    while(node != NULL) {
+    while(node != NULL)
+    {
         struct file *file = container_of(node, struct file, table_node);
         const char *name = fs_path_get_name(file->path);
         printk("\tDescriptor(%ld) refs=%ld, path=%p, %s\n",
-            file->table_node.key,
-            (sl_t)file->refs,
-            file->path,
-            name != NULL ? name : "(NULL)"
-            );
+               file->table_node.key,
+               (sl_t)file->refs,
+               file->path,
+               name != NULL ? name : "(NULL)");
         node = ptree_get_next(node);
     }
-
 }
 #endif
 
 int
-file_table_create(
-        struct process *process)
+file_table_create(struct process *process)
 {
     int res;
 
     struct file_table *table = kzmalloc(sizeof(struct file_table), KM_KERNEL);
-    if(table == NULL) {
+    if(table == NULL)
+    {
         return -ENOMEM;
     }
 
@@ -54,7 +53,8 @@ file_table_create(
     ilist_init(&table->process_list);
 
     res = file_table_attach(table, process);
-    if(res) {
+    if(res)
+    {
         kfree(table);
         return res;
     }
@@ -63,15 +63,14 @@ file_table_create(
 }
 
 int
-file_table_clone(
-        struct file_table *parent,
-        struct process *process)
+file_table_clone(struct file_table *parent, struct process *process)
 {
     int res;
     dprintk("file_table_clone\n");
 
     struct file_table *child = kzmalloc(sizeof(struct file_table), KM_KERNEL);
-    if(child == NULL) {
+    if(child == NULL)
+    {
         return -ENOMEM;
     }
 
@@ -89,7 +88,8 @@ file_table_clone(
 
         struct file *parent_file = container_of(node, struct file, table_node);
         struct file *child_file = kzmalloc(sizeof(struct file), KM_KERNEL);
-        if(child_file == NULL) {
+        if(child_file == NULL)
+        {
             return -ENOMEM;
         }
 
@@ -100,14 +100,19 @@ file_table_clone(
         child_file->status_flags = parent_file->status_flags;
 
         res = fs_path_get(parent_file->path);
-        if(res) {
-            panic("Could not clone reference to fs path in file_table_clone! (err=%s)\n",
-                    errnostr(res));
+        if(res)
+        {
+            panic("Could not clone reference to fs path in "
+                  "file_table_clone! "
+                  "(err=%s)\n",
+                  errnostr(res));
         }
         child_file->path = parent_file->path;
         child_file->refs = 1;
 
-        ptree_insert(&child->descriptor_tree, &child_file->table_node, parent_file->table_node.key);
+        ptree_insert(&child->descriptor_tree,
+                     &child_file->table_node,
+                     parent_file->table_node.key);
 
         node = ptree_get_next(node);
     }
@@ -115,9 +120,11 @@ file_table_clone(
     thread_lock_release(&parent->lock);
 
     res = file_table_attach(child, process);
-    if(res) {
+    if(res)
+    {
         struct ptree_node *node = ptree_get_first(&child->descriptor_tree);
-        while(node != NULL) {
+        while(node != NULL)
+        {
             file_table_close(child, process, node->key);
         }
         kfree(child);
@@ -128,9 +135,7 @@ file_table_clone(
 }
 
 int
-file_table_attach(
-        struct file_table *table,
-        struct process *process)
+file_table_attach(struct file_table *table, struct process *process)
 {
     thread_lock_acquire(&table->lock);
     ilist_push_tail(&table->process_list, &process->file_table_node);
@@ -142,16 +147,12 @@ file_table_attach(
 // Called when refs == 0, or the table is being destroyed,
 // must be called with table->lock held
 static int
-__file_table_free_descriptor(
-        struct file_table *table,
-        struct file *desc)
+__file_table_free_descriptor(struct file_table *table, struct file *desc)
 {
     int res;
 
-    struct ptree_node *removed
-        = ptree_remove(
-                &table->descriptor_tree,
-                desc->table_node.key);
+    struct ptree_node *removed =
+        ptree_remove(&table->descriptor_tree, desc->table_node.key);
 
     DEBUG_ASSERT(removed == &desc->table_node);
     DEBUG_ASSERT(KERNEL_ADDR(desc));
@@ -159,7 +160,8 @@ __file_table_free_descriptor(
 
     res = fs_path_put(desc->path);
 
-    if(res) {
+    if(res)
+    {
         eprintk("Failed to put fs_path when closing file descriptor!\n");
         return res;
     }
@@ -171,58 +173,57 @@ __file_table_free_descriptor(
 }
 
 int
-file_table_deattach(
-        struct file_table *table,
-        struct process *process)
+file_table_deattach(struct file_table *table, struct process *process)
 {
     thread_lock_acquire(&table->lock);
 
     ilist_remove(&table->process_list, &process->file_table_node);
     process->file_table = NULL;
 
-    if(ilist_empty(&table->process_list)) {
+    if(ilist_empty(&table->process_list))
+    {
         // We need to destroy this file table
 
-        do {
-            struct ptree_node *node =
-                ptree_get_first(&table->descriptor_tree);
-            if(node == NULL) {
+        do
+        {
+            struct ptree_node *node = ptree_get_first(&table->descriptor_tree);
+            if(node == NULL)
+            {
                 break;
             }
-            struct file *desc =
-                container_of(node, struct file, table_node);
+            struct file *desc = container_of(node, struct file, table_node);
 
             DEBUG_ASSERT(KERNEL_ADDR(table));
             DEBUG_ASSERT(KERNEL_ADDR(desc));
             __file_table_free_descriptor(table, desc);
-
         } while(1);
 
         DEBUG_ASSERT(table->num_open_files == 0);
 
         kfree(table);
-
-    } else {
+    }
+    else
+    {
         // Some other process is still using the table
-        thread_lock_release(&table->lock);    
+        thread_lock_release(&table->lock);
     }
 
     return 0;
 }
 
 int
-file_table_open_path(
-        struct file_table *table,
-        struct process *process,
-        struct fs_path *path,
-        unsigned long access_flags,
-        unsigned long mode_flags,
-        fd_t *fd)
+file_table_open_path(struct file_table *table,
+                     struct process *process,
+                     struct fs_path *path,
+                     unsigned long access_flags,
+                     unsigned long mode_flags,
+                     fd_t *fd)
 {
     int res;
 
     struct file *desc = kzmalloc(sizeof(struct file), KM_KERNEL);
-    if(desc == NULL) {
+    if(desc == NULL)
+    {
         return -ENOMEM;
     }
 
@@ -232,18 +233,17 @@ file_table_open_path(
     desc->refs = 1;
 
     // Done by memset above
-    //desc->seek_offset = 0;
-    //desc->dir_offset = 0;
-    //desc->status_flags = 0;
+    // desc->seek_offset = 0;
+    // desc->dir_offset = 0;
+    // desc->status_flags = 0;
     desc->mode_flags = mode_flags;
     desc->access_flags = access_flags;
 
     thread_lock_acquire(&table->lock);
 
-    res = ptree_insert_any(
-            &table->descriptor_tree,
-            &desc->table_node);
-    if(res) {
+    res = ptree_insert_any(&table->descriptor_tree, &desc->table_node);
+    if(res)
+    {
         thread_lock_release(&table->lock);
         fs_path_put(desc->path);
         kfree(desc);
@@ -260,77 +260,71 @@ file_table_open_path(
 }
 
 int
-file_table_open(
-        struct file_table *table,
-        struct process *process,
-	    struct fs_path *dir,
-        const char *path_str,
-        unsigned long access_flags,
-        unsigned long mode_flags,
-        fd_t *fd)
+file_table_open(struct file_table *table,
+                struct process *process,
+                struct fs_path *dir,
+                const char *path_str,
+                unsigned long access_flags,
+                unsigned long mode_flags,
+                fd_t *fd)
 {
     int res;
 
     struct fs_path *path;
 
-    res = fs_path_lookup_for_process(
-            process,
-	        dir,
-            path_str,
-            access_flags,
-            mode_flags,
-            &path);
-    if(res) {
+    res = fs_path_lookup_for_process(process,
+                                     dir,
+                                     path_str,
+                                     access_flags,
+                                     mode_flags,
+                                     &path);
+    if(res)
+    {
         dprintk("file_table_open: fs_path_lookup_for_process returned: %s\n",
                 errnostr(res));
         return res;
     }
 
-    res = file_table_open_path(
-            table,
-            process,
-            path,
-            access_flags,
-            mode_flags,
-            fd);
+    res = file_table_open_path(table,
+                               process,
+                               path,
+                               access_flags,
+                               mode_flags,
+                               fd);
 
     fs_path_put(path);
     return res;
 }
 
 int
-file_table_open_node(
-        struct file_table *table,
-        struct process *process,
-        struct fs_node *node,
-        unsigned long access_flags,
-        unsigned long mode_flags,
-        fd_t *fd)
+file_table_open_node(struct file_table *table,
+                     struct process *process,
+                     struct fs_node *node,
+                     unsigned long access_flags,
+                     unsigned long mode_flags,
+                     fd_t *fd)
 {
     int res;
     struct fs_path *path;
-    res = fs_path_create_anonymous(
-            node,
-            &path);
-    if(res) {
+    res = fs_path_create_anonymous(node, &path);
+    if(res)
+    {
         return res;
     }
-    res = file_table_open_path(
-            table,
-            process,
-            path,
-            access_flags,
-            mode_flags,
-            fd);
+    res = file_table_open_path(table,
+                               process,
+                               path,
+                               access_flags,
+                               mode_flags,
+                               fd);
     fs_path_put(path);
     return res;
 }
 
 static int
-__file_table_close_lockless(
-	struct file_table *table,
-	struct process *process,
-	struct file *desc)
+__file_table_close_lockless(struct file_table *table,
+                            struct process *process,
+                            struct file *desc)
 {
     int res;
 
@@ -338,10 +332,14 @@ __file_table_close_lockless(
     desc->refs--;
     desc->status_flags |= FILE_STATUS_CLOSED;
 
-    if(desc->refs == 0) {
+    if(desc->refs == 0)
+    {
         res = __file_table_free_descriptor(table, desc);
-        if(res) {
-            eprintk("file_table_close_file: Failed to free descriptor with refs==0! (err=%s)\n",
+        if(res)
+        {
+            eprintk("file_table_close_file: Failed to free "
+                    "descriptor with "
+                    "refs==0! (err=%s)\n",
                     errnostr(res));
             return res;
         }
@@ -351,10 +349,7 @@ __file_table_close_lockless(
 }
 
 int
-file_table_close(
-        struct file_table *table,
-        struct process *process,
-        fd_t fd)
+file_table_close(struct file_table *table, struct process *process, fd_t fd)
 {
     int res;
 
@@ -363,18 +358,19 @@ file_table_close(
     struct ptree_node *table_node =
         ptree_get(&table->descriptor_tree, (uintptr_t)fd);
 
-    if(table_node == NULL) {
-	thread_lock_release(&table->lock);
+    if(table_node == NULL)
+    {
+        thread_lock_release(&table->lock);
         return -ENXIO;
     }
 
-    struct file *desc =
-        container_of(table_node, struct file, table_node);
+    struct file *desc = container_of(table_node, struct file, table_node);
 
     res = __file_table_close_lockless(table, process, desc);
-    if(res) {
+    if(res)
+    {
         thread_lock_release(&table->lock);
-	return res;
+        return res;
     }
 
     thread_lock_release(&table->lock);
@@ -382,28 +378,30 @@ file_table_close(
 }
 
 struct file *
-file_table_get_file(
-        struct file_table *table,
-        struct process *process,
-        fd_t fd)
+file_table_get_file(struct file_table *table, struct process *process, fd_t fd)
 {
     struct file *desc;
     thread_lock_acquire(&table->lock);
 
-    struct ptree_node *node =
-        ptree_get(&table->descriptor_tree, (uintptr_t)fd);
+    struct ptree_node *node = ptree_get(&table->descriptor_tree, (uintptr_t)fd);
 
-    if(node == NULL) {
+    if(node == NULL)
+    {
         dprintk("PID(%ld) Tried to get non-existant file %ld\n",
-            process->id, fd);
+                process->id,
+                fd);
         desc = NULL;
-    } else {
+    }
+    else
+    {
         desc = container_of(node, struct file, table_node);
-        if(desc->status_flags & FILE_STATUS_CLOSED) {
-            dprintk("PID(%ld) Tried to get closed file %ld\n",
-                    process->id, fd);
+        if(desc->status_flags & FILE_STATUS_CLOSED)
+        {
+            dprintk("PID(%ld) Tried to get closed file %ld\n", process->id, fd);
             desc = NULL;
-        } else {
+        }
+        else
+        {
             desc->refs++;
         }
     }
@@ -413,19 +411,21 @@ file_table_get_file(
 }
 
 int
-file_table_put_file(
-        struct file_table *table,
-        struct process *process,
-        struct file *desc)
+file_table_put_file(struct file_table *table,
+                    struct process *process,
+                    struct file *desc)
 {
     int res;
     thread_lock_acquire(&table->lock);
 
     DEBUG_ASSERT(desc->refs > 0);
     desc->refs--;
-    if(desc->refs == 0) {
+    if(desc->refs == 0)
+    {
         res = __file_table_free_descriptor(table, desc);
-    } else {
+    }
+    else
+    {
         res = 0;
     }
 
@@ -435,14 +435,12 @@ file_table_put_file(
 }
 
 int
-file_table_swap(
-        struct file_table *table,
-        fd_t fd0,
-        fd_t fd1)
+file_table_swap(struct file_table *table, fd_t fd0, fd_t fd1)
 {
     int res;
 
-    if(fd0 == fd1) {
+    if(fd0 == fd1)
+    {
         return 0;
     }
 
@@ -450,32 +448,36 @@ file_table_swap(
 
     struct ptree_node *rem;
 
-    struct ptree_node *p0 =
-        ptree_get(&table->descriptor_tree, fd0);
-    if(p0 != NULL) {
+    struct ptree_node *p0 = ptree_get(&table->descriptor_tree, fd0);
+    if(p0 != NULL)
+    {
         rem = ptree_remove(&table->descriptor_tree, fd0);
         DEBUG_ASSERT(rem == p0);
     }
 
-    struct ptree_node *p1 =
-        ptree_get(&table->descriptor_tree, fd1);
-    if(p1 != NULL) {
+    struct ptree_node *p1 = ptree_get(&table->descriptor_tree, fd1);
+    if(p1 != NULL)
+    {
         rem = ptree_remove(&table->descriptor_tree, fd1);
         DEBUG_ASSERT(rem == p1);
     }
 
-    if(p0 != NULL) {
+    if(p0 != NULL)
+    {
         p0->key = fd1;
         res = ptree_insert(&table->descriptor_tree, p0, fd1);
-        if(res) {
+        if(res)
+        {
             goto exit;
         }
     }
 
-    if(p1 != NULL) {
+    if(p1 != NULL)
+    {
         p1->key = fd0;
         ptree_insert(&table->descriptor_tree, p1, fd0);
-        if(res) {
+        if(res)
+        {
             goto exit;
         }
     }
@@ -487,29 +489,31 @@ exit:
 }
 
 int
-file_table_dup_into(
-        struct file_table *table,
-        fd_t dst,
-        fd_t open_src,
-        fd_t *out)
+file_table_dup_into(struct file_table *table,
+                    fd_t dst,
+                    fd_t open_src,
+                    fd_t *out)
 {
     int res;
 
     thread_lock_acquire(&table->lock);
 
     struct ptree_node *open_node = ptree_get(&table->descriptor_tree, open_src);
-    if(open_node == NULL) {
+    if(open_node == NULL)
+    {
         res = -ENXIO;
         goto exit;
     }
     struct file *src_file = container_of(open_node, struct file, table_node);
 
-    while(ptree_get(&table->descriptor_tree, dst) != NULL) {
+    while(ptree_get(&table->descriptor_tree, dst) != NULL)
+    {
         dst++;
     }
 
     struct file *dst_file = kzmalloc(sizeof(struct file), KM_KERNEL);
-    if(dst_file == NULL) {
+    if(dst_file == NULL)
+    {
         res = -ENOMEM;
         goto exit;
     }
@@ -521,7 +525,8 @@ file_table_dup_into(
     dst_file->status_flags = src_file->status_flags;
 
     res = fs_path_get(src_file->path);
-    if(res) {
+    if(res)
+    {
         kfree(dst_file);
         goto exit;
     }
@@ -529,7 +534,8 @@ file_table_dup_into(
     dst_file->refs = 1;
 
     res = ptree_insert(&table->descriptor_tree, &dst_file->table_node, dst);
-    if(res) {
+    if(res)
+    {
         fs_path_put(dst_file->path);
         kfree(dst_file);
         goto exit;
@@ -545,39 +551,37 @@ exit:
 }
 
 int
-file_table_on_exec(
-	struct file_table *table,
-	struct process *process)
+file_table_on_exec(struct file_table *table, struct process *process)
 {
     int res;
 
     thread_lock_acquire(&table->lock);
 
     struct ptree_node *pnode = ptree_get_first(&table->descriptor_tree);
-    while(pnode != NULL) {
+    while(pnode != NULL)
+    {
 
-	    struct file *desc = container_of(pnode, struct file, table_node);
+        struct file *desc = container_of(pnode, struct file, table_node);
 
         // Get the next node preemptively, in case we end up
         // deleting the current node.
         struct ptree_node *next = ptree_get_next(pnode);
-	    
-	    if(desc->mode_flags & FILE_MODE_CLOSE_ON_EXEC) {
-	        res = __file_table_close_lockless(
-	    	    table,
-	    	    process,
-	    	    desc);
-	        if(res) {
-	    	    wprintk("Failed to close CLOSE_ON_EXEC file during exec! (err=%s)\n",
-	    	    	errnostr(res));
-	        }
-	    }
 
-	    pnode = next;
+        if(desc->mode_flags & FILE_MODE_CLOSE_ON_EXEC)
+        {
+            res = __file_table_close_lockless(table, process, desc);
+            if(res)
+            {
+                wprintk("Failed to close CLOSE_ON_EXEC file "
+                        "during exec! (err=%s)\n",
+                        errnostr(res));
+            }
+        }
+
+        pnode = next;
     }
 
     thread_lock_release(&table->lock);
 
     return 0;
 }
-

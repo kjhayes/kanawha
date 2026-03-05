@@ -1,8 +1,8 @@
 #ifndef __KANAWHA__APIC_TIMER_H__
 #define __KANAWHA__APIC_TIMER_H__
 
-#include <kanawha/timer_dev.h>
 #include <kanawha/dev/clk.h>
+#include <kanawha/timer_dev.h>
 
 struct x64_cpu;
 

@@ -1,20 +1,20 @@
 
 #include <kanawha/dev/input.h>
 #include <kanawha/errno.h>
-#include <kanawha/spinlock.h>
-#include <kanawha/stree.h>
-#include <kanawha/stddef.h>
 #include <kanawha/init.h>
-#include <kanawha/lock.h>
 #include <kanawha/kmalloc.h>
+#include <kanawha/lock.h>
+#include <kanawha/spinlock.h>
+#include <kanawha/stddef.h>
+#include <kanawha/stree.h>
 
 static int
-input_dev_init(
-        struct input_dev *input)
+input_dev_init(struct input_dev *input)
 {
     int res;
 
-    for(size_t bit = 0; bit < INPUT_NUM_KEYS; bit++) {
+    for(size_t bit = 0; bit < INPUT_NUM_KEYS; bit++)
+    {
         bitmap_clear(input->pressed_bitmap, bit);
     }
 
@@ -22,11 +22,13 @@ input_dev_init(
     input->buf_tail = 0;
 
     input->read_queue = kmalloc(sizeof(struct waitqueue), KM_KERNEL);
-    if(input->read_queue == NULL) {
+    if(input->read_queue == NULL)
+    {
         return -ENOMEM;
     }
     res = waitqueue_init(input->read_queue);
-    if(res) {
+    if(res)
+    {
         kfree(input->read_queue);
         input->read_queue = NULL;
         return res;
@@ -48,47 +50,44 @@ input_dev_deinit(struct input_dev *input)
     return -EUNIMPL;
 }
 
-DEFINE_DEV_TYPE(
-	input_dev,
-	dev,
-	input_dev_init,
-	input_dev_deinit);
+DEFINE_DEV_TYPE(input_dev, dev, input_dev_init, input_dev_deinit);
 
 int
-input_driver_enqueue_event(
-        struct input_dev *input,
-        struct input_event *event)
+input_driver_enqueue_event(struct input_dev *input, struct input_event *event)
 {
-    if(((input->buf_head+1)%INPUT_EVENT_BUFLEN) == input->buf_tail) {
+    if(((input->buf_head + 1) % INPUT_EVENT_BUFLEN) == input->buf_tail)
+    {
 
         // We filled up the buffer, so we are going to dequeue
         // and lose the oldest key event (updates the bitmap)
-        struct input_event lost = { 0 };
+        struct input_event lost = {0};
         input_driver_dequeue_event(input, &lost);
 
-        switch(lost.type) {
-          case INPUT_EVT_KEY:
+        switch(lost.type)
+        {
+        case INPUT_EVT_KEY:
             wprintk("input_dev(%s) lost key event: (%s, %s)\n",
                     input_dev_get_name(input),
                     input_key_to_string(lost.key),
                     input_motion_to_string(lost.motion));
             break;
-          case INPUT_EVT_MOUSE:
+        case INPUT_EVT_MOUSE:
             wprintk("input_dev(%s) lost mouse event (%d, %d)\n",
                     input_dev_get_name(input),
                     (int)lost.mouse_delta_x,
                     (int)lost.mouse_delta_y);
             break;
-          default:
+        default:
             wprintk("input_dev(%s) lost event of unknown type!\n");
             break;
         }
     }
 
     input->buffer[input->buf_head] = *event;
-    input->buf_head = ((input->buf_head+1)%INPUT_EVENT_BUFLEN);
+    input->buf_head = ((input->buf_head + 1) % INPUT_EVENT_BUFLEN);
 
-    if(input->read_queue) {
+    if(input->read_queue)
+    {
         dprintk("input_enqueue: (WAKING ALL)\n");
         wake_all(input->read_queue);
     }
@@ -97,34 +96,32 @@ input_driver_enqueue_event(
 }
 
 int
-input_driver_dequeue_event(
-        struct input_dev *input,
-        struct input_event *event)
+input_driver_dequeue_event(struct input_dev *input, struct input_event *event)
 {
-    if(input->buf_head == input->buf_tail) {
+    if(input->buf_head == input->buf_tail)
+    {
         return -EWOULDBLOCK;
     }
 
     *event = input->buffer[input->buf_tail];
-    input->buf_tail = ((input->buf_tail+1)%INPUT_EVENT_BUFLEN);
+    input->buf_tail = ((input->buf_tail + 1) % INPUT_EVENT_BUFLEN);
 
     return 0;
 }
 
 int
-input_driver_event_buffer_empty(
-	struct input_dev *input)
+input_driver_event_buffer_empty(struct input_dev *input)
 {
     return input->buf_head == input->buf_tail;
 }
 
 int
-input_driver_wait_for_event(
-	struct input_dev *dev)
+input_driver_wait_for_event(struct input_dev *dev)
 {
     int res;
     res = wait_on(dev->read_queue);
-    if(res) {
+    if(res)
+    {
         return res;
     }
     return 0;
@@ -132,9 +129,9 @@ input_driver_wait_for_event(
 
 #ifdef CONFIG_LOG_INPUTDEV_REGISTRY_ON_LAUNCH
 static int
-dump_input_dev_on_launch(void) {
+dump_input_dev_on_launch(void)
+{
     return dump_input_dev_registry(do_printk);
 }
 declare_init(launch, dump_input_dev_on_launch);
 #endif
-

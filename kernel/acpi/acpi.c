@@ -1,25 +1,27 @@
 
-#include <kanawha/printk.h>
-#include <kanawha/vmem.h>
-#include <kanawha/lock.h>
-#include <kanawha/stree.h>
-#include <kanawha/string.h>
-#include <kanawha/slab.h>
-#include <kanawha/stddef.h>
-#include <kanawha/init.h>
 #include <acpi/acpi.h>
 #include <acpi/table.h>
+#include <kanawha/init.h>
+#include <kanawha/lock.h>
+#include <kanawha/printk.h>
+#include <kanawha/slab.h>
+#include <kanawha/stddef.h>
+#include <kanawha/stree.h>
+#include <kanawha/string.h>
+#include <kanawha/vmem.h>
 
 #ifdef CONFIG_ACPI_SYSFS
 #include <acpi/sysfs.h>
 #endif
 
-struct __packed acpi_rsdt {
+struct __packed acpi_rsdt
+{
     struct acpi_table_hdr hdr;
     uint32_t table_ptrs[];
 };
 
-struct __packed acpi_xsdt {
+struct __packed acpi_xsdt
+{
     struct acpi_table_hdr hdr;
     uint64_t table_ptrs[];
 };
@@ -28,8 +30,8 @@ DEFINE_LOCAL_THREAD_LOCK(acpi_table_lock);
 
 int found_global_xsdp = 0;
 int found_global_rsdp = 0;
-static struct acpi_xsdp global_xsdp = { 0 };
-static struct acpi_rsdp global_rsdp = { 0 };
+static struct acpi_xsdp global_xsdp = {0};
+static struct acpi_rsdp global_rsdp = {0};
 static struct acpi_xsdt *global_xsdt = NULL;
 static struct acpi_rsdt *global_rsdt = NULL;
 
@@ -50,46 +52,54 @@ acpi_register_raw_table(struct acpi_table_data *table)
     struct acpi_table *ptr;
 
     // Special Cases
-    if(table->hdr.signature[0] == 'S'
-    &&(table->hdr.signature[1] == 'S')
-    &&(table->hdr.signature[2] == 'D')
-    &&(table->hdr.signature[3] == 'T'))
+    if(table->hdr.signature[0] == 'S' && (table->hdr.signature[1] == 'S') &&
+       (table->hdr.signature[2] == 'D') && (table->hdr.signature[3] == 'T'))
     {
         ptr = slab_alloc(acpi_table_slab_allocator);
-        if(ptr == NULL) {
+        if(ptr == NULL)
+        {
             acpi_table_lock_release();
             return -ENOMEM;
         }
         ptr->table = table;
-	ptr->is_ssdt = 1;
+        ptr->is_ssdt = 1;
 
-	size_t index = ilist_count(&acpi_ssdt_list);
-	snprintk(ptr->signature_str, ACPI_TABLE_SIGNATURE_BUFLEN, "SSDT%lu", (ul_t)index);
+        size_t index = ilist_count(&acpi_ssdt_list);
+        snprintk(ptr->signature_str,
+                 ACPI_TABLE_SIGNATURE_BUFLEN,
+                 "SSDT%lu",
+                 (ul_t)index);
 
-	ilist_push_tail(&acpi_ssdt_list, &ptr->ssdt_node);
+        ilist_push_tail(&acpi_ssdt_list, &ptr->ssdt_node);
     }
-    else {
+    else
+    {
 
         struct stree_node *node;
         char buf[5];
         memcpy(buf, table->hdr.signature, 4);
         buf[4] = '\0';
         node = stree_get(&acpi_table_tree, buf);
-        if(node != NULL) {
-            wprintk("Trying to register multiple versions of the ACPI \"%s\" Table! (ignoring)\n", buf);
+        if(node != NULL)
+        {
+            wprintk("Trying to register multiple versions of the "
+                    "ACPI \"%s\" "
+                    "Table! (ignoring)\n",
+                    buf);
             acpi_table_lock_release();
             return 0;
         }
 
         ptr = slab_alloc(acpi_table_slab_allocator);
-        if(ptr == NULL) {
+        if(ptr == NULL)
+        {
             eprintk("Failed to allocate ACPI table node!\n");
             acpi_table_lock_release();
             return -ENOMEM;
         }
 
         ptr->table = table;
-	ptr->is_ssdt = 0;
+        ptr->is_ssdt = 0;
         strncpy(ptr->signature_str, buf, ACPI_TABLE_SIGNATURE_BUFLEN);
         ptr->tree_node.key = ptr->signature_str;
 
@@ -98,7 +108,8 @@ acpi_register_raw_table(struct acpi_table_data *table)
 
 #ifdef CONFIG_ACPI_SYSFS
     res = acpi_sysfs_on_register_table(ptr);
-    if(res) {
+    if(res)
+    {
         wprintk("Failed to register ACPI table with ACPI sysfs!\n");
     }
 #endif
@@ -113,47 +124,58 @@ static int
 acpi_load_tables(void)
 {
     acpi_table_slab_allocator =
-        create_static_slab_allocator(
-                acpi_table_slab_buffer,
-                sizeof(acpi_table_slab_buffer),
-                sizeof(struct acpi_table),
-                alignof(struct acpi_table));
+        create_static_slab_allocator(acpi_table_slab_buffer,
+                                     sizeof(acpi_table_slab_buffer),
+                                     sizeof(struct acpi_table),
+                                     alignof(struct acpi_table));
 
-    if(acpi_table_slab_allocator == NULL) {
+    if(acpi_table_slab_allocator == NULL)
+    {
         return -ENOMEM;
     }
 
-    if(global_xsdt != NULL) {
+    if(global_xsdt != NULL)
+    {
         size_t num_tables =
-            (global_xsdt->hdr.length - sizeof(struct acpi_table_hdr))
-            / sizeof(uint64_t);
+            (global_xsdt->hdr.length - sizeof(struct acpi_table_hdr)) /
+            sizeof(uint64_t);
         printk("Loading %lu Tables from XSDT\n", num_tables);
-        for(size_t i = 0; i < num_tables; i++) {
+        for(size_t i = 0; i < num_tables; i++)
+        {
             uint64_t phys_ptr = global_xsdt->table_ptrs[i];
-            void *table = (void*)__va((void __phys *)phys_ptr);
+            void *table = (void *)__va((void __phys *)phys_ptr);
             int res = acpi_register_raw_table(table);
-            if(res) {
-                eprintk("Failed to register APCI table at address (%p)!\n",
+            if(res)
+            {
+                eprintk("Failed to register APCI table at "
+                        "address (%p)!\n",
                         table);
                 return res;
             }
         }
-    } else if(global_rsdt != NULL) {
+    }
+    else if(global_rsdt != NULL)
+    {
         size_t num_tables =
-            (global_rsdt->hdr.length - sizeof(struct acpi_table_hdr))
-            / sizeof(uint32_t);
+            (global_rsdt->hdr.length - sizeof(struct acpi_table_hdr)) /
+            sizeof(uint32_t);
         printk("Loading %lu Tables from RSDT\n", num_tables);
-        for(size_t i = 0; i < num_tables; i++) {
+        for(size_t i = 0; i < num_tables; i++)
+        {
             uint32_t phys_ptr = global_rsdt->table_ptrs[i];
-            void *table = (void*)__va((void __phys *)(uintptr_t)phys_ptr);
+            void *table = (void *)__va((void __phys *)(uintptr_t)phys_ptr);
             int res = acpi_register_raw_table(table);
-            if(res) {
-                eprintk("Failed to register APCI table at address (%p)!\n",
+            if(res)
+            {
+                eprintk("Failed to register APCI table at "
+                        "address (%p)!\n",
                         table);
                 return res;
             }
         }
-    } else {
+    }
+    else
+    {
 #ifdef CONFIG_ACPI_REQUIRED
         eprintk("ACPI Tried to Load Tables from RSDP without XSDT or RSDT!\n");
         return -EINVAL;
@@ -170,7 +192,8 @@ int
 acpi_provide_rsdp(struct acpi_rsdp *rsdp)
 {
     acpi_table_lock_acquire();
-    if(found_global_rsdp) {
+    if(found_global_rsdp)
+    {
         acpi_table_lock_release();
         eprintk("ACPI provided with multiple RSDP!\n");
         return -EINVAL;
@@ -178,7 +201,7 @@ acpi_provide_rsdp(struct acpi_rsdp *rsdp)
 
     memcpy(&global_rsdp, rsdp, sizeof(struct acpi_rsdp));
     found_global_rsdp = 1;
-    global_rsdt = (void*)__va((void __phys *)(uintptr_t)rsdp->rsdt_ptr);
+    global_rsdt = (void *)__va((void __phys *)(uintptr_t)rsdp->rsdt_ptr);
     printk("ACPI RSDT: %p\n", global_rsdt);
 
     acpi_table_lock_release();
@@ -189,7 +212,8 @@ int
 acpi_provide_xsdp(struct acpi_xsdp *xsdp)
 {
     acpi_table_lock_acquire();
-    if(found_global_xsdp) {
+    if(found_global_xsdp)
+    {
         acpi_table_lock_release();
         eprintk("ACPI provided with multiple XSDP!\n");
         return -EINVAL;
@@ -197,7 +221,7 @@ acpi_provide_xsdp(struct acpi_xsdp *xsdp)
 
     memcpy(&global_xsdp, xsdp, sizeof(struct acpi_xsdp));
     found_global_xsdp = 1;
-    global_xsdt = (void*)__va((void __phys *)xsdp->xsdt_ptr);
+    global_xsdt = (void *)__va((void __phys *)xsdp->xsdt_ptr);
     printk("ACPI XSDT: %p\n", global_xsdt);
 
     acpi_table_lock_release();
@@ -205,27 +229,34 @@ acpi_provide_xsdp(struct acpi_xsdp *xsdp)
 }
 
 struct acpi_table *
-acpi_find_table(const char *signature) {
+acpi_find_table(const char *signature)
+{
     struct acpi_table *table;
     acpi_table_lock_acquire();
     struct stree_node *node;
     node = stree_get(&acpi_table_tree, signature);
-    if(node == NULL) {
+    if(node == NULL)
+    {
         table = NULL;
-    } else {
+    }
+    else
+    {
         table = container_of(node, struct acpi_table, tree_node);
     }
     acpi_table_lock_release();
     return table;
 }
 
-uint32_t acpi_revision(void) {
-    if(found_global_xsdp) {
+uint32_t
+acpi_revision(void)
+{
+    if(found_global_xsdp)
+    {
         return global_xsdp.revision;
     }
-    if(found_global_rsdp) {
+    if(found_global_rsdp)
+    {
         return global_rsdp.revision;
     }
     return 0;
 }
-

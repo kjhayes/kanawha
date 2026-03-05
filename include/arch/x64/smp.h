@@ -9,5 +9,4 @@ x64_ap_notify_booted(void);
 cpu_id_t
 x64_get_booting_ap(void);
 
-
 #endif

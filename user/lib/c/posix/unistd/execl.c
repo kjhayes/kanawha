@@ -1,12 +1,11 @@
 
-#include <unistd.h>
-#include <stdarg.h>
 #include <errno.h>
+#include <stdarg.h>
 #include <stdlib.h>
+#include <unistd.h>
 
-int execl(const char *path,
-	  const char *arg0,
-	  ... /*, (char *)0 */)
+int
+execl(const char *path, const char *arg0, ... /*, (char *)0 */)
 {
     int res;
 
@@ -15,32 +14,37 @@ int execl(const char *path,
 
     int argc = 1;
     char **argv = malloc(argc * sizeof(char *));
-    if(argv == NULL) {
-	errno = -ENOMEM;
-	return -1;
+    if(argv == NULL)
+    {
+        errno = -ENOMEM;
+        return -1;
     }
 
     argv[0] = (char *)arg0;
-    while(1) {
-	char *arg = va_arg(args, char *);
+    while(1)
+    {
+        char *arg = va_arg(args, char *);
 
-	argc++;
-	argv = realloc(argv, argc * sizeof(char *));
-	if(argv == NULL) {
-	    res = -ENOMEM;
-	    break;
-	}
+        argc++;
+        argv = realloc(argv, argc * sizeof(char *));
+        if(argv == NULL)
+        {
+            res = -ENOMEM;
+            break;
+        }
 
-	argv[argc-1] = arg;
+        argv[argc - 1] = arg;
 
-	if(arg == (char *)0) {
-	    res = 0;
-	    break;
-	}
+        if(arg == (char *)0)
+        {
+            res = 0;
+            break;
+        }
     }
-    if(res) {
-	errno = res;
-	return -1;
+    if(res)
+    {
+        errno = res;
+        return -1;
     }
     argc--; // Don't count the final NULL entry
 
@@ -51,4 +55,3 @@ int execl(const char *path,
     va_end(args);
     return res;
 }
-

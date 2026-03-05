@@ -3,9 +3,9 @@
 
 #include <elk-libc-internal/__sFILE.h>
 
-int __elk_libc_internal__dofopen(
-        const char * restrict path,
-        const char * restrict mode,
-        struct __sFILE *file);
+int
+__elk_libc_internal__dofopen(const char *restrict path,
+                             const char *restrict mode,
+                             struct __sFILE *file);
 
 #endif

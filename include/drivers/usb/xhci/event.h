@@ -1,8 +1,8 @@
 #ifndef __KANAWHA__USB_XHCI_EVENT_H__
 #define __KANAWHA__USB_XHCI_EVENT_H__
 
-#include <kanawha/dma.h>
 #include <drivers/usb/xhci/trb.h>
+#include <kanawha/dma.h>
 #include <kanawha/irq.h>
 #include <kanawha/lock.h>
 
@@ -32,11 +32,9 @@ struct usb_xhci_interruptor
 };
 
 int
-usb_xhci_init_interruptors(
-        struct usb_xhci *dev);
+usb_xhci_init_interruptors(struct usb_xhci *dev);
 int
-usb_xhci_deinit_interruptors(
-        struct usb_xhci *dev);
+usb_xhci_deinit_interruptors(struct usb_xhci *dev);
 
 // Called by the interrupt handler when
 // a new event appears.
@@ -44,7 +42,6 @@ usb_xhci_deinit_interruptors(
 // (Can be used to "poke" the interruptor to check for
 //  new events in case we miss an interrupt somehow)
 int
-usb_xhci_interruptor_event_queue_notify(
-        struct usb_xhci_interruptor *intr);
+usb_xhci_interruptor_event_queue_notify(struct usb_xhci_interruptor *intr);
 
 #endif

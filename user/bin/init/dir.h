@@ -3,7 +3,7 @@
 
 int
 for_each_file_under(const char *dir_path,
-                    void(*callback)(int dir, const char *name, void *priv),
+                    void (*callback)(int dir, const char *name, void *priv),
                     void *priv);
 
 #endif

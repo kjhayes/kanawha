@@ -1,7 +1,8 @@
 #ifndef __ELK_LIBC__SGTTY_H__
 #define __ELK_LIBC__SGTTY_H__
 
-struct sgttyb {
+struct sgttyb
+{
     char sg_ispeed;
     char sg_ospeed;
     char sg_erase;
@@ -9,7 +10,9 @@ struct sgttyb {
     int sg_flags;
 };
 
-int gtty (int filedes, struct sgttyb *attributes);
-int stty (int filedes, struct sgttyb * attributes);
+int
+gtty(int filedes, struct sgttyb *attributes);
+int
+stty(int filedes, struct sgttyb *attributes);
 
 #endif

@@ -1,9 +1,9 @@
 #ifndef __KANAWHA__SYMBOL_H__
 #define __KANAWHA__SYMBOL_H__
 
-#include <kanawha/types.h>
 #include <kanawha/list.h>
 #include <kanawha/stree.h>
+#include <kanawha/types.h>
 
 struct module;
 
@@ -16,16 +16,14 @@ struct ksymbol
     struct stree_node symbol_node;
 };
 
-struct ksymbol*
+struct ksymbol *
 ksymbol_get(const char *symbol);
 
 int
 ksymbol_put(struct ksymbol *symbol);
 
 int
-register_kernel_symbol(
-        struct ksymbol *symbol,
-        struct module *mod);
+register_kernel_symbol(struct ksymbol *symbol, struct module *mod);
 
 int
 unregister_kernel_symbol(struct ksymbol *symbol);

@@ -1,8 +1,8 @@
 
 #include <errno.h>
 
-int remove(const char *filename)
+int
+remove(const char *filename)
 {
     return -EUNIMPL;
 }
-

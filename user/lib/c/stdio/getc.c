@@ -1,15 +1,17 @@
 
-#include <stdio.h>
 #include <errno.h>
+#include <stdio.h>
 
 #undef getc_unlocked
-int getc_unlocked(FILE *stream)
+int
+getc_unlocked(FILE *stream)
 {
     return fgetc_unlocked(stream);
 }
 
 #undef getc
-int getc(FILE *stream)
+int
+getc(FILE *stream)
 {
     int res = 0;
     flockfile(stream);
@@ -17,5 +19,3 @@ int getc(FILE *stream)
     funlockfile(stream);
     return res;
 }
-
-

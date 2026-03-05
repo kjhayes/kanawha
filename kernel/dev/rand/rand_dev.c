@@ -19,16 +19,12 @@ rand_dev_deinit(struct rand_dev *dev)
     return 0;
 }
 
-DEFINE_DEV_TYPE(
-        rand_dev,
-        dev,
-        rand_dev_init,
-        rand_dev_deinit 
-        );
+DEFINE_DEV_TYPE(rand_dev, dev, rand_dev_init, rand_dev_deinit);
 
 #ifdef CONFIG_LOG_RANDDEV_REGISTRY_ON_LAUNCH
 static int
-dump_rand_dev_on_launch(void) {
+dump_rand_dev_on_launch(void)
+{
     return dump_rand_dev_registry(do_printk);
 }
 declare_init(launch, dump_rand_dev_on_launch);

@@ -6,4 +6,3 @@ dlerror(void)
 {
     return "ELK Dynamic Linking is Unimplemented";
 }
-

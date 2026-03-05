@@ -1,16 +1,16 @@
 
-#include <arch/x64/lapic.h>
-#include <arch/x64/xapic.h>
 #include <arch/x64/cpu.h>
-#include <arch/x64/exception.h>
-#include <arch/x64/msr.h>
 #include <arch/x64/cpuid.h>
-#include <kanawha/percpu.h>
-#include <kanawha/irq_domain.h>
-#include <kanawha/stddef.h>
-#include <kanawha/printk.h>
-#include <kanawha/thread.h>
+#include <arch/x64/exception.h>
+#include <arch/x64/lapic.h>
+#include <arch/x64/msr.h>
+#include <arch/x64/xapic.h>
 #include <kanawha/assert.h>
+#include <kanawha/irq_domain.h>
+#include <kanawha/percpu.h>
+#include <kanawha/printk.h>
+#include <kanawha/stddef.h>
+#include <kanawha/thread.h>
 
 #ifdef CONFIG_PCI
 #include <arch/x64/lapic/pci_mailbox.h>
@@ -19,21 +19,19 @@
 #define LAPIC_MAX_LVT_ENTRIES 7
 
 #define LAPIC_SPURRIOUS_VECTOR 255
-#define LAPIC_LVT_VECTOR_BASE  255-LAPIC_MAX_LVT_ENTRIES
+#define LAPIC_LVT_VECTOR_BASE 255 - LAPIC_MAX_LVT_ENTRIES
 
-static
-struct irq_action *
-x64_vector_lapic_actions[256-32] = { 0 };
+static struct irq_action *x64_vector_lapic_actions[256 - 32] = {0};
 
 static struct lapic *
-current_lapic(void) {
+current_lapic(void)
+{
     struct cpu *gen_cpu = cpu_from_id(current_cpu_id());
     struct x64_cpu *cpu = container_of(gen_cpu, struct x64_cpu, cpu);
     return &cpu->apic;
 }
 
-static size_t lapic_hwirq_to_lvt_reg[] = 
-{
+static size_t lapic_hwirq_to_lvt_reg[] = {
     [LAPIC_LVT_TIMER_HWIRQ] = LAPIC_REG_LVT_TIMER,
     [LAPIC_LVT_THERMAL_HWIRQ] = LAPIC_REG_LVT_THERMAL,
     [LAPIC_LVT_PERF_HWIRQ] = LAPIC_REG_LVT_PERF,
@@ -44,56 +42,51 @@ static size_t lapic_hwirq_to_lvt_reg[] =
 };
 
 static int
-lapic_lvt_mask_irq(
-        struct irq_dev *dev,
-        hwirq_t hwirq)
+lapic_lvt_mask_irq(struct irq_dev *dev, hwirq_t hwirq)
 {
     dprintk("lapic_lvt_mask_irq hwirq=0x%x\n", hwirq);
     size_t reg = lapic_hwirq_to_lvt_reg[hwirq];
-    struct lapic *apic =
-        container_of(dev, struct lapic, lvt_dev);
-    if(apic_id_from_cpu(cpu_from_id(current_cpu_id())) != apic->id) {
+    struct lapic *apic = container_of(dev, struct lapic, lvt_dev);
+    if(apic_id_from_cpu(cpu_from_id(current_cpu_id())) != apic->id)
+    {
         return -EINVAL;
     }
     uint64_t lvt = lapic_read_reg(apic, reg);
-    lvt |= (1ULL<<16);
+    lvt |= (1ULL << 16);
     lapic_write_reg(apic, reg, lvt);
     return 0;
 }
 
 static int
-lapic_lvt_unmask_irq(
-        struct irq_dev *dev,
-        hwirq_t hwirq)
+lapic_lvt_unmask_irq(struct irq_dev *dev, hwirq_t hwirq)
 {
     dprintk("lapic_lvt_unmask_irq hwirq=0x%x\n", hwirq);
     size_t reg = lapic_hwirq_to_lvt_reg[hwirq];
-    struct lapic *apic =
-        container_of(dev, struct lapic, lvt_dev);
-    if(apic_id_from_cpu(cpu_from_id(current_cpu_id())) != apic->id) {
+    struct lapic *apic = container_of(dev, struct lapic, lvt_dev);
+    if(apic_id_from_cpu(cpu_from_id(current_cpu_id())) != apic->id)
+    {
         return -EINVAL;
     }
     uint64_t lvt = lapic_read_reg(apic, reg);
-    lvt &= ~(1ULL<<16);
+    lvt &= ~(1ULL << 16);
     lapic_write_reg(apic, reg, lvt);
     return 0;
 }
 
-static unsigned long 
-lapic_lvt_irq_status(
-        struct irq_dev *dev,
-        hwirq_t hwirq)
+static unsigned long
+lapic_lvt_irq_status(struct irq_dev *dev, hwirq_t hwirq)
 {
     unsigned long flags = 0;
 
     size_t reg = lapic_hwirq_to_lvt_reg[hwirq];
-    struct lapic *apic =
-        container_of(dev, struct lapic, lvt_dev);
-    if(apic_id_from_cpu(cpu_from_id(current_cpu_id())) != apic->id) {
+    struct lapic *apic = container_of(dev, struct lapic, lvt_dev);
+    if(apic_id_from_cpu(cpu_from_id(current_cpu_id())) != apic->id)
+    {
         return -EINVAL;
     }
     uint64_t lvt = lapic_read_reg(apic, reg);
-    if(lvt & (1ULL<<16)) {
+    if(lvt & (1ULL << 16))
+    {
         flags |= IRQ_STATUS_MASKED;
     }
 
@@ -101,130 +94,123 @@ lapic_lvt_irq_status(
 }
 
 static int
-lapic_lvt_describe_irq(
-        struct irq_dev *dev,
-        hwirq_t hwirq,
-        char *buffer,
-        size_t buflen)
+lapic_lvt_describe_irq(struct irq_dev *dev,
+                       hwirq_t hwirq,
+                       char *buffer,
+                       size_t buflen)
 {
 
-    struct lapic *lapic =
-        container_of(dev, struct lapic, lvt_dev);
+    struct lapic *lapic = container_of(dev, struct lapic, lvt_dev);
 
     char *str;
-    switch(hwirq) {
-        case LAPIC_LVT_TIMER_HWIRQ: str = "timer"; break;
-        case LAPIC_LVT_PERF_HWIRQ: str = "perf"; break;
-        case LAPIC_LVT_CMCI_HWIRQ: str = "cmci"; break;
-        case LAPIC_LVT_LINT0_HWIRQ: str = "lint0"; break;
-        case LAPIC_LVT_LINT1_HWIRQ: str = "lint1"; break;
-        case LAPIC_LVT_THERMAL_HWIRQ: str = "thermal"; break;
-        case LAPIC_LVT_ERROR_HWIRQ: str = "error"; break;
-        default: str = "???"; break;
+    switch(hwirq)
+    {
+    case LAPIC_LVT_TIMER_HWIRQ:
+        str = "timer";
+        break;
+    case LAPIC_LVT_PERF_HWIRQ:
+        str = "perf";
+        break;
+    case LAPIC_LVT_CMCI_HWIRQ:
+        str = "cmci";
+        break;
+    case LAPIC_LVT_LINT0_HWIRQ:
+        str = "lint0";
+        break;
+    case LAPIC_LVT_LINT1_HWIRQ:
+        str = "lint1";
+        break;
+    case LAPIC_LVT_THERMAL_HWIRQ:
+        str = "thermal";
+        break;
+    case LAPIC_LVT_ERROR_HWIRQ:
+        str = "error";
+        break;
+    default:
+        str = "???";
+        break;
     }
 
-    snprintk(buffer, buflen,
-            "lapic-%lu-lvt-%s",
-            (ul_t)lapic->id,
-            str);
+    snprintk(buffer, buflen, "lapic-%lu-lvt-%s", (ul_t)lapic->id, str);
     return 0;
 }
 
 static int
-lapic_ack_irq(
-        struct irq_dev *dev,
-        hwirq_t hwirq)
+lapic_ack_irq(struct irq_dev *dev, hwirq_t hwirq)
 {
     dprintk("lapic vector ack\n");
     return 0;
 }
 
 static int
-lapic_eoi_irq(
-        struct irq_dev *dev,
-        hwirq_t hwirq)
+lapic_eoi_irq(struct irq_dev *dev, hwirq_t hwirq)
 {
     dprintk("lapic vector eoi\n");
-    struct lapic *apic =
-        container_of(dev, struct lapic, irq_dev);
+    struct lapic *apic = container_of(dev, struct lapic, irq_dev);
 
     lapic_write_reg(apic, LAPIC_REG_EOI, 0);
     return 0;
 }
 
 static int
-lapic_trigger_irq(
-        struct irq_dev *dev,
-        hwirq_t hwirq)
+lapic_trigger_irq(struct irq_dev *dev, hwirq_t hwirq)
 {
     int res;
 
-    struct lapic *target_apic =
-        container_of(dev, struct lapic, irq_dev);
+    struct lapic *target_apic = container_of(dev, struct lapic, irq_dev);
 
-    if(hwirq > 255 || hwirq < 32) {
+    if(hwirq > 255 || hwirq < 32)
+    {
         return -EINVAL;
     }
 
     struct lapic *current_apic = current_lapic();
 
-    res = lapic_send_ipi(
-            current_apic,
-            target_apic->id,
-            (uint8_t)hwirq,
-            LAPIC_MT_FIXED,
-            0, // physical APIC ID
-            1, // assert
-            LAPIC_TRIGGER_MODE_EDGE);
+    res = lapic_send_ipi(current_apic,
+                         target_apic->id,
+                         (uint8_t)hwirq,
+                         LAPIC_MT_FIXED,
+                         0, // physical APIC ID
+                         1, // assert
+                         LAPIC_TRIGGER_MODE_EDGE);
 
     return res;
 }
 
 static int
-lapic_mask_irq(
-        struct irq_dev *dev,
-        hwirq_t hwirq)
+lapic_mask_irq(struct irq_dev *dev, hwirq_t hwirq)
 {
     // We cannot mask these IRQ's
     return -EINVAL;
 }
 
 static int
-lapic_unmask_irq(
-        struct irq_dev *dev,
-        hwirq_t hwirq)
+lapic_unmask_irq(struct irq_dev *dev, hwirq_t hwirq)
 {
     // They are always unmasked so this is fine
     return 0;
 }
 
-static unsigned long 
-lapic_irq_status(
-        struct irq_dev *dev,
-        hwirq_t hwirq)
+static unsigned long
+lapic_irq_status(struct irq_dev *dev, hwirq_t hwirq)
 {
     unsigned long flags = 0;
     return flags;
 }
 
 static int
-lapic_describe_irq(
-        struct irq_dev *dev,
-        hwirq_t hwirq,
-        char *buffer,
-        size_t buflen)
+lapic_describe_irq(struct irq_dev *dev,
+                   hwirq_t hwirq,
+                   char *buffer,
+                   size_t buflen)
 {
 
-    struct lapic *lapic =
-        container_of(dev, struct lapic, irq_dev);
-    snprintk(buffer, buflen,
-            "lapic-%lu",
-            (ul_t)lapic->id);
+    struct lapic *lapic = container_of(dev, struct lapic, irq_dev);
+    snprintk(buffer, buflen, "lapic-%lu", (ul_t)lapic->id);
     return 0;
 }
 
-static struct irq_driver
-lapic_irq_driver = {
+static struct irq_driver lapic_irq_driver = {
     .mask_irq = lapic_mask_irq,
     .unmask_irq = lapic_unmask_irq,
     .irq_status = lapic_irq_status,
@@ -234,8 +220,7 @@ lapic_irq_driver = {
     .describe_irq = lapic_describe_irq,
 };
 
-static struct irq_driver
-lapic_lvt_irq_driver = {
+static struct irq_driver lapic_lvt_irq_driver = {
     .mask_irq = lapic_lvt_mask_irq,
     .unmask_irq = lapic_lvt_unmask_irq,
     .irq_status = lapic_lvt_irq_status,
@@ -246,55 +231,58 @@ lapic_lvt_irq_driver = {
 };
 
 static int
-setup_lapic_irq_dev(
-        struct x64_cpu *cpu,
-        struct lapic *apic)
+setup_lapic_irq_dev(struct x64_cpu *cpu, struct lapic *apic)
 {
     int res;
 
-    dprintk("Setting up CPU (%d) LAPIC Vector IRQ Domain\n",
-            cpu->cpu.id);
+    dprintk("Setting up CPU (%d) LAPIC Vector IRQ Domain\n", cpu->cpu.id);
     apic->irq_dev.driver = &lapic_irq_driver;
 
-    apic->irq_domain = alloc_irq_domain_linear(
-            32, 256-32);
+    apic->irq_domain = alloc_irq_domain_linear(32, 256 - 32);
 
-    if(apic->irq_domain == NULL) {
+    if(apic->irq_domain == NULL)
+    {
         return -ENOMEM;
     }
 
     for(hwirq_t vector = 32; vector < 256; vector++)
     {
         irq_t irq = irq_domain_revmap(apic->irq_domain, vector);
-        if(irq == NULL_IRQ) {
+        if(irq == NULL_IRQ)
+        {
             free_irq_domain_linear(apic->irq_domain);
             return -EINVAL;
         }
         struct irq_desc *desc = irq_to_desc(irq);
-        if(desc == NULL) {
+        if(desc == NULL)
+        {
             free_irq_domain_linear(apic->irq_domain);
             return -EINVAL;
         }
 
         desc->dev = &apic->irq_dev;
 
-        struct irq_action *action = x64_vector_lapic_actions[vector-32];
+        struct irq_action *action = x64_vector_lapic_actions[vector - 32];
 
-        irq_t global_vector_irq = irq_domain_revmap(x64_vector_irq_domain, vector);
+        irq_t global_vector_irq =
+            irq_domain_revmap(x64_vector_irq_domain, vector);
 
-        if(action == NULL) {
+        if(action == NULL)
+        {
             action = irq_install_percpu_link(irq_to_desc(global_vector_irq));
-            if(action == NULL) {
+            if(action == NULL)
+            {
                 free_irq_domain_linear(apic->irq_domain);
                 return -ENOMEM;
             }
-            x64_vector_lapic_actions[vector-32] = action;
+            x64_vector_lapic_actions[vector - 32] = action;
         }
 
-        // This means we need to have set up the percpu alloc framework before
-        // calling this initialization
+        // This means we need to have set up the percpu alloc framework
+        // before calling this initialization
         res = irq_action_set_percpu_link(action, desc, cpu->cpu.id);
-        if(res) {
+        if(res)
+        {
             free_irq_domain_linear(apic->irq_domain);
             return res;
         }
@@ -304,19 +292,16 @@ setup_lapic_irq_dev(
 }
 
 static int
-setup_lapic_lvt_dev(
-        struct x64_cpu *cpu,
-        struct lapic *apic)
+setup_lapic_lvt_dev(struct x64_cpu *cpu, struct lapic *apic)
 {
-    dprintk("Setting up CPU (%d) LAPIC LVT IRQ Domain\n",
-            cpu->cpu.id);
+    dprintk("Setting up CPU (%d) LAPIC LVT IRQ Domain\n", cpu->cpu.id);
 
     apic->lvt_dev.driver = &lapic_lvt_irq_driver;
 
-    apic->lvt_domain = alloc_irq_domain_linear(
-            0, LAPIC_MAX_LVT_ENTRIES);
+    apic->lvt_domain = alloc_irq_domain_linear(0, LAPIC_MAX_LVT_ENTRIES);
 
-    if(apic->lvt_domain == NULL) {
+    if(apic->lvt_domain == NULL)
+    {
         return -ENOMEM;
     }
 
@@ -326,26 +311,31 @@ setup_lapic_lvt_dev(
     {
         irq_t irq = irq_domain_revmap(apic->lvt_domain, hwirq);
         struct irq_desc *desc = irq_to_desc(irq);
-        if(desc != NULL) {
+        if(desc != NULL)
+        {
             desc->dev = &apic->lvt_dev;
-        } else {
+        }
+        else
+        {
             eprintk("Failed to get LAPIC IRQ 0x%lx (hwirq=0x%lx)\n",
-                    (unsigned long)irq, (unsigned long)hwirq);
+                    (unsigned long)irq,
+                    (unsigned long)hwirq);
             free_irq_domain_linear(apic->lvt_domain);
             return -EINVAL;
         }
 
         // We got a vector, map it to our handler
-        irq_t percpu_vector_irq = irq_domain_revmap(apic->irq_domain, LAPIC_LVT_VECTOR_BASE+hwirq);
+        irq_t percpu_vector_irq =
+            irq_domain_revmap(apic->irq_domain, LAPIC_LVT_VECTOR_BASE + hwirq);
         struct irq_desc *vector_desc = irq_to_desc(percpu_vector_irq);
 
-        // This can be a direct link because we should already have a percpu link
-        // to each apic->irq_domain IRQ.
-        struct irq_action *link = irq_install_direct_link(
-                vector_desc,
-                desc);
-        if(link == NULL) {
-            eprintk("Failed to link vector 0x%lx to APIC IRQ 0x%lx (hwirq=0x%lx)\n",
+        // This can be a direct link because we should already have a
+        // percpu link to each apic->irq_domain IRQ.
+        struct irq_action *link = irq_install_direct_link(vector_desc, desc);
+        if(link == NULL)
+        {
+            eprintk("Failed to link vector 0x%lx to APIC IRQ 0x%lx "
+                    "(hwirq=0x%lx)\n",
                     (unsigned long)vector_desc->hwirq,
                     (unsigned long)irq,
                     (unsigned long)hwirq);
@@ -363,7 +353,8 @@ lapic_init_current(void)
     dprintk("Enabling LAPIC on CPU %d\n", current_cpu_id());
     struct cpu *gen_cpu = cpu_from_id(current_cpu_id());
 
-    if(gen_cpu == NULL) {
+    if(gen_cpu == NULL)
+    {
         eprintk("Could not get struct cpu of CPU %d!\n", current_cpu_id());
         return -ENXIO;
     }
@@ -380,21 +371,27 @@ lapic_init_current(void)
 
     // Mark the vector as potentially spurrious so we
     // don't log an error if we see it without anyone handling it
-    struct irq_desc *spurrious_desc = irq_to_desc(irq_domain_revmap(apic->irq_domain, LAPIC_SPURRIOUS_VECTOR));
+    struct irq_desc *spurrious_desc = irq_to_desc(
+        irq_domain_revmap(apic->irq_domain, LAPIC_SPURRIOUS_VECTOR));
     spurrious_desc->flags |= IRQ_DESC_FLAG_SPURRIOUS;
 
     // Set the spurrious vector and make sure the LAPIC is software enabled
     uint64_t siv = lapic_read_reg(apic, LAPIC_REG_SIV);
     siv |= LAPIC_SPURRIOUS_VECTOR; // Set spurrious interrupt vector
-    siv |= (1ULL<<8); // SW Enable the APIC
-    siv &= ~(1ULL<<12); // Broadcast EOI
+    siv |= (1ULL << 8);            // SW Enable the APIC
+    siv &= ~(1ULL << 12);          // Broadcast EOI
     lapic_write_reg(apic, LAPIC_REG_SIV, siv);
 
     // Double check that our APIC ID is correct
     apic_id_t apic_id = lapic_read_id(apic);
-    if(apic_id != cpu->apic.id) {
-        panic("APIC ID Mismatch! CPU %d has multiple APIC ID's (current=0x%x, new=0x%x)\n",
-                cpu->cpu.id, cpu->apic.id, apic_id);
+    if(apic_id != cpu->apic.id)
+    {
+        panic("APIC ID Mismatch! CPU %d has multiple APIC ID's "
+              "(current=0x%x, "
+              "new=0x%x)\n",
+              cpu->cpu.id,
+              cpu->apic.id,
+              apic_id);
     }
 
     // Set up all of the LVT entries
@@ -402,8 +399,8 @@ lapic_init_current(void)
     uint64_t timer_ctrl = lapic_read_reg(apic, LAPIC_REG_LVT_TIMER);
     timer_ctrl &= ~(0xFF);
     timer_ctrl |= LAPIC_LVT_VECTOR_BASE + LAPIC_LVT_TIMER_HWIRQ;
-    timer_ctrl &= ~(1ULL<<15); // edge-triggered
-    timer_ctrl |= (1ULL<<16); // masked
+    timer_ctrl &= ~(1ULL << 15); // edge-triggered
+    timer_ctrl |= (1ULL << 16);  // masked
     timer_ctrl &= ~(0b111 << 8); // MT fixed
     lapic_write_reg(apic, LAPIC_REG_LVT_TIMER, timer_ctrl);
     dprintk("\tLVT Timer: 0x%lx\n", timer_ctrl);
@@ -411,8 +408,8 @@ lapic_init_current(void)
     uint64_t thermal_ctrl = lapic_read_reg(apic, LAPIC_REG_LVT_THERMAL);
     thermal_ctrl &= ~(0xFF);
     thermal_ctrl |= LAPIC_LVT_VECTOR_BASE + LAPIC_LVT_THERMAL_HWIRQ;
-    thermal_ctrl &= ~(1ULL<<15); // edge-triggered
-    thermal_ctrl |= (1ULL<<16); // masked
+    thermal_ctrl &= ~(1ULL << 15); // edge-triggered
+    thermal_ctrl |= (1ULL << 16);  // masked
     thermal_ctrl &= ~(0b111 << 8); // MT fixed
     lapic_write_reg(apic, LAPIC_REG_LVT_THERMAL, thermal_ctrl);
     dprintk("\tLVT Thermal: 0x%lx\n", thermal_ctrl);
@@ -420,8 +417,8 @@ lapic_init_current(void)
     uint64_t perf_ctrl = lapic_read_reg(apic, LAPIC_REG_LVT_PERF);
     perf_ctrl &= ~(0xFF);
     perf_ctrl |= LAPIC_LVT_VECTOR_BASE + LAPIC_LVT_PERF_HWIRQ;
-    perf_ctrl &= ~(1ULL<<15); // edge-triggered
-    perf_ctrl |= (1ULL<<16); // masked
+    perf_ctrl &= ~(1ULL << 15); // edge-triggered
+    perf_ctrl |= (1ULL << 16);  // masked
     perf_ctrl &= ~(0b111 << 8); // MT fixed
     lapic_write_reg(apic, LAPIC_REG_LVT_PERF, perf_ctrl);
     dprintk("\tLVT Perf: 0x%lx\n", perf_ctrl);
@@ -429,8 +426,8 @@ lapic_init_current(void)
     uint64_t lint0_ctrl = lapic_read_reg(apic, LAPIC_REG_LVT_LINT0);
     lint0_ctrl &= ~(0xFF);
     lint0_ctrl |= LAPIC_LVT_VECTOR_BASE + LAPIC_LVT_LINT0_HWIRQ;
-    lint0_ctrl &= ~(1ULL<<15); // edge-triggered
-    lint0_ctrl |= (1ULL<<16); // masked
+    lint0_ctrl &= ~(1ULL << 15); // edge-triggered
+    lint0_ctrl |= (1ULL << 16);  // masked
     lint0_ctrl &= ~(0b111 << 8); // MT fixed
     lapic_write_reg(apic, LAPIC_REG_LVT_LINT0, lint0_ctrl);
     dprintk("\tLVT LINT0: 0x%lx\n", lint0_ctrl);
@@ -438,8 +435,8 @@ lapic_init_current(void)
     uint64_t lint1_ctrl = lapic_read_reg(apic, LAPIC_REG_LVT_LINT1);
     lint1_ctrl &= ~(0xFF);
     lint1_ctrl |= LAPIC_LVT_VECTOR_BASE + LAPIC_LVT_LINT1_HWIRQ;
-    lint1_ctrl &= ~(1ULL<<15); // edge-triggered
-    lint1_ctrl |= (1ULL<<16); // masked
+    lint1_ctrl &= ~(1ULL << 15); // edge-triggered
+    lint1_ctrl |= (1ULL << 16);  // masked
     lint1_ctrl &= ~(0b111 << 8); // MT fixed
     lapic_write_reg(apic, LAPIC_REG_LVT_LINT1, lint1_ctrl);
     dprintk("\tLVT LINT1: 0x%lx\n", lint1_ctrl);
@@ -447,8 +444,8 @@ lapic_init_current(void)
     uint64_t error_ctrl = lapic_read_reg(apic, LAPIC_REG_LVT_ERROR);
     error_ctrl &= ~(0xFF);
     error_ctrl |= LAPIC_LVT_VECTOR_BASE + LAPIC_LVT_ERROR_HWIRQ;
-    error_ctrl &= ~(1ULL<<15); // edge-triggered
-    error_ctrl |= (1ULL<<16); // masked
+    error_ctrl &= ~(1ULL << 15); // edge-triggered
+    error_ctrl |= (1ULL << 16);  // masked
     error_ctrl &= ~(0b111 << 8); // MT fixed
     lapic_write_reg(apic, LAPIC_REG_LVT_ERROR, error_ctrl);
     dprintk("\tLVT Error: 0x%lx\n", error_ctrl);
@@ -458,14 +455,11 @@ lapic_init_current(void)
     // Don't block any interrupts through the TPR
     lapic_write_reg(apic, LAPIC_REG_TPR, 0);
 
-
-
     return 0;
 }
 
 int
-bsp_register_cpu_lapic(
-        struct x64_cpu *cpu)
+bsp_register_cpu_lapic(struct x64_cpu *cpu)
 {
     int res;
 
@@ -474,25 +468,29 @@ bsp_register_cpu_lapic(
     // We will use XAPIC mode for all LAPIC(s) for now
     printk("Setting Up LAPIC XAPIC Mode\n");
     res = xapic_setup_lapic(apic);
-    if(res) {
+    if(res)
+    {
         return res;
     }
 
     printk("Setting Up LAPIC IRQ Device\n");
     res = setup_lapic_irq_dev(cpu, apic);
-    if(res) {
+    if(res)
+    {
         return res;
     }
 
     printk("Setting Up LAPIC Local Vector Table\n");
     res = setup_lapic_lvt_dev(cpu, apic);
-    if(res) {
+    if(res)
+    {
         return res;
     }
 
 #ifdef CONFIG_PCI
     res = register_cpu_lapic_pci_mailbox(apic);
-    if(res) {
+    if(res)
+    {
         return res;
     }
 #endif
@@ -504,8 +502,7 @@ irq_t
 lapic_vector_irq(cpu_id_t cpu_id, hwirq_t vector)
 {
     struct cpu *gen_cpu = cpu_from_id(cpu_id);
-    struct x64_cpu *cpu = container_of(
-            gen_cpu, struct x64_cpu, cpu);
+    struct x64_cpu *cpu = container_of(gen_cpu, struct x64_cpu, cpu);
 
     struct lapic *lapic = &cpu->apic;
     DEBUG_ASSERT(lapic->irq_domain);
@@ -517,12 +514,10 @@ irq_t
 lapic_lvt_irq(cpu_id_t cpu_id, hwirq_t lvt_index)
 {
     struct cpu *gen_cpu = cpu_from_id(cpu_id);
-    struct x64_cpu *cpu = container_of(
-            gen_cpu, struct x64_cpu, cpu);
+    struct x64_cpu *cpu = container_of(gen_cpu, struct x64_cpu, cpu);
 
     struct lapic *lapic = &cpu->apic;
     DEBUG_ASSERT(lapic->irq_domain);
 
     return irq_domain_revmap(lapic->lvt_domain, lvt_index);
 }
-

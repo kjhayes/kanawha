@@ -1,21 +1,21 @@
 
-#include <kanawha/vmem.h>
-#include <kanawha/init.h>
-#include <kanawha/types.h>
-#include <kanawha/stddef.h>
-#include <kanawha/errno.h>
-#include <kanawha/slab.h>
-#include <kanawha/percpu.h>
-#include <kanawha/printk.h>
-#include <kanawha/ptree.h>
-#include <kanawha/thread.h>
-#include <kanawha/proc/process.h>
-#include <kanawha/proc/signal.h>
-#include <kanawha/proc/mmap.h>
+#include <arch/x64/mmu.h>
 #include <kanawha/assert.h>
+#include <kanawha/errno.h>
+#include <kanawha/init.h>
 #include <kanawha/irq.h>
 #include <kanawha/lock.h>
-#include <arch/x64/mmu.h>
+#include <kanawha/percpu.h>
+#include <kanawha/printk.h>
+#include <kanawha/proc/mmap.h>
+#include <kanawha/proc/process.h>
+#include <kanawha/proc/signal.h>
+#include <kanawha/ptree.h>
+#include <kanawha/slab.h>
+#include <kanawha/stddef.h>
+#include <kanawha/thread.h>
+#include <kanawha/types.h>
+#include <kanawha/vmem.h>
 
 #define VMEM_MAP_SLAB_BUFFER_SIZE 0x1000
 static uint8_t vmem_map_slab_buffer[VMEM_MAP_SLAB_BUFFER_SIZE];
@@ -33,59 +33,67 @@ static struct slab_allocator *vmem_region_ref_slab_allocator = NULL;
 DEFINE_LOCAL_THREAD_LOCK(vmem_region_ref_slab_lock);
 
 static int
-init_vmem_mapping_allocators(void) 
+init_vmem_mapping_allocators(void)
 {
-    vmem_map_slab_allocator = create_static_slab_allocator(
-            vmem_map_slab_buffer,
-            VMEM_MAP_SLAB_BUFFER_SIZE,
-            sizeof(struct vmem_map),
-            orderof(struct vmem_map));
+    vmem_map_slab_allocator =
+        create_static_slab_allocator(vmem_map_slab_buffer,
+                                     VMEM_MAP_SLAB_BUFFER_SIZE,
+                                     sizeof(struct vmem_map),
+                                     orderof(struct vmem_map));
 
-    if(vmem_map_slab_allocator == NULL) {
+    if(vmem_map_slab_allocator == NULL)
+    {
         return -ENOMEM;
     }
 
-    vmem_region_slab_allocator = create_static_slab_allocator(
-            vmem_region_slab_buffer,
-            VMEM_REGION_SLAB_BUFFER_SIZE,
-            sizeof(struct vmem_region),
-            orderof(struct vmem_region));
+    vmem_region_slab_allocator =
+        create_static_slab_allocator(vmem_region_slab_buffer,
+                                     VMEM_REGION_SLAB_BUFFER_SIZE,
+                                     sizeof(struct vmem_region),
+                                     orderof(struct vmem_region));
 
-    if(vmem_region_slab_allocator == NULL) {
+    if(vmem_region_slab_allocator == NULL)
+    {
         return -ENOMEM;
     }
 
-    vmem_region_ref_slab_allocator = create_static_slab_allocator(
-            vmem_region_ref_slab_buffer,
-            VMEM_REGION_REF_SLAB_BUFFER_SIZE,
-            sizeof(struct vmem_region_ref),
-            orderof(struct vmem_region_ref));
+    vmem_region_ref_slab_allocator =
+        create_static_slab_allocator(vmem_region_ref_slab_buffer,
+                                     VMEM_REGION_REF_SLAB_BUFFER_SIZE,
+                                     sizeof(struct vmem_region_ref),
+                                     orderof(struct vmem_region_ref));
 
-    if(vmem_region_ref_slab_allocator == NULL) {
+    if(vmem_region_ref_slab_allocator == NULL)
+    {
         return -ENOMEM;
     }
 
     return 0;
 }
-declare_init_desc(static, init_vmem_mapping_allocators, "Initializing Virtual Memory Region Slab Allocator(s)");
+declare_init_desc(static,
+                  init_vmem_mapping_allocators,
+                  "Initializing Virtual Memory Region Slab Allocator(s)");
 
 static struct vmem_region_ref *
-alloc_vmem_region_ref(void) 
+alloc_vmem_region_ref(void)
 {
     vmem_region_ref_slab_lock_acquire();
-    if(vmem_region_ref_slab_allocator == NULL) {
+    if(vmem_region_ref_slab_allocator == NULL)
+    {
         return NULL;
     }
 
-    dprintk("alloc_vmem_region_ref: num slab objs = 0x%llx\n", (ull_t)slab_objs_free(vmem_region_ref_slab_allocator));
-    struct vmem_region_ref *ref = (struct vmem_region_ref*)slab_alloc(vmem_region_ref_slab_allocator);
+    dprintk("alloc_vmem_region_ref: num slab objs = 0x%llx\n",
+            (ull_t)slab_objs_free(vmem_region_ref_slab_allocator));
+    struct vmem_region_ref *ref =
+        (struct vmem_region_ref *)slab_alloc(vmem_region_ref_slab_allocator);
     dprintk("alloc_vmem_region_ref = %p\n", ref);
     vmem_region_ref_slab_lock_release();
     return ref;
 }
 
 static void
-free_vmem_region_ref(struct vmem_region_ref *ref) 
+free_vmem_region_ref(struct vmem_region_ref *ref)
 {
     vmem_region_ref_slab_lock_acquire();
     slab_free(vmem_region_ref_slab_allocator, ref);
@@ -97,13 +105,16 @@ vmem_map_create(void)
 {
     int res;
     vmem_map_slab_lock_acquire();
-    if(vmem_map_slab_allocator == NULL) {
-        eprintk("Called vmem_map_create before vmem_map_slab_allocator has been initialized!\n");
+    if(vmem_map_slab_allocator == NULL)
+    {
+        eprintk("Called vmem_map_create before vmem_map_slab_allocator has "
+                "been initialized!\n");
         return NULL;
     }
     struct vmem_map *map = slab_alloc(vmem_map_slab_allocator);
     vmem_map_slab_lock_release();
-    if(map == NULL) {
+    if(map == NULL)
+    {
         eprintk("vmem_map_create: slab_alloc failed!\n");
         return map;
     }
@@ -112,7 +123,8 @@ vmem_map_create(void)
     ptree_init(&map->mapping_root);
 
     res = arch_vmem_map_init(map);
-    if(res) {
+    if(res)
+    {
         vmem_map_slab_lock_acquire();
         slab_free(vmem_map_slab_allocator, map);
         vmem_map_slab_lock_release();
@@ -128,22 +140,26 @@ vmem_map_destroy(struct vmem_map *map)
 {
     int res;
 
-    do {
+    do
+    {
         struct ptree_node *region_node = ptree_get_first(&map->mapping_root);
-        if(region_node == NULL) {
+        if(region_node == NULL)
+        {
             break;
         }
         struct vmem_region_ref *ref =
             container_of(region_node, struct vmem_region_ref, map_node);
         res = vmem_map_unmap_region(map, ref);
-        if(res) {
+        if(res)
+        {
             eprintk("vmem_map_destroy failed to unmap vmem region!\n");
             return res;
         }
     } while(1);
 
     res = arch_vmem_map_deinit(map);
-    if(res) {
+    if(res)
+    {
         return res;
     }
 
@@ -151,16 +167,14 @@ vmem_map_destroy(struct vmem_map *map)
 }
 
 struct vmem_region *
-vmem_region_create_direct(
-        void __phys * paddr,
-        size_t size,
-        unsigned long flags)
+vmem_region_create_direct(void __phys *paddr, size_t size, unsigned long flags)
 {
     int res;
     vmem_region_slab_lock_acquire();
     struct vmem_region *region = slab_alloc(vmem_region_slab_allocator);
     vmem_region_slab_lock_release();
-    if(region == NULL) {
+    if(region == NULL)
+    {
         return NULL;
     }
 
@@ -174,7 +188,8 @@ vmem_region_create_direct(
     ilist_init(&region->ref_list);
 
     res = arch_vmem_region_init(region);
-    if(res) {
+    if(res)
+    {
         slab_free(vmem_region_slab_allocator, region);
         return NULL;
     }
@@ -183,29 +198,28 @@ vmem_region_create_direct(
 }
 
 static int
-default_page_fault_handler(
-        struct excp_state *state,
-        struct vmem_region_ref *region_ref,
-        uintptr_t offset,
-        unsigned long access_flags,
-        void *priv_state)
+default_page_fault_handler(struct excp_state *state,
+                           struct vmem_region_ref *region_ref,
+                           uintptr_t offset,
+                           unsigned long access_flags,
+                           void *priv_state)
 {
     eprintk("Unhandled Page Fault on vmem_region_ref %p, offset 0x%llx\n",
-            region_ref, (ull_t)offset);
+            region_ref,
+            (ull_t)offset);
 
     return PAGE_FAULT_UNHANDLED;
 }
 
-
 struct vmem_region *
-vmem_region_create_paged(
-        size_t size,
-        page_fault_f *fault_handler,
-        void *priv_state)
+vmem_region_create_paged(size_t size,
+                         page_fault_f *fault_handler,
+                         void *priv_state)
 {
     int res;
     struct vmem_region *region = slab_alloc(vmem_region_slab_allocator);
-    if(region == NULL) {
+    if(region == NULL)
+    {
         return NULL;
     }
 
@@ -220,7 +234,8 @@ vmem_region_create_paged(
     ilist_init(&region->ref_list);
 
     res = arch_vmem_region_init(region);
-    if(res) {
+    if(res)
+    {
         slab_free(vmem_region_slab_allocator, region);
         return NULL;
     }
@@ -229,28 +244,31 @@ vmem_region_create_paged(
 }
 
 int
-vmem_region_destroy(
-        struct vmem_region *region)
+vmem_region_destroy(struct vmem_region *region)
 {
     int res;
 
-    do {
+    do
+    {
         ilist_node_t *region_node = ilist_pop_head(&region->ref_list);
-        if(region_node == NULL) {
+        if(region_node == NULL)
+        {
             break;
         }
         struct vmem_region_ref *ref =
             container_of(region_node, struct vmem_region_ref, region_node);
 
         res = vmem_map_unmap_region(ref->map, ref);
-        if(res) {
+        if(res)
+        {
             eprintk("vmem_region_destroy failed to unmap vmem region!\n");
             return res;
         }
     } while(1);
 
     res = arch_vmem_region_deinit(region);
-    if(res) {
+    if(res)
+    {
         return res;
     }
 
@@ -258,39 +276,40 @@ vmem_region_destroy(
 }
 
 order_t
-vmem_region_alignment(
-        struct vmem_region *region)
+vmem_region_alignment(struct vmem_region *region)
 {
     return arch_vmem_region_alignment(region);
 }
 
 struct vmem_region_ref *
-vmem_map_get_region(struct vmem_map *map, void * addr) 
+vmem_map_get_region(struct vmem_map *map, void *addr)
 {
-    dprintk("vmem_map_get_region(map=%p, addr=%p)\n",
-            map, addr);
+    dprintk("vmem_map_get_region(map=%p, addr=%p)\n", map, addr);
 
-    struct ptree_node *node = ptree_get_max_less_or_eq(&map->mapping_root, (uintptr_t)addr);
-    if(node == NULL) {
+    struct ptree_node *node =
+        ptree_get_max_less_or_eq(&map->mapping_root, (uintptr_t)addr);
+    if(node == NULL)
+    {
         return NULL;
     }
 
-    struct vmem_region_ref *ref = container_of(node, struct vmem_region_ref, map_node);
-    void * end = ref->virt_addr + ref->region->size;
-    if(addr >= end) {
+    struct vmem_region_ref *ref =
+        container_of(node, struct vmem_region_ref, map_node);
+    void *end = ref->virt_addr + ref->region->size;
+    if(addr >= end)
+    {
         return NULL;
     }
     return ref;
 }
 
 int
-vmem_map_map_region(
-        struct vmem_map *map,
-        struct vmem_region *region,
-        void * base)
+vmem_map_map_region(struct vmem_map *map,
+                    struct vmem_region *region,
+                    void *base)
 {
     int res;
-    void * end = base + region->size;
+    void *end = base + region->size;
 
     DEBUG_ASSERT(KERNEL_ADDR(map));
     DEBUG_ASSERT(KERNEL_ADDR(region));
@@ -299,46 +318,59 @@ vmem_map_map_region(
     spin_lock(&map->lock);
 
     order_t region_align_order = vmem_region_alignment(region);
-    if(ptr_orderof(base) < region_align_order) {
+    if(ptr_orderof(base) < region_align_order)
+    {
         spin_unlock(&map->lock);
         spin_unlock(&region->lock);
         return -EINVAL;
     }
 
     { // Checking for overlap
-    struct ptree_node *overlap_check_node = ptree_get_max_less_or_eq(&map->mapping_root, (uintptr_t)end-1);
-    if(overlap_check_node != NULL) {
-        struct vmem_region_ref *overlap_check_region =
-            container_of(overlap_check_node, struct vmem_region_ref, map_node);
-        void * overlap_end = overlap_check_region->virt_addr + overlap_check_region->region->size;
-        if(overlap_end > base) {
-            // We overlap with this region in virtual memory
-            eprintk("Found overlapping region when trying to map vmem_region into vmem_map!\n");
-            res = -EEXIST;
-            goto err0;
+        struct ptree_node *overlap_check_node =
+            ptree_get_max_less_or_eq(&map->mapping_root, (uintptr_t)end - 1);
+        if(overlap_check_node != NULL)
+        {
+            struct vmem_region_ref *overlap_check_region =
+                container_of(overlap_check_node,
+                             struct vmem_region_ref,
+                             map_node);
+            void *overlap_end = overlap_check_region->virt_addr +
+                                overlap_check_region->region->size;
+            if(overlap_end > base)
+            {
+                // We overlap with this region in virtual memory
+                eprintk("Found overlapping region when trying to map "
+                        "vmem_region "
+                        "into vmem_map!\n");
+                res = -EEXIST;
+                goto err0;
+            }
         }
     }
-    }
-    
+
     // We don't overlap any existing region
     region->num_refs += 1;
 
     struct vmem_region_ref *ref = alloc_vmem_region_ref();
-    if(ref == NULL) {
+    if(ref == NULL)
+    {
         eprintk("Failed to allocate vmem_region_ref!\n");
-	res = -ENOMEM;
+        res = -ENOMEM;
         goto err1;
     }
 
     ref->map = map;
     ref->region = region;
-    ref->virt_addr = base; 
+    ref->virt_addr = base;
 
     ilist_push_tail(&region->ref_list, &ref->region_node);
     res = ptree_insert(&map->mapping_root, &ref->map_node, (uintptr_t)base);
-    if(res) {
-        eprintk("Failed to insert vmem_region_ref into vmem_map ptree tree! Region [%p - %p)\n",
-                base, base + region->size);
+    if(res)
+    {
+        eprintk("Failed to insert vmem_region_ref into vmem_map ptree tree! "
+                "Region [%p - %p)\n",
+                base,
+                base + region->size);
         goto err2;
     }
 
@@ -346,7 +378,8 @@ vmem_map_map_region(
     spin_unlock(&region->lock);
 
     res = arch_vmem_map_map_region(map, ref);
-    if(res) {
+    if(res)
+    {
         eprintk("arch_vmem_map_map_region failed! (err=%s)\n", errnostr(res));
         goto err3;
     }
@@ -367,14 +400,13 @@ err0:
 }
 
 int
-vmem_map_unmap_region(
-        struct vmem_map *map,
-        struct vmem_region_ref *ref)
+vmem_map_unmap_region(struct vmem_map *map, struct vmem_region_ref *ref)
 {
     int res = 0;
     res = arch_vmem_map_unmap_region(map, ref);
 
-    if(res) {
+    if(res)
+    {
         return res;
     }
 
@@ -383,7 +415,8 @@ vmem_map_unmap_region(
 
     struct vmem_region *region = ref->region;
 
-    struct ptree_node *removed = ptree_remove(&map->mapping_root, (uintptr_t)ref->virt_addr);
+    struct ptree_node *removed =
+        ptree_remove(&map->mapping_root, (uintptr_t)ref->virt_addr);
     DEBUG_ASSERT(removed == &ref->map_node);
 
     region->num_refs--;
@@ -398,7 +431,7 @@ vmem_map_unmap_region(
 }
 
 int
-vmem_flush_map(struct vmem_map *map) 
+vmem_flush_map(struct vmem_map *map)
 {
     int res;
     spin_lock(&map->lock);
@@ -408,7 +441,7 @@ vmem_flush_map(struct vmem_map *map)
 }
 
 int
-vmem_flush_region(struct vmem_region *region) 
+vmem_flush_region(struct vmem_region *region)
 {
     int res;
     spin_lock(&region->lock);
@@ -418,7 +451,8 @@ vmem_flush_region(struct vmem_region *region)
         struct vmem_region_ref *ref =
             container_of(node, struct vmem_region_ref, region_node);
         res = vmem_flush_map(ref->map);
-        if(res) {
+        if(res)
+        {
             spin_unlock(&region->lock);
             return res;
         }
@@ -429,7 +463,8 @@ vmem_flush_region(struct vmem_region *region)
 
 DECLARE_STATIC_PERCPU_VAR(struct vmem_map *, current_vmem_map);
 
-int vmem_map_activate(struct vmem_map *map)
+int
+vmem_map_activate(struct vmem_map *map)
 {
     int res;
 
@@ -437,7 +472,8 @@ int vmem_map_activate(struct vmem_map *map)
 
     struct vmem_map **current_map = percpu_ptr(percpu_addr(current_vmem_map));
 
-    if(*current_map == map) {
+    if(*current_map == map)
+    {
         return 0;
     }
 
@@ -448,19 +484,25 @@ int vmem_map_activate(struct vmem_map *map)
     // Acquiring both locks is tricky because this section of
     // code can be run both from interrupt context and regular thread context.
     int irq_flags = disable_save_irqs();
-    while(1) {
+    while(1)
+    {
         irq_flags = disable_save_irqs();
-        if(lesser) {
+        if(lesser)
+        {
             int acq = spin_try_lock(&lesser->lock);
-            if(!acq) {
+            if(!acq)
+            {
                 enable_restore_irqs(irq_flags);
                 continue;
             }
         }
-        if(greater) {
+        if(greater)
+        {
             int acq = spin_try_lock(&greater->lock);
-            if(!acq) {
-                if(lesser) {
+            if(!acq)
+            {
+                if(lesser)
+                {
                     spin_unlock(&lesser->lock);
                 }
                 enable_restore_irqs(irq_flags);
@@ -470,26 +512,39 @@ int vmem_map_activate(struct vmem_map *map)
         break;
     }
 
-    dprintk("Activating vmem_map %p on CPU %ld\n",
-            map, (sl_t)current_cpu_id());
+    dprintk("Activating vmem_map %p on CPU %ld\n", map, (sl_t)current_cpu_id());
 
     res = arch_vmem_map_activate(map);
-    if(res) {
-        if(greater) {spin_unlock(&greater->lock);}
-        if(lesser) {spin_unlock(&lesser->lock);}
+    if(res)
+    {
+        if(greater)
+        {
+            spin_unlock(&greater->lock);
+        }
+        if(lesser)
+        {
+            spin_unlock(&lesser->lock);
+        }
         return res;
     }
 
     dprintk("returned from arch_vmem_map_activate\n");
-    
+
     map->active_on++;
-    if(*current_map) {
+    if(*current_map)
+    {
         (*current_map)->active_on--;
     }
     *current_map = map;
 
-    if(greater) {spin_unlock(&greater->lock);}
-    if(lesser) {spin_unlock(&lesser->lock);}
+    if(greater)
+    {
+        spin_unlock(&greater->lock);
+    }
+    if(lesser)
+    {
+        spin_unlock(&lesser->lock);
+    }
 
     enable_restore_irqs(irq_flags);
 
@@ -498,16 +553,19 @@ int vmem_map_activate(struct vmem_map *map)
 
 static struct vmem_map *default_map = NULL;
 
-int vmem_map_deactivate(void) 
+int
+vmem_map_deactivate(void)
 {
     int res = 0;
 
-    struct vmem_map **current_map_slot = percpu_ptr(percpu_addr(current_vmem_map));
+    struct vmem_map **current_map_slot =
+        percpu_ptr(percpu_addr(current_vmem_map));
 
     struct vmem_map *map = *current_map_slot;
 
     spin_lock(&map->lock);
-    if(map != NULL && map != default_map) {
+    if(map != NULL && map != default_map)
+    {
         res = vmem_map_activate(default_map);
     }
     spin_unlock(&map->lock);
@@ -519,60 +577,54 @@ struct vmem_map *
 vmem_map_get_current(void)
 {
     // We assume the caller has dealt with the issue of preemption
-    return *(struct vmem_map**)percpu_ptr(percpu_addr(current_vmem_map));
+    return *(struct vmem_map **)percpu_ptr(percpu_addr(current_vmem_map));
 }
 
 int
-vmem_paged_region_map(
-        struct vmem_region *region,
-        size_t offset,
-        void __phys * phys_addr,
-        size_t size,
-        unsigned long flags)
+vmem_paged_region_map(struct vmem_region *region,
+                      size_t offset,
+                      void __phys *phys_addr,
+                      size_t size,
+                      unsigned long flags)
 {
     int res;
     dprintk("vmem_paged_region_map: offset=0x%llx, paddr=%p, size=0x%llx\n",
             (ull_t)offset,
             phys_addr,
             (ull_t)size);
-    if(offset + size > region->size) {
-        eprintk("vmem_paged_region_map: tried to map outside of region bounds!\n");
+    if(offset + size > region->size)
+    {
+        eprintk("vmem_paged_region_map: tried to map outside of region "
+                "bounds!\n");
         return -ERANGE;
     }
-    if(region->type != VMEM_REGION_TYPE_PAGED) {
-        eprintk("vmem_paged_region_map: region->type != VMEM_REGION_TYPE_PAGED!\n");
+    if(region->type != VMEM_REGION_TYPE_PAGED)
+    {
+        eprintk("vmem_paged_region_map: region->type != "
+                "VMEM_REGION_TYPE_PAGED!\n");
         return -EINVAL;
     }
-    res = arch_vmem_paged_region_map(
-            region,
-            offset,
-            phys_addr,
-            size,
-            flags);
-    if(res) {
-        eprintk("arch_vmem_paged_region_map returned %s\n",
-                errnostr(res));
+    res = arch_vmem_paged_region_map(region, offset, phys_addr, size, flags);
+    if(res)
+    {
+        eprintk("arch_vmem_paged_region_map returned %s\n", errnostr(res));
         return res;
     }
     return 0;
 }
 
 int
-vmem_paged_region_unmap(
-        struct vmem_region *region,
-        size_t offset,
-        size_t size)
+vmem_paged_region_unmap(struct vmem_region *region, size_t offset, size_t size)
 {
-    if(offset + size > region->size) {
+    if(offset + size > region->size)
+    {
         return -ERANGE;
     }
-    if(region->type != VMEM_REGION_TYPE_PAGED) {
+    if(region->type != VMEM_REGION_TYPE_PAGED)
+    {
         return -EINVAL;
     }
-    return arch_vmem_paged_region_unmap(
-            region,
-            offset,
-            size);
+    return arch_vmem_paged_region_unmap(region, offset, size);
 }
 
 /*
@@ -580,28 +632,29 @@ vmem_paged_region_unmap(
  */
 
 struct vmem_map *
-vmem_get_default_map(void) {
+vmem_get_default_map(void)
+{
     return default_map;
 }
 
 int
-vmem_force_mapping(struct vmem_region *region, void * virtual_address)
+vmem_force_mapping(struct vmem_region *region, void *virtual_address)
 {
     int res;
 
-    res = vmem_map_map_region(
-            default_map,
-            region,
-            virtual_address);
+    res = vmem_map_map_region(default_map, region, virtual_address);
 
-    if(res) {
-        eprintk("vmem_force_mapping: Failed to map into the default map! (err=%s)\n",
+    if(res)
+    {
+        eprintk("vmem_force_mapping: Failed to map into the default map! "
+                "(err=%s)\n",
                 errnostr(res));
         return res;
     }
 
     res = thread_force_mapping(region, virtual_address);
-    if(res) {
+    if(res)
+    {
         eprintk("vmem_force_mapping: thread_force_mapping returned (%s)!\n",
                 errnostr(res));
         return res;
@@ -611,23 +664,23 @@ vmem_force_mapping(struct vmem_region *region, void * virtual_address)
 }
 
 int
-vmem_relax_mapping(void * virtual_address)
+vmem_relax_mapping(void *virtual_address)
 {
     return -EUNIMPL;
 }
 
 static int
-vmem_map_unhandled_user_page_fault(
-        struct excp_state *state,
-        void * faulting_address,
-        unsigned long access_flags,
-        struct vmem_region_ref *ref,
-        struct vmem_map *map)
+vmem_map_unhandled_user_page_fault(struct excp_state *state,
+                                   void *faulting_address,
+                                   unsigned long access_flags,
+                                   struct vmem_region_ref *ref,
+                                   struct vmem_map *map)
 {
     int res;
 
     struct process *process = current_process();
-    if(!KERNEL_ADDR(process)) {
+    if(!KERNEL_ADDR(process))
+    {
         eprintk("User Page Fault without a current process!\n");
         return -EINVAL;
     }
@@ -635,7 +688,8 @@ vmem_map_unhandled_user_page_fault(
     // We need to terminate the process
 
 #ifdef CONFIG_DEBUG_TRACK_PROCESS_EXEC
-    eprintk("Terminating PID(%ld) [EXEC(%s)] for Invalid Memory Access (user_ip=%p) (addr=%p)!\n"
+    eprintk("Terminating PID(%ld) [EXEC(%s)] for Invalid Memory Access "
+            "(user_ip=%p) (addr=%p)!\n"
             "\tattempted_access_flags={%s%s%s%s%s}\n",
             (sl_t)process->id,
             process->tracked_exec == NULL ? "???" : process->tracked_exec,
@@ -645,26 +699,23 @@ vmem_map_unhandled_user_page_fault(
             access_flags & PF_FLAG_WRITE ? "[WRITE]" : "",
             access_flags & PF_FLAG_EXEC ? "[EXEC]" : "",
             access_flags & PF_FLAG_USERMODE ? "[USERMODE]" : "",
-            access_flags & PF_FLAG_NOT_PRESENT ? "" : "[PRESENT]"
-            );
+            access_flags & PF_FLAG_NOT_PRESENT ? "" : "[PRESENT]");
     uint8_t inst_bytes[16];
-    void __user * line_start = (void __user *)((uintptr_t)process->user_ip & ~0xF);
+    void __user *line_start =
+        (void __user *)((uintptr_t)process->user_ip & ~0xF);
     size_t line_offset = (size_t)((uintptr_t)process->user_ip & 0xF);
-    res = process_read_usermem(
-            process,
-            inst_bytes,
-            line_start,
-            16);
-    if(res) {
+    res = process_read_usermem(process, inst_bytes, line_start, 16);
+    if(res)
+    {
         eprintk("Failed to read instruction bytes: %s!\n", errnostr(res));
-    } else {
+    }
+    else
+    {
         eprintk("Instruction Bytes: \n");
-        for(size_t i = 0; i < 16; i++) {
+        for(size_t i = 0; i < 16; i++)
+        {
             uint8_t b = inst_bytes[i];
-            eprintk("%s 0x%x\n",
-                    i == line_offset ? ">" : " ",
-                    b
-                    );
+            eprintk("%s 0x%x\n", i == line_offset ? ">" : " ", b);
         }
     }
     arch_excp_dump_state(state, do_printk);
@@ -676,90 +727,108 @@ vmem_map_unhandled_user_page_fault(
 #endif
 
     printk("Sending MEMFAULT to process %ld for unhandled page fault!\n",
-	    (sl_t)process->id);
+           (sl_t)process->id);
     arch_excp_dump_state(state, do_printk);
 
     res = signal_deliver(process, SIGNAL_ID_MEMFAULT, 0);
-    if(res) {
+    if(res)
+    {
         eprintk("Failed to deliver signal to process (err=%s)!\n",
                 errnostr(res));
         res = process_terminate(-EFAULT);
-        if(res) {
-            panic("Failed to terminate process which could not be delivered MEMFAULT (err=%s)\n",
-                    errnostr(res));
+        if(res)
+        {
+            panic("Failed to terminate process which could not be "
+                  "delivered "
+                  "MEMFAULT (err=%s)\n",
+                  errnostr(res));
         }
         thread_abandon(force_resched());
     }
 
     return 0;
 
-//#ifdef CONFIG_DEBUGGING
-//    panic("Panicking on process termination because signals are not implemented yet!\n");
-//#endif
-//
-//    thread_abandon(force_resched());
-//    return 0;
+    // #ifdef CONFIG_DEBUGGING
+    //     panic("Panicking on process termination because signals are not
+    //     implemented yet!\n");
+    // #endif
+    //
+    //     thread_abandon(force_resched());
+    //     return 0;
 }
 
 int
-vmem_map_handle_page_fault(
-        struct excp_state *state,
-        void * faulting_address,
-        unsigned long access_flags,
-        struct vmem_map *map)
+vmem_map_handle_page_fault(struct excp_state *state,
+                           void *faulting_address,
+                           unsigned long access_flags,
+                           struct vmem_map *map)
 {
     DEBUG_ASSERT(KERNEL_ADDR(map));
 
-    struct vmem_region_ref *ref =
-        vmem_map_get_region(map, faulting_address);
+    struct vmem_region_ref *ref = vmem_map_get_region(map, faulting_address);
 
     int res;
 
-    if(ref == NULL) {
+    if(ref == NULL)
+    {
         res = PAGE_FAULT_UNHANDLED;
     }
-    else {
+    else
+    {
         struct vmem_region *region = ref->region;
-        if(region->type != VMEM_REGION_TYPE_PAGED) {
-            eprintk("Page Fault in non-paged vmem region! region=%p ref=%p (unexpected)\n", region, ref);
+        if(region->type != VMEM_REGION_TYPE_PAGED)
+        {
+            eprintk("Page Fault in non-paged vmem region! region=%p "
+                    "ref=%p "
+                    "(unexpected)\n",
+                    region,
+                    ref);
             return -EINVAL;
         }
 
         uintptr_t offset = faulting_address - ref->virt_addr;
-        res = (region->paged.fault_handler)(state, ref, offset, access_flags, region->paged.priv_state);
+        res = (region->paged.fault_handler)(state,
+                                            ref,
+                                            offset,
+                                            access_flags,
+                                            region->paged.priv_state);
     }
 
-    switch(res) {
-        case PAGE_FAULT_HANDLED:
-            return 0;
-        case PAGE_FAULT_UNHANDLED:
+    switch(res)
+    {
+    case PAGE_FAULT_HANDLED:
+        return 0;
+    case PAGE_FAULT_UNHANDLED:
 
-            if(access_flags & PF_FLAG_USERMODE) {
-                res = vmem_map_unhandled_user_page_fault(
-                        state,
-                        faulting_address,
-                        access_flags,
-                        ref,
-                        map);
-                return res; // res should be zero assuming there are no kernel errors,
-                            // even if we end up killing the user-process
-            } else {
-		//arch_dump_vmem_map(do_printk, map);
-                eprintk("Unhandled Kernel Page Fault! (addr=%p) %s%s%s%s%s\n",
+        if(access_flags & PF_FLAG_USERMODE)
+        {
+            res = vmem_map_unhandled_user_page_fault(state,
+                                                     faulting_address,
+                                                     access_flags,
+                                                     ref,
+                                                     map);
+            return res; // res should be zero assuming there are no
+                        // kernel errors, even if we end up killing the
+                        // user-process
+        }
+        else
+        {
+            // arch_dump_vmem_map(do_printk, map);
+            eprintk("Unhandled Kernel Page Fault! (addr=%p) %s%s%s%s%s\n",
                     faulting_address,
                     (access_flags & PF_FLAG_NOT_PRESENT ? "[NOT_PRESENT]" : ""),
                     (access_flags & PF_FLAG_READ ? "[READ]" : ""),
                     (access_flags & PF_FLAG_WRITE ? "[WRITE]" : ""),
                     (access_flags & PF_FLAG_EXEC ? "[EXEC]" : ""),
-                    (access_flags & PF_FLAG_USERMODE ? "[USERMODE]" : "")
-                    );
-                return -EINVAL;
-            }
-             
+                    (access_flags & PF_FLAG_USERMODE ? "[USERMODE]" : ""));
             return -EINVAL;
-        default:
-            eprintk("vmem_region page fault handler returned unknown value (%d)\n", res);
-            return -EINVAL;
+        }
+
+        return -EINVAL;
+    default:
+        eprintk("vmem_region page fault handler returned unknown value (%d)\n",
+                res);
+        return -EINVAL;
     }
 }
 
@@ -767,39 +836,43 @@ static int
 vmem_create_default_kernel_map(void)
 {
     default_map = vmem_map_create();
-    if(default_map == NULL) {
+    if(default_map == NULL)
+    {
         eprintk("OOM Error when initializing default kernel vmem_map!\n");
         return -ENOMEM;
     }
 
     return 0;
 }
-declare_init_desc(dynamic_page, vmem_create_default_kernel_map, "Creating Default Kernel Virtual Memory Mapping");
+declare_init_desc(dynamic_page,
+                  vmem_create_default_kernel_map,
+                  "Creating Default Kernel Virtual Memory Mapping");
 
 int
 vmem_percpu_init(void)
 {
-    if(default_map == NULL) {
+    if(default_map == NULL)
+    {
         return -EDEFER;
     }
     return vmem_map_activate(default_map);
 }
-declare_init_desc(enable_vmem, vmem_percpu_init, "Activating default kernel vmem_map on BSP");
+declare_init_desc(enable_vmem,
+                  vmem_percpu_init,
+                  "Activating default kernel vmem_map on BSP");
 
 int
-vmem_verify_access(
-        void *loc,
-        size_t size,
-        unsigned long flags)
+vmem_verify_access(void *loc, size_t size, unsigned long flags)
 {
     struct vmem_map *map = vmem_map_get_current();
-    if(map == NULL) {
+    if(map == NULL)
+    {
         return 0; // No current vmem map?
     }
-    struct vmem_region_ref *ref =
-        vmem_map_get_region(map, loc);
-    
-    if(ref == NULL) {
+    struct vmem_region_ref *ref = vmem_map_get_region(map, loc);
+
+    if(ref == NULL)
+    {
         return -ENXIO;
     }
 
@@ -807,4 +880,3 @@ vmem_verify_access(
 
     return 0;
 }
-

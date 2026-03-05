@@ -1,12 +1,12 @@
 #ifndef __KANAWHA__IRQ_DOMAIN_H__
 #define __KANAWHA__IRQ_DOMAIN_H__
 
-#include <kanawha/printk.h>
-#include <kanawha/list.h>
-#include <kanawha/rwlock.h>
 #include <kanawha/cpu.h>
-#include <kanawha/percpu.h>
 #include <kanawha/dev/irq.h>
+#include <kanawha/list.h>
+#include <kanawha/percpu.h>
+#include <kanawha/printk.h>
+#include <kanawha/rwlock.h>
 
 struct irq_domain;
 struct irq_desc;
@@ -16,34 +16,40 @@ struct excp_state;
 // "Good" Outcomes for an irq_handler_f
 // irq_handler_f can also return negative errno's if something is very wrong
 //
-// irq_handler_f must also be tolerant to being called spurriously (the IRQ line might be shared)
+// irq_handler_f must also be tolerant to being called spurriously (the IRQ
+// line might be shared)
 
-#define IRQ_NONE 0 // We're not certain if this device was the cause of the IRQ or not (keep looking for other actions)
-#define IRQ_HANDLED 1 // We did it, and we are certain we caused the IRQ (stop handling other actions)
-#define IRQ_UNHANDLED 2 // We are certain this device did not cause the IRQ, (keep looking for other actions)
-typedef int(irq_handler_f)(
-        struct excp_state *excp_state,
-        struct irq_action *action);
+#define IRQ_NONE                                                               \
+    0 // We're not certain if this device was the cause of the IRQ or not (keep
+      // looking for other actions)
+#define IRQ_HANDLED                                                            \
+    1 // We did it, and we are certain we caused the IRQ (stop handling other
+      // actions)
+#define IRQ_UNHANDLED                                                          \
+    2 // We are certain this device did not cause the IRQ, (keep looking for
+      // other actions)
+typedef int(irq_handler_f)(struct excp_state *excp_state,
+                           struct irq_action *action);
 
-typedef struct irq_desc *(irq_resolver_f)(
-        struct excp_state *excp_state,
-        struct irq_action *action);
+typedef struct irq_desc *(irq_resolver_f)(struct excp_state *excp_state,
+                                          struct irq_action *action);
 
-#define IRQ_DESC_FLAG_SPURRIOUS (1ULL<<0)
+#define IRQ_DESC_FLAG_SPURRIOUS (1ULL << 0)
 struct irq_desc
 {
     irq_t irq;
     hwirq_t hwirq;
 
     rlock_t lock;
-   
+
     unsigned long flags;
 
     size_t num_actions;
     ilist_t actions;
 
     // List of incoming direct link actions
-    // (child lock must be acquired before parent if multiple are held concurrently)
+    // (child lock must be acquired before parent if multiple are held
+    // concurrently)
     spinlock_t direct_links_lock;
     ilist_t direct_links;
 
@@ -77,50 +83,63 @@ struct irq_action
     struct irq_desc *desc;
     ilist_node_t list_node;
 
-    enum {
+    enum
+    {
         IRQ_ACTION_HANDLER,
         IRQ_ACTION_DIRECT_LINK,
         IRQ_ACTION_PERCPU_LINK,
         IRQ_ACTION_RESOLVED_LINK,
     } type;
 
-    union {
-      struct {
-          void *priv_data;
-          irq_handler_f *handler;
-      } handler_data;
-      struct {
-          struct irq_desc *link;
-          ilist_node_t incoming_node;
-      } direct_link_data;
-      struct {
-          struct irq_desc __percpu *link;
-      } percpu_link_data;
-      struct {
-          irq_resolver_f *resolver;
-      } resolved_link_data;
-    };  
+    union
+    {
+        struct
+        {
+            void *priv_data;
+            irq_handler_f *handler;
+        } handler_data;
+        struct
+        {
+            struct irq_desc *link;
+            ilist_node_t incoming_node;
+        } direct_link_data;
+        struct
+        {
+            struct irq_desc __percpu *link;
+        } percpu_link_data;
+        struct
+        {
+            irq_resolver_f *resolver;
+        } resolved_link_data;
+    };
 };
 
 struct irq_domain *
 irq_to_domain(irq_t irq);
 
-irq_t irq_domain_revmap(struct irq_domain *domain, hwirq_t hwirq);
+irq_t
+irq_domain_revmap(struct irq_domain *domain, hwirq_t hwirq);
 
-irq_t irq_domain_base_irq(struct irq_domain *domain);
-size_t irq_domain_num_irqs(struct irq_domain *domain);
+irq_t
+irq_domain_base_irq(struct irq_domain *domain);
+size_t
+irq_domain_num_irqs(struct irq_domain *domain);
 
 struct irq_desc *
 irq_to_desc(irq_t irq);
 
 // Only mask/unmask this specific descriptor
-int mask_irq_desc_single(struct irq_desc *desc);
-int unmask_irq_desc_single(struct irq_desc *desc);
+int
+mask_irq_desc_single(struct irq_desc *desc);
+int
+unmask_irq_desc_single(struct irq_desc *desc);
 
 // Mask/unmask this descriptor and traverse incoming direct link actions
 // and mask/unmask the associated irq descriptors too.
-int mask_irq_desc_chain(struct irq_desc *desc);
-int unmask_irq_desc_chain(struct irq_desc *desc);
+int
+mask_irq_desc_chain(struct irq_desc *desc);
+int
+unmask_irq_desc_chain(struct irq_desc *desc);
 
 static inline int
 mask_irq_desc(struct irq_desc *desc)
@@ -141,34 +160,28 @@ unmask_irq_desc(struct irq_desc *desc)
 unsigned long
 irq_desc_status(struct irq_desc *desc);
 
-int trigger_irq_desc(struct irq_desc *desc);
+int
+trigger_irq_desc(struct irq_desc *desc);
 
 // IRQ Actions
 struct irq_action *
-irq_install_handler(
-        struct irq_desc *desc,
-        void *priv_data,
-        irq_handler_f *handler);
+irq_install_handler(struct irq_desc *desc,
+                    void *priv_data,
+                    irq_handler_f *handler);
 
 struct irq_action *
-irq_install_direct_link(
-        struct irq_desc *from,
-        struct irq_desc *to);
+irq_install_direct_link(struct irq_desc *from, struct irq_desc *to);
 
 struct irq_action *
 irq_install_percpu_link(struct irq_desc *desc);
 
 int
-irq_action_set_percpu_link(
-        struct irq_action *action,
-        struct irq_desc *percpu_desc,
-        cpu_id_t to);
+irq_action_set_percpu_link(struct irq_action *action,
+                           struct irq_desc *percpu_desc,
+                           cpu_id_t to);
 
 struct irq_action *
-irq_install_resolved_link(
-        struct irq_desc *desc,
-        irq_resolver_f *resolver);
-        
+irq_install_resolved_link(struct irq_desc *desc, irq_resolver_f *resolver);
 
 // This should "free" the action struct
 int
@@ -182,18 +195,22 @@ handle_irq(struct irq_desc *desc, struct excp_state *excp_state);
 
 // Masking
 static inline int
-mask_irq(irq_t irq) {
+mask_irq(irq_t irq)
+{
     struct irq_desc *desc = irq_to_desc(irq);
-    if(desc == NULL) {
+    if(desc == NULL)
+    {
         return -ENXIO;
     }
     return mask_irq_desc(desc);
 }
 
 static inline int
-unmask_irq(irq_t irq) {
+unmask_irq(irq_t irq)
+{
     struct irq_desc *desc = irq_to_desc(irq);
-    if(desc == NULL) {
+    if(desc == NULL)
+    {
         return -ENXIO;
     }
     return unmask_irq_desc(desc);
@@ -203,16 +220,19 @@ static inline unsigned long
 irq_status(irq_t irq)
 {
     struct irq_desc *desc = irq_to_desc(irq);
-    if(desc == NULL) {
+    if(desc == NULL)
+    {
         return IRQ_STATUS_INVALID;
     }
-    return irq_desc_status(desc);   
+    return irq_desc_status(desc);
 }
 
 static inline int
-trigger_irq(irq_t irq) {
+trigger_irq(irq_t irq)
+{
     struct irq_desc *desc = irq_to_desc(irq);
-    if(desc == NULL) {
+    if(desc == NULL)
+    {
         return -ENXIO;
     }
     return trigger_irq_desc(desc);
@@ -225,22 +245,17 @@ int
 free_irq_domain_linear(struct irq_domain *domain);
 
 int
-irq_domain_set_all_irq_dev(
-        struct irq_domain *domain,
-        struct irq_dev *dev);
+irq_domain_set_all_irq_dev(struct irq_domain *domain, struct irq_dev *dev);
 
 int
-describe_irq_desc(
-        printk_f *printer,
-        struct irq_desc *desc);
+describe_irq_desc(printk_f *printer, struct irq_desc *desc);
 
 static inline int
-describe_irq(
-        printk_f *printer,
-        irq_t irq)
+describe_irq(printk_f *printer, irq_t irq)
 {
     struct irq_desc *desc = irq_to_desc(irq);
-    if(desc == NULL) {
+    if(desc == NULL)
+    {
         return -ENXIO;
     }
     return describe_irq_desc(printer, desc);

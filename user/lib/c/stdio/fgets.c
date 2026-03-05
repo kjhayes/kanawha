@@ -3,25 +3,26 @@
 
 #undef fgets_unlocked
 char *
-fgets_unlocked(
-        char * restrict s,
-        int n,
-        FILE * restrict stream)
+fgets_unlocked(char *restrict s, int n, FILE *restrict stream)
 {
     char *stashed_s = s;
-    while(n>1) {
+    while(n > 1)
+    {
         char c = fgetc(stream);
         *s = c;
-        if(c == EOF) {
+        if(c == EOF)
+        {
             break;
         }
         s++;
         n--;
-        if(c == '\n') {
+        if(c == '\n')
+        {
             break;
         }
     }
-    if(n >= 1) {
+    if(n >= 1)
+    {
         *s = '\0';
     }
     return stashed_s;
@@ -29,10 +30,7 @@ fgets_unlocked(
 
 #undef fgets
 char *
-fgets(
-        char * restrict s,
-        int n,
-        FILE * restrict stream)
+fgets(char *restrict s, int n, FILE *restrict stream)
 {
     char *ret;
     flockfile(stream);
@@ -40,4 +38,3 @@ fgets(
     funlockfile(stream);
     return ret;
 }
-

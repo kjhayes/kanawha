@@ -1,24 +1,27 @@
 
-#include <kanawha/syscall.h>
-#include <kanawha/stddef.h>
-#include <kanawha/types.h>
-#include <kanawha/proc/process.h>
-#include <kanawha/thread.h>
 #include <kanawha/attribute.h>
+#include <kanawha/proc/process.h>
+#include <kanawha/stddef.h>
+#include <kanawha/syscall.h>
+#include <kanawha/thread.h>
+#include <kanawha/types.h>
 
-__noreturn
-int
-syscall_exit(
-        int exitcode)
+__noreturn int
+syscall_exit(int exitcode)
 {
     int res;
 
     struct process *process = current_process();
 
     res = process_terminate(exitcode);
-    if(res) {
-        panic("PID(%ld) syscall_exit: process_terminate(%d) -> %s, user_ip=%p\n",
-              process->id, exitcode, errnostr(res), process->user_ip);
+    if(res)
+    {
+        panic("PID(%ld) syscall_exit: process_terminate(%d) -> %s, "
+              "user_ip=%p\n",
+              process->id,
+              exitcode,
+              errnostr(res),
+              process->user_ip);
     }
 
 #ifdef CONFIG_DEBUG_SYSCALL_EXIT
@@ -27,6 +30,5 @@ syscall_exit(
 
     thread_abandon(force_resched());
     panic("PID(%ld) syscall_exit: thread_abandon returned!\n",
-            (sl_t)process->id);
+          (sl_t)process->id);
 }
-

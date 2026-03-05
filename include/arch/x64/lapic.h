@@ -1,21 +1,21 @@
 #ifndef __KANAWHA__X64_LAPIC_H__
 #define __KANAWHA__X64_LAPIC_H__
 
-#include <kanawha/types.h>
 #include <kanawha/dev/irq.h>
 #include <kanawha/ops.h>
+#include <kanawha/types.h>
 
 #ifdef CONFIG_PCI
 #include <drivers/pci/mailbox.h>
 #endif
 
 #define LAPIC_BASE_ADDR_MSR 0x0000001B
-#define LAPIC_BASE_ADDR_MSR_BSP         (1ULL<<8)
-#define LAPIC_BASE_ADDR_MSR_APIC_ENABLE (1ULL<<11)
+#define LAPIC_BASE_ADDR_MSR_BSP (1ULL << 8)
+#define LAPIC_BASE_ADDR_MSR_APIC_ENABLE (1ULL << 11)
 
 // These are all defined using xAPIC offsets
 // x2APIC will need to translate to MSR(s)
-#define LAPIC_REG_ID      0x20
+#define LAPIC_REG_ID 0x20
 #define LAPIC_REG_VERSION 0x30
 #define LAPIC_REG_TPR 0x80
 #define LAPIC_REG_APR 0x90
@@ -52,31 +52,32 @@
 #define LAPIC_REG_ESR 0x280
 #define LAPIC_REG_LVT_CMCI 0x2F0 // Intel Only
 #define LAPIC_REG_ICR 0x300
-#define LAPIC_REG_ICR_LOW  0x300
+#define LAPIC_REG_ICR_LOW 0x300
 #define LAPIC_REG_ICR_HIGH 0x310 // xAPIC Only
-#define LAPIC_REG_LVT_TIMER   0x320
+#define LAPIC_REG_LVT_TIMER 0x320
 #define LAPIC_REG_LVT_THERMAL 0x330
-#define LAPIC_REG_LVT_PERF    0x340
-#define LAPIC_REG_LVT_LINT0   0x350
-#define LAPIC_REG_LVT_LINT1   0x360
-#define LAPIC_REG_LVT_ERROR   0x370
+#define LAPIC_REG_LVT_PERF 0x340
+#define LAPIC_REG_LVT_LINT0 0x350
+#define LAPIC_REG_LVT_LINT1 0x360
+#define LAPIC_REG_LVT_ERROR 0x370
 #define LAPIC_REG_TMR_ICR 0x380
 #define LAPIC_REG_TMR_CCR 0x390
 #define LAPIC_REG_TMR_DCR 0x3E0
 
-#define LAPIC_MT_FIXED        0b000
+#define LAPIC_MT_FIXED 0b000
 #define LAPIC_MT_LOW_PRIORITY 0b001
-#define LAPIC_MT_SMI          0b010
-#define LAPIC_MT_REMOTE_READ  0b011
-#define LAPIC_MT_NMI          0b100
-#define LAPIC_MT_INIT         0b101
-#define LAPIC_MT_STARTUP      0b110
-#define LAPIC_MT_EXTINT       0b111
+#define LAPIC_MT_SMI 0b010
+#define LAPIC_MT_REMOTE_READ 0b011
+#define LAPIC_MT_NMI 0b100
+#define LAPIC_MT_INIT 0b101
+#define LAPIC_MT_STARTUP 0b110
+#define LAPIC_MT_EXTINT 0b111
 
-#define LAPIC_TRIGGER_MODE_EDGE  0
+#define LAPIC_TRIGGER_MODE_EDGE 0
 #define LAPIC_TRIGGER_MODE_LEVEL 1
 
-enum {
+enum
+{
     LAPIC_LVT_TIMER_HWIRQ = 0,
     LAPIC_LVT_THERMAL_HWIRQ,
     LAPIC_LVT_PERF_HWIRQ,
@@ -85,8 +86,6 @@ enum {
     LAPIC_LVT_ERROR_HWIRQ,
     LAPIC_LVT_CMCI_HWIRQ,
 };
-
-
 
 struct x64_cpu;
 
@@ -97,36 +96,36 @@ typedef uint32_t apic_id_t;
  * of the current processor (and hence preemption is disabled somehow)
  */
 
-#define LAPIC_READ_REG_SIG(RET,ARG,...)\
-RET(uint64_t)\
-ARG(size_t, reg)
+#define LAPIC_READ_REG_SIG(RET, ARG, ...)                                      \
+    RET(uint64_t)                                                              \
+    ARG(size_t, reg)
 
-#define LAPIC_WRITE_REG_SIG(RET,ARG,...)\
-RET(int)\
-ARG(size_t, reg)\
-ARG(uint64_t, val)
+#define LAPIC_WRITE_REG_SIG(RET, ARG, ...)                                     \
+    RET(int)                                                                   \
+    ARG(size_t, reg)                                                           \
+    ARG(uint64_t, val)
 
-#define LAPIC_READ_ID_SIG(RET,ARG,...)\
-RET(apic_id_t)
+#define LAPIC_READ_ID_SIG(RET, ARG, ...) RET(apic_id_t)
 
-#define LAPIC_SEND_IPI_SIG(RET,ARG,...)\
-RET(int)\
-ARG(apic_id_t, target)\
-ARG(uint8_t, vector)\
-ARG(int, message_type)\
-ARG(int, logical)\
-ARG(int, assert)\
-ARG(int, trigger_mode)\
+#define LAPIC_SEND_IPI_SIG(RET, ARG, ...)                                      \
+    RET(int)                                                                   \
+    ARG(apic_id_t, target)                                                     \
+    ARG(uint8_t, vector)                                                       \
+    ARG(int, message_type)                                                     \
+    ARG(int, logical)                                                          \
+    ARG(int, assert)                                                           \
+    ARG(int, trigger_mode)
 
-#define LAPIC_OP_LIST(OP, ...)\
-OP(read_reg, LAPIC_READ_REG_SIG, ##__VA_ARGS__)\
-OP(write_reg, LAPIC_WRITE_REG_SIG, ##__VA_ARGS__)\
-OP(read_id, LAPIC_READ_ID_SIG, ##__VA_ARGS__)\
-OP(send_ipi, LAPIC_SEND_IPI_SIG, ##__VA_ARGS__)\
+#define LAPIC_OP_LIST(OP, ...)                                                 \
+    OP(read_reg, LAPIC_READ_REG_SIG, ##__VA_ARGS__)                            \
+    OP(write_reg, LAPIC_WRITE_REG_SIG, ##__VA_ARGS__)                          \
+    OP(read_id, LAPIC_READ_ID_SIG, ##__VA_ARGS__)                              \
+    OP(send_ipi, LAPIC_SEND_IPI_SIG, ##__VA_ARGS__)
 
 struct lapic;
-struct lapic_ops {
-DECLARE_OP_LIST_PTRS(LAPIC_OP_LIST, struct lapic *)
+struct lapic_ops
+{
+    DECLARE_OP_LIST_PTRS(LAPIC_OP_LIST, struct lapic *)
 };
 
 struct lapic
@@ -146,21 +145,19 @@ struct lapic
 #endif
 };
 
-DEFINE_OP_LIST_WRAPPERS(
-        LAPIC_OP_LIST,
-        static inline,
-        /* No Prefix */,
-        lapic,
-        OPS_STRUCT_PTR_ACCESSOR,
-        SELF_ACCESSOR)
+DEFINE_OP_LIST_WRAPPERS(LAPIC_OP_LIST,
+                        static inline,
+                        /* No Prefix */,
+                        lapic,
+                        OPS_STRUCT_PTR_ACCESSOR,
+                        SELF_ACCESSOR)
 
 #undef LAPIC_READ_REG_SIG
 #undef LAPIC_WRITE_REG_SIG
 #undef LAPIC_OP_LIST
 
 int
-bsp_register_cpu_lapic(
-        struct x64_cpu *cpu);
+bsp_register_cpu_lapic(struct x64_cpu *cpu);
 
 int
 lapic_init_current(void);

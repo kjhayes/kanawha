@@ -1,10 +1,10 @@
 #ifndef __KANAWHA__ACPI_INTERP_STATE_H__
 #define __KANAWHA__ACPI_INTERP_STATE_H__
 
-#include <kanawha/list.h>
-#include <kanawha/errno.h>
 #include <acpi/namespace.h>
 #include <acpi/object.h>
+#include <kanawha/errno.h>
+#include <kanawha/list.h>
 
 struct acpi_interp_frame
 {
@@ -24,37 +24,32 @@ struct acpi_interp_state
 };
 
 int
-acpi_interp_state_init(
-	struct acpi_interp_state *state);
+acpi_interp_state_init(struct acpi_interp_state *state);
 
-#define ACPI_INTERP_PUSH_FRAME_LOCAL    (0)
+#define ACPI_INTERP_PUSH_FRAME_LOCAL (0)
 #define ACPI_INTERP_PUSH_FRAME_DEFERRED (1)
 
 int
-acpi_interp_push_frame(
-	struct acpi_interp_state *state,
-	struct acpi_node *scope,
-	void *aml_data,
-	size_t aml_len,
-	unsigned long flags);
+acpi_interp_push_frame(struct acpi_interp_state *state,
+                       struct acpi_node *scope,
+                       void *aml_data,
+                       size_t aml_len,
+                       unsigned long flags);
 
 int
-acpi_interp_push_inner_frame(
-	struct acpi_interp_state *state,
-	struct acpi_node *scope,
-	size_t base_rip,
-	size_t len,
-	unsigned long flags);
+acpi_interp_push_inner_frame(struct acpi_interp_state *state,
+                             struct acpi_node *scope,
+                             size_t base_rip,
+                             size_t len,
+                             unsigned long flags);
 
 int
-acpi_interp_pop_frame(
-	struct acpi_interp_state *state,
-	struct acpi_obj *ret_obj,
-	unsigned long flags);
+acpi_interp_pop_frame(struct acpi_interp_state *state,
+                      struct acpi_obj *ret_obj,
+                      unsigned long flags);
 
 static inline size_t
-acpi_interp_bytes_left_in_frame(
-	struct acpi_interp_state *state)
+acpi_interp_bytes_left_in_frame(struct acpi_interp_state *state)
 {
     DEBUG_ASSERT(KERNEL_ADDR(state->frame));
     DEBUG_ASSERT(state->frame->rip <= state->frame->aml_len);
@@ -62,8 +57,7 @@ acpi_interp_bytes_left_in_frame(
 }
 
 static inline void *
-acpi_interp_current_ip(
-	struct acpi_interp_state *state)
+acpi_interp_current_ip(struct acpi_interp_state *state)
 {
     DEBUG_ASSERT(KERNEL_ADDR(state->frame));
     DEBUG_ASSERT(state->frame->rip <= state->frame->aml_len);
@@ -71,9 +65,7 @@ acpi_interp_current_ip(
 }
 
 static inline void
-acpi_interp_advance_frame(
-	struct acpi_interp_state *state,
-	size_t amt)
+acpi_interp_advance_frame(struct acpi_interp_state *state, size_t amt)
 {
     DEBUG_ASSERT(KERNEL_ADDR(state->frame));
     DEBUG_ASSERT(state->frame->rip + amt <= state->frame->aml_len);
@@ -81,20 +73,18 @@ acpi_interp_advance_frame(
 }
 
 static inline struct acpi_node *
-acpi_interp_current_scope(
-	struct acpi_interp_state *state)
+acpi_interp_current_scope(struct acpi_interp_state *state)
 {
     DEBUG_ASSERT(KERNEL_ADDR(state->frame));
     return state->frame->scope;
 }
 
 static inline int
-acpi_interp_set_scope(
-	struct acpi_interp_state *state,
-	struct acpi_node *scope)
+acpi_interp_set_scope(struct acpi_interp_state *state, struct acpi_node *scope)
 {
-    if(state->frame == NULL) {
-	return -EINVAL;
+    if(state->frame == NULL)
+    {
+        return -EINVAL;
     }
     acpi_node_get(scope);
     struct acpi_node *old_scope = state->frame->scope;

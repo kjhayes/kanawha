@@ -1,37 +1,40 @@
 
-#include <kanawha/scheduler.h>
-#include <kanawha/stddef.h>
-#include <kanawha/kmalloc.h>
-#include <kanawha/string.h>
-#include <kanawha/percpu.h>
-#include <kanawha/init.h>
-#include <kanawha/time.h>
-#include <kanawha/timer.h>
-#include <kanawha/xcall.h>
-#include <kanawha/vmem.h>
 #include <kanawha/assert.h>
 #include <kanawha/event.h>
+#include <kanawha/init.h>
+#include <kanawha/kmalloc.h>
+#include <kanawha/percpu.h>
+#include <kanawha/scheduler.h>
+#include <kanawha/stddef.h>
+#include <kanawha/string.h>
+#include <kanawha/time.h>
+#include <kanawha/timer.h>
+#include <kanawha/vmem.h>
+#include <kanawha/xcall.h>
 
 #define TIMESLICE_MS 100
 
-struct rr_thread {
+struct rr_thread
+{
     struct thread_state *state;
 
     ilist_node_t list_node;
 };
 
-struct rr_scheduler {
+struct rr_scheduler
+{
     struct scheduler sched;
 
     spinlock_t list_lock;
     size_t num_threads;
     ilist_t thread_list;
 
-    struct rr_thread * __percpu *current_rr_thread;
+    struct rr_thread *__percpu *current_rr_thread;
 };
 
 static void
-rr_sched_kick_xcall(void *in) {
+rr_sched_kick_xcall(void *in)
+{
     dprintk("rr_sched_kick_xcall\n");
 }
 
@@ -44,23 +47,25 @@ rr_sched_kick(void *in)
     dprintk("rr_sched_kick\n");
 
     res = xcall_broadcast(rr_sched_kick_xcall, NULL);
-    if(res) {
-        eprintk("rr_sched_kick broadcast failed (err=%s)\n",
-                errnostr(res));
+    if(res)
+    {
+        eprintk("rr_sched_kick broadcast failed (err=%s)\n", errnostr(res));
     }
 }
 
 static struct scheduler *
-rr_sched_alloc_instance(
-        struct scheduler_type *type)
+rr_sched_alloc_instance(struct scheduler_type *type)
 {
-    struct rr_scheduler *sched = kzmalloc(sizeof(struct rr_scheduler), KM_KERNEL);
-    if(sched == NULL) {
+    struct rr_scheduler *sched =
+        kzmalloc(sizeof(struct rr_scheduler), KM_KERNEL);
+    if(sched == NULL)
+    {
         return NULL;
     }
 
-    sched->current_rr_thread = percpu_calloc(sizeof(struct rr_thread*));
-    if(sched->current_rr_thread == PERCPU_NULL) {
+    sched->current_rr_thread = percpu_calloc(sizeof(struct rr_thread *));
+    if(sched->current_rr_thread == PERCPU_NULL)
+    {
         kfree(sched);
         return NULL;
     }
@@ -69,15 +74,15 @@ rr_sched_alloc_instance(
     ilist_init(&sched->thread_list);
     spinlock_init(&sched->list_lock);
 
-    struct periodic_event *event
-        = create_periodic_event(
-            msec_to_duration(TIMESLICE_MS),
-            (void*)sched,
-            rr_sched_kick);
+    struct periodic_event *event =
+        create_periodic_event(msec_to_duration(TIMESLICE_MS),
+                              (void *)sched,
+                              rr_sched_kick);
 
-    if(event == NULL) {
+    if(event == NULL)
+    {
         eprintk("Failed to set rr_sched periodic kick!\n");
-        percpu_free(sched->current_rr_thread, sizeof(struct rr_thread*));
+        percpu_free(sched->current_rr_thread, sizeof(struct rr_thread *));
         kfree(sched);
         return NULL;
     }
@@ -86,14 +91,12 @@ rr_sched_alloc_instance(
 }
 
 static int
-rr_sched_free_instance(
-        struct scheduler_type *type,
-        struct scheduler *sched)
+rr_sched_free_instance(struct scheduler_type *type, struct scheduler *sched)
 {
     struct rr_scheduler *rr_sched =
         container_of(sched, struct rr_scheduler, sched);
 
-    percpu_free(rr_sched->current_rr_thread, sizeof(struct rr_thread*));
+    percpu_free(rr_sched->current_rr_thread, sizeof(struct rr_thread *));
     kfree(rr_sched);
 
     return 0;
@@ -104,35 +107,46 @@ rr_sched_force_resched(struct scheduler *sched)
 {
     struct rr_scheduler *rr_sched =
         container_of(sched, struct rr_scheduler, sched);
-   
+
     int irq_flags = spin_lock_irq_save(&rr_sched->list_lock);
 
-    if(rr_sched->num_threads == 0) {
+    if(rr_sched->num_threads == 0)
+    {
         spin_unlock_irq_restore(&rr_sched->list_lock, irq_flags);
         dprintk("rr_sched_force_resched without any threads!\n");
         return NULL;
     }
 
-
-    struct rr_thread **current_ptr = (struct rr_thread**)percpu_ptr(rr_sched->current_rr_thread);
+    struct rr_thread **current_ptr =
+        (struct rr_thread **)percpu_ptr(rr_sched->current_rr_thread);
     struct rr_thread *current = *current_ptr;
-    struct rr_thread *running  = current;
+    struct rr_thread *running = current;
     struct rr_thread *next = NULL;
 
-    do {
-        if(current == NULL || current->list_node.next == &rr_sched->thread_list) {
-            next = container_of(rr_sched->thread_list.next, struct rr_thread, list_node);
-        } else {
-            next = container_of(current->list_node.next, struct rr_thread, list_node);
+    do
+    {
+        if(current == NULL || current->list_node.next == &rr_sched->thread_list)
+        {
+            next = container_of(rr_sched->thread_list.next,
+                                struct rr_thread,
+                                list_node);
+        }
+        else
+        {
+            next = container_of(current->list_node.next,
+                                struct rr_thread,
+                                list_node);
         }
 
-        if(next == running) {
+        if(next == running)
+        {
             *current_ptr = NULL; // we are not running any rr_thread
             spin_unlock_irq_restore(&rr_sched->list_lock, irq_flags);
             return NULL;
         }
 
-        if(running == NULL) {
+        if(running == NULL)
+        {
             running = next;
         }
 
@@ -142,12 +156,14 @@ rr_sched_force_resched(struct scheduler *sched)
         DEBUG_ASSERT(KERNEL_ADDR(current->state));
 
         int res = thread_schedule(current->state);
-        if(res) {
+        if(res)
+        {
             continue;
-        } else {
+        }
+        else
+        {
             break;
         }
-
     } while(1);
 
     *current_ptr = current;
@@ -165,17 +181,15 @@ rr_sched_query_resched(struct scheduler *sched)
 }
 
 static int
-rr_sched_add_thread(
-        struct scheduler *sched,
-        struct thread_state *state)
+rr_sched_add_thread(struct scheduler *sched, struct thread_state *state)
 {
-    dprintk("rr_sched_add_thread(%ld)\n",
-            state->id);
+    dprintk("rr_sched_add_thread(%ld)\n", state->id);
     struct rr_scheduler *rr_sched =
         container_of(sched, struct rr_scheduler, sched);
 
     struct rr_thread *thread = kzmalloc(sizeof(struct rr_thread), KM_KERNEL);
-    if(thread == NULL) {
+    if(thread == NULL)
+    {
         return -ENOMEM;
     }
 
@@ -189,28 +203,28 @@ rr_sched_add_thread(
 }
 
 static int
-rr_sched_remove_thread(
-        struct scheduler *sched,
-        struct thread_state *state)
+rr_sched_remove_thread(struct scheduler *sched, struct thread_state *state)
 {
-    dprintk("rr_sched_remove_thread(%ld)\n",
-            state->id);
+    dprintk("rr_sched_remove_thread(%ld)\n", state->id);
 
     struct rr_scheduler *rr_sched =
         container_of(sched, struct rr_scheduler, sched);
 
-
     int irq_flags = spin_lock_irq_save(&rr_sched->list_lock);
 
     ilist_node_t *node;
-    ilist_for_each(node, &rr_sched->thread_list) {
+    ilist_for_each(node, &rr_sched->thread_list)
+    {
         struct rr_thread *thread =
             container_of(node, struct rr_thread, list_node);
-        if(thread->state == state) {
+        if(thread->state == state)
+        {
             ilist_remove(&rr_sched->thread_list, &thread->list_node);
             rr_sched->num_threads--;
-            struct rr_thread **current_ptr = (struct rr_thread**)percpu_ptr(rr_sched->current_rr_thread);
-            if(*current_ptr && (*current_ptr)->state == state) {
+            struct rr_thread **current_ptr =
+                (struct rr_thread **)percpu_ptr(rr_sched->current_rr_thread);
+            if(*current_ptr && (*current_ptr)->state == state)
+            {
                 *current_ptr = NULL;
             }
             spin_unlock_irq_restore(&rr_sched->list_lock, irq_flags);
@@ -223,27 +237,23 @@ rr_sched_remove_thread(
 }
 
 static int
-rr_sched_debug_dump(
-        struct scheduler *scheduler,
-        printk_f *printer)
+rr_sched_debug_dump(struct scheduler *scheduler, printk_f *printer)
 {
     struct rr_scheduler *sched =
         container_of(scheduler, struct rr_scheduler, sched);
     spin_lock(&sched->list_lock);
     ilist_node_t *node;
-    ilist_for_each(node, &sched->thread_list) {
+    ilist_for_each(node, &sched->thread_list)
+    {
         struct rr_thread *thread =
             container_of(node, struct rr_thread, list_node);
-        (*printer)("RR-THREAD(%ld)\n",
-                (sl_t)thread->state->id
-                );
+        (*printer)("RR-THREAD(%ld)\n", (sl_t)thread->state->id);
     }
     spin_unlock(&sched->list_lock);
     return 0;
 }
 
-static struct scheduler_type
-rr_sched_type = {
+static struct scheduler_type rr_sched_type = {
     .name = "rr_sched",
     .type_ops.alloc_instance = rr_sched_alloc_instance,
     .type_ops.free_instance = rr_sched_free_instance,
@@ -257,8 +267,8 @@ rr_sched_type = {
 };
 
 static int
-rr_sched_register(void) {
+rr_sched_register(void)
+{
     return register_scheduler_type(&rr_sched_type);
 }
 declare_init(dynamic, rr_sched_register);
-

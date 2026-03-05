@@ -16,16 +16,12 @@ fb_dev_deinit(struct fb_dev *dev)
     return 0;
 }
 
-DEFINE_DEV_TYPE(
-    fb_dev,
-    dev,
-    fb_dev_init,
-    fb_dev_deinit
-    );
+DEFINE_DEV_TYPE(fb_dev, dev, fb_dev_init, fb_dev_deinit);
 
 #ifdef CONFIG_LOG_FBDEV_REGISTRY_ON_LAUNCH
 static int
-dump_fb_dev_on_launch(void) {
+dump_fb_dev_on_launch(void)
+{
     return dump_fb_dev_registry(do_printk);
 }
 declare_init(launch, dump_fb_dev_on_launch);

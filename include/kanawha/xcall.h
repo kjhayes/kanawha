@@ -4,29 +4,39 @@
 #include <kanawha/cpu.h>
 #include <kanawha/irq.h>
 
-typedef void(xcall_f)(void*);
+typedef void(xcall_f)(void *);
 
-int xcall_queue(cpu_id_t cpu, xcall_f *func, void *arg);
-int xcall_notify(cpu_id_t cpu);
+int
+xcall_queue(cpu_id_t cpu, xcall_f *func, void *arg);
+int
+xcall_notify(cpu_id_t cpu);
 
-static inline
-int xcall_run(cpu_id_t cpu, xcall_f *func, void *arg)
+static inline int
+xcall_run(cpu_id_t cpu, xcall_f *func, void *arg)
 {
     int res;
     res = xcall_queue(cpu, func, arg);
-    if(res) {return res;}
+    if(res)
+    {
+        return res;
+    }
     res = xcall_notify(cpu);
-    if(res) {return res;}
+    if(res)
+    {
+        return res;
+    }
     return 0;
 }
 
-static inline
-int xcall_broadcast(xcall_f *func, void *arg)
+static inline int
+xcall_broadcast(xcall_f *func, void *arg)
 {
     int res = 0;
-    for(cpu_id_t cpu = 0; cpu < total_num_cpus(); cpu++) {
-        res = xcall_run(cpu, func, arg); 
-        if(res) {
+    for(cpu_id_t cpu = 0; cpu < total_num_cpus(); cpu++)
+    {
+        res = xcall_run(cpu, func, arg);
+        if(res)
+        {
             eprintk("xcall_broadcast: failed to run on CPU %ld\n", (sl_t)cpu);
             continue;
         }

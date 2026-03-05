@@ -1,9 +1,9 @@
 
-#include <glob.h>
 #include <errno.h>
+#include <glob.h>
 
-void globfree(glob_t *pglob)
+void
+globfree(glob_t *pglob)
 {
     errno = -EUNIMPL;
 }
-

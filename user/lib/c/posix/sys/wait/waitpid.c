@@ -1,36 +1,34 @@
 
-#include <sys/wait.h>
+#include <errno.h>
 #include <kanawha/process.h>
 #include <kanawha/sys-wrappers.h>
-#include <errno.h>
 #include <stdio.h>
+#include <sys/wait.h>
 
 pid_t
-waitpid(
-        pid_t pid,
-        int *status_loc,
-        int options)
+waitpid(pid_t pid, int *status_loc, int options)
 {
     int res;
 
     unsigned long reap_flags = 0;
-    if(options & WNOHANG) {
+    if(options & WNOHANG)
+    {
         reap_flags |= REAP_NON_BLOCKING;
     }
 
-    if(pid <= 0) {
+    if(pid <= 0)
+    {
         reap_flags |= REAP_ANY;
     }
 
     int child_status;
     pid_t child_pid = pid;
 
-    res = kanawha_sys_reap(
-            reap_flags,
-            &child_pid,
-            &child_status);
-    if(res) {
-        if(res == -EWOULDBLOCK) {
+    res = kanawha_sys_reap(reap_flags, &child_pid, &child_status);
+    if(res)
+    {
+        if(res == -EWOULDBLOCK)
+        {
             return 0;
         }
         errno = res;
@@ -38,10 +36,10 @@ waitpid(
     }
 
     // We did it!
-    if(status_loc != NULL) {
+    if(status_loc != NULL)
+    {
         *status_loc = child_status;
     }
 
     return child_pid;
 }
-

@@ -27,15 +27,9 @@ int
 timer_clear(struct timer *timer);
 
 int
-timer_set_periodic(
-        struct timer *timer,
-        duration_t period,
-        alarm_f *callback);
+timer_set_periodic(struct timer *timer, duration_t period, alarm_f *callback);
 
 int
-timer_set_oneshot(
-        struct timer *timer,
-        duration_t wait_for,
-        alarm_f *callback);
+timer_set_oneshot(struct timer *timer, duration_t wait_for, alarm_f *callback);
 
 #endif

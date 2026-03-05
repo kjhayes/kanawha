@@ -2,21 +2,23 @@
 #define __KANAWHA__ARCH_H__
 
 #include <kanawha/errno.h>
-#include <kanawha/types.h>
 #include <kanawha/init.h>
+#include <kanawha/types.h>
 
 /*
  * Generic "architecture" description enums
  */
 
-typedef enum arch {
+typedef enum arch
+{
     ARCH_UNKNOWN = 0,
-    ARCH_X86, // 32-bit
-    ARCH_X64, // 64-bit
+    ARCH_X86,     // 32-bit
+    ARCH_X64,     // 64-bit
     ARCH_RISCV64, // 64-bit
 } arch_t;
 
-typedef enum endian {
+typedef enum endian
+{
     ENDIAN_UNKNOWN = 0,
     ENDIAN_LITTLE,
     ENDIAN_BIG,
@@ -40,22 +42,30 @@ const static arch_t kernel_arch = KERNEL_ARCH;
 #ifndef KERNEL_ENDIANNESS
 static endian_t kernel_endian = ENDIAN_UNKNOWN;
 static int
-detect_kernel_endianness(void) {
+detect_kernel_endianness(void)
+{
     uint16_t val = 0x1234;
-    uint8_t *val_ptr = (uint8_t*)&val;
+    uint8_t *val_ptr = (uint8_t *)&val;
     uint8_t first_byte = *val_ptr;
 
-    if(first_byte == 0x34) {
+    if(first_byte == 0x34)
+    {
         kernel_endian = ENDIAN_LITTLE;
-    } else if(first_byte == 0x12) {
+    }
+    else if(first_byte == 0x12)
+    {
         kernel_endian = ENDIAN_BIG;
-    } else {
+    }
+    else
+    {
         kernel_endian = ENDIAN_UNKNOWN;
         return -EINVAL;
     }
     return 0;
 }
-declare_init_desc(static, detect_kernel_endianness, "Detecting Kernel Endianness");
+declare_init_desc(static,
+                  detect_kernel_endianness,
+                  "Detecting Kernel Endianness");
 #else
 const static endian_t kernel_endian = KERNEL_ENDIANNESS;
 #undef KENREL_ENDIANNESS

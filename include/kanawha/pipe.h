@@ -1,9 +1,9 @@
 #ifndef __KANAWHA__PIPE_H__
 #define __KANAWHA__PIPE_H__
 
+#include <kanawha/lock.h>
 #include <kanawha/ptree.h>
 #include <kanawha/waitqueue.h>
-#include <kanawha/lock.h>
 
 #include <kanawha/fs/node.h>
 

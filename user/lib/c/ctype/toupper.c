@@ -1,9 +1,11 @@
 
 #include <ctype.h>
 
-int toupper(int i)
+int
+toupper(int i)
 {
-    if(!islower(i)) {
+    if(!islower(i))
+    {
         return i;
     }
 

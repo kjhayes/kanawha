@@ -1,8 +1,8 @@
 #ifndef __KANAWHA_TYPES_H__
 #define __KANAWHA_TYPES_H__
 
-#include <stdint.h>
 #include <kanawha/uapi/types.h>
+#include <stdint.h>
 
 #ifdef CONFIG_TOOLCHAIN_SUPPORTS_BITWISE_ATTRIBUTE
 #define __bitwise __attribute__((bitwise))
@@ -11,13 +11,14 @@
 #endif
 
 #undef NULL
-#define NULL ((void*)0)
+#define NULL ((void *)0)
 
-#define PAGE_SIZE_4KB (1ULL<<12)
-#define PAGE_SIZE_2MB (1ULL<<20)
-#define PAGE_SIZE_1GB (1ULL<<30)
+#define PAGE_SIZE_4KB (1ULL << 12)
+#define PAGE_SIZE_2MB (1ULL << 20)
+#define PAGE_SIZE_1GB (1ULL << 30)
 
-_Static_assert(sizeof(void*) <= sizeof(uintptr_t), "sizeof(void*) is greater than sizeof(uintptr_t)!");
+_Static_assert(sizeof(void *) <= sizeof(uintptr_t),
+               "sizeof(void*) is greater than sizeof(uintptr_t)!");
 
 typedef unsigned int order_t;
 

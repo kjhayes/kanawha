@@ -7,4 +7,3 @@ dlopen(const char *file, int mode)
 {
     return NULL;
 }
-

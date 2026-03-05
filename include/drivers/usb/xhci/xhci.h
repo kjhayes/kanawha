@@ -1,13 +1,13 @@
 #ifndef __KANAWHA__XHCI_H__
 #define __KANAWHA__XHCI_H__
 
-#include <kanawha/types.h>
-#include <drivers/pci/pci.h>
 #include <drivers/pci/bar.h>
-#include <kanawha/dma.h>
+#include <drivers/pci/pci.h>
 #include <drivers/usb/xhci/command.h>
 #include <drivers/usb/xhci/event.h>
 #include <drivers/usb/xhci/port.h>
+#include <kanawha/dma.h>
+#include <kanawha/types.h>
 
 struct usb_xhci_device;
 

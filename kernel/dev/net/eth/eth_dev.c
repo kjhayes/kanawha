@@ -1,18 +1,17 @@
 
 #include <kanawha/dev/net/eth.h>
-#include <kanawha/registry.h>
 #include <kanawha/init.h>
+#include <kanawha/registry.h>
 
 struct eth_dev_recv_hook
 {
     struct eth_dev *dev;
     void *priv_state;
-    int(*on_recv)(
-            struct eth_dev *dev,
-            struct eth_frame *frame,
-            size_t framelen,
-            unsigned long flags,
-            void *priv_state);
+    int (*on_recv)(struct eth_dev *dev,
+                   struct eth_frame *frame,
+                   size_t framelen,
+                   unsigned long flags,
+                   void *priv_state);
     ilist_node_t list_node;
 };
 
@@ -30,7 +29,8 @@ eth_dev_deinit(struct eth_dev *dev)
 {
     irq_lock_acquire(&dev->recv_callback_lock);
     ilist_node_t *list_node;
-    ilist_for_each(list_node, &dev->recv_callback_list) {
+    ilist_for_each(list_node, &dev->recv_callback_list)
+    {
         struct eth_dev_recv_hook *hook =
             container_of(list_node, struct eth_dev_recv_hook, list_node);
         hook->dev = NULL;
@@ -43,31 +43,31 @@ eth_dev_deinit(struct eth_dev *dev)
 
 // External
 struct eth_dev_recv_hook *
-hook_eth_dev_receive(
-        struct eth_dev *dev,
-        int(*on_recv)(
-            struct eth_dev *dev,
-            struct eth_frame *frame,
-            size_t framelen,
-            unsigned long flags,
-            void *priv_state),
-        void *priv_state
-        )
+hook_eth_dev_receive(struct eth_dev *dev,
+                     int (*on_recv)(struct eth_dev *dev,
+                                    struct eth_frame *frame,
+                                    size_t framelen,
+                                    unsigned long flags,
+                                    void *priv_state),
+                     void *priv_state)
 {
     int res;
 
     struct eth_dev_recv_hook *hook;
     hook = kmalloc(sizeof(*hook), KM_KERNEL);
-    if(hook == NULL) {
+    if(hook == NULL)
+    {
         return NULL;
     }
     hook->on_recv = on_recv;
     hook->priv_state = priv_state;
 
     irq_lock_acquire(&dev->recv_callback_lock);
-    if(ilist_empty(&dev->recv_callback_list)) {
+    if(ilist_empty(&dev->recv_callback_list))
+    {
         res = eth_dev_begin_recv(dev, 0);
-        if(res) {
+        if(res)
+        {
             irq_lock_release(&dev->recv_callback_lock);
             kfree(hook);
             return NULL;
@@ -81,22 +81,29 @@ hook_eth_dev_receive(
 }
 
 int
-unhook_eth_dev_receive(
-        struct eth_dev_recv_hook *hook)
+unhook_eth_dev_receive(struct eth_dev_recv_hook *hook)
 {
     int res;
 
-    if(hook->dev != NULL) {
+    if(hook->dev != NULL)
+    {
         irq_lock_acquire(&hook->dev->recv_callback_lock);
-        if(hook->dev != NULL) {
+        if(hook->dev != NULL)
+        {
             ilist_remove(&hook->dev->recv_callback_list, &hook->list_node);
-            if(ilist_empty(&hook->dev->recv_callback_list)) {
+            if(ilist_empty(&hook->dev->recv_callback_list))
+            {
                 res = eth_dev_end_recv(hook->dev, 0);
-                if(res) {
-                    // Uh-Oh (Not necessarily panic worthy though)
-                    wprintk("Failed to stop receiving on ethernet device \"%s\"!\n",
+                if(res)
+                {
+                    // Uh-Oh (Not necessarily panic worthy
+                    // though)
+                    wprintk("Failed to stop receiving on "
+                            "ethernet device \"%s\"!\n",
                             eth_dev_get_name(hook->dev));
-                } else {
+                }
+                else
+                {
                     hook->dev->receiving = 0;
                 }
             }
@@ -111,31 +118,30 @@ unhook_eth_dev_receive(
 
 // Internal
 int
-eth_dev_internal_on_recv(
-        struct eth_dev *dev,
-        struct eth_frame *frame,
-        size_t framelen,
-        unsigned long flags)
+eth_dev_internal_on_recv(struct eth_dev *dev,
+                         struct eth_frame *frame,
+                         size_t framelen,
+                         unsigned long flags)
 {
     irq_lock_acquire(&dev->recv_callback_lock);
     ilist_node_t *list_node;
-    ilist_for_each(list_node, &dev->recv_callback_list) {
+    ilist_for_each(list_node, &dev->recv_callback_list)
+    {
         struct eth_dev_recv_hook *hook =
             container_of(list_node, struct eth_dev_recv_hook, list_node);
 
         DEBUG_ASSERT(hook->dev == dev);
         DEBUG_ASSERT(KERNEL_ADDR(hook->on_recv));
 
-        int hook_ret = (*hook->on_recv)(
-                dev,
-                frame,
-                framelen,
-                flags,
-                hook->priv_state);
+        int hook_ret =
+            (*hook->on_recv)(dev, frame, framelen, flags, hook->priv_state);
 
-        if(hook_ret == ETH_RECV_IGNORE || hook_ret == ETH_RECV_FORWARD) {
+        if(hook_ret == ETH_RECV_IGNORE || hook_ret == ETH_RECV_FORWARD)
+        {
             continue;
-        } else {
+        }
+        else
+        {
             break;
         }
     }
@@ -144,15 +150,12 @@ eth_dev_internal_on_recv(
     return 0;
 }
 
-DEFINE_DEV_TYPE(
-        eth_dev,
-        dev,
-        eth_dev_init,
-        eth_dev_deinit);
+DEFINE_DEV_TYPE(eth_dev, dev, eth_dev_init, eth_dev_deinit);
 
 #ifdef CONFIG_LOG_ETHDEV_REGISTRY_ON_LAUNCH
 static int
-dump_eth_dev_on_launch(void) {
+dump_eth_dev_on_launch(void)
+{
     return dump_eth_dev_registry(do_printk);
 }
 declare_init(launch, dump_eth_dev_on_launch);

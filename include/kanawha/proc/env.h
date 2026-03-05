@@ -1,10 +1,10 @@
 #ifndef __KANAWHA__ENV_H__
 #define __KANAWHA__ENV_H__
 
+#include <kanawha/list.h>
+#include <kanawha/spinlock.h>
 #include <kanawha/stree.h>
 #include <kanawha/types.h>
-#include <kanawha/spinlock.h>
-#include <kanawha/list.h>
 #include <kanawha/usermode.h>
 
 /*
@@ -29,64 +29,55 @@
  * transition.
  *
  * To help with this, Kanawha explicitly stores environment variables for
- * processes, with a simple key-value store, which is inherited by child processes,
- * and survives the exec syscall.
+ * processes, with a simple key-value store, which is inherited by child
+ * processes, and survives the exec syscall.
  *
  * This allows user-level ABI's to pass envp more or less directly, and can
- * indirectly support argv by defining an environment variable "ARGV" which contains
- * the arguments to the process.
+ * indirectly support argv by defining an environment variable "ARGV" which
+ * contains the arguments to the process.
  */
 
 struct process;
 
-struct envvar {
+struct envvar
+{
     struct stree_node node;
     char *value;
 };
 
-struct environment {
+struct environment
+{
     spinlock_t lock;
     struct stree env_table;
     ilist_t process_list;
 };
 
 int
-environment_create(
-        struct process *process);
+environment_create(struct process *process);
 
 int
-environment_attach(
-        struct environment *environ,
-        struct process *parent);
+environment_attach(struct environment *environ, struct process *parent);
 
 int
-environment_deattach(
-        struct environment *environ,
-        struct process *process);
+environment_deattach(struct environment *environ, struct process *process);
 
 int
-environment_clone(
-        struct environment *environ,
-        struct process *process);
+environment_clone(struct environment *environ, struct process *process);
 
 // Clears the environment variable "var_name"
 // still returns 0 even if "var_name" didn't exist
 int
-environment_clear_var(
-        struct environment *environ,
-        const char *var_name);
+environment_clear_var(struct environment *environ, const char *var_name);
 
 int
-environment_clear_all(
-        struct environment *environ);
+environment_clear_all(struct environment *environ);
 
 // Sets the environment variable "var_name" to "value"
 // and creates the variable if it did not exist previously
 int
-environment_set(
-        struct environment *environ,
-        const char *var_name,
-        const char *value);
+environment_set(struct environment *environ,
+                const char *var_name,
+                const char *value);
 
 // Returns NULL if "var_name" does not exist
 //
@@ -95,27 +86,25 @@ environment_set(
 // returns a pointer to the value of key "var_name"
 //
 // The caller will then need to call environment_put_var
-// to unlock the environment, (if NULL was returned, DO NOT CALL environment_put_var)
+// to unlock the environment, (if NULL was returned, DO NOT CALL
+// environment_put_var)
 //
-// Between the calls to environment_get_var and environment_put_var is 
+// Between the calls to environment_get_var and environment_put_var is
 // a critical section, and should not block under any circumstances.
 const char *
-environment_get_var(
-        struct environment *environ,
-        const char *var_name);
+environment_get_var(struct environment *environ, const char *var_name);
 
 int
-environment_put_var(
-        struct environment *environ);
+environment_put_var(struct environment *environ);
 
 /*
- * Dump the environment as KEY=VALUE strings delimited with \0, into a userspace buffer.
+ * Dump the environment as KEY=VALUE strings delimited with \0, into a
+ * userspace buffer.
  */
 int
-environment_user_dump(
-        struct process *process,
-        struct environment *environ,
-        char __user *userbuf,
-        size_t buflen);
+environment_user_dump(struct process *process,
+                      struct environment *environ,
+                      char __user *userbuf,
+                      size_t buflen);
 
 #endif

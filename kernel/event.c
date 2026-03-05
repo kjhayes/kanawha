@@ -1,15 +1,15 @@
 
 #include <kanawha/event.h>
-#include <kanawha/kmalloc.h>
-#include <kanawha/string.h>
-#include <kanawha/list.h>
+#include <kanawha/init.h>
 #include <kanawha/irq.h>
+#include <kanawha/kmalloc.h>
+#include <kanawha/list.h>
 #include <kanawha/lock.h>
-#include <kanawha/types.h>
+#include <kanawha/stddef.h>
+#include <kanawha/string.h>
 #include <kanawha/timer.h>
 #include <kanawha/timer_dev.h>
-#include <kanawha/stddef.h>
-#include <kanawha/init.h>
+#include <kanawha/types.h>
 
 static size_t num_enabled_periodic_events = 0;
 static DECLARE_ILIST(periodic_event_list);
@@ -35,7 +35,8 @@ periodic_callback(void)
 {
     periodic_event_list_lock_acquire();
     ilist_node_t *node;
-    ilist_for_each(node, &periodic_event_list) {
+    ilist_for_each(node, &periodic_event_list)
+    {
         struct periodic_event *event =
             container_of(node, struct periodic_event, list_node);
         if(event->current_period <= tick_length)
@@ -44,7 +45,8 @@ periodic_callback(void)
             // Run the event callback
             (*event->callback)(event->state);
         }
-        else {
+        else
+        {
             event->current_period -= tick_length;
         }
     }
@@ -56,22 +58,24 @@ periodic_kickstart_lockless(void)
 {
     int res;
 
-    if(periodic_timer == NULL) {
+    if(periodic_timer == NULL)
+    {
         periodic_timer = reserve_timer();
-    } else {
+    }
+    else
+    {
         return -EALREADY;
     }
-    if(periodic_timer == NULL) {
+    if(periodic_timer == NULL)
+    {
         return -ENODEV;
     }
 
-    tick_length = msec_to_duration(CONFIG_PERIODIC_RESOLUTION_MS); 
+    tick_length = msec_to_duration(CONFIG_PERIODIC_RESOLUTION_MS);
 
-    res = timer_set_periodic(
-            periodic_timer,
-            tick_length,
-            periodic_callback);
-    if(res) {
+    res = timer_set_periodic(periodic_timer, tick_length, periodic_callback);
+    if(res)
+    {
         return res;
     }
 
@@ -79,22 +83,24 @@ periodic_kickstart_lockless(void)
 }
 
 static int
-periodic_stop_lockless(void) {
+periodic_stop_lockless(void)
+{
     return -EUNIMPL;
 }
 
 static inline int
-enable_periodic_event(
-        struct periodic_event *event)
+enable_periodic_event(struct periodic_event *event)
 {
     int res;
     periodic_event_list_lock_acquire();
     ilist_push_tail(&periodic_event_list, &event->list_node);
     num_enabled_periodic_events++;
-    if(num_enabled_periodic_events == 1) {
+    if(num_enabled_periodic_events == 1)
+    {
         // We need to kickstart the periodic timer
         res = periodic_kickstart_lockless();
-        if(res) {
+        if(res)
+        {
             periodic_event_list_lock_release();
             return res;
         }
@@ -104,8 +110,7 @@ enable_periodic_event(
 }
 
 static inline int
-disable_periodic_event(
-        struct periodic_event *event)
+disable_periodic_event(struct periodic_event *event)
 {
     int res;
 
@@ -115,10 +120,12 @@ disable_periodic_event(
 
     ilist_remove(&periodic_event_list, &event->list_node);
 
-    if(num_enabled_periodic_events == 0) {
+    if(num_enabled_periodic_events == 0)
+    {
         // Stop the periodic timer
-        res = periodic_stop_lockless(); 
-        if(res) {
+        res = periodic_stop_lockless();
+        if(res)
+        {
             periodic_event_list_lock_release();
             return res;
         }
@@ -128,14 +135,14 @@ disable_periodic_event(
 }
 
 struct periodic_event *
-create_periodic_event(
-        duration_t period,
-        void *state,
-        periodic_callback_f *callback)
+create_periodic_event(duration_t period,
+                      void *state,
+                      periodic_callback_f *callback)
 {
     struct periodic_event *evt =
         kzmalloc(sizeof(struct periodic_event), KM_KERNEL);
-    if(evt == NULL) {
+    if(evt == NULL)
+    {
         return NULL;
     }
 
@@ -146,7 +153,8 @@ create_periodic_event(
     evt->current_period = evt->period;
 
     int res = enable_periodic_event(evt);
-    if(res) {
+    if(res)
+    {
         kfree(evt);
         return NULL;
     }
@@ -155,13 +163,13 @@ create_periodic_event(
 }
 
 int
-destroy_periodic_event(
-        struct periodic_event *event)
+destroy_periodic_event(struct periodic_event *event)
 {
     int res;
 
     res = disable_periodic_event(event);
-    if(res) {
+    if(res)
+    {
         return res;
     }
 
@@ -169,4 +177,3 @@ destroy_periodic_event(
 
     return 0;
 }
-

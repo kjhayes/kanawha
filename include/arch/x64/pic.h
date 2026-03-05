@@ -18,9 +18,9 @@ x64_pic_irq_domain(void);
 static inline irq_t
 x64_pic_irq(hwirq_t hwirq)
 {
-    struct irq_domain *domain =
-        x64_pic_irq_domain();
-    if(domain == NULL) {
+    struct irq_domain *domain = x64_pic_irq_domain();
+    if(domain == NULL)
+    {
         return NULL_IRQ;
     }
     return irq_domain_revmap(domain, hwirq);

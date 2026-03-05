@@ -1,15 +1,15 @@
 #ifndef __KANAWHA__X64_IOAPIC_H__
 #define __KANAWHA__X64_IOAPIC_H__
 
+#include <kanawha/dev/irq.h>
+#include <kanawha/irq_domain.h>
+#include <kanawha/list.h>
 #include <kanawha/mmio.h>
 #include <kanawha/vmem.h>
-#include <kanawha/list.h>
-#include <kanawha/irq_domain.h>
-#include <kanawha/dev/irq.h>
 
 typedef uint8_t ioapic_id_t;
 
-#define IOAPIC_REG_IOAPICID  0
+#define IOAPIC_REG_IOAPICID 0
 #define IOAPIC_REG_IOAPICVER 1
 #define IOAPIC_REG_IOAPICARB 2
 
@@ -18,7 +18,7 @@ typedef uint8_t ioapic_id_t;
 struct ioapic
 {
     ioapic_id_t id;
-    void __phys * phys_regs_base;
+    void __phys *phys_regs_base;
 
     struct irq_dev dev;
 
@@ -35,32 +35,19 @@ struct ioapic
 };
 
 int
-x64_register_ioapic(
-        ioapic_id_t id,
-        void __phys * reg_base,
-        hwirq_t irq_base);
+x64_register_ioapic(ioapic_id_t id, void __phys *reg_base, hwirq_t irq_base);
 
 uint32_t
-ioapic_read_reg(
-        struct ioapic *ioapic,
-        uint8_t reg_index);
+ioapic_read_reg(struct ioapic *ioapic, uint8_t reg_index);
 
 void
-ioapic_write_reg(
-        struct ioapic *ioapic,
-        uint8_t reg_index,
-        uint32_t value);
+ioapic_write_reg(struct ioapic *ioapic, uint8_t reg_index, uint32_t value);
 
 uint64_t
-ioapic_read_iored(
-        struct ioapic *ioapic,
-        hwirq_t irq);
+ioapic_read_iored(struct ioapic *ioapic, hwirq_t irq);
 
 void
-ioapic_write_iored(
-        struct ioapic *ioapic,
-        hwirq_t irq,
-        uint64_t value);
+ioapic_write_iored(struct ioapic *ioapic, hwirq_t irq, uint64_t value);
 
 // IRQ Lookup
 irq_t

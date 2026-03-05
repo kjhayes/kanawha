@@ -1,28 +1,33 @@
 
-#include <kanawha/time.h>
+#include <kanawha/errno.h>
 #include <kanawha/event.h>
 #include <kanawha/init.h>
-#include <kanawha/errno.h>
+#include <kanawha/time.h>
 
 static time_t system_timestamp = 0;
 static struct periodic_event *tick_event = NULL;
 
-time_t current_timestamp(void) {
+time_t
+current_timestamp(void)
+{
     return system_timestamp;
 }
 
 static void
-timestamp_tick(void *null) {
+timestamp_tick(void *null)
+{
     system_timestamp += msec_to_duration(CONFIG_TIMESTAMP_RESOLUTION_MS);
 }
 
-static int 
-start_timestamp_tick(void) {
-    tick_event = create_periodic_event(
-            msec_to_duration(CONFIG_TIMESTAMP_RESOLUTION_MS),
-            NULL,
-            timestamp_tick);
-    if(tick_event == NULL) {
+static int
+start_timestamp_tick(void)
+{
+    tick_event =
+        create_periodic_event(msec_to_duration(CONFIG_TIMESTAMP_RESOLUTION_MS),
+                              NULL,
+                              timestamp_tick);
+    if(tick_event == NULL)
+    {
         return -EDEFER;
     }
     return 0;

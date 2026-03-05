@@ -1,11 +1,11 @@
 #ifndef __KANAWHA__DRIVER_FB_VIRTIO_GPU_H__
 #define __KANAWHA__DRIVER_FB_VIRTIO_GPU_H__
 
+#include <drivers/virtio/device.h>
+#include <drivers/virtio/queue.h>
+#include <kanawha/dev/fb.h>
 #include <kanawha/endian.h>
 #include <kanawha/types.h>
-#include <kanawha/dev/fb.h>
-#include <drivers/virtio/queue.h>
-#include <drivers/virtio/device.h>
 
 #define VIRTIO_GPU_EVENT_DISPLAY (1 << 0)
 
@@ -70,33 +70,37 @@ enum virtio_gpu_ctrl_type
 
 struct virtio_gpu_ctrl_hdr
 {
-  le32_t type;
-  le32_t flags;
-  le64_t fence_id;
-  le32_t ctx_id;
-  uint8_t ring_idx;
-  uint8_t padding[3];
+    le32_t type;
+    le32_t flags;
+    le64_t fence_id;
+    le32_t ctx_id;
+    uint8_t ring_idx;
+    uint8_t padding[3];
 };
 
 #define VIRTIO_GPU_MAX_SCANOUTS 16
 
-struct virtio_gpu_rect {
-  le32_t x;
-  le32_t y;
-  le32_t width;
-  le32_t height;
+struct virtio_gpu_rect
+{
+    le32_t x;
+    le32_t y;
+    le32_t width;
+    le32_t height;
 };
 
-struct virtio_gpu_resp_display_info {
-  struct virtio_gpu_ctrl_hdr hdr;
-  struct virtio_gpu_display_one {
-    struct virtio_gpu_rect r;
-    le32_t enabled;
-    le32_t flags;
-  } pmodes[VIRTIO_GPU_MAX_SCANOUTS];
+struct virtio_gpu_resp_display_info
+{
+    struct virtio_gpu_ctrl_hdr hdr;
+    struct virtio_gpu_display_one
+    {
+        struct virtio_gpu_rect r;
+        le32_t enabled;
+        le32_t flags;
+    } pmodes[VIRTIO_GPU_MAX_SCANOUTS];
 };
 
-enum virtio_gpu_formats {
+enum virtio_gpu_formats
+{
     VIRTIO_GPU_FORMAT_B8G8R8A8_UNORM = 1,
     VIRTIO_GPU_FORMAT_B8G8R8X8_UNORM = 2,
     VIRTIO_GPU_FORMAT_A8R8G8B8_UNORM = 3,
@@ -123,7 +127,8 @@ struct virtio_gpu_resource_unref
     le32_t padding;
 };
 
-struct virtio_gpu_resource_attach_backing {
+struct virtio_gpu_resource_attach_backing
+{
     struct virtio_gpu_ctrl_hdr hdr;
     le32_t resource_id;
     le32_t nr_entries;
@@ -169,7 +174,8 @@ struct virtio_gpu_set_scanout
 };
 
 //
-struct virtio_gpu_scanout {
+struct virtio_gpu_scanout
+{
     uint32_t pref_width;
     uint32_t pref_height;
     uint32_t pref_pos_x;
@@ -181,7 +187,8 @@ struct virtio_gpu_resource
 {
     struct ptree_node tree_node;
 
-    enum virtio_gpu_resource_type {
+    enum virtio_gpu_resource_type
+    {
         VIRTIO_GPU_RESOURCE_TYPE_2D,
         VIRTIO_GPU_RESOURCE_TYPE_BLOB,
     } type;
@@ -214,43 +221,35 @@ struct virtio_gpu
 };
 
 int
-virtio_gpu_update_scanout_info(
-        struct virtio_gpu *gpu);
+virtio_gpu_update_scanout_info(struct virtio_gpu *gpu);
 
 struct virtio_gpu_resource *
-virtio_gpu_create_resource_2d(
-        struct virtio_gpu *gpu,
-        size_t width,
-        size_t height,
-        enum virtio_gpu_formats format);
+virtio_gpu_create_resource_2d(struct virtio_gpu *gpu,
+                              size_t width,
+                              size_t height,
+                              enum virtio_gpu_formats format);
 
 int
-virtio_gpu_destroy_resource_2d(
-        struct virtio_gpu_resource *resource);
+virtio_gpu_destroy_resource_2d(struct virtio_gpu_resource *resource);
 int
-virtio_gpu_resource_attach_backing(
-        struct virtio_gpu_resource *resource,
-        void __phys *backing_data,
-        size_t backing_size);
+virtio_gpu_resource_attach_backing(struct virtio_gpu_resource *resource,
+                                   void __phys *backing_data,
+                                   size_t backing_size);
 
 int
-virtio_gpu_resource_deattach_backing(
-        struct virtio_gpu_resource *resource);
+virtio_gpu_resource_deattach_backing(struct virtio_gpu_resource *resource);
 
 int
-virtio_gpu_resource_transfer_to_host(
-        struct virtio_gpu_resource *resource);
+virtio_gpu_resource_transfer_to_host(struct virtio_gpu_resource *resource);
 
 int
-virtio_gpu_resource_flush(
-        struct virtio_gpu_resource *resource);
+virtio_gpu_resource_flush(struct virtio_gpu_resource *resource);
 
 int
-virtio_gpu_set_scanout(
-        struct virtio_gpu *gpu,
-        int scanout_index,
-        size_t width,
-        size_t height,
-        struct virtio_gpu_resource *resource);
+virtio_gpu_set_scanout(struct virtio_gpu *gpu,
+                       int scanout_index,
+                       size_t width,
+                       size_t height,
+                       struct virtio_gpu_resource *resource);
 
 #endif

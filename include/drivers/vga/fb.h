@@ -1,8 +1,8 @@
 #ifndef __KANAWHA__VGA_FB_H__
 #define __KANAWHA__VGA_FB_H__
 
-#include <kanawha/dev/fb.h>
 #include <drivers/vga/vga.h>
+#include <kanawha/dev/fb.h>
 #include <kanawha/lock.h>
 
 struct vga_fb;

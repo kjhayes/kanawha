@@ -1,48 +1,45 @@
 #ifndef __KANAWHA__SCHEDULER_H__
 #define __KANAWHA__SCHEDULER_H__
 
-#include <kanawha/thread.h>
-#include <kanawha/stree.h>
 #include <kanawha/ops.h>
 #include <kanawha/printk.h>
+#include <kanawha/stree.h>
+#include <kanawha/thread.h>
 
 // Asking if we should resched
-#define SCHED_QUERY_RESCHED_SIG(RET,ARG,...)\
-RET(struct thread_state *)
+#define SCHED_QUERY_RESCHED_SIG(RET, ARG, ...) RET(struct thread_state *)
 
 // Telling we need to be resched (sleeping, waiting, exiting, etc.)
-#define SCHED_FORCE_RESCHED_SIG(RET,ARG,...)\
-RET(struct thread_state *)
+#define SCHED_FORCE_RESCHED_SIG(RET, ARG, ...) RET(struct thread_state *)
 
-#define SCHED_ADD_THREAD_SIG(RET,ARG,...)\
-RET(int)\
-ARG(struct thread_state *, thread)
+#define SCHED_ADD_THREAD_SIG(RET, ARG, ...)                                    \
+    RET(int)                                                                   \
+    ARG(struct thread_state *, thread)
 
-#define SCHED_REMOVE_THREAD_SIG(RET,ARG,...)\
-RET(int)\
-ARG(struct thread_state *, thread)
+#define SCHED_REMOVE_THREAD_SIG(RET, ARG, ...)                                 \
+    RET(int)                                                                   \
+    ARG(struct thread_state *, thread)
 
-#define SCHED_DEBUG_DUMP_SIG(RET,ARG,...)\
-RET(int)\
-ARG(printk_f *, printer)
+#define SCHED_DEBUG_DUMP_SIG(RET, ARG, ...)                                    \
+    RET(int)                                                                   \
+    ARG(printk_f *, printer)
 
-#define SCHED_OP_LIST(OP, ...)\
-OP(query_resched, SCHED_QUERY_RESCHED_SIG, ##__VA_ARGS__)\
-OP(force_resched, SCHED_FORCE_RESCHED_SIG, ##__VA_ARGS__)\
-OP(add_thread, SCHED_ADD_THREAD_SIG, ##__VA_ARGS__)\
-OP(remove_thread, SCHED_REMOVE_THREAD_SIG, ##__VA_ARGS__)\
-OP(debug_dump, SCHED_DEBUG_DUMP_SIG, ##__VA_ARGS__)\
+#define SCHED_OP_LIST(OP, ...)                                                 \
+    OP(query_resched, SCHED_QUERY_RESCHED_SIG, ##__VA_ARGS__)                  \
+    OP(force_resched, SCHED_FORCE_RESCHED_SIG, ##__VA_ARGS__)                  \
+    OP(add_thread, SCHED_ADD_THREAD_SIG, ##__VA_ARGS__)                        \
+    OP(remove_thread, SCHED_REMOVE_THREAD_SIG, ##__VA_ARGS__)                  \
+    OP(debug_dump, SCHED_DEBUG_DUMP_SIG, ##__VA_ARGS__)
 
-#define SCHED_TYPE_ALLOC_INSTANCE_SIG(RET,ARG,...)\
-RET(struct scheduler *)
+#define SCHED_TYPE_ALLOC_INSTANCE_SIG(RET, ARG, ...) RET(struct scheduler *)
 
-#define SCHED_TYPE_FREE_INSTANCE_SIG(RET,ARG,...)\
-RET(int)\
-ARG(struct scheduler *, instance)
+#define SCHED_TYPE_FREE_INSTANCE_SIG(RET, ARG, ...)                            \
+    RET(int)                                                                   \
+    ARG(struct scheduler *, instance)
 
-#define SCHED_TYPE_OP_LIST(OP, ...)\
-OP(alloc_instance, SCHED_TYPE_ALLOC_INSTANCE_SIG, ##__VA_ARGS__)\
-OP(free_instance, SCHED_TYPE_FREE_INSTANCE_SIG, ##__VA_ARGS__)
+#define SCHED_TYPE_OP_LIST(OP, ...)                                            \
+    OP(alloc_instance, SCHED_TYPE_ALLOC_INSTANCE_SIG, ##__VA_ARGS__)           \
+    OP(free_instance, SCHED_TYPE_FREE_INSTANCE_SIG, ##__VA_ARGS__)
 
 struct scheduler;
 
@@ -52,24 +49,25 @@ struct scheduler_type
     ilist_t instance_list;
     struct stree_node tree_node;
 
-    struct {
-DECLARE_OP_LIST_PTRS(SCHED_OP_LIST, struct scheduler *);
+    struct
+    {
+        DECLARE_OP_LIST_PTRS(SCHED_OP_LIST, struct scheduler *);
     } instance_ops;
 
-    struct {
-DECLARE_OP_LIST_PTRS(SCHED_TYPE_OP_LIST, struct scheduler_type *);
+    struct
+    {
+        DECLARE_OP_LIST_PTRS(SCHED_TYPE_OP_LIST, struct scheduler_type *);
     } type_ops;
 };
 
 #define SCHED_TYPE_OPS_ACCESSOR(__self, __field) __self->type_ops.__field
 
-DEFINE_OP_LIST_WRAPPERS(
-        SCHED_TYPE_OP_LIST,
-        static inline,
-        /* No Prefix */,
-        scheduler_type,
-        SCHED_TYPE_OPS_ACCESSOR,
-        SELF_ACCESSOR);
+DEFINE_OP_LIST_WRAPPERS(SCHED_TYPE_OP_LIST,
+                        static inline,
+                        /* No Prefix */,
+                        scheduler_type,
+                        SCHED_TYPE_OPS_ACCESSOR,
+                        SELF_ACCESSOR);
 
 struct scheduler
 {
@@ -82,15 +80,15 @@ struct scheduler
     ilist_node_t instance_list_node;
 };
 
-#define SCHED_INSTANCE_OPS_ACCESSOR(__self, __field) __self->type->instance_ops.__field
+#define SCHED_INSTANCE_OPS_ACCESSOR(__self, __field)                           \
+    __self->type->instance_ops.__field
 
-DEFINE_OP_LIST_WRAPPERS(
-    SCHED_OP_LIST,
-    static inline,
-    /* No Prefix */,
-    scheduler,
-    SCHED_INSTANCE_OPS_ACCESSOR,
-    SELF_ACCESSOR);
+DEFINE_OP_LIST_WRAPPERS(SCHED_OP_LIST,
+                        static inline,
+                        /* No Prefix */,
+                        scheduler,
+                        SCHED_INSTANCE_OPS_ACCESSOR,
+                        SELF_ACCESSOR);
 
 #undef SCHED_NEXT_SIG
 #undef SCHED_OP_LIST
@@ -102,22 +100,21 @@ struct scheduler *
 create_scheduler(const char *type_name, const char *sched_name);
 
 int
-assign_cpu_scheduler(
-        struct scheduler *sched,
-        cpu_id_t cpu);
+assign_cpu_scheduler(struct scheduler *sched, cpu_id_t cpu);
 
 // Assumes preemption is disabled
 // Returns NULL if the current CPU does not have a scheduler
 struct scheduler *
 current_sched(void);
 
-struct thread_state * query_resched(void);
-struct thread_state * force_resched(void);
+struct thread_state *
+query_resched(void);
+struct thread_state *
+force_resched(void);
 
 // Default Implementations
-int sched_debug_dump_no_info(
-        struct scheduler *sched,
-        printk_f *printer);
+int
+sched_debug_dump_no_info(struct scheduler *sched, printk_f *printer);
 
 // Debug Printing
 void

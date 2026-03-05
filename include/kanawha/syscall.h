@@ -2,31 +2,29 @@
 #define __KANAWHA__SYSCALL_H__
 
 #include <kanawha/excp.h>
-#include <kanawha/usermode.h>
-#include <kanawha/types.h>
-#include <kanawha/stddef.h>
 #include <kanawha/ops.h>
 #include <kanawha/proc/file_table.h>
+#include <kanawha/stddef.h>
+#include <kanawha/types.h>
 #include <kanawha/uapi/syscall.h>
+#include <kanawha/usermode.h>
 
 struct process;
 
 #define SYSCALL_MAX_ARG_COUNT 6
 
-struct syscall_args {
+struct syscall_args
+{
     uint64_t args[SYSCALL_MAX_ARG_COUNT];
 };
 
-#define DECLARE_SYSCALL_HANDLER_FUNCTIONS(__name, __id, __NAME, __SIG, ...)\
-SIG_RETURN_TYPE(__SIG) syscall_ ## __name (SIG_ARG_DECLS(__SIG));
+#define DECLARE_SYSCALL_HANDLER_FUNCTIONS(__name, __id, __NAME, __SIG, ...)    \
+    SIG_RETURN_TYPE(__SIG) syscall_##__name(SIG_ARG_DECLS(__SIG));
 SYSCALL_XLIST(DECLARE_SYSCALL_HANDLER_FUNCTIONS)
 #undef DECLARE_SYSCALL_HANDLER_FUNCTIONS
 
 int
-handle_syscall(
-        syscall_id_t id,
-        struct syscall_args *args,
-        uint64_t *ret_out);
+handle_syscall(syscall_id_t id, struct syscall_args *args, uint64_t *ret_out);
 
 const char *
 syscall_id_string(syscall_id_t id);

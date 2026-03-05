@@ -4,7 +4,8 @@
 #include <kanawha/uapi/gfx.h>
 
 // Layer Info
-struct fb_layer_info {
+struct fb_layer_info
+{
     struct gfx_layout layout;
 };
 

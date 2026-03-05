@@ -1,13 +1,14 @@
 
-#include <kanawha/printk.h>
-#include <kanawha/panic.h>
 #include <kanawha/export.h>
+#include <kanawha/panic.h>
+#include <kanawha/printk.h>
 #include <stdarg.h>
 
-static char panic_state_buffer[CONFIG_PANIC_BUFFER_SIZE] = { 0 };
-static struct vprintk_state panic_state = { 0 };
+static char panic_state_buffer[CONFIG_PANIC_BUFFER_SIZE] = {0};
+static struct vprintk_state panic_state = {0};
 
-int do_panic_printk(const char *fmt, ...) 
+int
+do_panic_printk(const char *fmt, ...)
 {
     int res;
 
@@ -21,7 +22,8 @@ int do_panic_printk(const char *fmt, ...)
 }
 
 int
-panic_printk_init(void) {
+panic_printk_init(void)
+{
     panic_state.buffer = panic_state_buffer;
     panic_state.buffer_size = CONFIG_PANIC_BUFFER_SIZE;
     panic_state.print_buffer = printk_print_buffer;
@@ -30,4 +32,3 @@ panic_printk_init(void) {
 }
 
 EXPORT_SYMBOL(do_panic_printk);
-

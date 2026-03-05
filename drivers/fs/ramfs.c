@@ -1,17 +1,17 @@
 
 
-#include <kanawha/init.h>
-#include <kanawha/kmalloc.h>
-#include <kanawha/ptree.h>
-#include <kanawha/stddef.h>
-#include <kanawha/list.h>
-#include <kanawha/page_alloc.h>
-#include <kanawha/lock.h>
-#include <kanawha/string.h>
-#include <kanawha/fs/type.h>
+#include <kanawha/fs/file.h>
 #include <kanawha/fs/mount.h>
 #include <kanawha/fs/node.h>
-#include <kanawha/fs/file.h>
+#include <kanawha/fs/type.h>
+#include <kanawha/init.h>
+#include <kanawha/kmalloc.h>
+#include <kanawha/list.h>
+#include <kanawha/lock.h>
+#include <kanawha/page_alloc.h>
+#include <kanawha/ptree.h>
+#include <kanawha/stddef.h>
+#include <kanawha/string.h>
 
 #define RAMFS_PAGE_ORDER 12
 
@@ -29,7 +29,8 @@ struct ramfs_node
     ilist_t directory;
 };
 
-struct ramfs_dirent {
+struct ramfs_dirent
+{
     ilist_node_t list_node;
     char *name;
     size_t inode;
@@ -51,7 +52,6 @@ struct ramfs_mount
     struct ramfs_node root_node;
 };
 
-
 #define ROOT_INODE_INDEX (0)
 
 static struct fs_node_ops ramfs_file_node_ops;
@@ -62,11 +62,10 @@ static struct fs_file_ops ramfs_dir_file_ops;
 // Regular File fs_node
 
 static int
-ramfs_file_load_page(
-	struct fs_node *fs_node,
-	uintptr_t pfn,
-	unsigned long flags,
-	void __phys **addr_out)
+ramfs_file_load_page(struct fs_node *fs_node,
+                     uintptr_t pfn,
+                     unsigned long flags,
+                     void __phys **addr_out)
 {
     int res;
 
@@ -76,27 +75,31 @@ ramfs_file_load_page(
 
     if(pnode == NULL)
     {
-	if(flags & FS_NODE_LOAD_PAGE_MAY_CREATE) {
-	    struct ramfs_page *page = kzmalloc(sizeof(*page), KM_KERNEL);
-	    if(page == NULL) {
-		return -ENOMEM;
-	    }
+        if(flags & FS_NODE_LOAD_PAGE_MAY_CREATE)
+        {
+            struct ramfs_page *page = kzmalloc(sizeof(*page), KM_KERNEL);
+            if(page == NULL)
+            {
+                return -ENOMEM;
+            }
 
-	    res = page_alloc(RAMFS_PAGE_ORDER, &page->page, 0);
-	    if(res) {
-		kfree(page);
-		return res;
-	    }
+            res = page_alloc(RAMFS_PAGE_ORDER, &page->page, 0);
+            if(res)
+            {
+                kfree(page);
+                return res;
+            }
 
-	    memset_p(page->page, 0, 1ULL<<RAMFS_PAGE_ORDER);
+            memset_p(page->page, 0, 1ULL << RAMFS_PAGE_ORDER);
 
-	    ptree_insert(&node->page_tree, &page->node, pfn);
+            ptree_insert(&node->page_tree, &page->node, pfn);
 
-	    pnode = &page->node;
-
-	} else {
-	    return -ENXIO;
-	}
+            pnode = &page->node;
+        }
+        else
+        {
+            return -ENXIO;
+        }
     }
 
     struct ramfs_page *page = container_of(pnode, struct ramfs_page, node);
@@ -107,48 +110,48 @@ ramfs_file_load_page(
 }
 
 static int
-ramfs_file_unload_page(
-	struct fs_node *fs_node,
-	uintptr_t pfn,
-	unsigned long flags,
-	void __phys *addr)
+ramfs_file_unload_page(struct fs_node *fs_node,
+                       uintptr_t pfn,
+                       unsigned long flags,
+                       void __phys *addr)
 {
     // TODO
     return 0;
 }
 
 static int
-ramfs_file_free_all_pages(
-	struct ramfs_node *node)
+ramfs_file_free_all_pages(struct ramfs_node *node)
 {
     struct ptree_node *pnode;
-    do {
-	pnode = ptree_get_first(&node->page_tree);
-	if(pnode == NULL) {
-	    break;
-	}
-	ptree_remove(&node->page_tree, pnode->key);
-	struct ramfs_page *page = container_of(pnode, struct ramfs_page, node);
-	page_free(RAMFS_PAGE_ORDER, page->page);
+    do
+    {
+        pnode = ptree_get_first(&node->page_tree);
+        if(pnode == NULL)
+        {
+            break;
+        }
+        ptree_remove(&node->page_tree, pnode->key);
+        struct ramfs_page *page = container_of(pnode, struct ramfs_page, node);
+        page_free(RAMFS_PAGE_ORDER, page->page);
     } while(1);
 
     return 0;
 }
 
 static int
-ramfs_file_resize(
-	struct ramfs_node *node,
-	size_t new_size)
+ramfs_file_resize(struct ramfs_node *node, size_t new_size)
 {
-    if(new_size >= node->size) {
-	node->size = new_size;
-	return 0;
+    if(new_size >= node->size)
+    {
+        node->size = new_size;
+        return 0;
     }
 
     // We need to shrink
 
-    if(new_size == 0) {
-	return ramfs_file_free_all_pages(node);
+    if(new_size == 0)
+    {
+        return ramfs_file_free_all_pages(node);
     }
 
     // Will add an unnecessary page in some cases
@@ -156,14 +159,16 @@ ramfs_file_resize(
     uintptr_t new_num_pages = (new_size >> RAMFS_PAGE_ORDER) + 1;
 
     struct ptree_node *pnode;
-    do {
-	pnode = ptree_get_min_greater_or_eq(&node->page_tree, new_num_pages);
-	if(pnode == NULL) {
-	    break;
-	}
-	ptree_remove(&node->page_tree, pnode->key);
-	struct ramfs_page *page = container_of(pnode, struct ramfs_page, node);
-	page_free(RAMFS_PAGE_ORDER, page->page);
+    do
+    {
+        pnode = ptree_get_min_greater_or_eq(&node->page_tree, new_num_pages);
+        if(pnode == NULL)
+        {
+            break;
+        }
+        ptree_remove(&node->page_tree, pnode->key);
+        struct ramfs_page *page = container_of(pnode, struct ramfs_page, node);
+        page_free(RAMFS_PAGE_ORDER, page->page);
     } while(1);
 
     node->size = new_size;
@@ -172,49 +177,43 @@ ramfs_file_resize(
 }
 
 static int
-ramfs_file_getattr(
-        struct fs_node *fs_node,
-        int attr,
-        size_t *value)
+ramfs_file_getattr(struct fs_node *fs_node, int attr, size_t *value)
 {
     struct ramfs_node *node = fs_node->backing.priv_state;
 
-    switch(attr) {
-        case FS_NODE_ATTR_DATA_SIZE:
-            *value = node->size;
-            break;
-        case FS_NODE_ATTR_PAGE_ORDER:
-            *value = RAMFS_PAGE_ORDER;
-            break;
-        case FS_NODE_ATTR_TYPES:
-            *value = FS_NODE_TYPE_REGULAR;
-            break;
-        default:
-            return -EINVAL;
+    switch(attr)
+    {
+    case FS_NODE_ATTR_DATA_SIZE:
+        *value = node->size;
+        break;
+    case FS_NODE_ATTR_PAGE_ORDER:
+        *value = RAMFS_PAGE_ORDER;
+        break;
+    case FS_NODE_ATTR_TYPES:
+        *value = FS_NODE_TYPE_REGULAR;
+        break;
+    default:
+        return -EINVAL;
     }
 
     return 0;
 }
 
 static int
-ramfs_file_setattr(
-        struct fs_node *fs_node,
-        int attr,
-        size_t value)
+ramfs_file_setattr(struct fs_node *fs_node, int attr, size_t value)
 {
     struct ramfs_node *node = fs_node->backing.priv_state;
 
-    switch(attr) {
-        case FS_NODE_ATTR_DATA_SIZE:
-	    return ramfs_file_resize(node, value);
+    switch(attr)
+    {
+    case FS_NODE_ATTR_DATA_SIZE:
+        return ramfs_file_resize(node, value);
     }
 
     return -EINVAL;
 }
 
-static struct fs_node_ops
-ramfs_file_node_ops =
-{
+static struct fs_node_ops ramfs_file_node_ops = {
     .load_page = ramfs_file_load_page,
     .unload_page = ramfs_file_unload_page,
 
@@ -226,9 +225,7 @@ ramfs_file_node_ops =
 };
 FS_NODE_OPS_INIT_UNDEF(ramfs_file_node_ops);
 
-static struct fs_file_ops
-ramfs_file_file_ops =
-{
+static struct fs_file_ops ramfs_file_file_ops = {
     .read = fs_file_paged_read,
     .write = fs_file_paged_write,
     .seek = fs_file_paged_seek,
@@ -237,90 +234,91 @@ ramfs_file_file_ops =
 FS_FILE_OPS_INIT_UNDEF(ramfs_file_file_ops);
 
 static int
-ramfs_dir_getattr(
-        struct fs_node *fs_node,
-        int attr,
-        size_t *value)
+ramfs_dir_getattr(struct fs_node *fs_node, int attr, size_t *value)
 {
     struct ramfs_node *node = fs_node->backing.priv_state;
 
-    switch(attr) {
-        case FS_NODE_ATTR_DATA_SIZE:
-            *value = node->size;
-            break;
-        case FS_NODE_ATTR_PAGE_ORDER:
-            *value = RAMFS_PAGE_ORDER;
-            break;
-        case FS_NODE_ATTR_TYPES:
-            *value = FS_NODE_TYPE_DIRECTORY;
-            break;
-        default:
-            return -EINVAL;
+    switch(attr)
+    {
+    case FS_NODE_ATTR_DATA_SIZE:
+        *value = node->size;
+        break;
+    case FS_NODE_ATTR_PAGE_ORDER:
+        *value = RAMFS_PAGE_ORDER;
+        break;
+    case FS_NODE_ATTR_TYPES:
+        *value = FS_NODE_TYPE_DIRECTORY;
+        break;
+    default:
+        return -EINVAL;
     }
 
     return 0;
 }
 
 static int
-ramfs_dir_setattr(
-        struct fs_node *fs_node,
-        int attr,
-        size_t value)
+ramfs_dir_setattr(struct fs_node *fs_node, int attr, size_t value)
 {
     struct ramfs_node *node = fs_node->backing.priv_state;
 
-    switch(attr) {
-        case FS_NODE_ATTR_DATA_SIZE:
-	    if(value == 0) {
-                return 0;
-	    } else {
-		return -EINVAL;
-	    }
-	    break;
+    switch(attr)
+    {
+    case FS_NODE_ATTR_DATA_SIZE:
+        if(value == 0)
+        {
+            return 0;
+        }
+        else
+        {
+            return -EINVAL;
+        }
+        break;
     }
 
     return -EINVAL;
 }
 
 static int
-ramfs_dir_lookup(
-	struct fs_node *fs_node,
-	const char *name,
-	size_t *inode,
-	char *sym_buffer,
-	size_t sym_buflen)
+ramfs_dir_lookup(struct fs_node *fs_node,
+                 const char *name,
+                 size_t *inode,
+                 char *sym_buffer,
+                 size_t sym_buflen)
 {
     struct ramfs_node *node = fs_node->backing.priv_state;
 
     ilist_node_t *iter;
 
-    ilist_for_each(iter, &node->directory) {
-	struct ramfs_dirent *dirent =
-	    container_of(iter, struct ramfs_dirent, list_node);
-	if(strcmp(dirent->name, name) == 0) {
-	    *inode = dirent->inode;
-	    return FS_NODE_LOOKUP_HARD;
-	}
+    ilist_for_each(iter, &node->directory)
+    {
+        struct ramfs_dirent *dirent =
+            container_of(iter, struct ramfs_dirent, list_node);
+        if(strcmp(dirent->name, name) == 0)
+        {
+            *inode = dirent->inode;
+            return FS_NODE_LOOKUP_HARD;
+        }
     }
 
     return -ENXIO;
 }
 
 static int
-ramfs_create_link(
-	struct ramfs_node *dir,
-	struct ramfs_node *child,
-	const char *name)
+ramfs_create_link(struct ramfs_node *dir,
+                  struct ramfs_node *child,
+                  const char *name)
 {
     struct ramfs_dirent *dirent = kzmalloc(sizeof(*dirent), KM_KERNEL);
-    if(dirent == NULL) {
-	return -ENOMEM;
+    if(dirent == NULL)
+    {
+        return -ENOMEM;
     }
 
     dirent->name = kstrdup(name);
-    if(dirent->name == NULL) {
-	kfree(dirent);
-	return -ENOMEM;
+    if(dirent->name == NULL)
+    {
+        kfree(dirent);
+        return -ENOMEM;
     }
     dirent->inode = child->inode_node.key;
 
@@ -332,18 +330,18 @@ ramfs_create_link(
 }
 
 static int
-ramfs_dir_mkfile(
-	struct fs_node *fs_node,
-	const char *filename,
-	unsigned long flags)
+ramfs_dir_mkfile(struct fs_node *fs_node,
+                 const char *filename,
+                 unsigned long flags)
 {
     int res;
 
     struct ramfs_node *dir = fs_node->backing.priv_state;
 
     struct ramfs_node *child = kzmalloc(sizeof(*child), KM_KERNEL);
-    if(child == NULL) {
-	return -ENOMEM;
+    if(child == NULL)
+    {
+        return -ENOMEM;
     }
 
     child->size = 0;
@@ -353,39 +351,42 @@ ramfs_dir_mkfile(
     atomic_set_relaxed(&child->dirent_refs, 0);
     ptree_init(&child->page_tree);
 
-    struct ramfs_mount *mnt = container_of(fs_node->mount, struct ramfs_mount, fs_mount);
+    struct ramfs_mount *mnt =
+        container_of(fs_node->mount, struct ramfs_mount, fs_mount);
 
     thread_lock_acquire(&mnt->inode_lock);
     res = ptree_insert_any(&mnt->inode_tree, &child->inode_node);
-    if(res) {
-	kfree(child);
-	return res;
+    if(res)
+    {
+        kfree(child);
+        return res;
     }
     thread_lock_release(&mnt->inode_lock);
 
     res = ramfs_create_link(dir, child, filename);
-    if(res) {
-	ptree_remove(&mnt->inode_tree, child->inode_node.key);
-	kfree(child);
-	return res;
+    if(res)
+    {
+        ptree_remove(&mnt->inode_tree, child->inode_node.key);
+        kfree(child);
+        return res;
     }
 
     return 0;
 }
 
 static int
-ramfs_dir_mkdir(
-	struct fs_node *fs_node,
-	const char *filename,
-	unsigned long flags)
+ramfs_dir_mkdir(struct fs_node *fs_node,
+                const char *filename,
+                unsigned long flags)
 {
     int res;
 
     struct ramfs_node *dir = fs_node->backing.priv_state;
 
     struct ramfs_node *child = kzmalloc(sizeof(*child), KM_KERNEL);
-    if(child == NULL) {
-	return -ENOMEM;
+    if(child == NULL)
+    {
+        return -ENOMEM;
     }
 
     child->size = 0;
@@ -395,165 +396,169 @@ ramfs_dir_mkdir(
     atomic_set_relaxed(&child->dirent_refs, 0);
     ptree_init(&child->page_tree);
 
-    struct ramfs_mount *mnt = container_of(fs_node->mount, struct ramfs_mount, fs_mount);
+    struct ramfs_mount *mnt =
+        container_of(fs_node->mount, struct ramfs_mount, fs_mount);
 
     thread_lock_acquire(&mnt->inode_lock);
     res = ptree_insert_any(&mnt->inode_tree, &child->inode_node);
-    if(res) {
-	kfree(child);
-	return res;
+    if(res)
+    {
+        kfree(child);
+        return res;
     }
     thread_lock_release(&mnt->inode_lock);
 
     res = ramfs_create_link(dir, child, filename);
-    if(res) {
-	ptree_remove(&mnt->inode_tree, child->inode_node.key);
-	kfree(child);
-	return res;
+    if(res)
+    {
+        ptree_remove(&mnt->inode_tree, child->inode_node.key);
+        kfree(child);
+        return res;
     }
 
     return 0;
 }
 
 static struct ramfs_dirent *
-ramfs_get_current_dirent(
-	struct file *file)
+ramfs_get_current_dirent(struct file *file)
 {
     struct fs_node *fs_node = fs_path_get_fs_node(file->path);
     struct ramfs_node *node = fs_node->backing.priv_state;
 
     size_t offset = 0;
 
-    if(ilist_empty(&node->directory)) {
-	return NULL;
+    if(ilist_empty(&node->directory))
+    {
+        return NULL;
     }
 
     struct ramfs_dirent *cur;
     ilist_node_t *iter;
-    ilist_for_each(iter, &node->directory) {
-	if(offset == file->dir_offset) {
-	    return container_of(iter, struct ramfs_dirent, list_node);
-	}
-	offset++;
+    ilist_for_each(iter, &node->directory)
+    {
+        if(offset == file->dir_offset)
+        {
+            return container_of(iter, struct ramfs_dirent, list_node);
+        }
+        offset++;
     }
 
     return NULL;
 }
 
 int
-ramfs_dir_dir_begin(
-	struct file *file)
+ramfs_dir_dir_begin(struct file *file)
 {
     file->dir_offset = 0;
     return 0;
 }
 
 int
-ramfs_dir_dir_next(
-	struct file *file)
+ramfs_dir_dir_next(struct file *file)
 {
     file->dir_offset++;
     struct ramfs_dirent *dirent = ramfs_get_current_dirent(file);
-    if(dirent == NULL) {
-	return -ENXIO;
+    if(dirent == NULL)
+    {
+        return -ENXIO;
     }
     return 0;
 }
 
 int
-ramfs_dir_dir_readattr(
-	struct file *file,
-	int attr,
-	size_t *value)
+ramfs_dir_dir_readattr(struct file *file, int attr, size_t *value)
 {
     return -EUNIMPL;
 }
 
 int
-ramfs_dir_dir_readname(
-	struct file *file,
-	char *buffer,
-	size_t buflen)
+ramfs_dir_dir_readname(struct file *file, char *buffer, size_t buflen)
 {
     struct ramfs_dirent *dirent = ramfs_get_current_dirent(file);
-    if(dirent == NULL) {
-	return -EINVAL;
+    if(dirent == NULL)
+    {
+        return -EINVAL;
     }
 
     DEBUG_ASSERT(KERNEL_ADDR(dirent));
     DEBUG_ASSERT(KERNEL_ADDR(dirent->name));
 
     strncpy(buffer, dirent->name, buflen);
-    buffer[buflen-1] = '\0';
+    buffer[buflen - 1] = '\0';
 
     return 0;
 }
 
 int
-ramfs_dir_unlink(
-	struct fs_node *fs_node,
-	const char *name)
+ramfs_dir_unlink(struct fs_node *fs_node, const char *name)
 {
     dprintk("ramfs_dir_unlink\n");
     struct ramfs_node *node = fs_node->backing.priv_state;
 
     size_t inode;
-  
+
     int found = 0;
     ilist_node_t *iter;
-    ilist_for_each(iter, &node->directory) {
-	struct ramfs_dirent *dirent = container_of(iter, struct ramfs_dirent, list_node);
-	if(strcmp(dirent->name, name) == 0) {
-	    inode = dirent->inode;
-	    found = 1;
-	    ilist_remove(&node->directory, iter);
-	    kfree(dirent->name);
-	    kfree(dirent);
-	    break;
-	}
+    ilist_for_each(iter, &node->directory)
+    {
+        struct ramfs_dirent *dirent =
+            container_of(iter, struct ramfs_dirent, list_node);
+        if(strcmp(dirent->name, name) == 0)
+        {
+            inode = dirent->inode;
+            found = 1;
+            ilist_remove(&node->directory, iter);
+            kfree(dirent->name);
+            kfree(dirent);
+            break;
+        }
     }
 
-    if(!found) {
-	dprintk("Failed to find \"%s\"\n", name);
-	return -EINVAL;
+    if(!found)
+    {
+        dprintk("Failed to find \"%s\"\n", name);
+        return -EINVAL;
     }
 
     // Decrement the references to the inode
 
-    struct ramfs_mount *mnt = container_of(fs_node->mount, struct ramfs_mount, fs_mount);
+    struct ramfs_mount *mnt =
+        container_of(fs_node->mount, struct ramfs_mount, fs_mount);
 
     thread_lock_acquire(&mnt->inode_lock);
     struct ptree_node *pnode = ptree_get(&mnt->inode_tree, inode);
-    if(pnode == NULL) {
-	// Removed an invalid dirent?
-	dprintk("Failed to find inode %d\n", (int)inode);
+    if(pnode == NULL)
+    {
+        // Removed an invalid dirent?
+        dprintk("Failed to find inode %d\n", (int)inode);
         thread_lock_release(&mnt->inode_lock);
-	return 0;
+        return 0;
     }
-    struct ramfs_node *linked_to = container_of(pnode, struct ramfs_node, inode_node);
+    struct ramfs_node *linked_to =
+        container_of(pnode, struct ramfs_node, inode_node);
 
-    if(!ilist_empty(&linked_to->directory)) {
-	// Cannot remove non-empty directory
-	dprintk("Cannot remove non-empty directory\n");
+    if(!ilist_empty(&linked_to->directory))
+    {
+        // Cannot remove non-empty directory
+        dprintk("Cannot remove non-empty directory\n");
         thread_lock_release(&mnt->inode_lock);
-	return -EINVAL;
+        return -EINVAL;
     }
 
     atomic_val_t refs = atomic_fetch_dec(&linked_to->dirent_refs);
-    if(refs == 1) {
-	// We just closed the last reference to this node
-	ptree_remove(&mnt->inode_tree, linked_to->inode_node.key);
-	ramfs_file_free_all_pages(linked_to);
-	kfree(linked_to);
+    if(refs == 1)
+    {
+        // We just closed the last reference to this node
+        ptree_remove(&mnt->inode_tree, linked_to->inode_node.key);
+        ramfs_file_free_all_pages(linked_to);
+        kfree(linked_to);
     }
     thread_lock_release(&mnt->inode_lock);
 
     return 0;
 }
 
-static struct fs_node_ops
-ramfs_dir_node_ops =
-{
+static struct fs_node_ops ramfs_dir_node_ops = {
     .lookup = ramfs_dir_lookup,
     .mkdir = ramfs_dir_mkdir,
     .mkfile = ramfs_dir_mkfile,
@@ -567,9 +572,7 @@ ramfs_dir_node_ops =
 };
 FS_NODE_OPS_INIT_UNDEF(ramfs_dir_node_ops);
 
-static struct fs_file_ops
-ramfs_dir_file_ops =
-{
+static struct fs_file_ops ramfs_dir_file_ops = {
     .dir_begin = ramfs_dir_dir_begin,
     .dir_next = ramfs_dir_dir_next,
     .dir_readattr = ramfs_dir_dir_readattr,
@@ -579,34 +582,33 @@ ramfs_dir_file_ops =
 };
 FS_FILE_OPS_INIT_UNDEF(ramfs_dir_file_ops);
 
-
 // Mount
 
 static int
-ramfs_mount_root_index(
-        struct fs_mount *mnt,
-        size_t *root_index)
+ramfs_mount_root_index(struct fs_mount *mnt, size_t *root_index)
 {
     *root_index = ROOT_INODE_INDEX;
     return 0;
 }
 
 static int
-ramfs_mount_load_node(
-        struct fs_mount *fs_mount,
-        size_t node_index,
-	struct fs_node *fs_node)
+ramfs_mount_load_node(struct fs_mount *fs_mount,
+                      size_t node_index,
+                      struct fs_node *fs_node)
 {
-    struct ramfs_mount *mnt = container_of(fs_mount, struct ramfs_mount, fs_mount);
+    struct ramfs_mount *mnt =
+        container_of(fs_mount, struct ramfs_mount, fs_mount);
 
     thread_lock_acquire(&mnt->inode_lock);
     struct ptree_node *pnode = ptree_get(&mnt->inode_tree, node_index);
-    if(pnode == NULL) {
-	return -ENXIO;
+    if(pnode == NULL)
+    {
+        return -ENXIO;
     }
     thread_lock_release(&mnt->inode_lock);
 
-    struct ramfs_node *node = container_of(pnode, struct ramfs_node, inode_node);
+    struct ramfs_node *node =
+        container_of(pnode, struct ramfs_node, inode_node);
 
     fs_node->backing.file_ops = node->file_ops;
     fs_node->backing.node_ops = node->node_ops;
@@ -616,18 +618,17 @@ ramfs_mount_load_node(
 }
 
 static int
-ramfs_mount_unload_node(
-        struct fs_mount *fs_mount,
-	size_t node_index,
-        struct fs_node *fs_node)
+ramfs_mount_unload_node(struct fs_mount *fs_mount,
+                        size_t node_index,
+                        struct fs_node *fs_node)
 {
-    struct ramfs_mount *mnt = container_of(fs_mount, struct ramfs_mount, fs_mount);
+    struct ramfs_mount *mnt =
+        container_of(fs_mount, struct ramfs_mount, fs_mount);
 
     return 0;
 }
 
-static struct fs_mount_ops
-ramfs_mount_ops = {
+static struct fs_mount_ops ramfs_mount_ops = {
     .root_index = ramfs_mount_root_index,
     .load_node = ramfs_mount_load_node,
     .unload_node = ramfs_mount_unload_node,
@@ -637,18 +638,19 @@ ramfs_mount_ops = {
 // ramfs FS type
 
 static int
-ramfs_type_mount_special(
-        struct fs_type *type,
-        const char *id,
-        struct fs_mount **out)
+ramfs_type_mount_special(struct fs_type *type,
+                         const char *id,
+                         struct fs_mount **out)
 {
-    if(strcmp(id, "ramfs") != 0) {
-	return  -EINVAL;
+    if(strcmp(id, "ramfs") != 0)
+    {
+        return -EINVAL;
     }
 
     struct ramfs_mount *mnt = kzmalloc(sizeof(*mnt), KM_KERNEL);
-    if(mnt == NULL) {
-	return -ENOMEM;
+    if(mnt == NULL)
+    {
+        return -ENOMEM;
     }
 
     init_fs_mount_struct(&mnt->fs_mount, &ramfs_mount_ops);
@@ -663,7 +665,9 @@ ramfs_type_mount_special(
     ilist_init(&mnt->root_node.directory);
     mnt->root_node.dirent_refs = 1;
 
-    ptree_insert(&mnt->inode_tree, &mnt->root_node.inode_node, ROOT_INODE_INDEX);
+    ptree_insert(&mnt->inode_tree,
+                 &mnt->root_node.inode_node,
+                 ROOT_INODE_INDEX);
 
     *out = &mnt->fs_mount;
 
@@ -671,9 +675,7 @@ ramfs_type_mount_special(
 }
 
 static int
-ramfs_type_unmount(
-        struct fs_type *type,
-        struct fs_mount *mnt)
+ramfs_type_unmount(struct fs_type *type, struct fs_mount *mnt)
 {
     return -EUNIMPL;
 }
@@ -688,13 +690,11 @@ static int
 ramfs_register_fs_type(void)
 {
     int res;
-    res = register_fs_type(
-            &ramfs_fs_type,
-            "ramfs");
-    if(res) {
+    res = register_fs_type(&ramfs_fs_type, "ramfs");
+    if(res)
+    {
         return res;
     }
     return 0;
 }
 declare_init_desc(fs, ramfs_register_fs_type, "Registering RAMFS Filesystem");
-

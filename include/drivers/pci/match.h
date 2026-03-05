@@ -1,8 +1,8 @@
 #ifndef __KANAWHA_DRIVERS_PCI_MATCH_H__
 #define __KANAWHA_DRIVERS_PCI_MATCH_H__
 
-#include <kanawha/spinlock.h>
 #include <kanawha/list.h>
+#include <kanawha/spinlock.h>
 
 extern spinlock_t pci_match_lock;
 extern ilist_t pci_driver_list;

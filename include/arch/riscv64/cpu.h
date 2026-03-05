@@ -1,9 +1,9 @@
 #ifndef __KANAWHA__ARCH_RISCV64__CPU_H__
 #define __KANAWHA__ARCH_RISCV64__CPU_H__
 
-#include <kanawha/types.h>
 #include <kanawha/cpu.h>
 #include <kanawha/percpu.h>
+#include <kanawha/types.h>
 
 typedef uint64_t hartid_t;
 
@@ -24,12 +24,14 @@ provide_hartid(hartid_t hartid, cpu_id_t cpu)
 }
 
 static inline int
-provide_bsp_hartid(hartid_t hartid) {
+provide_bsp_hartid(hartid_t hartid)
+{
     return provide_hartid(hartid, 0);
 }
 
 static inline hartid_t
-current_hartid(void) {
+current_hartid(void)
+{
     hartid_t *id = percpu_ptr(percpu_addr(riscv64_hartid));
     return *id;
 }

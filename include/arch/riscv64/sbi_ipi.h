@@ -3,6 +3,7 @@
 
 #include <arch/riscv64/cpu.h>
 
-int sbi_send_ipi(hartid_t hartid);
+int
+sbi_send_ipi(hartid_t hartid);
 
 #endif

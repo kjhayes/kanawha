@@ -3,13 +3,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-__attribute__((noreturn))
-void __arch_longjmp(jmp_buf buf, int ret);
+__attribute__((noreturn)) void
+__arch_longjmp(jmp_buf buf, int ret);
 
-__attribute__((noreturn))
-void _longjmp(jmp_buf buf, int ret) {
-    if(ret == 0) {
-	ret = 1;
+__attribute__((noreturn)) void
+_longjmp(jmp_buf buf, int ret)
+{
+    if(ret == 0)
+    {
+        ret = 1;
     }
     __arch_longjmp(buf, ret);
 
@@ -18,10 +20,11 @@ void _longjmp(jmp_buf buf, int ret) {
     abort();
 }
 
-__attribute__((noreturn))
-void longjmp(jmp_buf buf, int ret)
+__attribute__((noreturn)) void
+longjmp(jmp_buf buf, int ret)
 {
-    if(ret == 0) {
+    if(ret == 0)
+    {
         ret = 1;
     }
     __arch_longjmp(buf, ret);
@@ -30,4 +33,3 @@ void longjmp(jmp_buf buf, int ret)
     fprintf(stderr, "Architecture returned from longjmp!\n");
     abort();
 }
-

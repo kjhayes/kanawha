@@ -1,10 +1,9 @@
 
-#include <locale.h>
 #include <limits.h>
+#include <locale.h>
 #include <string.h>
 
-const static struct lconv
-__ELK_c_locale = {
+const static struct lconv __ELK_c_locale = {
     .decimal_point = ".",
     .thousands_sep = "",
     .grouping = "",
@@ -30,20 +29,21 @@ __ELK_c_locale = {
     .int_n_sign_posn = CHAR_MAX,
 };
 
-static struct lconv
-__ELK_current_locale = __ELK_c_locale;
+static struct lconv __ELK_current_locale = __ELK_c_locale;
 
-char *setlocale(int category, const char *locale)
+char *
+setlocale(int category, const char *locale)
 {
     // We only support the "C" locale
-    if(locale == NULL) {
+    if(locale == NULL)
+    {
         return "C";
     }
     return NULL;
 }
 
-struct lconv *localeconv(void)
+struct lconv *
+localeconv(void)
 {
     return &__ELK_current_locale;
 }
-

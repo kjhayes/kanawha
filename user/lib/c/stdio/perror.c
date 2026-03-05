@@ -6,11 +6,11 @@
 void
 perror(const char *s)
 {
-    if(s) {
+    if(s)
+    {
         fprintf(stderr, s);
         fprintf(stderr, ": ");
     }
 
     fprintf(stderr, "%s\n", strerror(errno));
 }
-

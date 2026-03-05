@@ -7,4 +7,3 @@ dlclose(void *handle)
 {
     return -EUNIMPL;
 }
-

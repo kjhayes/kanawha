@@ -4,7 +4,6 @@
 #include <acpi/acpi.h>
 
 int
-acpi_sysfs_on_register_table(
-        struct acpi_table *table);
+acpi_sysfs_on_register_table(struct acpi_table *table);
 
 #endif

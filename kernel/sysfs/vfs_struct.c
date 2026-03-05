@@ -1,10 +1,10 @@
 
-#include <kanawha/sysfs/vfs.h>
-#include <kanawha/kmalloc.h>
-#include <kanawha/string.h>
 #include <kanawha/assert.h>
-#include <kanawha/stddef.h>
+#include <kanawha/kmalloc.h>
 #include <kanawha/parse.h>
+#include <kanawha/stddef.h>
+#include <kanawha/string.h>
+#include <kanawha/sysfs/vfs.h>
 
 static struct fs_node_ops vfs_field_node_ops;
 static struct fs_file_ops vfs_field_file_ops;
@@ -21,11 +21,17 @@ struct vfs_struct_field
     void *state;
 
     // Raw Read/Write Callbacks
-    ssize_t(*raw_read)(struct vfs_struct_field *, size_t offset, void *buffer, size_t buflen);
-    ssize_t(*raw_write)(struct vfs_struct_field *, size_t offset, void *buffer, size_t buflen);
+    ssize_t (*raw_read)(struct vfs_struct_field *,
+                        size_t offset,
+                        void *buffer,
+                        size_t buflen);
+    ssize_t (*raw_write)(struct vfs_struct_field *,
+                         size_t offset,
+                         void *buffer,
+                         size_t buflen);
 
     // Free this structure
-    int(*deallocate)(struct vfs_struct_field *self);
+    int (*deallocate)(struct vfs_struct_field *self);
 };
 
 static struct fs_node_ops vfs_struct_node_node_ops;
@@ -44,20 +50,25 @@ struct vfs_struct_node
 };
 
 static inline int
-__vfs_struct_add_field(
-        struct vfs_struct_node *struct_node,
-        struct vfs_struct_field *field,
-        const char *name,
-        void *state,
-        ssize_t(*raw_read)(struct vfs_struct_field *, size_t offset, void *buffer, size_t buflen),
-        ssize_t(*raw_write)(struct vfs_struct_field *, size_t offset, void *buffer, size_t buflen),
-        int(*deallocate)(struct vfs_struct_field *self)
-        )
+__vfs_struct_add_field(struct vfs_struct_node *struct_node,
+                       struct vfs_struct_field *field,
+                       const char *name,
+                       void *state,
+                       ssize_t (*raw_read)(struct vfs_struct_field *,
+                                           size_t offset,
+                                           void *buffer,
+                                           size_t buflen),
+                       ssize_t (*raw_write)(struct vfs_struct_field *,
+                                            size_t offset,
+                                            void *buffer,
+                                            size_t buflen),
+                       int (*deallocate)(struct vfs_struct_field *self))
 {
     int res;
 
     field->name = kstrdup(name);
-    if(field->name == NULL) {
+    if(field->name == NULL)
+    {
         return -ENOMEM;
     }
 
@@ -69,23 +80,19 @@ __vfs_struct_add_field(
     field->vfs_node.fs_node_ops = &vfs_field_node_ops;
     field->vfs_node.fs_file_ops = &vfs_field_file_ops;
 
-    res = vfs_mount_insert_node(
-            struct_node->mnt,
-            &field->vfs_node,
-            &field->inode);
-    if(res) {
+    res = vfs_mount_insert_node(struct_node->mnt,
+                                &field->vfs_node,
+                                &field->inode);
+    if(res)
+    {
         kfree(field->name);
         return res;
     }
 
-    res = vfs_node_link(
-            &struct_node->vfs_node,
-            field->name,
-            field->inode);
-    if(res) {
-        vfs_mount_remove_node(
-                struct_node->mnt,
-                &field->vfs_node);
+    res = vfs_node_link(&struct_node->vfs_node, field->name, field->inode);
+    if(res)
+    {
+        vfs_mount_remove_node(struct_node->mnt, &field->vfs_node);
         kfree(field->name);
         return res;
     }
@@ -93,17 +100,12 @@ __vfs_struct_add_field(
     field->field_node.key = field->name;
 
     spin_lock(&struct_node->field_tree_lock);
-    res = stree_insert(
-            &struct_node->field_tree,
-            &field->field_node);
+    res = stree_insert(&struct_node->field_tree, &field->field_node);
     spin_unlock(&struct_node->field_tree_lock);
-    if(res) {
-        vfs_node_unlink(
-                &struct_node->vfs_node,
-                field->name);
-        vfs_mount_remove_node(
-                struct_node->mnt,
-                &field->vfs_node);
+    if(res)
+    {
+        vfs_node_unlink(&struct_node->vfs_node, field->name);
+        vfs_mount_remove_node(struct_node->mnt, &field->vfs_node);
         kfree(field->name);
         return res;
     }
@@ -112,9 +114,7 @@ __vfs_struct_add_field(
 }
 
 int
-vfs_struct_node_destroy_field(
-        struct vfs_struct_node *node,
-        const char *name)
+vfs_struct_node_destroy_field(struct vfs_struct_node *node, const char *name)
 {
     int res;
 
@@ -122,28 +122,23 @@ vfs_struct_node_destroy_field(
 
     spin_lock(&node->field_tree_lock);
     {
-    struct stree_node *snode = stree_get(
-            &node->field_tree,
-            name);
-    if(snode == NULL) {
-        spin_unlock(&node->field_tree_lock);
-        return -ENXIO;
-    }
-    field = container_of(snode, struct vfs_struct_field, field_node);
+        struct stree_node *snode = stree_get(&node->field_tree, name);
+        if(snode == NULL)
+        {
+            spin_unlock(&node->field_tree_lock);
+            return -ENXIO;
+        }
+        field = container_of(snode, struct vfs_struct_field, field_node);
 
-    struct stree_node *rem = stree_remove(&node->field_tree, field->name);
-    DEBUG_ASSERT(rem == snode);
+        struct stree_node *rem = stree_remove(&node->field_tree, field->name);
+        DEBUG_ASSERT(rem == snode);
     }
     spin_unlock(&node->field_tree_lock);
 
-    res = vfs_node_unlink(
-            &node->vfs_node,
-            field->name);
+    res = vfs_node_unlink(&node->vfs_node, field->name);
     ASSERT(res == 0);
 
-    res = vfs_mount_remove_node(
-            node->mnt,
-            &field->vfs_node);
+    res = vfs_mount_remove_node(node->mnt, &field->vfs_node);
     ASSERT(res == 0);
 
     kfree(field->name);
@@ -158,60 +153,64 @@ vfs_struct_node_destroy_field(
 }
 
 static ssize_t
-vfs_field_fs_file_read(
-        struct file *file,
-        void *buffer,
-        ssize_t buflen,
-        unsigned long flags)
+vfs_field_fs_file_read(struct file *file,
+                       void *buffer,
+                       ssize_t buflen,
+                       unsigned long flags)
 {
     int res;
 
-    if(flags & FS_FILE_READ_NON_BLOCKING) {
+    if(flags & FS_FILE_READ_NON_BLOCKING)
+    {
         return -EUNIMPL;
     }
 
     struct fs_node *fs_node = fs_path_get_fs_node(file->path);
-    if(fs_node == NULL) {
+    if(fs_node == NULL)
+    {
         return -EUNIMPL;
     }
 
-    struct vfs_struct_field *field = container_of(fs_node->backing.priv_state, struct vfs_struct_field, vfs_node);
+    struct vfs_struct_field *field = container_of(fs_node->backing.priv_state,
+                                                  struct vfs_struct_field,
+                                                  vfs_node);
 
     return (*field->raw_read)(field, file->seek_offset, buffer, buflen);
 }
 
 static ssize_t
-vfs_field_fs_file_write(
-        struct file *file,
-        void *buffer,
-        ssize_t buflen,
-        unsigned long flags)
+vfs_field_fs_file_write(struct file *file,
+                        void *buffer,
+                        ssize_t buflen,
+                        unsigned long flags)
 {
     int res;
 
-    if(flags & FS_FILE_WRITE_NON_BLOCKING) {
+    if(flags & FS_FILE_WRITE_NON_BLOCKING)
+    {
         return -EUNIMPL;
     }
 
     struct fs_node *fs_node = fs_path_get_fs_node(file->path);
-    if(fs_node == NULL) {
+    if(fs_node == NULL)
+    {
         return -EUNIMPL;
     }
 
-    struct vfs_struct_field *field = container_of(fs_node->backing.priv_state, struct vfs_struct_field, vfs_node);
+    struct vfs_struct_field *field = container_of(fs_node->backing.priv_state,
+                                                  struct vfs_struct_field,
+                                                  vfs_node);
 
     return (*field->raw_write)(field, file->seek_offset, buffer, buflen);
 }
 
-static struct fs_node_ops vfs_field_node_ops =
-{
+static struct fs_node_ops vfs_field_node_ops = {
 
     .flush = fs_node_flush_nop,
 };
 FS_NODE_OPS_INIT_UNDEF(vfs_field_node_ops);
 
-static struct fs_file_ops vfs_field_file_ops =
-{
+static struct fs_file_ops vfs_field_file_ops = {
     .read = vfs_field_fs_file_read,
     .write = vfs_field_fs_file_write,
     .seek = fs_file_paged_seek,
@@ -219,15 +218,14 @@ static struct fs_file_ops vfs_field_file_ops =
 FS_FILE_OPS_INIT_UNDEF(vfs_field_file_ops);
 
 struct vfs_struct_node *
-vfs_create_struct_node(
-        struct vfs_mount *mnt,
-        const char *name)
+vfs_create_struct_node(struct vfs_mount *mnt, const char *name)
 {
     int res;
 
     struct vfs_struct_node *node;
     node = kmalloc(sizeof(struct vfs_struct_node), KM_KERNEL);
-    if(node == NULL) {
+    if(node == NULL)
+    {
         return NULL;
     }
 
@@ -240,29 +238,24 @@ vfs_create_struct_node(
     stree_init(&node->field_tree);
 
     node->name = kstrdup(name);
-    if(node->name == NULL) {
+    if(node->name == NULL)
+    {
         kfree(node);
         return NULL;
     }
 
-    res = vfs_mount_insert_node(
-            mnt,
-            &node->vfs_node,
-            &node->inode);
-    if(res) {
+    res = vfs_mount_insert_node(mnt, &node->vfs_node, &node->inode);
+    if(res)
+    {
         kfree(node->name);
         kfree(node);
         return NULL;
     }
 
-    res = vfs_mount_link_root(
-            mnt,
-            name,
-            node->inode);
-    if(res) {
-        vfs_mount_remove_node(
-                mnt,
-                &node->vfs_node);
+    res = vfs_mount_link_root(mnt, name, node->inode);
+    if(res)
+    {
+        vfs_mount_remove_node(mnt, &node->vfs_node);
         kfree(node->name);
         kfree(node);
         return NULL;
@@ -272,19 +265,18 @@ vfs_create_struct_node(
 }
 
 int
-vfs_destroy_struct_node(
-        struct vfs_struct_node *node)
+vfs_destroy_struct_node(struct vfs_struct_node *node)
 {
     int res;
-    res = vfs_mount_unlink_root(
-            node->mnt,
-            node->name);
-    if(res) {
+    res = vfs_mount_unlink_root(node->mnt, node->name);
+    if(res)
+    {
         return res;
     }
 
     res = vfs_mount_remove_node(node->mnt, &node->vfs_node);
-    if(res) {
+    if(res)
+    {
         return res;
     }
 
@@ -293,15 +285,13 @@ vfs_destroy_struct_node(
     return 0;
 }
 
-static struct fs_node_ops vfs_struct_node_node_ops =
-{
+static struct fs_node_ops vfs_struct_node_node_ops = {
     .flush = fs_node_flush_nop,
     .lookup = vfs_dir_lookup,
 };
 FS_NODE_OPS_INIT_UNDEF(vfs_struct_node_node_ops);
 
-static struct fs_file_ops vfs_struct_node_file_ops =
-{
+static struct fs_file_ops vfs_struct_node_file_ops = {
     .dir_begin = vfs_dir_begin,
     .dir_next = vfs_dir_next,
     .dir_readattr = vfs_dir_readattr,
@@ -312,83 +302,99 @@ FS_FILE_OPS_INIT_UNDEF(vfs_struct_node_file_ops);
 struct vfs_struct_unsigned_long_field
 {
     struct vfs_struct_field vfs_field;
-    int(*read)(unsigned long *out, void *state); 
-    int(*write)(unsigned long in, void *state);
+    int (*read)(unsigned long *out, void *state);
+    int (*write)(unsigned long in, void *state);
 };
 
 static int
-__vfs_struct_deallocate_unsigned_long_field(
-        struct vfs_struct_field *gen_field)
+__vfs_struct_deallocate_unsigned_long_field(struct vfs_struct_field *gen_field)
 {
     struct vfs_struct_unsigned_long_field *field;
-    field = container_of(gen_field, struct vfs_struct_unsigned_long_field, vfs_field);
+    field = container_of(gen_field,
+                         struct vfs_struct_unsigned_long_field,
+                         vfs_field);
     kfree(field);
     return 0;
 }
 
 static ssize_t
-__vfs_struct_unsigned_long_field_raw_write(
-        struct vfs_struct_field *gen_field,
-        size_t offset,
-        void *buffer,
-        size_t buflen)
+__vfs_struct_unsigned_long_field_raw_write(struct vfs_struct_field *gen_field,
+                                           size_t offset,
+                                           void *buffer,
+                                           size_t buflen)
 {
     int res;
 
     struct vfs_struct_unsigned_long_field *field;
-    field = container_of(gen_field, struct vfs_struct_unsigned_long_field, vfs_field);
- 
-    if(field->write == NULL) {
+    field = container_of(gen_field,
+                         struct vfs_struct_unsigned_long_field,
+                         vfs_field);
+
+    if(field->write == NULL)
+    {
         return -EINVAL;
     }
 
-    if(offset != 0) {
+    if(offset != 0)
+    {
         return 0;
     }
 
-    char str_buf[buflen+1];
+    char str_buf[buflen + 1];
     memcpy(str_buf, buffer, buflen);
     str_buf[buflen] = '\0';
 
     unsigned long val = parse_unsigned_long(str_buf, 0);
 
     res = (*field->write)(val, field->vfs_field.state);
-    if(res == 0) {
+    if(res == 0)
+    {
         return buflen;
-    } else if(res < 0) {
+    }
+    else if(res < 0)
+    {
         return res;
-    } else {
+    }
+    else
+    {
         return -EINVAL;
     }
 }
 
 static ssize_t
-__vfs_struct_unsigned_long_field_raw_read(
-        struct vfs_struct_field *gen_field,
-        size_t offset,
-        void *buffer,
-        size_t buflen)
+__vfs_struct_unsigned_long_field_raw_read(struct vfs_struct_field *gen_field,
+                                          size_t offset,
+                                          void *buffer,
+                                          size_t buflen)
 {
     int res;
 
     struct vfs_struct_unsigned_long_field *field;
-    field = container_of(gen_field, struct vfs_struct_unsigned_long_field, vfs_field);
+    field = container_of(gen_field,
+                         struct vfs_struct_unsigned_long_field,
+                         vfs_field);
 
-    if(field->read == NULL) {
+    if(field->read == NULL)
+    {
         return -EINVAL;
     }
 
-    if(offset != 0) {
+    if(offset != 0)
+    {
         return 0;
     }
 
     unsigned long val;
 
     res = (*field->read)(&val, field->vfs_field.state);
-    if(res != 0) {
-        if(res < 0) {
+    if(res != 0)
+    {
+        if(res < 0)
+        {
             return res;
-        } else {
+        }
+        else
+        {
             return -EINVAL;
         }
     }
@@ -400,35 +406,36 @@ __vfs_struct_unsigned_long_field_raw_read(
     return len;
 }
 int
-vfs_struct_node_add_unsigned_long_field(
-        struct vfs_struct_node *node,
-        const char *name,
-        void *state,
-        int(*read)(unsigned long *out, void *state),
-        int(*write)(unsigned long in, void *state)
-        )
+vfs_struct_node_add_unsigned_long_field(struct vfs_struct_node *node,
+                                        const char *name,
+                                        void *state,
+                                        int (*read)(unsigned long *out,
+                                                    void *state),
+                                        int (*write)(unsigned long in,
+                                                     void *state))
 {
     int res;
 
     struct vfs_struct_unsigned_long_field *field;
 
     field = kmalloc(sizeof(*field), KM_KERNEL);
-    if(field == NULL) {
+    if(field == NULL)
+    {
         return -ENOMEM;
     }
 
     field->read = read;
     field->write = write;
 
-    res = __vfs_struct_add_field(
-            node,
-            &field->vfs_field,
-            name,
-            state,
-            __vfs_struct_unsigned_long_field_raw_read,
-            __vfs_struct_unsigned_long_field_raw_write,
-            __vfs_struct_deallocate_unsigned_long_field);
-    if(res) {
+    res = __vfs_struct_add_field(node,
+                                 &field->vfs_field,
+                                 name,
+                                 state,
+                                 __vfs_struct_unsigned_long_field_raw_read,
+                                 __vfs_struct_unsigned_long_field_raw_write,
+                                 __vfs_struct_deallocate_unsigned_long_field);
+    if(res)
+    {
         kfree(field);
         return res;
     }
@@ -441,13 +448,12 @@ vfs_struct_node_add_unsigned_long_field(
 struct vfs_struct_buffer_field
 {
     struct vfs_struct_field vfs_field;
-    ssize_t(*read)(size_t offset, char *buf_out, size_t len, void *state); 
-    ssize_t(*write)(size_t offset, char *buf_in, size_t len, void *state);
+    ssize_t (*read)(size_t offset, char *buf_out, size_t len, void *state);
+    ssize_t (*write)(size_t offset, char *buf_in, size_t len, void *state);
 };
 
 static int
-__vfs_struct_deallocate_buffer_field(
-        struct vfs_struct_field *gen_field)
+__vfs_struct_deallocate_buffer_field(struct vfs_struct_field *gen_field)
 {
     struct vfs_struct_buffer_field *field;
     field = container_of(gen_field, struct vfs_struct_buffer_field, vfs_field);
@@ -456,18 +462,18 @@ __vfs_struct_deallocate_buffer_field(
 }
 
 static ssize_t
-__vfs_struct_buffer_field_raw_write(
-        struct vfs_struct_field *gen_field,
-        size_t offset,
-        void *buffer,
-        size_t buflen)
+__vfs_struct_buffer_field_raw_write(struct vfs_struct_field *gen_field,
+                                    size_t offset,
+                                    void *buffer,
+                                    size_t buflen)
 {
     int res;
 
     struct vfs_struct_buffer_field *field;
     field = container_of(gen_field, struct vfs_struct_buffer_field, vfs_field);
- 
-    if(field->write == NULL) {
+
+    if(field->write == NULL)
+    {
         return -EINVAL;
     }
 
@@ -475,18 +481,18 @@ __vfs_struct_buffer_field_raw_write(
 }
 
 static ssize_t
-__vfs_struct_buffer_field_raw_read(
-        struct vfs_struct_field *gen_field,
-        size_t offset,
-        void *buffer,
-        size_t buflen)
+__vfs_struct_buffer_field_raw_read(struct vfs_struct_field *gen_field,
+                                   size_t offset,
+                                   void *buffer,
+                                   size_t buflen)
 {
     int res;
 
     struct vfs_struct_buffer_field *field;
     field = container_of(gen_field, struct vfs_struct_buffer_field, vfs_field);
 
-    if(field->read == NULL) {
+    if(field->read == NULL)
+    {
         return -EINVAL;
     }
 
@@ -495,38 +501,37 @@ __vfs_struct_buffer_field_raw_read(
 
 int
 vfs_struct_node_add_buffer_field(
-        struct vfs_struct_node *node,
-        const char *name,
-        void *state,
-        ssize_t(*read)(size_t offset, char *buf_out, size_t len, void *state),
-        ssize_t(*write)(size_t offset, char *buf_in, size_t len, void *state)
-        )
+    struct vfs_struct_node *node,
+    const char *name,
+    void *state,
+    ssize_t (*read)(size_t offset, char *buf_out, size_t len, void *state),
+    ssize_t (*write)(size_t offset, char *buf_in, size_t len, void *state))
 {
     int res;
 
     struct vfs_struct_buffer_field *field;
 
     field = kmalloc(sizeof(*field), KM_KERNEL);
-    if(field == NULL) {
+    if(field == NULL)
+    {
         return -ENOMEM;
     }
 
     field->read = read;
     field->write = write;
 
-    res = __vfs_struct_add_field(
-            node,
-            &field->vfs_field,
-            name,
-            state,
-            __vfs_struct_buffer_field_raw_read,
-            __vfs_struct_buffer_field_raw_write,
-            __vfs_struct_deallocate_buffer_field);
-    if(res) {
+    res = __vfs_struct_add_field(node,
+                                 &field->vfs_field,
+                                 name,
+                                 state,
+                                 __vfs_struct_buffer_field_raw_read,
+                                 __vfs_struct_buffer_field_raw_write,
+                                 __vfs_struct_deallocate_buffer_field);
+    if(res)
+    {
         kfree(field);
         return res;
     }
 
     return 0;
 }
-

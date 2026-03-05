@@ -3,13 +3,15 @@
 
 #include <kanawha/process.h>
 
-struct daemon {
+struct daemon
+{
     const char *command;
     const char **args;
 
     pid_t pid;
 
-    enum {
+    enum
+    {
         DAEMON_UNINIT = 0,
         DAEMON_RUNNING,
     } status;
@@ -20,11 +22,13 @@ struct daemon {
     struct daemon_socket *sockets;
 };
 
-struct daemon_socket {
+struct daemon_socket
+{
     int socket;
     const char *env;
 };
 
-int start_daemon(struct daemon *daemon);
+int
+start_daemon(struct daemon *daemon);
 
 #endif

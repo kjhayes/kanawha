@@ -1,19 +1,19 @@
 
-#include <kanawha/fs/type.h>
+#include <kanawha/assert.h>
+#include <kanawha/fs/file.h>
 #include <kanawha/fs/mount.h>
 #include <kanawha/fs/node.h>
-#include <kanawha/fs/file.h>
-#include <kanawha/sysfs/sysfs.h>
-#include <kanawha/sysfs/vfs.h>
-#include <kanawha/proc/file_table.h>
-#include <kanawha/types.h>
-#include <kanawha/stddef.h>
-#include <kanawha/vmem.h>
-#include <kanawha/string.h>
+#include <kanawha/fs/type.h>
+#include <kanawha/init.h>
 #include <kanawha/kmalloc.h>
 #include <kanawha/page_alloc.h>
-#include <kanawha/init.h>
-#include <kanawha/assert.h>
+#include <kanawha/proc/file_table.h>
+#include <kanawha/stddef.h>
+#include <kanawha/string.h>
+#include <kanawha/sysfs/sysfs.h>
+#include <kanawha/sysfs/vfs.h>
+#include <kanawha/types.h>
+#include <kanawha/vmem.h>
 
 struct fs_node_ops;
 
@@ -24,52 +24,55 @@ struct ramfile
 
     size_t page_refs;
 
-    void __phys * paddr;
+    void __phys *paddr;
     size_t size;
     order_t page_order;
 };
 
 static struct vfs_mount *ramfile_fs_mount = NULL;
 
-#define RAMFILE_FROM_FS_NODE(fs_node_ptr)\
-    (container_of(((struct vfs_node*)(fs_node_ptr)->backing.priv_state), struct ramfile, vfs_node))
+#define RAMFILE_FROM_FS_NODE(fs_node_ptr)                                      \
+    (container_of(((struct vfs_node *)(fs_node_ptr)->backing.priv_state),      \
+                  struct ramfile,                                              \
+                  vfs_node))
 
 static int
-ramfile_read_page(
-        struct fs_node *fs_node,
-        void *buffer,
-        uintptr_t pfn,
-        unsigned long flags)
+ramfile_read_page(struct fs_node *fs_node,
+                  void *buffer,
+                  uintptr_t pfn,
+                  unsigned long flags)
 {
     int res;
 
-    struct ramfile *ramfile =
-        RAMFILE_FROM_FS_NODE(fs_node);
+    struct ramfile *ramfile = RAMFILE_FROM_FS_NODE(fs_node);
 
     order_t order;
     res = fs_node_page_order(fs_node, &order);
-    if(res) {
+    if(res)
+    {
         return res;
     }
 
     spin_lock(&ramfile->lock);
 
     uintptr_t offset = pfn << order;
-    uintptr_t page_end_offset = offset + (1ULL<<order);
+    uintptr_t page_end_offset = offset + (1ULL << order);
 
-    if(page_end_offset > ramfile->size) {
+    if(page_end_offset > ramfile->size)
+    {
         page_end_offset = ramfile->size;
     }
 
     dprintk("ramfile_read_page: offset=%p, page_end_offset=%p\n",
-            offset, page_end_offset);
+            offset,
+            page_end_offset);
 
     ssize_t copy_size = page_end_offset - offset;
     DEBUG_ASSERT(copy_size >= 0);
 
     memcpy_pv(buffer, ramfile->paddr + offset, copy_size);
 
-    ssize_t room_left = (1ULL<<order) - copy_size;
+    ssize_t room_left = (1ULL << order) - copy_size;
     memset(buffer + copy_size, 0, room_left);
 
     spin_unlock(&ramfile->lock);
@@ -78,36 +81,35 @@ ramfile_read_page(
 }
 
 static int
-ramfile_write_page(
-        struct fs_node *fs_node,
-        void *buffer,
-        uintptr_t pfn,
-        unsigned long flags)
+ramfile_write_page(struct fs_node *fs_node,
+                   void *buffer,
+                   uintptr_t pfn,
+                   unsigned long flags)
 {
     int res;
 
     dprintk("ramfile_write_page\n");
 
-    struct ramfile *ramfile =
-        RAMFILE_FROM_FS_NODE(fs_node);
+    struct ramfile *ramfile = RAMFILE_FROM_FS_NODE(fs_node);
 
     order_t order;
     res = fs_node_page_order(fs_node, &order);
-    if(res) {
+    if(res)
+    {
         return res;
     }
 
     spin_lock(&ramfile->lock);
 
     uintptr_t offset = pfn << order;
-    uintptr_t page_end_offset = offset + (1ULL<<order);
+    uintptr_t page_end_offset = offset + (1ULL << order);
 
-    if(page_end_offset > ramfile->size) {
+    if(page_end_offset > ramfile->size)
+    {
         page_end_offset = ramfile->size;
     }
 
-    dprintk("offset=%p page_end_offset=%p\n",
-            offset, page_end_offset);
+    dprintk("offset=%p page_end_offset=%p\n", offset, page_end_offset);
 
     ssize_t copy_size = page_end_offset - offset;
     DEBUG_ASSERT(copy_size >= 0);
@@ -120,36 +122,34 @@ ramfile_write_page(
 }
 
 static int
-ramfile_load_page(
-        struct fs_node *fs_node,
-        uintptr_t pfn,
-        unsigned long flags,
-        void __phys **addr_out)
+ramfile_load_page(struct fs_node *fs_node,
+                  uintptr_t pfn,
+                  unsigned long flags,
+                  void __phys **addr_out)
 {
     int res;
 
-    struct ramfile *ramfile =
-        RAMFILE_FROM_FS_NODE(fs_node);
+    struct ramfile *ramfile = RAMFILE_FROM_FS_NODE(fs_node);
 
     order_t order;
     res = fs_node_page_order(fs_node, &order);
-    if(res) {
+    if(res)
+    {
         return res;
     }
 
     spin_lock(&ramfile->lock);
 
     uintptr_t offset = pfn << order;
-    uintptr_t page_end_offset = offset + (1ULL<<order);
+    uintptr_t page_end_offset = offset + (1ULL << order);
 
-    void __phys *page; 
-    if(page_end_offset > ramfile->size) {
+    void __phys *page;
+    if(page_end_offset > ramfile->size)
+    {
         // This is a problem, allocate a page for the tail
-        res = page_alloc(
-                order,
-                &page,
-                0);
-        if(res) {
+        res = page_alloc(order, &page, 0);
+        if(res)
+        {
             spin_unlock(&ramfile->lock);
             return res;
         }
@@ -157,9 +157,12 @@ ramfile_load_page(
         // Copy over the data onto the full page
         memcpy_pp(page, ramfile->paddr + offset, ramfile->size - offset);
         // Clear the rest of the page
-        memset_p(page + (ramfile->size - offset), 0, page_end_offset - ramfile->size);
-
-    } else {
+        memset_p(page + (ramfile->size - offset),
+                 0,
+                 page_end_offset - ramfile->size);
+    }
+    else
+    {
         // Just access the page directly
         page = ramfile->paddr + offset;
     }
@@ -172,44 +175,44 @@ ramfile_load_page(
 }
 
 static int
-ramfile_unload_page(
-        struct fs_node *fs_node,
-        uintptr_t pfn,
-        unsigned long flags,
-        void __phys *addr)
+ramfile_unload_page(struct fs_node *fs_node,
+                    uintptr_t pfn,
+                    unsigned long flags,
+                    void __phys *addr)
 {
     int res;
 
-    struct ramfile *ramfile =
-        RAMFILE_FROM_FS_NODE(fs_node);
+    struct ramfile *ramfile = RAMFILE_FROM_FS_NODE(fs_node);
 
     order_t order;
     res = fs_node_page_order(fs_node, &order);
-    if(res) {
+    if(res)
+    {
         return res;
     }
 
     spin_lock(&ramfile->lock);
 
     uintptr_t offset = pfn << order;
-    uintptr_t page_end_offset = offset + (1ULL<<order);
+    uintptr_t page_end_offset = offset + (1ULL << order);
 
-    if(page_end_offset > ramfile->size) {
+    if(page_end_offset > ramfile->size)
+    {
         // This page must have been allocated in ramfile_load_page
 
         // Copy over the page data
         memcpy_pp(ramfile->paddr + offset, addr, ramfile->size - offset);
 
         // Free the backing page
-        res = page_free(
-                order,
-                addr);
-        if(res) { 
+        res = page_free(order, addr);
+        if(res)
+        {
             spin_unlock(&ramfile->lock);
             return res;
         }
-
-    } else {
+    }
+    else
+    {
         // Nothing to be done
     }
 
@@ -220,35 +223,36 @@ ramfile_unload_page(
 
 // Exact same as "unload" page but we don't actually free the backing data
 static int
-ramfile_flush_page(
-        struct fs_node *fs_node,
-        uintptr_t pfn,
-        unsigned long flags,
-        void __phys *addr)
+ramfile_flush_page(struct fs_node *fs_node,
+                   uintptr_t pfn,
+                   unsigned long flags,
+                   void __phys *addr)
 {
     int res;
 
-    struct ramfile *ramfile =
-        RAMFILE_FROM_FS_NODE(fs_node);
+    struct ramfile *ramfile = RAMFILE_FROM_FS_NODE(fs_node);
 
     order_t order;
     res = fs_node_page_order(fs_node, &order);
-    if(res) {
+    if(res)
+    {
         return res;
     }
 
     spin_lock(&ramfile->lock);
 
     uintptr_t offset = pfn << order;
-    uintptr_t page_end_offset = offset + (1ULL<<order);
+    uintptr_t page_end_offset = offset + (1ULL << order);
 
-    if(page_end_offset > ramfile->size) {
+    if(page_end_offset > ramfile->size)
+    {
         // This page must have been allocated in ramfile_load_page
 
         // Copy over the page data
         memcpy_pp(ramfile->paddr + offset, addr, ramfile->size - offset);
-
-    } else {
+    }
+    else
+    {
         // Nothing to be done
     }
 
@@ -258,32 +262,26 @@ ramfile_flush_page(
 }
 
 static int
-ramfile_node_getattr(
-        struct fs_node *fs_node,
-        int attr,
-        size_t *value)
+ramfile_node_getattr(struct fs_node *fs_node, int attr, size_t *value)
 {
-    struct ramfile *ramfile =
-        RAMFILE_FROM_FS_NODE(fs_node);
+    struct ramfile *ramfile = RAMFILE_FROM_FS_NODE(fs_node);
 
-    switch(attr) {
-        case FS_NODE_ATTR_DATA_SIZE:
-            *value = ramfile->size;
-            break;
-        case FS_NODE_ATTR_PAGE_ORDER:
-            *value = ramfile->page_order;
-            break;
-        default:
-            return -EINVAL;
+    switch(attr)
+    {
+    case FS_NODE_ATTR_DATA_SIZE:
+        *value = ramfile->size;
+        break;
+    case FS_NODE_ATTR_PAGE_ORDER:
+        *value = ramfile->page_order;
+        break;
+    default:
+        return -EINVAL;
     }
     return 0;
 }
 
 static int
-ramfile_node_setattr(
-        struct fs_node *fs_node,
-        int attr,
-        size_t value)
+ramfile_node_setattr(struct fs_node *fs_node, int attr, size_t value)
 {
     return -EINVAL;
 }
@@ -292,7 +290,8 @@ static int
 ramfile_mount_init(void)
 {
     ramfile_fs_mount = vfs_mount_create();
-    if(ramfile_fs_mount == NULL) {
+    if(ramfile_fs_mount == NULL)
+    {
         return -ENOMEM;
     }
 
@@ -305,14 +304,14 @@ ramfile_register_sysfs(void)
 {
     int res;
 
-    if(ramfile_fs_mount == NULL) {
+    if(ramfile_fs_mount == NULL)
+    {
         return -EDEFER;
     }
 
-    res = sysfs_register_mount(
-            &ramfile_fs_mount->fs_mount,
-            "ramfile");
-    if(res) {
+    res = sysfs_register_mount(&ramfile_fs_mount->fs_mount, "ramfile");
+    if(res)
+    {
         return res;
     }
 
@@ -326,9 +325,7 @@ ramfile_mount(void)
     return &ramfile_fs_mount->fs_mount;
 }
 
-struct fs_node_ops
-ramfile_fs_node_ops =
-{
+struct fs_node_ops ramfile_fs_node_ops = {
     .read_page = ramfile_read_page,
     .write_page = ramfile_write_page,
 
@@ -343,9 +340,7 @@ ramfile_fs_node_ops =
 };
 FS_NODE_OPS_INIT_UNDEF(ramfile_fs_node_ops);
 
-struct fs_file_ops
-ramfile_fs_file_ops =
-{
+struct fs_file_ops ramfile_fs_file_ops = {
     .read = fs_file_paged_read,
     .write = fs_file_paged_write,
     .seek = fs_file_paged_seek,
@@ -355,20 +350,18 @@ ramfile_fs_file_ops =
 FS_FILE_OPS_INIT_UNDEF(ramfile_fs_file_ops);
 
 int
-create_ramfile(
-        const char *ramfile_name,
-        void __phys * paddr,
-        size_t size)
+create_ramfile(const char *ramfile_name, void __phys *paddr, size_t size)
 {
     int res;
 
-    if(ramfile_fs_mount == NULL) {
+    if(ramfile_fs_mount == NULL)
+    {
         return -EDEFER;
     }
 
-    struct ramfile *ramfile =
-        kzmalloc(sizeof(struct ramfile), KM_KERNEL);
-    if(ramfile == NULL) {
+    struct ramfile *ramfile = kzmalloc(sizeof(struct ramfile), KM_KERNEL);
+    if(ramfile == NULL)
+    {
         return -ENOMEM;
     }
 
@@ -385,11 +378,11 @@ create_ramfile(
     ramfile->vfs_node.fs_file_ops = &ramfile_fs_file_ops;
     ramfile->vfs_node.fs_node_ops = &ramfile_fs_node_ops;
 
-    res = vfs_mount_insert_node_and_link_root(
-            ramfile_fs_mount,
-            &ramfile->vfs_node,
-            ramfile_name);
-    if(res) {
+    res = vfs_mount_insert_node_and_link_root(ramfile_fs_mount,
+                                              &ramfile->vfs_node,
+                                              ramfile_name);
+    if(res)
+    {
         kfree(ramfile);
         return res;
     }
@@ -398,9 +391,7 @@ create_ramfile(
 }
 
 int
-destroy_ramfile(
-        const char *ramfile_name)
+destroy_ramfile(const char *ramfile_name)
 {
     return -EUNIMPL;
 }
-

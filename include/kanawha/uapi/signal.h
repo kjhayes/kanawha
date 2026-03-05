@@ -3,29 +3,29 @@
 
 typedef unsigned long signal_id_t;
 
-#define SIGMOD_ENTRY  (1)
-#define SIGMOD_ACK    (2)
+#define SIGMOD_ENTRY (1)
+#define SIGMOD_ACK (2)
 
-#define SIGINFO_RETURN  (1)
+#define SIGINFO_RETURN (1)
 #define SIGINFO_CURRENT (2)
 
-#define SIGNAL_XLIST(X)\
-X(0, NONE)\
-X(1, MEMFAULT)\
-X(2, PROTFAULT)\
-X(3, DECODEFAULT)\
-X(4, ORPHANED)\
+#define SIGNAL_XLIST(X)                                                        \
+    X(0, NONE)                                                                 \
+    X(1, MEMFAULT)                                                             \
+    X(2, PROTFAULT)                                                            \
+    X(3, DECODEFAULT)                                                          \
+    X(4, ORPHANED)
 
-#define DECLARE_SIGNAL_ID_CONSTANTS(__id, __NAME, ...)\
-const static signal_id_t SIGNAL_ID_ ## __NAME = __id;
+#define DECLARE_SIGNAL_ID_CONSTANTS(__id, __NAME, ...)                         \
+    const static signal_id_t SIGNAL_ID_##__NAME = __id;
 SIGNAL_XLIST(DECLARE_SIGNAL_ID_CONSTANTS)
 #undef DECLARE_SIGNAL_ID_CONSTANTS
 
-#define SIGNAL_ID_NONE        (0)
-#define SIGNAL_ID_MEMFAULT    (1)
-#define SIGNAL_ID_PROTFAULT   (2)
+#define SIGNAL_ID_NONE (0)
+#define SIGNAL_ID_MEMFAULT (1)
+#define SIGNAL_ID_PROTFAULT (2)
 #define SIGNAL_ID_DECODEFAULT (3)
-#define SIGNAL_ID_ORPHANED    (4)
+#define SIGNAL_ID_ORPHANED (4)
 
 #ifdef KANAWHA_SIGNAL_UNDEF_XLISTS
 #undef SIGNAL_XLIST

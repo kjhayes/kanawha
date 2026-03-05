@@ -42,26 +42,29 @@ extern struct terminal_data
 
 } terminal_data;
 
-#define LOG(tdata, fmt, ...)\
-    do {\
-        if(tdata->log_file != NULL) {\
-            fprintf(tdata->log_file, fmt, ##__VA_ARGS__);\
-            fflush(tdata->log_file);\
-        }\
+#define LOG(tdata, fmt, ...)                                                   \
+    do                                                                         \
+    {                                                                          \
+        if(tdata->log_file != NULL)                                            \
+        {                                                                      \
+            fprintf(tdata->log_file, fmt, ##__VA_ARGS__);                      \
+            fflush(tdata->log_file);                                           \
+        }                                                                      \
     } while(0)
 
 // "input" must outlive this terminal
 int
-init_terminal(FILE *input, FILE *log_file, size_t width, size_t height, size_t mode);
+init_terminal(FILE *input,
+              FILE *log_file,
+              size_t width,
+              size_t height,
+              size_t mode);
 
 void
 deinit_terminal(void);
 
 int
-terminal_resize(
-	struct terminal_data *tdata,
-	size_t width,
-	size_t height);
+terminal_resize(struct terminal_data *tdata, size_t width, size_t height);
 
 void
 terminal_mark_redraw(struct terminal_data *tdata, size_t __x, size_t __y);
@@ -77,58 +80,39 @@ void
 terminal_advance_cursor(struct terminal_data *tdata);
 
 void
-terminal_set_cursor(
-        struct terminal_data *data,
-        int x,
-        int y);
+terminal_set_cursor(struct terminal_data *data, int x, int y);
 
 char
-terminal_get_char_under_cursor(
-        struct terminal_data *data);
+terminal_get_char_under_cursor(struct terminal_data *data);
 
 void
-terminal_move_cursor_up(
-        struct terminal_data *data,
-        int amount);
+terminal_move_cursor_up(struct terminal_data *data, int amount);
 
 void
-terminal_move_cursor_down(
-        struct terminal_data *data,
-        int amount);
+terminal_move_cursor_down(struct terminal_data *data, int amount);
 
 void
-terminal_move_cursor_right(
-        struct terminal_data *data,
-        int amount);
+terminal_move_cursor_right(struct terminal_data *data, int amount);
 
 void
-terminal_move_cursor_left(
-        struct terminal_data *data,
-        int amount);
+terminal_move_cursor_left(struct terminal_data *data, int amount);
 
 void
-terminal_move_cursor_to_column(
-        struct terminal_data *data,
-        int offset);
+terminal_move_cursor_to_column(struct terminal_data *data, int offset);
 
 void
-terminal_move_cursor_to_row(
-        struct terminal_data *data,
-        int offset);
+terminal_move_cursor_to_row(struct terminal_data *data, int offset);
 
 void
 terminal_put_at_cursor(struct terminal_data *tdata, char __c);
 
 void
-terminal_insert_at_cursor(
-        struct terminal_data *tdata, char __c);
+terminal_insert_at_cursor(struct terminal_data *tdata, char __c);
 void
-terminal_delete_at_cursor(
-        struct terminal_data *tdata, char __fill_end);
+terminal_delete_at_cursor(struct terminal_data *tdata, char __fill_end);
 
 void
-terminal_delete_line_at_cursor(
-        struct terminal_data *tdata, char __fill_end);
+terminal_delete_line_at_cursor(struct terminal_data *tdata, char __fill_end);
 
 void
 terminal_clear_cursor_to_end_of_screen(struct terminal_data *tdata);

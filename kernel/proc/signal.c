@@ -1,22 +1,21 @@
 
-#include <kanawha/proc/signal.h>
-#include <kanawha/proc/process.h>
-#include <kanawha/uapi/signal.h>
-#include <kanawha/strace.h>
-#include <kanawha/spinlock.h>
 #include <kanawha/irq.h>
+#include <kanawha/proc/process.h>
+#include <kanawha/proc/signal.h>
+#include <kanawha/spinlock.h>
+#include <kanawha/strace.h>
 #include <kanawha/string.h>
+#include <kanawha/uapi/signal.h>
 
 int
-signal_state_init(
-        struct signal_state *state)
+signal_state_init(struct signal_state *state)
 {
     irq_lock_init(&state->lock);
 
     state->signal_entry = NULL;
     state->signal_entry_set = 0;
 
-    state->interrupted_user_ip  = 0;
+    state->interrupted_user_ip = 0;
     state->interrupted = 0;
 
     state->fatal = 0;
@@ -28,9 +27,8 @@ signal_state_init(
 }
 
 int
-signal_state_init_on_spawn(
-	struct signal_state *parent,
-	struct signal_state *child)
+signal_state_init_on_spawn(struct signal_state *parent,
+                           struct signal_state *child)
 {
     int res;
 
@@ -45,34 +43,34 @@ signal_state_init_on_spawn(
 }
 
 int
-signal_deliver(
-        struct process *process,
-        signal_id_t id,
-        unsigned long flags)
+signal_deliver(struct process *process, signal_id_t id, unsigned long flags)
 {
     int res;
     irq_lock_acquire(&process->signal_state.lock);
 
     strace_deliver_signal(process, id);
 
-    if(flags & SIGNAL_FLAG_FATAL) {
+    if(flags & SIGNAL_FLAG_FATAL)
+    {
         process->signal_state.fatal = 1;
     }
 
-    if(!(flags & SIGNAL_FLAG_IGNORABLE)) {
+    if(!(flags & SIGNAL_FLAG_IGNORABLE))
+    {
         thread_wake(&process->thread);
     }
 
     if(bitmap_check(process->signal_state.pending_bitmap, id))
     {
-	    // The signal is already pending
+        // The signal is already pending
         irq_lock_release(&process->signal_state.lock);
 
-	    if((flags & SIGNAL_FLAG_COALESCE) == 0) {
-	        return -EALREADY;
-	    }
+        if((flags & SIGNAL_FLAG_COALESCE) == 0)
+        {
+            return -EALREADY;
+        }
 
-	    return 0;
+        return 0;
     }
 
     bitmap_set(process->signal_state.pending_bitmap, id);
@@ -84,9 +82,7 @@ signal_deliver(
 }
 
 int
-signal_ack(
-	struct process *process,
-	signal_id_t id)
+signal_ack(struct process *process, signal_id_t id)
 {
     int res;
 
@@ -94,9 +90,10 @@ signal_ack(
 
     process->signal_state.interrupted = 0;
 
-    if(bitmap_check(process->signal_state.pending_bitmap, id)) {
-	    process->signal_state.num_pending--;
-	    bitmap_clear(process->signal_state.pending_bitmap, id);
+    if(bitmap_check(process->signal_state.pending_bitmap, id))
+    {
+        process->signal_state.num_pending--;
+        bitmap_clear(process->signal_state.pending_bitmap, id);
     }
 
     irq_lock_release(&process->signal_state.lock);
@@ -105,14 +102,14 @@ signal_ack(
 }
 
 int
-signal_on_return_to_userspace(
-	struct process *process)
+signal_on_return_to_userspace(struct process *process)
 {
     int res;
 
     irq_lock_acquire(&process->signal_state.lock);
 
-    if(process->signal_state.fatal) {
+    if(process->signal_state.fatal)
+    {
         irq_lock_release(&process->signal_state.lock);
         disable_irqs();
         process_terminate(-EINTR);
@@ -120,22 +117,26 @@ signal_on_return_to_userspace(
         panic("thread_abandon returned!\n");
     }
 
-    if(process->signal_state.num_pending == 0) {
+    if(process->signal_state.num_pending == 0)
+    {
         irq_lock_release(&process->signal_state.lock);
-	    return 0; // Nothing to do
+        return 0; // Nothing to do
     }
 
-    if(process->signal_state.interrupted) {
+    if(process->signal_state.interrupted)
+    {
         irq_lock_release(&process->signal_state.lock);
-	    return 0; // Can't deliver another signal
+        return 0; // Can't deliver another signal
     }
 
-    if(process->signal_state.signal_entry_set == 0) {
+    if(process->signal_state.signal_entry_set == 0)
+    {
         irq_lock_release(&process->signal_state.lock);
-	    return -EINVAL; // No entry point set
+        return -EINVAL; // No entry point set
     }
 
-    signal_id_t id = bitmap_find_first_set(process->signal_state.pending_bitmap, NUM_SIGNALS);
+    signal_id_t id = bitmap_find_first_set(process->signal_state.pending_bitmap,
+                                           NUM_SIGNALS);
     DEBUG_ASSERT(id < NUM_SIGNALS);
 
     process->signal_state.interrupted_user_ip = process->user_ip;
@@ -143,8 +144,8 @@ signal_on_return_to_userspace(
     process->signal_state.interrupted = 1;
 
     printk("Delivering Signal to Userspace: interrupted=%p, entry=%p\n",
-	    process->signal_state.interrupted_user_ip,
-	    process->user_ip);
+           process->signal_state.interrupted_user_ip,
+           process->user_ip);
 
     irq_lock_release(&process->signal_state.lock);
 
@@ -152,9 +153,7 @@ signal_on_return_to_userspace(
 }
 
 int
-signal_set_entry(
-        struct process *process,
-        void __user *entry)
+signal_set_entry(struct process *process, void __user *entry)
 {
     irq_lock_acquire(&process->signal_state.lock);
 
@@ -166,16 +165,17 @@ signal_set_entry(
 }
 
 signal_id_t
-process_current_signal(
-	struct process *process)
+process_current_signal(struct process *process)
 {
     signal_id_t sig;
 
     irq_lock_acquire(&process->signal_state.lock);
 
-    sig = bitmap_find_first_set(process->signal_state.pending_bitmap, NUM_SIGNALS);
-    if(sig == NUM_SIGNALS) {
-	sig = SIGNAL_ID_NONE;
+    sig = bitmap_find_first_set(process->signal_state.pending_bitmap,
+                                NUM_SIGNALS);
+    if(sig == NUM_SIGNALS)
+    {
+        sig = SIGNAL_ID_NONE;
     }
 
     irq_lock_release(&process->signal_state.lock);
@@ -184,8 +184,7 @@ process_current_signal(
 }
 
 void __user *
-process_signal_return_addr(
-	struct process *process)
+process_signal_return_addr(struct process *process)
 {
     void __user *addr;
 
@@ -201,16 +200,16 @@ process_signal_return_addr(
 const char *
 signal_id_string(signal_id_t id)
 {
-    switch(id) {
-#define SIGNAL_ID_STRING_CASE(__ID, __NAME, ...)\
-        case SIGNAL_ID_ ## __NAME:\
-            return #__NAME;
+    switch(id)
+    {
+#define SIGNAL_ID_STRING_CASE(__ID, __NAME, ...)                               \
+    case SIGNAL_ID_##__NAME:                                                   \
+        return #__NAME;
 
         SIGNAL_XLIST(SIGNAL_ID_STRING_CASE)
 #undef SIGNAL_ID_STRING_CASE
 
-        default:
-            return "UNKNOWN";
+    default:
+        return "UNKNOWN";
     }
 }
-

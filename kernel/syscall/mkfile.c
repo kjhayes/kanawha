@@ -1,62 +1,58 @@
 
+#include <kanawha/fs/node.h>
+#include <kanawha/proc/file_table.h>
 #include <kanawha/proc/process.h>
 #include <kanawha/uapi/syscall.h>
-#include <kanawha/proc/file_table.h>
-#include <kanawha/fs/node.h>
 
 #define SYSCALL_MKFILE_MAX_NAMELEN 128
 
 #ifdef CONFIG_DEBUG_SYSCALL_MKFILE
-#define LOG(fmt, ...) \
+#define LOG(fmt, ...)                                                          \
     printk("PID(%ld) syscall_mkfile: " fmt, process->id, ##__VA_ARGS__)
 #else
 #define LOG(...)
 #endif
 
 int
-syscall_mkfile(
-        fd_t dir_fd,
-        char __user * name,
-        unsigned long user_flags)
+syscall_mkfile(fd_t dir_fd, char __user *name, unsigned long user_flags)
 {
     int res;
     struct process *process = current_process();
-    LOG("dir_fd=%ld, name=%p, userflags=%p\n",
-            dir_fd, name, user_flags);
+    LOG("dir_fd=%ld, name=%p, userflags=%p\n", dir_fd, name, user_flags);
 
-    struct file *dir_file
-        = file_table_get_file(
-            process->file_table,
-            process,
-            dir_fd);
-    if(dir_file == NULL) {
+    struct file *dir_file =
+        file_table_get_file(process->file_table, process, dir_fd);
+    if(dir_file == NULL)
+    {
         return -ENXIO;
     }
 
     size_t namelen;
-    res = process_strlen_usermem(
-            process,
-            name,
-            SYSCALL_MKFILE_MAX_NAMELEN+1,
-            &namelen);
-    if(res) {
+    res = process_strlen_usermem(process,
+                                 name,
+                                 SYSCALL_MKFILE_MAX_NAMELEN + 1,
+                                 &namelen);
+    if(res)
+    {
         eprintk("PID(%ld) syscall_mkfile: could not get namelen! (err=%s)\n",
-                process->id, errnostr(res));
+                process->id,
+                errnostr(res));
         return res;
     }
-    if(namelen <= 0) {
-        eprintk("PID(%ld) syscall_mkfile: name length cannot be <= 0! len=%llu\n",
+    if(namelen <= 0)
+    {
+        eprintk("PID(%ld) syscall_mkfile: name length cannot be <= 0! "
+                "len=%llu\n",
                 (sl_t)process->id,
                 (ull_t)namelen);
         return -EINVAL;
     }
-    if(namelen > SYSCALL_MKFILE_MAX_NAMELEN) {
+    if(namelen > SYSCALL_MKFILE_MAX_NAMELEN)
+    {
         // Path is too long
-        file_table_put_file(
-                process->file_table,
-                process,
-                dir_file);
-        eprintk("PID(%ld) syscall_mkfile: name is too long! len=%llu, (>%llu)\n",
+        file_table_put_file(process->file_table, process, dir_file);
+        eprintk("PID(%ld) syscall_mkfile: name is too long! len=%llu, "
+                "(>%llu)\n",
                 (sl_t)process->id,
                 (ull_t)namelen,
                 (ull_t)SYSCALL_MKFILE_MAX_NAMELEN);
@@ -64,18 +60,17 @@ syscall_mkfile(
     }
 
     char namebuf[namelen + 1];
-    res = process_read_usermem(
-            process,
-            (void*)namebuf,
-            (void __user *)name,
-            namelen);
-    if(res) {
-        file_table_put_file(
-                process->file_table,
-                process,
-                dir_file);
-        eprintk("syscall_mkfile: failed to read file name! process_read_usermem(%p) -> %s\n",
-                name, errnostr(res));
+    res = process_read_usermem(process,
+                               (void *)namebuf,
+                               (void __user *)name,
+                               namelen);
+    if(res)
+    {
+        file_table_put_file(process->file_table, process, dir_file);
+        eprintk("syscall_mkfile: failed to read file name! "
+                "process_read_usermem(%p) -> %s\n",
+                name,
+                errnostr(res));
         return res;
     }
 
@@ -88,30 +83,19 @@ syscall_mkfile(
     size_t existing_inode;
 
     struct fs_node *fs_node = fs_path_get_fs_node(dir_file->path);
-    if(fs_node == NULL) {
-        file_table_put_file(
-                process->file_table,
-                process,
-                dir_file);
+    if(fs_node == NULL)
+    {
+        file_table_put_file(process->file_table, process, dir_file);
         return -EINVAL;
     }
 
-    res = fs_node_mkfile(
-            fs_node,
-            namebuf,
-            flags);
-    if(res) {
-        file_table_put_file(
-            process->file_table,
-            process,
-            dir_file);
+    res = fs_node_mkfile(fs_node, namebuf, flags);
+    if(res)
+    {
+        file_table_put_file(process->file_table, process, dir_file);
         return res;
     }
 
-    file_table_put_file(
-            process->file_table,
-            process,
-            dir_file);
+    file_table_put_file(process->file_table, process, dir_file);
     return 0;
 }
-

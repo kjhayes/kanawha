@@ -9,13 +9,13 @@ struct udrv_fb_pkt_provide_mode_info
     unsigned long index;
     struct fb_mode_info mode_info;
 };
-#define UDRV_FB_PKT_REVOKE_MODE_INFO  (2) // User -> Kernel
+#define UDRV_FB_PKT_REVOKE_MODE_INFO (2) // User -> Kernel
 struct udrv_fb_pkt_revoke_mode_info
 {
     unsigned long index;
 };
 
-#define UDRV_FB_PKT_SET_MODE (3)     // Kernel -> User
+#define UDRV_FB_PKT_SET_MODE (3) // Kernel -> User
 struct udrv_fb_pkt_set_mode
 {
     unsigned long mode;

@@ -6,47 +6,51 @@
  * meaning byte n has bits (8n) to (8(n+1))-1
  */
 
-#include <kanawha/types.h>
 #include <kanawha/assert.h>
+#include <kanawha/types.h>
 
-#define BITS_PER_LONG (sizeof(unsigned long)*8)
+#define BITS_PER_LONG (sizeof(unsigned long) * 8)
 
-#define BITMAP_ENTRIES(entries)\
-    (((entries)/BITS_PER_LONG) + ((((entries) % BITS_PER_LONG)!=0)))
+#define BITMAP_ENTRIES(entries)                                                \
+    (((entries) / BITS_PER_LONG) + ((((entries) % BITS_PER_LONG) != 0)))
 
-#define BITMAP_SIZE(entries)\
-    (BITMAP_ENTRIES(entries) * sizeof(unsigned long))
+#define BITMAP_SIZE(entries) (BITMAP_ENTRIES(entries) * sizeof(unsigned long))
 
-
-#define DECLARE_BITMAP(name, entries)\
-    unsigned long (name)[\
-        BITMAP_ENTRIES(entries)\
-    ]
+#define DECLARE_BITMAP(name, entries)                                          \
+    unsigned long(name)[BITMAP_ENTRIES(entries)]
 
 static inline int
 bitmap_check(unsigned long *bitmap, size_t bit)
 {
-    return (bitmap[bit/BITS_PER_LONG] >> (bit%BITS_PER_LONG)) & 1ULL;
+    return (bitmap[bit / BITS_PER_LONG] >> (bit % BITS_PER_LONG)) & 1ULL;
 }
 
 static inline void
 bitmap_set(unsigned long *bitmap, size_t bit)
 {
-    bitmap[bit/BITS_PER_LONG] |= 1ULL<<(bit%BITS_PER_LONG);
+    bitmap[bit / BITS_PER_LONG] |= 1ULL << (bit % BITS_PER_LONG);
 }
 
 static inline void
 bitmap_clear(unsigned long *bitmap, size_t bit)
 {
-    bitmap[bit/BITS_PER_LONG] &= ~(1ULL<<(bit%BITS_PER_LONG));
+    bitmap[bit / BITS_PER_LONG] &= ~(1ULL << (bit % BITS_PER_LONG));
 }
 
 // Search functions for a bitmap with "num_entries" number of bits,
 // returns bit index found or "num_entries" if none are found.
-size_t bitmap_find_first_set(unsigned long *bitmap, size_t num_entries);
-size_t bitmap_find_first_clear(unsigned long *bitmap, size_t num_entries);
+size_t
+bitmap_find_first_set(unsigned long *bitmap, size_t num_entries);
+size_t
+bitmap_find_first_clear(unsigned long *bitmap, size_t num_entries);
 
-size_t bitmap_find_set_range(unsigned long *bitmap, size_t num_entries, size_t num_needed);
-size_t bitmap_find_clear_range(unsigned long *bitmap, size_t num_entries, size_t num_needed);
+size_t
+bitmap_find_set_range(unsigned long *bitmap,
+                      size_t num_entries,
+                      size_t num_needed);
+size_t
+bitmap_find_clear_range(unsigned long *bitmap,
+                        size_t num_entries,
+                        size_t num_needed);
 
 #endif

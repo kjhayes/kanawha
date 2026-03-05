@@ -7,4 +7,3 @@ raise(int sig)
 {
     return kill(getpid(), sig);
 }
-

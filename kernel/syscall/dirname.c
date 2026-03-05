@@ -1,8 +1,8 @@
 
-#include <kanawha/uapi/dir.h>
-#include <kanawha/syscall.h>
 #include <kanawha/fs/file.h>
 #include <kanawha/kmalloc.h>
+#include <kanawha/syscall.h>
+#include <kanawha/uapi/dir.h>
 
 #ifdef CONFIG_DEBUG_SYSCALL_DIRNAME
 #define LOG(...) printk(__VA_ARGS__)
@@ -13,79 +13,62 @@
 #define SYSCALL_DIRNAME_MAX_NAME_LEN 128
 
 int
-syscall_dirname(
-        fd_t dir_fd,
-        char __user *user_namebuf,
-        size_t user_namebuflen)
+syscall_dirname(fd_t dir_fd, char __user *user_namebuf, size_t user_namebuflen)
 {
     int res;
     struct process *process = current_process();
     struct file *file =
-        file_table_get_file(
-                process->file_table,
-                process,
-                dir_fd);
-    if(file == NULL) {
+        file_table_get_file(process->file_table, process, dir_fd);
+    if(file == NULL)
+    {
         return -EINVAL;
     }
 
-    size_t buf_len = user_namebuflen < SYSCALL_DIRNAME_MAX_NAME_LEN 
-        ? user_namebuflen : SYSCALL_DIRNAME_MAX_NAME_LEN;
+    size_t buf_len = user_namebuflen < SYSCALL_DIRNAME_MAX_NAME_LEN
+                         ? user_namebuflen
+                         : SYSCALL_DIRNAME_MAX_NAME_LEN;
 
-    char * name_buf = kmalloc(buf_len, KM_KERNEL);
-    if(name_buf == NULL) {
-        file_table_put_file(
-                process->file_table,
-                process,
-                file);
+    char *name_buf = kmalloc(buf_len, KM_KERNEL);
+    if(name_buf == NULL)
+    {
+        file_table_put_file(process->file_table, process, file);
         return -ENOMEM;
     }
 
-    res = direct_file_dir_readname(
-            file,
-            name_buf,
-            buf_len);
-    if(res) {
+    res = direct_file_dir_readname(file, name_buf, buf_len);
+    if(res)
+    {
         kfree(name_buf);
-        file_table_put_file(
-                process->file_table,
-                process,
-                file);
+        file_table_put_file(process->file_table, process, file);
         return res;
     }
 
-    name_buf[buf_len-1] = '\0';
+    name_buf[buf_len - 1] = '\0';
 
 #ifdef CONFIG_DEBUG_SYSCALL_DIRNAME
     const char *__pathname = fs_path_get_name(file->path);
     LOG("PID(%ld) dirname(%s): returned \"%s\"\n",
-            (sl_t)process->id,
-            __pathname ? __pathname : "NULL",
-            name_buf);
+        (sl_t)process->id,
+        __pathname ? __pathname : "NULL",
+        name_buf);
 #endif
 
-    res = file_table_put_file(
-                process->file_table,
-                process,
-                file);
-    if(res) {
+    res = file_table_put_file(process->file_table, process, file);
+    if(res)
+    {
         kfree(name_buf);
         return res;
     }
 
-    res = process_write_usermem(
-            process,
-            user_namebuf,
-            name_buf,
-            buf_len);
-    if(res) {
+    res = process_write_usermem(process, user_namebuf, name_buf, buf_len);
+    if(res)
+    {
         kfree(name_buf);
         return res;
     }
 
-    LOG("PID(%ld) syscall_dirname: wrote to usermem\n",
-            (sl_t)process->id);
-           
+    LOG("PID(%ld) syscall_dirname: wrote to usermem\n", (sl_t)process->id);
+
     kfree(name_buf);
     return 0;
 }

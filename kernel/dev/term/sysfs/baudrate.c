@@ -1,43 +1,45 @@
 
-#include <kanawha/dev/term/sysfs.h>
 #include <kanawha/dev/term.h>
+#include <kanawha/dev/term/sysfs.h>
 
-#include <kanawha/types.h>
-#include <kanawha/init.h>
-#include <kanawha/stddef.h>
-#include <kanawha/string.h>
-#include <kanawha/lock.h>
-#include <kanawha/kmalloc.h>
-#include <kanawha/parse.h>
-#include <kanawha/fs/type.h>
+#include <kanawha/fs/file.h>
 #include <kanawha/fs/mount.h>
 #include <kanawha/fs/node.h>
-#include <kanawha/fs/file.h>
+#include <kanawha/fs/type.h>
+#include <kanawha/init.h>
+#include <kanawha/kmalloc.h>
+#include <kanawha/lock.h>
+#include <kanawha/parse.h>
+#include <kanawha/stddef.h>
+#include <kanawha/string.h>
 #include <kanawha/sysfs/sysfs.h>
 #include <kanawha/sysfs/vfs.h>
+#include <kanawha/types.h>
 
-static ssize_t 
-term_dev_baudrate_fs_file_read(
-        struct file *file,
-        void *buffer,
-        ssize_t amount,
-        unsigned long flags)
+static ssize_t
+term_dev_baudrate_fs_file_read(struct file *file,
+                               void *buffer,
+                               ssize_t amount,
+                               unsigned long flags)
 {
     int res;
     struct term_dev *dev = term_dev_from_file(file, baudrate_vfs_node);
 
-    if(file->seek_offset != 0) {
-	return 0;
+    if(file->seek_offset != 0)
+    {
+        return 0;
     }
 
-    if(flags & FS_FILE_READ_NON_BLOCKING) {
+    if(flags & FS_FILE_READ_NON_BLOCKING)
+    {
         return -EWOULDBLOCK;
     }
 
     baud_t baud;
     res = term_dev_get_baudrate(dev, &baud);
-    if(res) {
-	return res;
+    if(res)
+    {
+        return res;
     }
 
     snprintk(buffer, amount, "%ld", baud);
@@ -45,11 +47,10 @@ term_dev_baudrate_fs_file_read(
 }
 
 static ssize_t
-term_dev_baudrate_fs_file_write(
-        struct file *file,
-        void *buffer,
-        ssize_t amount,
-        unsigned long flags)
+term_dev_baudrate_fs_file_write(struct file *file,
+                                void *buffer,
+                                ssize_t amount,
+                                unsigned long flags)
 {
 #define BUFLEN 32
 
@@ -57,20 +58,25 @@ term_dev_baudrate_fs_file_write(
 
     struct term_dev *dev = term_dev_from_file(file, baudrate_vfs_node);
 
-    if(file->seek_offset != 0) {
-	return 0;
+    if(file->seek_offset != 0)
+    {
+        return 0;
     }
 
-    if(flags & FS_FILE_WRITE_NON_BLOCKING) {
+    if(flags & FS_FILE_WRITE_NON_BLOCKING)
+    {
         return 0;
     }
 
     char tmp_buffer[BUFLEN];
 
-    if(amount < BUFLEN) {
+    if(amount < BUFLEN)
+    {
         tmp_buffer[amount] = '\0';
-    } else {
-	return -EINVAL;
+    }
+    else
+    {
+        return -EINVAL;
     }
 
     memcpy(tmp_buffer, buffer, amount);
@@ -79,8 +85,9 @@ term_dev_baudrate_fs_file_write(
     baud_t baud = (baud_t)value;
 
     res = term_dev_set_baudrate(dev, baud);
-    if(res) {
-	return res;
+    if(res)
+    {
+        return res;
     }
 
     return amount;
@@ -89,49 +96,46 @@ term_dev_baudrate_fs_file_write(
 }
 
 static int
-term_dev_baudrate_fs_file_flush(
-        struct file *file,
-        unsigned long flags)
+term_dev_baudrate_fs_file_flush(struct file *file, unsigned long flags)
 {
     struct term_dev *dev = term_dev_from_file(file, baudrate_vfs_node);
     return 0;
 }
 
 static int
-term_dev_baudrate_fs_node_setattr(
-        struct fs_node *fs_node,
-        int attr,
-        size_t value)
+term_dev_baudrate_fs_node_setattr(struct fs_node *fs_node,
+                                  int attr,
+                                  size_t value)
 {
     struct term_dev *dev = term_dev_from_node(fs_node, baudrate_vfs_node);
 
-    switch(attr) {
-        case FS_NODE_ATTR_DATA_SIZE:
-            // We'll accept any value here and ignore it
-            return 0;
+    switch(attr)
+    {
+    case FS_NODE_ATTR_DATA_SIZE:
+        // We'll accept any value here and ignore it
+        return 0;
     }
     return -EINVAL;
 }
 
 static int
-term_dev_baudrate_fs_node_getattr(
-        struct fs_node *fs_node,
-        int attr,
-        size_t *value)
+term_dev_baudrate_fs_node_getattr(struct fs_node *fs_node,
+                                  int attr,
+                                  size_t *value)
 {
     struct term_dev *dev = term_dev_from_node(fs_node, baudrate_vfs_node);
 
-    switch(attr) {
-        case FS_NODE_ATTR_DATA_SIZE:
-            *value = 0;
-            return 0;
+    switch(attr)
+    {
+    case FS_NODE_ATTR_DATA_SIZE:
+        *value = 0;
+        return 0;
     }
 
     return -EINVAL;
 }
 
-static struct fs_node_ops term_dev_baudrate_fs_node_ops =
-{
+static struct fs_node_ops term_dev_baudrate_fs_node_ops = {
     .flush = fs_node_flush_nop,
     .setattr = term_dev_baudrate_fs_node_setattr,
     .getattr = term_dev_baudrate_fs_node_getattr,
@@ -139,8 +143,7 @@ static struct fs_node_ops term_dev_baudrate_fs_node_ops =
 };
 FS_NODE_OPS_INIT_UNDEF(term_dev_baudrate_fs_node_ops);
 
-static struct fs_file_ops term_dev_baudrate_fs_file_ops =
-{
+static struct fs_file_ops term_dev_baudrate_fs_file_ops = {
     .read = term_dev_baudrate_fs_file_read,
     .write = term_dev_baudrate_fs_file_write,
     .flush = term_dev_baudrate_fs_file_flush,
@@ -148,7 +151,8 @@ static struct fs_file_ops term_dev_baudrate_fs_file_ops =
 };
 FS_FILE_OPS_INIT_UNDEF(term_dev_baudrate_fs_file_ops);
 
-int term_dev_fs_node_init_baudrate(struct term_dev_fs_node *node)
+int
+term_dev_fs_node_init_baudrate(struct term_dev_fs_node *node)
 {
     node->baudrate_vfs_node.fs_node_ops = &term_dev_baudrate_fs_node_ops;
     node->baudrate_vfs_node.fs_file_ops = &term_dev_baudrate_fs_file_ops;
@@ -158,9 +162,9 @@ int term_dev_fs_node_init_baudrate(struct term_dev_fs_node *node)
 
     return 0;
 }
-int term_dev_fs_node_deinit_baudrate(struct term_dev_fs_node *node)
+int
+term_dev_fs_node_deinit_baudrate(struct term_dev_fs_node *node)
 {
     vfs_mount_remove_node(term_dev_fs_mount, &node->baudrate_vfs_node);
     return 0;
 }
-

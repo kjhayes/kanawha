@@ -1,15 +1,15 @@
 
 #include <kanawha/dev/net/eth.h>
-#include <kanawha/stree.h>
-#include <kanawha/lock.h>
-#include <kanawha/stddef.h>
+#include <kanawha/endian.h>
 #include <kanawha/kmalloc.h>
-#include <kanawha/string.h>
+#include <kanawha/lock.h>
+#include <kanawha/net/ethernet.h>
 #include <kanawha/parse.h>
+#include <kanawha/stddef.h>
+#include <kanawha/stree.h>
+#include <kanawha/string.h>
 #include <kanawha/sysfs/sysfs.h>
 #include <kanawha/sysfs/vfs.h>
-#include <kanawha/net/ethernet.h>
-#include <kanawha/endian.h>
 
 struct eth_dev_fs_node
 {
@@ -23,20 +23,19 @@ static struct fs_node_ops eth_dev_fs_node_ops;
 static struct fs_file_ops eth_dev_fs_file_ops;
 
 static int
-eth_dev_fs_probe_eth_dev(
-        struct eth_dev *dev)
+eth_dev_fs_probe_eth_dev(struct eth_dev *dev)
 {
     return 0;
 }
 
 static int
-eth_dev_fs_receive_eth_dev(
-        struct eth_dev *dev)
+eth_dev_fs_receive_eth_dev(struct eth_dev *dev)
 {
     int res;
 
     struct eth_dev_fs_node *edfs = kmalloc(sizeof(*edfs), KM_KERNEL);
-    if(edfs == NULL) {
+    if(edfs == NULL)
+    {
         return -ENOMEM;
     }
     memset(edfs, 0, sizeof(*edfs));
@@ -46,11 +45,11 @@ eth_dev_fs_receive_eth_dev(
     edfs->vfs_node.fs_file_ops = &eth_dev_fs_file_ops;
     edfs->vfs_node.fs_node_ops = &eth_dev_fs_node_ops;
 
-    res = vfs_mount_insert_node_and_link_root(
-            eth_dev_fs_mount,
-            &edfs->vfs_node,
-            eth_dev_get_name(dev));
-    if(res) {
+    res = vfs_mount_insert_node_and_link_root(eth_dev_fs_mount,
+                                              &edfs->vfs_node,
+                                              eth_dev_get_name(dev));
+    if(res)
+    {
         kfree(edfs);
         return res;
     }
@@ -59,29 +58,30 @@ eth_dev_fs_receive_eth_dev(
 }
 
 static int
-eth_dev_fs_revoke_eth_dev(
-        struct eth_dev *dev)
+eth_dev_fs_revoke_eth_dev(struct eth_dev *dev)
 {
     wprintk("Tried to unregister eth_dev from sysfs! (UNIMPL)\n");
     return -EUNIMPL;
 }
 
-static ssize_t 
-eth_dev_fs_file_read(
-        struct file *file,
-        void *buffer,
-        ssize_t amount,
-        unsigned long flags)
+static ssize_t
+eth_dev_fs_file_read(struct file *file,
+                     void *buffer,
+                     ssize_t amount,
+                     unsigned long flags)
 {
     struct fs_node *fs_node = fs_path_get_fs_node(file->path);
-    if(fs_node == NULL) {
+    if(fs_node == NULL)
+    {
         return -ENXIO;
     }
 
-    struct eth_dev_fs_node *edfs =
-        container_of(fs_node->backing.priv_state, struct eth_dev_fs_node, vfs_node);
+    struct eth_dev_fs_node *edfs = container_of(fs_node->backing.priv_state,
+                                                struct eth_dev_fs_node,
+                                                vfs_node);
 
-    if(flags & FS_FILE_READ_NON_BLOCKING) {
+    if(flags & FS_FILE_READ_NON_BLOCKING)
+    {
         return -EWOULDBLOCK;
     }
 
@@ -92,38 +92,39 @@ eth_dev_fs_file_read(
     return amt_read;
 }
 
-static ssize_t 
-eth_dev_fs_file_write(
-        struct file *file,
-        void *buffer,
-        ssize_t amount,
-        unsigned long flags)
+static ssize_t
+eth_dev_fs_file_write(struct file *file,
+                      void *buffer,
+                      ssize_t amount,
+                      unsigned long flags)
 {
     int res;
 
     struct fs_node *fs_node = fs_path_get_fs_node(file->path);
-    if(fs_node == NULL) {
+    if(fs_node == NULL)
+    {
         return -ENXIO;
     }
 
-    struct eth_dev_fs_node *edfs =
-        container_of(fs_node->backing.priv_state, struct eth_dev_fs_node, vfs_node);
+    struct eth_dev_fs_node *edfs = container_of(fs_node->backing.priv_state,
+                                                struct eth_dev_fs_node,
+                                                vfs_node);
 
-    if(flags & FS_FILE_READ_NON_BLOCKING) {
+    if(flags & FS_FILE_READ_NON_BLOCKING)
+    {
         return -EWOULDBLOCK;
     }
 
-    if(amount < sizeof(struct eth_frame_hdr)) {
+    if(amount < sizeof(struct eth_frame_hdr))
+    {
         return -EINVAL;
     }
 
     {
         struct eth_frame_hdr *hdr = buffer;
 
-        __maybe_unused
-        struct eth_mac_addr src;
-        __maybe_unused
-        struct eth_mac_addr dst;
+        __maybe_unused struct eth_mac_addr src;
+        __maybe_unused struct eth_mac_addr dst;
 
         src.raw = hdr->src_addr;
         dst.raw = hdr->dst_addr;
@@ -133,48 +134,43 @@ eth_dev_fs_file_write(
         // TODO (Do some basic validation of the header)
     }
 
-    struct eth_frame *frame =
-        eth_dev_alloc_frame(
-            edfs->dev,
-            amount,
-            0);
+    struct eth_frame *frame = eth_dev_alloc_frame(edfs->dev, amount, 0);
 
-    if(frame == NULL) {
+    if(frame == NULL)
+    {
         return -ENOMEM;
     }
 
     memcpy(frame->data, buffer, amount);
 
-    res = eth_dev_send_frame(
-            edfs->dev,
-            frame);
+    res = eth_dev_send_frame(edfs->dev, frame);
 
     // drop the packet regardless of success or failure to send
     int drop_res = eth_dev_drop_frame(edfs->dev, frame);
-    if(drop_res) {
-        wprintk("Potential Memory Leak: eth_dev sysfs failed to drop allocated ethernet frame! (drop-err=%s)\n",
-                 errnostr(drop_res));
+    if(drop_res)
+    {
+        wprintk("Potential Memory Leak: eth_dev sysfs failed to drop "
+                "allocated "
+                "ethernet frame! (drop-err=%s)\n",
+                errnostr(drop_res));
     }
 
     // from eth_dev_send_frame
-    if(res) {
+    if(res)
+    {
         return res;
     }
 
     return amount;
 }
 
-static struct fs_node_ops
-eth_dev_fs_node_ops =
-{
+static struct fs_node_ops eth_dev_fs_node_ops = {
     .lookup = vfs_dir_lookup,
     .flush = fs_node_flush_nop,
 };
 FS_NODE_OPS_INIT_UNDEF(eth_dev_fs_node_ops);
 
-static struct fs_file_ops
-eth_dev_fs_file_ops =
-{
+static struct fs_file_ops eth_dev_fs_file_ops = {
     .read = eth_dev_fs_file_read,
     .write = eth_dev_fs_file_write,
     .seek = fs_file_seek_pinned_zero,
@@ -186,24 +182,23 @@ eth_dev_fs_file_ops =
 };
 FS_FILE_OPS_INIT_UNDEF(eth_dev_fs_file_ops);
 
-//static int
-//eth_dev_fs_recv_callback(
-//        struct eth_dev *dev,
-//        struct eth_frame *buffer,
-//        size_t buflen,
-//        void *priv_state)
+// static int
+// eth_dev_fs_recv_callback(
+//         struct eth_dev *dev,
+//         struct eth_frame *buffer,
+//         size_t buflen,
+//         void *priv_state)
 //{
-//    struct edfs *edfs = priv_state;
+//     struct edfs *edfs = priv_state;
 //
-//    printk("Ethernet Device (%s) Received Packet of Length 0x%lx\n",
-//            eth_dev_get_name(dev),
-//            buflen);
+//     printk("Ethernet Device (%s) Received Packet of Length 0x%lx\n",
+//             eth_dev_get_name(dev),
+//             buflen);
 //
-//    return 0;
-//}
+//     return 0;
+// }
 
-static struct eth_dev_owner
-eth_dev_fs_owner = {
+static struct eth_dev_owner eth_dev_fs_owner = {
     .probe = eth_dev_fs_probe_eth_dev,
     .receive = eth_dev_fs_receive_eth_dev,
     .revoke = eth_dev_fs_revoke_eth_dev,
@@ -216,7 +211,8 @@ eth_dev_init_fs_mount(void)
 
     struct vfs_mount *mnt;
     mnt = vfs_mount_create();
-    if(mnt == NULL) {
+    if(mnt == NULL)
+    {
         eprintk("Failed to create eth_dev VFS mount!\n");
         return -ENOMEM;
     }
@@ -224,13 +220,15 @@ eth_dev_init_fs_mount(void)
     eth_dev_fs_mount = mnt;
 
     res = register_eth_dev_owner(&eth_dev_fs_owner);
-    if(res) {
+    if(res)
+    {
         vfs_mount_destroy(mnt);
         return res;
     }
 
     res = sysfs_register_mount(&eth_dev_fs_mount->fs_mount, "ethdev");
-    if(res) {
+    if(res)
+    {
         unregister_eth_dev_owner(&eth_dev_fs_owner);
         vfs_mount_destroy(mnt);
         return res;
@@ -238,5 +236,6 @@ eth_dev_init_fs_mount(void)
 
     return 0;
 }
-declare_init_desc(fs, eth_dev_init_fs_mount, "Registering Ethernet Sysfs Mount");
-
+declare_init_desc(fs,
+                  eth_dev_init_fs_mount,
+                  "Registering Ethernet Sysfs Mount");

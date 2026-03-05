@@ -1,13 +1,14 @@
 #ifndef __KANAWHA__FS_ISO9660_ISO9660_H__
 #define __KANAWHA__FS_ISO9660_ISO9660_H__
 
-#include <kanawha/types.h>
-#include <kanawha/endian.h>
 #include <kanawha/attribute.h>
+#include <kanawha/endian.h>
+#include <kanawha/types.h>
 
 #define ISO9660_VOLUME_IDENTIFIER_STRING "CD001"
 
-struct __packed iso9660_dec_datetime {
+struct __packed iso9660_dec_datetime
+{
     uint8_t year[4];
     uint8_t month[2];
     uint8_t day[2];
@@ -18,26 +19,30 @@ struct __packed iso9660_dec_datetime {
     int8_t timezone;
 };
 
-#define ISO9660_VOLUME_DESC_TYPE_BOOT_RECORD   (0)
-#define ISO9660_VOLUME_DESC_TYPE_PRIMARY       (1)
+#define ISO9660_VOLUME_DESC_TYPE_BOOT_RECORD (0)
+#define ISO9660_VOLUME_DESC_TYPE_PRIMARY (1)
 #define ISO9660_VOLUME_DESC_TYPE_SUPPLEMENTARY (2)
-#define ISO9660_VOLUME_DESC_TYPE_PARTITION     (3)
+#define ISO9660_VOLUME_DESC_TYPE_PARTITION (3)
 
-#define ISO9660_VOLUME_DESC_TYPE_TERMINATOR    (255)
+#define ISO9660_VOLUME_DESC_TYPE_TERMINATOR (255)
 
-struct __packed iso9660_volume_desc { 
+struct __packed iso9660_volume_desc
+{
     int8_t type;
     uint8_t ident[5];
     int8_t version;
 
-    union {
+    union
+    {
         uint8_t raw_data[2041];
-        struct __packed {
+        struct __packed
+        {
             uint8_t boot_system_ident[32];
             uint8_t boot_ident[32];
             uint8_t boot_system_use[1977];
         } boot_record;
-        struct __packed {
+        struct __packed
+        {
             uint8_t __unused_0;
             uint8_t system_ident[32];
             uint8_t volume_ident[32];

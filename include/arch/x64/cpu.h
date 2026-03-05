@@ -1,11 +1,11 @@
 #ifndef __KANAWHA__X64_CPU_H__
 #define __KANAWHA__X64_CPU_H__
 
-#include <kanawha/cpu.h>
-#include <kanawha/ptree.h>
-#include <arch/x64/lapic.h>
 #include <arch/x64/apic_timer.h>
 #include <arch/x64/gdt.h>
+#include <arch/x64/lapic.h>
+#include <kanawha/cpu.h>
+#include <kanawha/ptree.h>
 
 struct x64_cpu
 {
@@ -21,10 +21,7 @@ struct x64_cpu
 };
 
 int
-x64_bsp_register_smp_cpu(
-        struct x64_cpu *cpu,
-        apic_id_t apic_id,
-        int is_bsp);
+x64_bsp_register_smp_cpu(struct x64_cpu *cpu, apic_id_t apic_id, int is_bsp);
 
 struct x64_cpu *
 cpu_from_apic_id(apic_id_t id);
