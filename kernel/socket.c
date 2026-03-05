@@ -136,8 +136,7 @@ socket_fs_pipe_file_read(
         if(read == 0) {
             int can_block = !(flags & FS_FILE_READ_NON_BLOCKING);
             if(can_block) {
-                socket_lock_release(socket);
-                res = wait_on(&socket->pipe.read_wq);
+                res = wait_on_irq_lock_release(&socket->pipe.read_wq, &socket->lock);
                 if(res) {
                     return res;
                 }
@@ -202,8 +201,7 @@ socket_fs_pipe_file_write(
         if(written == 0) {
             int can_block = !(flags & FS_FILE_WRITE_NON_BLOCKING);
             if(can_block) {
-                socket_lock_release(socket);
-                res = wait_on(&socket->pipe.write_wq);
+                res = wait_on_irq_lock_release(&socket->pipe.write_wq, &socket->lock);
                 if(res) {
                     return res;
                 }
