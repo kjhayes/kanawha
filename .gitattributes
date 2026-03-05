@@ -1,0 +1,6 @@
+
+* text=auto
+
+*.c text filter=tabstospaces
+*.h text filter=tabstospaces
+
