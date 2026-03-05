@@ -4,6 +4,7 @@ libs += \
 	c \
 	dl \
 	kfb \
+	ksnd \
 
 bins += \
 	init \
