@@ -12,7 +12,7 @@
 #include <kanawha/printk.h>
 #include <kanawha/kmalloc.h>
 
-#define DEFAULT_WAITQUEUE_NAME "unnamed-waitqueue"
+// #define ENFORCE_NAME_ALL_WAITQUEUES
 
 int
 waitqueue_init(
@@ -23,7 +23,7 @@ waitqueue_init(
     queue->num_threads = 0;
     ilist_init(&queue->waiting_threads);
     queue->dyn_name = 0;
-    queue->name = DEFAULT_WAITQUEUE_NAME;
+    queue->name = "unnamed-waitqueue";
     return 0;
 }
 
@@ -34,15 +34,15 @@ waitqueue_name(
 {
     char *name = kstrdup(to_copy);
     if(name == NULL) {
-	return -ENOMEM;
+        return -ENOMEM;
     }
 
     irq_lock_acquire(&queue->lock);
     if(queue->dyn_name) {
-	char *old_name = queue->name;
-	queue->name = name;
-	mbarrier();
-	kfree(old_name);
+	    char *old_name = queue->name;
+	    queue->name = name;
+	    mbarrier();
+	    kfree(old_name);
     } else {
         queue->dyn_name = 1;
         queue->name = name;
@@ -70,7 +70,12 @@ waitqueue_deinit(
     irq_lock_acquire(&queue->lock);
     if(queue->dyn_name) {
 	    kfree(queue->name);
-	    queue->name = DEFAULT_WAITQUEUE_NAME;
+        // Do this to help with debugging
+#ifdef CONFIG_DEBUGGING
+	    queue->name = "destroyed-waitqueue";
+#else
+        queue->name = NULL
+#endif // CONFIG_DEBUGGING
 	    queue->dyn_name = 0;
     }
     irq_lock_release(&queue->lock);
@@ -138,6 +143,13 @@ wait_on_with_callback(struct waitqueue *queue,
 
     // Make sure that we haven't woken up spurriously
     irq_lock_acquire(&queue->lock);
+
+#ifdef ENFORCE_NAME_ALL_WAITQUEUES
+    if(strcmp(queue->name, "unnamed-waitqueue") == 0) {
+        panic("Waiting on an unnamed waitqueue!\n");
+    }
+#endif
+
     if(cur->waitqueue == queue) {
 	    // Something interrupted us (probably a signal)
         queue->num_threads--;
