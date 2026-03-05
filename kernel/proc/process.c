@@ -1138,18 +1138,10 @@ process_terminate(int exitcode)
     // because no one should ever be able to add/remove children
     // after this
 
-    if(current_process() == process) {
-        // IRQ's are left disabled because if we are running on the process' thread
-        // (as is the case in an "exit" syscall) then once we suspend the process,
-        // if we are preempted, then we will never be scheduled again to return.
-        //
-        // TODO: Look at this again, when did we start using an IRQ lock release here?
-        //       (could be re-enabling interrupts...)
-        irq_lock_release(&process->status_lock);
-    } else {
-        // This is some other process that we are forcing to terminate
-        irq_lock_release(&process->status_lock);
-    } 
+    // IRQ's are left disabled because if we are running on the process' thread
+    // (as is the case in an "exit" syscall) then once we suspend the process,
+    // if we are preempted, then we will never be scheduled again to return.
+    irq_lock_release_no_enable_irqs(&process->status_lock);
   
     printk("PID(%ld) finished process terminate!\n", process->id);
     return 0;
