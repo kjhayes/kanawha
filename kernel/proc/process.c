@@ -1099,14 +1099,14 @@ process_terminate(int exitcode)
             wprintk("Failed to get child of process to reap during "
                     "termination!\n");
         }
-        printk("PID(%d) reaped child! (%lu remaining)\n",
+        dprintk("PID(%d) reaped child! (%lu remaining)\n",
                (s_t)process->id,
                (ul_t)ilist_count(&process->children));
         process_hierarchy_lock_acquire(process);
     }
     process_hierarchy_lock_release(process);
 
-    printk("PID(%d) reaped all children!\n", process->id);
+    dprintk("PID(%d) reaped all children!\n", process->id);
 
     irq_lock_acquire(&process->status_lock);
 
@@ -1200,7 +1200,7 @@ process_terminate(int exitcode)
     // if we are preempted, then we will never be scheduled again to return.
     irq_lock_release_no_enable_irqs(&process->status_lock);
 
-    printk("PID(%ld) finished process terminate!\n", process->id);
+    dprintk("PID(%ld) finished process terminate!\n", process->id);
     return 0;
 
 #undef LOG

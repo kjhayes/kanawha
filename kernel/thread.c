@@ -86,6 +86,23 @@ get_thread_id(struct thread_state *state)
 DECLARE_PERCPU_VAR(struct thread_state *, __current_thread);
 DECLARE_STATIC_PERCPU_VAR(struct thread_state *, __idle_thread);
 
+static inline void
+thread_set_status(
+        struct thread_state *thread,
+        thread_status_t status)
+{
+    // We should have the lock held already...
+    DEBUG_ASSERT(thread->status == THREAD_STATUS_PREPARING || spin_try_lock(&thread->lock) != 0);
+    DEBUG_ASSERT(thread->status != THREAD_STATUS_ABANDONED);
+#ifdef CONFIG_DEBUG_LOG_THREAD_STATE_CHANGES
+    printk("thread(%ld) %s -> %s\n",
+            (sl_t)thread->id,
+            thread_status_to_string(thread->status),
+            thread_status_to_string(status));
+#endif
+    thread->status = status;
+}
+
 __noreturn void
 idle_loop(void)
 {
@@ -263,7 +280,7 @@ thread_init(struct thread_state *state,
         return res;
     }
 
-    state->status = THREAD_STATUS_READY;
+    thread_set_status(state, THREAD_STATUS_READY);
 
     return 0;
 }
@@ -340,8 +357,11 @@ thread_schedule(struct thread_state *state)
         return -EINVAL;
     }
 
-    state->status = THREAD_STATUS_SCHEDULED;
+    thread_set_status(state, THREAD_STATUS_SCHEDULED);
     cur_thread->scheduled = state;
+    //printk("Scheduling thread(%ld) to take over from thread(%ld)\n",
+    //        (sl_t)state->id,
+    //        (sl_t)cur_thread->id);
 
     spin_unlock_irq_restore(&state->lock, irq_flags);
     return 0;
@@ -361,10 +381,10 @@ __thread_switch_threadless(void *in)
     switch(switching_from->status)
     {
     case THREAD_STATUS_TIRED:
-        switching_from->status = THREAD_STATUS_SLEEPING;
+        thread_set_status(switching_from, THREAD_STATUS_SLEEPING);
         break;
     case THREAD_STATUS_RUNNING:
-        switching_from->status = THREAD_STATUS_READY;
+        thread_set_status(switching_from, THREAD_STATUS_READY);
         break;
     default:
         // This should be caught earlier
@@ -376,7 +396,7 @@ __thread_switch_threadless(void *in)
 
     // SCHEDULED -> RUNNING transition
     DEBUG_ASSERT(switching_to->status == THREAD_STATUS_SCHEDULED);
-    switching_to->status = THREAD_STATUS_RUNNING;
+    thread_set_status(switching_to, THREAD_STATUS_RUNNING);
 
     switching_to->running_on = current_cpu_id();
     dprintk("setting current_thread=%p\n", switching_to);
@@ -465,6 +485,8 @@ thread_switch(void)
 {
     int res;
 
+    int irq_flags = disable_save_irqs();
+
     struct thread_state *cur_thread;
     cur_thread = current_thread();
     DEBUG_ASSERT(cur_thread);
@@ -481,22 +503,15 @@ thread_switch(void)
 
     DEBUG_ASSERT(current_thread_is_rescheduled());
 
-    int irq_flags = spin_lock_pair_irq_save(&cur_thread->lock, &scheduled->lock);
+    spin_lock_pair(&cur_thread->lock, &scheduled->lock);
     dprintk("thread_switch %p -> %p\n", cur_thread, scheduled);
 
     DEBUG_ASSERT(scheduled->status == THREAD_STATUS_SCHEDULED);
     DEBUG_ASSERT(scheduled->pin_refs == 0 || scheduled->pinned_to == current_cpu_id());
 
     // This will unlock the locks
-    // if(cur_thread != NULL)
-    // {
-        cur_thread->scheduled = NULL;
-        arch_thread_run_threadless(__thread_switch_threadless, scheduled);
-    // }
-    // else
-    // {
-    //     __thread_switch_threadless(scheduled);
-    // }
+    cur_thread->scheduled = NULL;
+    arch_thread_run_threadless(__thread_switch_threadless, scheduled);
 
     enable_restore_irqs(irq_flags);
 
@@ -513,10 +528,10 @@ thread_tire(struct thread_state *thread)
     switch(thread->status)
     {
     case THREAD_STATUS_RUNNING:
-        thread->status = THREAD_STATUS_TIRED;
+        thread_set_status(thread, THREAD_STATUS_TIRED);
         break;
     case THREAD_STATUS_READY:
-        thread->status = THREAD_STATUS_SLEEPING;
+        thread_set_status(thread, THREAD_STATUS_SLEEPING);
         break;
     case THREAD_STATUS_SLEEPING:
     case THREAD_STATUS_TIRED:
@@ -540,10 +555,10 @@ thread_wake(struct thread_state *thread)
     switch(thread->status)
     {
     case THREAD_STATUS_TIRED:
-        thread->status = THREAD_STATUS_RUNNING;
+        thread_set_status(thread, THREAD_STATUS_RUNNING);
         break;
     case THREAD_STATUS_SLEEPING:
-        thread->status = THREAD_STATUS_READY;
+        thread_set_status(thread, THREAD_STATUS_READY);
         break;
     case THREAD_STATUS_READY:
     case THREAD_STATUS_RUNNING:
@@ -675,7 +690,7 @@ thread_abandon(void)
     {
     case THREAD_STATUS_RUNNING:
     case THREAD_STATUS_TIRED:
-        cur_thread->status = THREAD_STATUS_ABANDONED;
+        thread_set_status(cur_thread, THREAD_STATUS_ABANDONED);
         cur_thread->running_on = NULL_CPU_ID;
         break;
     default:
@@ -687,7 +702,7 @@ thread_abandon(void)
     switch(scheduled->status)
     {
     case THREAD_STATUS_SCHEDULED:
-        scheduled->status = THREAD_STATUS_RUNNING;
+        thread_set_status(scheduled, THREAD_STATUS_RUNNING);
         scheduled->running_on = current_cpu_id();
         break;
     default:
@@ -773,7 +788,7 @@ cpu_start_threading(thread_f *func, void *state)
     *idle = current;
 
     spin_lock(&current->lock);
-    current->status = THREAD_STATUS_RUNNING;
+    thread_set_status(current, THREAD_STATUS_RUNNING);
     current->running_on = current_cpu_id();
     dprintk("setting current_thread=%p\n", current);
     *(struct thread_state **)percpu_ptr(percpu_addr(__current_thread)) =

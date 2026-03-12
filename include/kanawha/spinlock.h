@@ -55,6 +55,20 @@ spin_unlock(spinlock_t *lock)
     atomic_bool_clear(&lock->held);
 }
 
+static inline void
+spin_lock_pair(spinlock_t *lock_0, spinlock_t *lock_1)
+{
+    DEBUG_ASSERT(lock_0 != lock_1);
+
+    spinlock_t *lesser =
+        (uintptr_t)lock_0 < (uintptr_t)lock_1 ? lock_0 : lock_1;
+    spinlock_t *greater =
+        (uintptr_t)lock_0 > (uintptr_t)lock_1 ? lock_0 : lock_1;
+
+    spin_lock(lesser);
+    spin_lock(greater);
+}
+
 #ifndef CONFIG_DEBUG_SPINLOCK_TRACK_THREADS
 #define DECLARE_SPINLOCK(__lock)                                               \
     spinlock_t __lock = {                                                      \

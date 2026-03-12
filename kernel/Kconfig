@@ -163,6 +163,11 @@ config DEBUG_DUMP_THREADS_PERIODICALLY_PERIOD
     depends on DEBUG_DUMP_THREADS_PERIODICALLY
     default 60
 
+config DEBUG_LOG_THREAD_STATE_CHANGES
+    bool "Log Thread State Changes"
+    depends on DEBUGGING
+    default n
+
 config DEBUG_TRACK_PROCESS_EXEC
     bool "Track Process Exec Path"
     depends on DEBUGGING
