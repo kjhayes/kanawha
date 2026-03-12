@@ -743,7 +743,7 @@ vmem_map_unhandled_user_page_fault(struct excp_state *state,
                   "MEMFAULT (err=%s)\n",
                   errnostr(res));
         }
-        thread_abandon(force_resched());
+        thread_abandon();
     }
 
     return 0;
@@ -753,7 +753,7 @@ vmem_map_unhandled_user_page_fault(struct excp_state *state,
     //     implemented yet!\n");
     // #endif
     //
-    //     thread_abandon(force_resched());
+    //     thread_abandon();
     //     return 0;
 }
 

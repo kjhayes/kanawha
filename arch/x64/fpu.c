@@ -91,7 +91,7 @@ x64_simd_fault_handler(struct excp_state *gen_excp_state,
                     errnostr(res));
             return res;
         }
-        thread_abandon(force_resched());
+        thread_abandon();
     }
 
     return IRQ_HANDLED;

@@ -102,8 +102,8 @@ rr_sched_free_instance(struct scheduler_type *type, struct scheduler *sched)
     return 0;
 }
 
-static struct thread_state *
-rr_sched_force_resched(struct scheduler *sched)
+static int
+rr_sched_hard_resched(struct scheduler *sched)
 {
     struct rr_scheduler *rr_sched =
         container_of(sched, struct rr_scheduler, sched);
@@ -113,8 +113,8 @@ rr_sched_force_resched(struct scheduler *sched)
     if(rr_sched->num_threads == 0)
     {
         spin_unlock_irq_restore(&rr_sched->list_lock, irq_flags);
-        dprintk("rr_sched_force_resched without any threads!\n");
-        return NULL;
+        dprintk("rr_sched_hard_resched without any threads!\n");
+        return 0;
     }
 
     struct rr_thread **current_ptr =
@@ -142,7 +142,7 @@ rr_sched_force_resched(struct scheduler *sched)
         {
             *current_ptr = NULL; // we are not running any rr_thread
             spin_unlock_irq_restore(&rr_sched->list_lock, irq_flags);
-            return NULL;
+            return -EINVAL;
         }
 
         if(running == NULL)
@@ -170,14 +170,19 @@ rr_sched_force_resched(struct scheduler *sched)
     spin_unlock_irq_restore(&rr_sched->list_lock, irq_flags);
 
     dprintk("scheduling thread (%lld)\n", (ull_t)current->state->id);
-    return current->state;
+    return 0;
 }
 
-static struct thread_state *
-rr_sched_query_resched(struct scheduler *sched)
+static int
+rr_sched_soft_resched(struct scheduler *sched)
 {
-    dprintk("rr_sched_query_resched CPU (%ld)\n", (sl_t)current_cpu_id());
-    return rr_sched_force_resched(sched);
+    int res;
+    dprintk("rr_sched_soft_resched CPU (%ld)\n", (sl_t)current_cpu_id());
+    res = rr_sched_hard_resched(sched);
+    if(res) {
+        // Ignore any errors, we don't NEED to reschedule...
+    }
+    return 0;
 }
 
 static int
@@ -258,8 +263,8 @@ static struct scheduler_type rr_sched_type = {
     .type_ops.alloc_instance = rr_sched_alloc_instance,
     .type_ops.free_instance = rr_sched_free_instance,
 
-    .instance_ops.query_resched = rr_sched_query_resched,
-    .instance_ops.force_resched = rr_sched_force_resched,
+    .instance_ops.soft_resched = rr_sched_soft_resched,
+    .instance_ops.hard_resched = rr_sched_hard_resched,
     .instance_ops.remove_thread = rr_sched_remove_thread,
     .instance_ops.add_thread = rr_sched_add_thread,
 

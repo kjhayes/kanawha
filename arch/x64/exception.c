@@ -278,17 +278,16 @@ x64_handle_exception(struct x64_excp_state *state)
         goto exit;
     }
 
-    struct thread_state *new_thread = query_resched();
-    if(new_thread != NULL)
+    soft_resched();
+    if(current_thread_is_rescheduled())
     {
 
-        dprintk("CPU (%ld) Interrupt Driven Thread Switch old=%p, new=%p\n",
+        dprintk("CPU (%ld) Interrupt Driven Thread Switch from=%p\n",
                 (sl_t)current_cpu_id(),
-                current_thread(),
-                new_thread);
+                current_thread());
 
         x64_nop_iret();
-        thread_switch(new_thread);
+        thread_switch();
 
         dprintk("CPU (%ld) Returned from interrupt driven thread switch! "
                 "thread=%p\n",

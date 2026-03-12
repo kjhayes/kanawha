@@ -75,6 +75,8 @@ struct thread_state
     struct waitqueue *waitqueue;
     ilist_node_t waitqueue_node;
 
+    struct thread_state *scheduled;
+
     thread_id_t id;
     thread_f *func;
 
@@ -104,6 +106,18 @@ thread_deinit(struct thread_state *state);
 struct thread_state *
 current_thread(void);
 
+static inline int
+current_thread_is_rescheduled(void)
+{
+    struct thread_state *scheduled = current_thread()->scheduled;
+    if(scheduled == NULL) {
+        return 0;
+    }
+    DEBUG_ASSERT(KERNEL_ADDR(scheduled));
+    DEBUG_ASSERT(scheduled->status == THREAD_STATUS_SCHEDULED);
+    return 1;
+}
+
 // Ensure that this thread does not change CPU(s)
 int
 pin_thread(struct thread_state *thread);
@@ -121,6 +135,12 @@ idle_thread(void);
 // To be called from within a scheduler, checks to make sure that a thread
 // can be run on the current processor, and changes the threads status
 // to THREAD_STATUS_SCHEDULED atomically.
+//
+// It then associates "to_schedule" with the current
+// thread, so that even if the current thread is interrupted
+// between calling thread schedule, and actually switching threads,
+// "to_schedule" should always be the next thread which runs
+// on the CPU.
 //
 // Returns 0 on success, else, Returns negative errno
 int
@@ -147,19 +167,21 @@ thread_tire_with_reason(struct thread_state *state, const char *fmt, ...);
 int
 thread_wake(struct thread_state *thread);
 
-// Switch to a scheduled thread, saving the state of the calling thread
+// Switch to the scheduled thread, saving the state of the calling thread
 // (returns negative errno if we fail to switch threads at all)
 int
-thread_switch(struct thread_state *scheduled);
+thread_switch(void);
 
 // Abandon the current thread and begin running
-// "scheduled", making it impossible to safely return to running
+// a thread which was previously scheduled via
+// calling "thread_schedule",
+// making it impossible to safely return to running
 // the current thread.
 //
-// If "scheduled == NULL", then we will begin running the current CPU's
-// idle thread.
+// If no thread has been scheduled, it will begin running the idle thread
+// on the current CPU
 __noreturn void
-thread_abandon(struct thread_state *scheduled);
+thread_abandon(void);
 
 // Start threading on the current CPU (assumes preemption is disabled)
 __noreturn void

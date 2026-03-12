@@ -28,7 +28,7 @@ syscall_exit(int exitcode)
     printk("Exiting PID(%ld) (exitcode=%d)\n", process->id, exitcode);
 #endif
 
-    thread_abandon(force_resched());
+    thread_abandon();
     panic("PID(%ld) syscall_exit: thread_abandon returned!\n",
           (sl_t)process->id);
 }

@@ -45,7 +45,7 @@ x64_gp_fault_handler(struct excp_state *gen_excp_state,
                     errnostr(res));
             return res;
         }
-        thread_abandon(force_resched());
+        thread_abandon();
     }
 
     return IRQ_HANDLED;
@@ -110,7 +110,7 @@ x64_div_zero_fault_handler(struct excp_state *gen_excp_state,
                     errnostr(res));
             return res;
         }
-        thread_abandon(force_resched());
+        thread_abandon();
     }
 
     return IRQ_HANDLED;
@@ -177,7 +177,7 @@ x64_inval_inst_fault_handler(struct excp_state *gen_excp_state,
                     errnostr(res));
             return res;
         }
-        thread_abandon(force_resched());
+        thread_abandon();
     }
 
     return IRQ_HANDLED;

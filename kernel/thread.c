@@ -204,6 +204,7 @@ thread_init(struct thread_state *state,
     state->pinned_to = NULL_CPU_ID;
     state->pin_refs = 0;
     state->waitqueue = NULL;
+    state->scheduled = NULL;
 
     state->mem_map = vmem_map_create();
     if(state->mem_map == NULL)
@@ -296,6 +297,14 @@ thread_schedule(struct thread_state *state)
 {
     dprintk("thread_schedule(state=%p id=%ld)\n", state, state->id);
 
+    struct thread_state *cur_thread = current_thread();
+    DEBUG_ASSERT(KERNEL_ADDR(cur_thread));
+
+    if(cur_thread->scheduled != NULL) {
+        dprintk("thread_schedule: thread already has scheduled a replacement!\n");
+        return -EALREADY;
+    }
+
     int irq_flags = disable_save_irqs();
 
     if(state->flags & THREAD_FLAG_IDLE)
@@ -332,6 +341,7 @@ thread_schedule(struct thread_state *state)
     }
 
     state->status = THREAD_STATUS_SCHEDULED;
+    cur_thread->scheduled = state;
 
     spin_unlock_irq_restore(&state->lock, irq_flags);
     return 0;
@@ -413,30 +423,80 @@ __thread_switch_threadless(void *in)
 // }
 
 int
-thread_switch(struct thread_state *state)
+thread_yield(void)
 {
     int res;
 
-    DEBUG_ASSERT(KERNEL_ADDR(state));
+    struct thread_state *cur_thread;
+    cur_thread = current_thread();
+    DEBUG_ASSERT(cur_thread);
+
+    struct thread_state *scheduled = cur_thread->scheduled;
+    if(scheduled == NULL) {
+        return 0;
+    }
+
+    int irq_flags = spin_lock_pair_irq_save(&cur_thread->lock, &scheduled->lock);
+    dprintk("thread_yield %p -> %p\n", cur_thread, scheduled);
+
+    DEBUG_ASSERT(scheduled->status == THREAD_STATUS_SCHEDULED);
+    DEBUG_ASSERT(scheduled->pin_refs == 0 || scheduled->pinned_to == current_cpu_id());
+
+    // This will unlock the locks
+    // if(cur_thread != NULL)
+    // {
+        cur_thread->scheduled = NULL;
+        arch_thread_run_threadless(__thread_switch_threadless, scheduled);
+    // }
+    // else
+    // {
+    //     __thread_switch_threadless(scheduled);
+    // }
+
+    enable_restore_irqs(irq_flags);
+
+    dprintk("Returned from thread yield (thread=%p)\n", current_thread());
+
+    return 0;
+}
+
+int
+thread_switch(void)
+{
+    int res;
 
     struct thread_state *cur_thread;
     cur_thread = current_thread();
+    DEBUG_ASSERT(cur_thread);
 
-    int irq_flags = spin_lock_pair_irq_save(&cur_thread->lock, &state->lock);
-    dprintk("thread_switch %p -> %p\n", cur_thread, state);
+    struct thread_state *scheduled = cur_thread->scheduled;
+    if(scheduled == NULL) {
+        if(cur_thread->flags & THREAD_FLAG_IDLE) {
+            return 0;
+        }
+        scheduled = idle_thread();
+        DEBUG_ASSERT(KERNEL_ADDR(scheduled));
+        thread_schedule(scheduled);
+    }
 
-    DEBUG_ASSERT(state->status == THREAD_STATUS_SCHEDULED);
-    DEBUG_ASSERT(state->pin_refs == 0 || state->pinned_to == current_cpu_id());
+    DEBUG_ASSERT(current_thread_is_rescheduled());
+
+    int irq_flags = spin_lock_pair_irq_save(&cur_thread->lock, &scheduled->lock);
+    dprintk("thread_switch %p -> %p\n", cur_thread, scheduled);
+
+    DEBUG_ASSERT(scheduled->status == THREAD_STATUS_SCHEDULED);
+    DEBUG_ASSERT(scheduled->pin_refs == 0 || scheduled->pinned_to == current_cpu_id());
 
     // This will unlock the locks
-    if(cur_thread != NULL)
-    {
-        arch_thread_run_threadless(__thread_switch_threadless, state);
-    }
-    else
-    {
-        __thread_switch_threadless(state);
-    }
+    // if(cur_thread != NULL)
+    // {
+        cur_thread->scheduled = NULL;
+        arch_thread_run_threadless(__thread_switch_threadless, scheduled);
+    // }
+    // else
+    // {
+    //     __thread_switch_threadless(scheduled);
+    // }
 
     enable_restore_irqs(irq_flags);
 
@@ -573,17 +633,19 @@ to_restore;
 */
 
 __noreturn void
-thread_abandon(struct thread_state *scheduled)
+thread_abandon(void)
 {
     int res;
 
     // We won't return, so we don't need to save the irq state
     disable_irqs();
 
-    if(scheduled == NULL)
+    struct thread_state *cur_thread =
+        *(struct thread_state **)percpu_ptr(percpu_addr(__current_thread));
+
+    if(cur_thread->scheduled == NULL)
     {
-        scheduled = idle_thread();
-        res = thread_schedule(scheduled);
+        res = thread_schedule(idle_thread());
         if(res)
         {
             panic("Failed to schedule idle thread during "
@@ -593,11 +655,10 @@ thread_abandon(struct thread_state *scheduled)
         }
     }
 
+    struct thread_state *scheduled = cur_thread->scheduled;
+
     DEBUG_ASSERT(KERNEL_ADDR(scheduled));
     DEBUG_ASSERT(scheduled->status == THREAD_STATUS_SCHEDULED);
-
-    struct thread_state *cur_thread =
-        *(struct thread_state **)percpu_ptr(percpu_addr(__current_thread));
 
     DEBUG_ASSERT(KERNEL_ADDR(cur_thread));
     DEBUG_ASSERT(cur_thread->waitqueue == NULL);

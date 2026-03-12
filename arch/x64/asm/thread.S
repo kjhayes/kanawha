@@ -22,9 +22,7 @@ __x64_thread_entry:
 
     callq *%rax // Call our function (%rdi is already set correctly)
 
-    callq force_resched 
-    movq %rax, %rdi // If this is NULL we will run the idle thread
-
+    callq hard_resched 
     callq thread_abandon
 
 __x64_returned_from_thread_abandon:

@@ -113,7 +113,7 @@ signal_on_return_to_userspace(struct process *process)
         irq_lock_release(&process->signal_state.lock);
         disable_irqs();
         process_terminate(-EINTR);
-        thread_abandon(force_resched());
+        thread_abandon();
         panic("thread_abandon returned!\n");
     }
 

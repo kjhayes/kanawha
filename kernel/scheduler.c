@@ -161,26 +161,55 @@ init_cpu_scheds(void)
 }
 declare_init_desc(smp, init_cpu_scheds, "Initializing CPU Scheduler(s)");
 
-struct thread_state *
-query_resched(void)
+int
+soft_resched(void)
 {
+    if(current_thread_is_rescheduled()) {
+        return 0;
+    }
+
     struct scheduler *sched = current_sched();
     if(sched == NULL)
     {
-        return NULL;
+        // Can't reschedule without a scheduler
+        return 0;
     }
-    return scheduler_query_resched(sched);
+    scheduler_soft_resched(sched);
+    return 0;
 }
 
-struct thread_state *
-force_resched(void)
+int
+hard_resched(void)
 {
+    int res;
+
+    if(current_thread_is_rescheduled()) {
+        return 0;
+    }
+
+    struct thread_state *idle;
     struct scheduler *sched = current_sched();
     if(sched == NULL)
     {
-        return NULL;
+        // If we have no scheduler switch to
+        // the idle thread...
+        goto idle_exit;
+
+    } else {
+
+        res = scheduler_hard_resched(sched);
+        if(res) {
+            goto idle_exit;
+        }
+        return 0;
+
     }
-    return scheduler_force_resched(sched);
+
+idle_exit:
+    idle = idle_thread();
+    DEBUG_ASSERT(KERNEL_ADDR(idle));
+    thread_schedule(idle);
+    return 0;
 }
 
 // Default Implementations

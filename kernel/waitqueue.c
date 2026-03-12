@@ -95,28 +95,11 @@ wait_on_with_callback(struct waitqueue *queue,
 
     struct thread_state *cur = current_thread();
 
-    struct thread_state *next = force_resched();
-    if(next == NULL)
-    {
-        next = idle_thread();
-        res = thread_schedule(next);
-        if(res)
-        {
-            panic("Failed to schedule idle thread on CPU %ld! "
-                  "(err=%s)\n",
-                  current_cpu_id(),
-                  errnostr(res));
-        }
-    }
-
-    DEBUG_ASSERT(KERNEL_ADDR(next));
-
     irq_lock_acquire(&queue->lock);
 
     if(queue->flags & WAITQUEUE_DISABLED)
     {
         irq_lock_release(&queue->lock);
-        thread_switch(next);
         return 0; // Should this be an error?
                   // ehhhhhhhhhhhhh... idk -KJH
     }
@@ -127,7 +110,6 @@ wait_on_with_callback(struct waitqueue *queue,
     if(res)
     {
         irq_lock_release(&queue->lock);
-        thread_switch(next);
         return res;
     }
 
@@ -145,7 +127,8 @@ wait_on_with_callback(struct waitqueue *queue,
     }
 
     // Force a reschedule (TIRED -> SLEEPING)
-    thread_switch(next);
+    hard_resched();
+    thread_switch();
 
     // We're back! (a "wake_*" function should have
     // removed us from the queue already)
