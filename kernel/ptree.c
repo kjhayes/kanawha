@@ -54,18 +54,54 @@ ptree_insert_bst(struct ptree *tree, struct ptree_node *node)
     }
 }
 
-static int
-ptree_rebalance(struct ptree *tree)
-{
-    // Just don't rebalance for now
-    // (Inefficient but should still be "correct")
-    return 0;
-}
-
 void
 ptree_init(struct ptree *tree)
 {
     tree->root = NULL;
+}
+
+static void
+ptree_solve_red_red_conflict(
+        struct ptree *tree,
+        struct ptree_node *bottom)
+{
+    struct ptree_node *parent;
+    struct ptree_node *uncle;
+    unsigned int uncle_color;
+
+recurse:
+    parent = bottom->parent;
+    uncle = NULL;
+    if(parent) {
+        uncle = parent->left == bottom ? parent->right : parent->left;
+    }
+    if(uncle == NULL) {
+        uncle_color = PTREE_COLOR_BLACK;
+    }
+
+    DEBUG_ASSERT(bottom->color == PTREE_COLOR_RED);
+    DEBUG_ASSERT(parent == NULL || bottom->parent->color == PTREE_COLOR_RED);
+
+    if(uncle_color == PTREE_COLOR_RED) {
+        // Uncle is red (so it is not NULL)
+        // Recolor both child nodes to black
+        // and the parent to red
+        uncle->color = PTREE_COLOR_BLACK;
+        bottom->color = PTREE_COLOR_BLACK;
+        parent->color = PTREE_COLOR_RED;
+
+        if(parent->parent) {
+            bottom = parent;
+            goto recurse;
+        } else {
+            // Recolor the root to fix the conflict
+            parent->color = PTREE_COLOR_BLACK;
+        }
+    } else { // uncle_color == PTREE_COLOR_BLACK
+        // TODO
+        // Not correctly rebalancing is a performance
+        // but not a correctness issue
+    }
 }
 
 int
@@ -76,16 +112,30 @@ ptree_insert(struct ptree *tree, struct ptree_node *node, uintptr_t key)
     node->key = key;
     node->left = NULL;
     node->right = NULL;
+
+    node->color = PTREE_COLOR_RED;
+
     res = ptree_insert_bst(tree, node);
     if(res)
     {
         return res;
     }
-    res = ptree_rebalance(tree);
-    if(res)
-    {
-        return res;
+
+    if(node->parent == NULL) {
+        // We are the root node
+        node->color = PTREE_COLOR_BLACK;
+        return 0;
     }
+    else if(node->parent->color == PTREE_COLOR_BLACK) {
+        // We inserted a red node and ended up
+        // the child of a black node, so no
+        // invariant has been violated.
+        return 0;
+    } else {
+        // We have a "red-red" conflict
+        ptree_solve_red_red_conflict(tree, node);
+    }
+
     return 0;
 }
 
@@ -151,22 +201,24 @@ ptree_remove(struct ptree *tree, uintptr_t key)
         return node;
     }
 
+    struct ptree_node *parent = node->parent;
     struct ptree_node *left = node->left;
     struct ptree_node *right = node->right;
 
+    struct ptree_node **parent_slot;
     if(node == tree->root)
     {
-        tree->root = NULL;
+        parent_slot = &tree->root;
     }
     else if(node->parent != NULL)
     {
         if(node->parent->left == node)
         {
-            node->parent->left = NULL;
+            parent_slot = &node->parent->left;
         }
         else if(node->parent->right == node)
         {
-            node->parent->right = NULL;
+            parent_slot = &node->parent->right;
         }
         else
         {
@@ -182,48 +234,36 @@ ptree_remove(struct ptree *tree, uintptr_t key)
         // Continue...
     }
 
+    *parent_slot = NULL;
+
     // We've fully removed our node (and it's subtree) from the main tree
 
     // Trim and re-insert the left and right subtrees if they exist
-    if(left != NULL)
+    if(left == NULL)
     {
-        // (This isn't really necessary but let's be safe)
-        left->parent = NULL;
-
-        // Don't do rebalancing yet
-        res = ptree_insert_bst(tree, left);
-        if(res)
+        if(right != NULL)
         {
-            // There's nothing we can really do,
-            // but leave the subtree attached to our node
-            // so it's not lost entirely
+            // We can just replace the node with the right subtree
+            *parent_slot = right;
+            right->parent = parent;
+        }
+    }
+    else
+    {
+        if(right != NULL)
+        {
+            // Both left and right exist...
+            left->parent = NULL;
+            right->parent = NULL;
+            ptree_insert_bst(tree, left);
+            ptree_insert_bst(tree, right);
         }
         else
         {
-            node->left = NULL;
+            // We can just replace the node with the left subtree
+            *parent_slot = left;
+            left->parent = parent;
         }
-    }
-    // Do the same as above for the right subtree
-    if(right != NULL)
-    {
-        right->parent = NULL;
-
-        res = ptree_insert_bst(tree, right);
-        if(res)
-        {
-        }
-        else
-        {
-            node->right = NULL;
-        }
-    }
-
-    res = ptree_rebalance(tree);
-    if(res)
-    {
-        // Hmmmmmmm weird, not much we can do about it here though
-        // (Hopefully it's not too bad and will get fixed on the next
-        //  attempt to rebalance)
     }
 
     return node;

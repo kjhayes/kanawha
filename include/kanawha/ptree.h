@@ -14,12 +14,16 @@ struct ptree
     struct ptree_node *root;
 };
 
+#define PTREE_COLOR_RED (0U)
+#define PTREE_COLOR_BLACK (1U)
+
 struct ptree_node
 {
     struct ptree_node *parent;
     struct ptree_node *left;
     struct ptree_node *right;
     uintptr_t key;
+    unsigned color : 1;
 };
 
 void
