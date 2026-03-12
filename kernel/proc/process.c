@@ -427,6 +427,9 @@ err0:
 static int
 process_free(struct process *process)
 {
+    DEBUG_ASSERT(process->status == PROCESS_STATUS_ZOMBIE);
+    DEBUG_ASSERT(process->thread.status == THREAD_STATUS_ABANDONED);
+
 #ifdef CONFIG_DEBUG_TRACK_PROCESS_EXEC
     if(process->tracked_exec)
     {
@@ -979,6 +982,8 @@ __process_reap_parent_lock(struct process *process)
 
     DEBUG_ASSERT(KERNEL_ADDR(process));
     DEBUG_ASSERT(KERNEL_ADDR(process->parent));
+    DEBUG_ASSERT(process->status == PROCESS_STATUS_ZOMBIE);
+    DEBUG_ASSERT(process->thread.status == THREAD_STATUS_ABANDONED);
 
     // Remove the process from the hierarchy
     ilist_remove(&process->parent->children, &process->child_node);
@@ -1228,7 +1233,8 @@ process_reap_child(struct process *parent,
 
     process_hierarchy_lock_acquire(parent);
 
-    while(process->status != PROCESS_STATUS_ZOMBIE)
+    while(process->status != PROCESS_STATUS_ZOMBIE
+       || process->thread.status != THREAD_STATUS_ABANDONED)
     {
         if(nowait)
         {

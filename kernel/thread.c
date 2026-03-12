@@ -600,6 +600,9 @@ thread_abandon(struct thread_state *scheduled)
         *(struct thread_state **)percpu_ptr(percpu_addr(__current_thread));
 
     DEBUG_ASSERT(KERNEL_ADDR(cur_thread));
+    DEBUG_ASSERT(cur_thread->waitqueue == NULL);
+    DEBUG_ASSERT(KERNEL_ADDR(cur_thread->mem_map));
+    DEBUG_ASSERT(cur_thread->tree_node.key == cur_thread->id);
 
     spin_lock(&cur_thread->lock);
     if(cur_thread->flags & THREAD_FLAG_IDLE)

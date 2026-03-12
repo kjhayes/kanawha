@@ -18,8 +18,8 @@ QEMU_FLAGS += -trace "virtio_*"
 
 QEMU_FLAGS += -device virtio-rng
 
-QEMU_FLAGS += -audio driver=pa,model=virtio
-QEMU_FLAGS += -audiodev pa,id=speaker -machine pcspk-audiodev=speaker
+# QEMU_FLAGS += -audio driver=pa,model=virtio
+# QEMU_FLAGS += -audiodev pa,id=speaker -machine pcspk-audiodev=speaker
 
 #QEMU_FLAGS += -drive id=disk,file=ahci.img,if=none \
               -device ahci,id=ahci \
@@ -57,10 +57,9 @@ QEMU_FLAGS += -cdrom $(ISO)
 
 QEMU_FLAGS += -serial stdio
 QEMU_FLAGS += -smp 4
-
 QEMU_FLAGS += -vga cirrus
 QEMU_FLAGS += -device virtio-gpu-pci
-QEMU_FLAGS += -accel kvm
+QEMU_FLAGS += -accel kvm 
 QEMU_FLAGS += -machine q35
 QEMU_FLAGS += -m 4G
 endif
