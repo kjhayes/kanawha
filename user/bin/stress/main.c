@@ -5,6 +5,7 @@
 #include <unistd.h>
 
 #define NUM_CHILDREN 1000 // Number of child processes to create
+#define STALL 1
 
 #define CHILD(...)
 #define PARENT(...) printf(__VA_ARGS__)
@@ -13,11 +14,11 @@ void
 child_process_task(int child_id)
 {
     CHILD("Child %d (PID: %d) starting work...\n",
-         (int)child_id,
-         (int)getpid());
+          (int)child_id,
+          (int)getpid());
     // Simulate some work, e.g., CPU-bound computation, I/O operations, etc.
     // For a simple stress test, a loop can suffice.
-    for(long long i = 0; i < 10000000ULL; ++i)
+    for(long long i = 0; i < STALL; ++i)
     {
         // Do some dummy calculations to keep the CPU busy
         volatile long result = i * i / (i + 1);

@@ -164,7 +164,8 @@ declare_init_desc(smp, init_cpu_scheds, "Initializing CPU Scheduler(s)");
 int
 soft_resched(void)
 {
-    if(current_thread_is_rescheduled()) {
+    if(current_thread_is_rescheduled())
+    {
         return 0;
     }
 
@@ -183,7 +184,8 @@ hard_resched(void)
 {
     int res;
 
-    if(current_thread_is_rescheduled()) {
+    if(current_thread_is_rescheduled())
+    {
         return 0;
     }
 
@@ -194,15 +196,16 @@ hard_resched(void)
         // If we have no scheduler switch to
         // the idle thread...
         goto idle_exit;
-
-    } else {
+    }
+    else
+    {
 
         res = scheduler_hard_resched(sched);
-        if(res) {
+        if(res)
+        {
             goto idle_exit;
         }
         return 0;
-
     }
 
 idle_exit:

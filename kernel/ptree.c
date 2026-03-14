@@ -60,10 +60,63 @@ ptree_init(struct ptree *tree)
     tree->root = NULL;
 }
 
+static inline void
+ptree_push_up(struct ptree *tree, struct ptree_node *node)
+{
+    struct ptree_node *parent = node->parent;
+    DEBUG_ASSERT(parent != NULL);
+
+    struct ptree_node *grand_parent = parent->parent;
+    struct ptree_node **grand_parent_slot;
+
+    if(grand_parent == NULL)
+    {
+        grand_parent_slot = &tree->root;
+    }
+    else
+    {
+        if(parent == grand_parent->left)
+        {
+            grand_parent_slot = &grand_parent->left;
+        }
+        else
+        {
+            grand_parent_slot = &grand_parent->right;
+            DEBUG_ASSERT(parent == grand_parent->right);
+        }
+    }
+
+    struct ptree_node *child;
+    struct ptree_node **parent_slot;
+    struct ptree_node **child_slot;
+    if(node == parent->left)
+    {
+        parent_slot = &parent->left;
+        child = node->right;
+        child_slot = &node->right;
+    }
+    else
+    {
+        parent_slot = &parent->right;
+        child = node->left;
+        child_slot = &node->left;
+    }
+
+    *parent_slot = child;
+    if(child != NULL)
+    {
+        child->parent = parent;
+    }
+
+    *child_slot = parent;
+    parent->parent = node;
+
+    *grand_parent_slot = node;
+    node->parent = grand_parent;
+}
+
 static void
-ptree_solve_red_red_conflict(
-        struct ptree *tree,
-        struct ptree_node *bottom)
+ptree_solve_red_red_conflict(struct ptree *tree, struct ptree_node *bottom)
 {
     struct ptree_node *parent;
     struct ptree_node *uncle;
@@ -72,17 +125,32 @@ ptree_solve_red_red_conflict(
 recurse:
     parent = bottom->parent;
     uncle = NULL;
-    if(parent) {
+    if(parent)
+    {
         uncle = parent->left == bottom ? parent->right : parent->left;
     }
-    if(uncle == NULL) {
+    else
+    {
+        bottom->color = PTREE_COLOR_BLACK;
+        return;
+    }
+
+    if(parent->parent == NULL)
+    {
+        parent->color = PTREE_COLOR_BLACK;
+        return;
+    }
+
+    if(uncle == NULL)
+    {
         uncle_color = PTREE_COLOR_BLACK;
     }
 
     DEBUG_ASSERT(bottom->color == PTREE_COLOR_RED);
     DEBUG_ASSERT(parent == NULL || bottom->parent->color == PTREE_COLOR_RED);
 
-    if(uncle_color == PTREE_COLOR_RED) {
+    if(uncle_color == PTREE_COLOR_RED)
+    {
         // Uncle is red (so it is not NULL)
         // Recolor both child nodes to black
         // and the parent to red
@@ -90,17 +158,24 @@ recurse:
         bottom->color = PTREE_COLOR_BLACK;
         parent->color = PTREE_COLOR_RED;
 
-        if(parent->parent) {
+        if(parent->parent)
+        {
             bottom = parent;
             goto recurse;
-        } else {
+        }
+        else
+        {
             // Recolor the root to fix the conflict
             parent->color = PTREE_COLOR_BLACK;
         }
-    } else { // uncle_color == PTREE_COLOR_BLACK
-        // TODO
-        // Not correctly rebalancing is a performance
-        // but not a correctness issue
+    }
+    else
+    { // uncle_color == PTREE_COLOR_BLACK
+        // Rotate around our grandparent, color our uncle
+        // read, and color ourselves black
+        parent->color = PTREE_COLOR_BLACK;
+        parent->parent->color = PTREE_COLOR_RED;
+        ptree_push_up(tree, parent);
     }
 }
 
@@ -121,17 +196,21 @@ ptree_insert(struct ptree *tree, struct ptree_node *node, uintptr_t key)
         return res;
     }
 
-    if(node->parent == NULL) {
+    if(node->parent == NULL)
+    {
         // We are the root node
         node->color = PTREE_COLOR_BLACK;
         return 0;
     }
-    else if(node->parent->color == PTREE_COLOR_BLACK) {
+    else if(node->parent->color == PTREE_COLOR_BLACK)
+    {
         // We inserted a red node and ended up
         // the child of a black node, so no
         // invariant has been violated.
         return 0;
-    } else {
+    }
+    else
+    {
         // We have a "red-red" conflict
         ptree_solve_red_red_conflict(tree, node);
     }
@@ -266,6 +345,9 @@ ptree_remove(struct ptree *tree, uintptr_t key)
         }
     }
 
+    // TODO we don't properly balance the tree again
+    // (not a correctness issue though)
+
     return node;
 }
 
@@ -273,7 +355,9 @@ struct ptree_node *
 ptree_get(struct ptree *tree, uintptr_t key)
 {
     dprintk("ptree_get key=%p\n", key);
+
     struct ptree_node *current = tree->root;
+
     while(current != NULL)
     {
         DEBUG_ASSERT(KERNEL_ADDR(current));
@@ -290,7 +374,6 @@ ptree_get(struct ptree *tree, uintptr_t key)
         }
         else
         { // current->key == key
-            dprintk("found\n");
             return current;
         }
     }

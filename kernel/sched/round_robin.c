@@ -12,7 +12,7 @@
 #include <kanawha/vmem.h>
 #include <kanawha/xcall.h>
 
-#define TIMESLICE_MS 100
+#define TIMESLICE_MS 10
 
 struct rr_thread
 {
@@ -179,7 +179,8 @@ rr_sched_soft_resched(struct scheduler *sched)
     int res;
     dprintk("rr_sched_soft_resched CPU (%ld)\n", (sl_t)current_cpu_id());
     res = rr_sched_hard_resched(sched);
-    if(res) {
+    if(res)
+    {
         // Ignore any errors, we don't NEED to reschedule...
     }
     return 0;

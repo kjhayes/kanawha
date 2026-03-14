@@ -7,12 +7,10 @@
 #include <kanawha/thread.h>
 
 // Asking if we should resched
-#define SCHED_SOFT_RESCHED_SIG(RET, ARG, ...) \
-    RET(int)
+#define SCHED_SOFT_RESCHED_SIG(RET, ARG, ...) RET(int)
 
 // Telling we need to be resched (sleeping, waiting, exiting, etc.)
-#define SCHED_HARD_RESCHED_SIG(RET, ARG, ...) \
-    RET(int)
+#define SCHED_HARD_RESCHED_SIG(RET, ARG, ...) RET(int)
 
 #define SCHED_ADD_THREAD_SIG(RET, ARG, ...)                                    \
     RET(int)                                                                   \
@@ -27,8 +25,8 @@
     ARG(printk_f *, printer)
 
 #define SCHED_OP_LIST(OP, ...)                                                 \
-    OP(soft_resched, SCHED_SOFT_RESCHED_SIG, ##__VA_ARGS__)                  \
-    OP(hard_resched, SCHED_HARD_RESCHED_SIG, ##__VA_ARGS__)                  \
+    OP(soft_resched, SCHED_SOFT_RESCHED_SIG, ##__VA_ARGS__)                    \
+    OP(hard_resched, SCHED_HARD_RESCHED_SIG, ##__VA_ARGS__)                    \
     OP(add_thread, SCHED_ADD_THREAD_SIG, ##__VA_ARGS__)                        \
     OP(remove_thread, SCHED_REMOVE_THREAD_SIG, ##__VA_ARGS__)                  \
     OP(debug_dump, SCHED_DEBUG_DUMP_SIG, ##__VA_ARGS__)
@@ -111,12 +109,14 @@ current_sched(void);
 
 // Allow the scheduler to reschedule
 // the current thread (may not actually)
-int soft_resched(void);
+int
+soft_resched(void);
 
 // Force the scheduler to reschedule
 // the current thread (even if that means
 // switching to the idle thread)
-int hard_resched(void);
+int
+hard_resched(void);
 
 // Default Implementations
 int

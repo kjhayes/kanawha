@@ -87,18 +87,17 @@ DECLARE_PERCPU_VAR(struct thread_state *, __current_thread);
 DECLARE_STATIC_PERCPU_VAR(struct thread_state *, __idle_thread);
 
 static inline void
-thread_set_status(
-        struct thread_state *thread,
-        thread_status_t status)
+thread_set_status(struct thread_state *thread, thread_status_t status)
 {
     // We should have the lock held already...
-    DEBUG_ASSERT(thread->status == THREAD_STATUS_PREPARING || spin_try_lock(&thread->lock) != 0);
+    DEBUG_ASSERT(thread->status == THREAD_STATUS_PREPARING ||
+                 spin_try_lock(&thread->lock) != 0);
     DEBUG_ASSERT(thread->status != THREAD_STATUS_ABANDONED);
 #ifdef CONFIG_DEBUG_LOG_THREAD_STATE_CHANGES
     printk("thread(%ld) %s -> %s\n",
-            (sl_t)thread->id,
-            thread_status_to_string(thread->status),
-            thread_status_to_string(status));
+           (sl_t)thread->id,
+           thread_status_to_string(thread->status),
+           thread_status_to_string(status));
 #endif
     thread->status = status;
 }
@@ -317,8 +316,10 @@ thread_schedule(struct thread_state *state)
     struct thread_state *cur_thread = current_thread();
     DEBUG_ASSERT(KERNEL_ADDR(cur_thread));
 
-    if(cur_thread->scheduled != NULL) {
-        dprintk("thread_schedule: thread already has scheduled a replacement!\n");
+    if(cur_thread->scheduled != NULL)
+    {
+        dprintk(
+            "thread_schedule: thread already has scheduled a replacement!\n");
         return -EALREADY;
     }
 
@@ -359,9 +360,9 @@ thread_schedule(struct thread_state *state)
 
     thread_set_status(state, THREAD_STATUS_SCHEDULED);
     cur_thread->scheduled = state;
-    //printk("Scheduling thread(%ld) to take over from thread(%ld)\n",
-    //        (sl_t)state->id,
-    //        (sl_t)cur_thread->id);
+    // printk("Scheduling thread(%ld) to take over from thread(%ld)\n",
+    //         (sl_t)state->id,
+    //         (sl_t)cur_thread->id);
 
     spin_unlock_irq_restore(&state->lock, irq_flags);
     return 0;
@@ -452,21 +453,24 @@ thread_yield(void)
     DEBUG_ASSERT(cur_thread);
 
     struct thread_state *scheduled = cur_thread->scheduled;
-    if(scheduled == NULL) {
+    if(scheduled == NULL)
+    {
         return 0;
     }
 
-    int irq_flags = spin_lock_pair_irq_save(&cur_thread->lock, &scheduled->lock);
+    int irq_flags =
+        spin_lock_pair_irq_save(&cur_thread->lock, &scheduled->lock);
     dprintk("thread_yield %p -> %p\n", cur_thread, scheduled);
 
     DEBUG_ASSERT(scheduled->status == THREAD_STATUS_SCHEDULED);
-    DEBUG_ASSERT(scheduled->pin_refs == 0 || scheduled->pinned_to == current_cpu_id());
+    DEBUG_ASSERT(scheduled->pin_refs == 0 ||
+                 scheduled->pinned_to == current_cpu_id());
 
     // This will unlock the locks
     // if(cur_thread != NULL)
     // {
-        cur_thread->scheduled = NULL;
-        arch_thread_run_threadless(__thread_switch_threadless, scheduled);
+    cur_thread->scheduled = NULL;
+    arch_thread_run_threadless(__thread_switch_threadless, scheduled);
     // }
     // else
     // {
@@ -492,8 +496,10 @@ thread_switch(void)
     DEBUG_ASSERT(cur_thread);
 
     struct thread_state *scheduled = cur_thread->scheduled;
-    if(scheduled == NULL) {
-        if(cur_thread->flags & THREAD_FLAG_IDLE) {
+    if(scheduled == NULL)
+    {
+        if(cur_thread->flags & THREAD_FLAG_IDLE)
+        {
             return 0;
         }
         scheduled = idle_thread();
@@ -507,7 +513,8 @@ thread_switch(void)
     dprintk("thread_switch %p -> %p\n", cur_thread, scheduled);
 
     DEBUG_ASSERT(scheduled->status == THREAD_STATUS_SCHEDULED);
-    DEBUG_ASSERT(scheduled->pin_refs == 0 || scheduled->pinned_to == current_cpu_id());
+    DEBUG_ASSERT(scheduled->pin_refs == 0 ||
+                 scheduled->pinned_to == current_cpu_id());
 
     // This will unlock the locks
     cur_thread->scheduled = NULL;

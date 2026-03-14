@@ -1100,8 +1100,8 @@ process_terminate(int exitcode)
                     "termination!\n");
         }
         dprintk("PID(%d) reaped child! (%lu remaining)\n",
-               (s_t)process->id,
-               (ul_t)ilist_count(&process->children));
+                (s_t)process->id,
+                (ul_t)ilist_count(&process->children));
         process_hierarchy_lock_acquire(process);
     }
     process_hierarchy_lock_release(process);
@@ -1233,8 +1233,8 @@ process_reap_child(struct process *parent,
 
     process_hierarchy_lock_acquire(parent);
 
-    while(process->status != PROCESS_STATUS_ZOMBIE
-       || process->thread.status != THREAD_STATUS_ABANDONED)
+    while(process->status != PROCESS_STATUS_ZOMBIE ||
+          process->thread.status != THREAD_STATUS_ABANDONED)
     {
         if(nowait)
         {

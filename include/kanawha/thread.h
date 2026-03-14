@@ -110,7 +110,8 @@ static inline int
 current_thread_is_rescheduled(void)
 {
     struct thread_state *scheduled = current_thread()->scheduled;
-    if(scheduled == NULL) {
+    if(scheduled == NULL)
+    {
         return 0;
     }
     DEBUG_ASSERT(KERNEL_ADDR(scheduled));
