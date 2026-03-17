@@ -205,14 +205,14 @@ hard_resched(void)
         {
             goto idle_exit;
         }
+        DEBUG_ASSERT(current_thread_is_rescheduled());
         return 0;
     }
 
 idle_exit:
     idle = idle_thread();
     DEBUG_ASSERT(KERNEL_ADDR(idle));
-    thread_schedule(idle);
-    return 0;
+    return thread_schedule(idle);
 }
 
 // Default Implementations

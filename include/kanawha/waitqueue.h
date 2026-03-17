@@ -52,7 +52,7 @@ wait_on_spin_unlock(struct waitqueue *queue, spinlock_t *to_unlock);
 int
 wait_on_thread_lock_release(struct waitqueue *queue, thread_lock_t *to_unlock);
 int
-wait_on_irq_lock_release(struct waitqueue *queue, irq_lock_t *to_unlock);
+wait_on_irq_lock_release(struct waitqueue *queue, irq_lock_t *to_unlock, int *irq_flags);
 
 // Wake a single thread waiting on this queue
 int

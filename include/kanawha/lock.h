@@ -173,10 +173,13 @@ irq_lock_release(irq_lock_t *lock)
     enable_restore_irqs(irq_flags);
 }
 
-static inline void
+static inline int
 irq_lock_release_no_enable_irqs(irq_lock_t *lock)
 {
+    int irq_flags = lock->irq_flags;
+    mbarrier();
     atomic_bool_clear(&lock->locked);
+    return irq_flags;
 }
 
 static inline void

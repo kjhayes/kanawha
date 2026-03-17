@@ -98,6 +98,11 @@ static inline void
 thread_set_status(struct thread_state *thread, thread_status_t status)
 {
     // We should have the lock held already...
+    DEBUG_ASSERT(!(thread->flags & THREAD_FLAG_IDLE)
+                 || (status == THREAD_STATUS_READY)
+                 || (status == THREAD_STATUS_RUNNING)
+                 || (status == THREAD_STATUS_SCHEDULED)
+                 );
     DEBUG_ASSERT(thread->status == THREAD_STATUS_PREPARING ||
                  spin_try_lock(&thread->lock) != 0);
     DEBUG_ASSERT(thread->status != THREAD_STATUS_ABANDONED);
@@ -117,6 +122,9 @@ idle_loop(void)
     enable_irqs();
     while(1)
     {
+        if(!irqs_enabled()) {
+            panic("Running the idle thread with interrupts disabled!\n");
+        }
         // if(current_cpu_id() == 0 && clk_mono_valid()) {
         //     printk("clk_mono = 0x%lx\n",
         //             clk_mono_current());
@@ -231,6 +239,7 @@ thread_init(struct thread_state *state,
     state->pin_refs = 0;
     state->waitqueue = NULL;
     state->scheduled = NULL;
+    state->irq_depth = 0;
 
     state->mem_map = vmem_map_create();
     if(state->mem_map == NULL)
@@ -366,6 +375,11 @@ thread_schedule(struct thread_state *state)
 
     if(state->status != THREAD_STATUS_READY)
     {
+        if(state->flags & THREAD_FLAG_IDLE) {
+            panic("Failed to schedule the idle thread on CPU %ld! (status=%s)\n",
+                    current_cpu_id(),
+                    thread_status_to_string(state->status));
+        }
         spin_unlock_irq_restore(&state->lock, irq_flags);
         return -EINVAL;
     }
@@ -521,13 +535,9 @@ thread_switch(void)
     struct thread_state *scheduled = cur_thread->scheduled;
     if(scheduled == NULL)
     {
-        if(cur_thread->flags & THREAD_FLAG_IDLE)
-        {
-            return 0;
-        }
-        scheduled = idle_thread();
-        DEBUG_ASSERT(KERNEL_ADDR(scheduled));
-        thread_schedule(scheduled);
+        panic("Called thread_switch without a scheduled thread!\n");
+        enable_restore_irqs(irq_flags);
+        return -EINVAL;
     }
 
     DEBUG_ASSERT(current_thread_is_rescheduled());

@@ -2,6 +2,7 @@
 #include <kanawha/dev/term.h>
 #include <kanawha/init.h>
 #include <kanawha/event.h>
+#include <kanawha/tasklet.h>
 
 #define TERM_DEV_BUFLEN (0x1000)
 #define TERM_DEV_BUFFER_QUEUE_LEN (8)
@@ -675,24 +676,37 @@ term_dev_cannot_set_baudrate(struct term_dev *dev, baud_t baud)
 }
 
 // Automatically flushing all term_dev at fixed intervals.
+static struct periodic_event *periodic_flush_term_dev_event = NULL;
+static struct tasklet *periodic_flush_term_dev_tasklet = NULL;
 static void
 flush_term_dev_callback(struct term_dev *dev, void *state)
 {
     term_dev_flush(dev);
 }
 static void
-periodic_flush_term_dev_callback(void *state)
+flush_term_dev_tasklet_callback(void *state)
 {
     for_each_term_dev(flush_term_dev_callback, NULL);
 }
-static struct periodic_event *periodic_flush_term_dev_event = NULL;
+static void
+flush_term_dev_periodic_callback(void *state)
+{
+    if(periodic_flush_term_dev_tasklet != NULL) {
+        tasklet_trigger(periodic_flush_term_dev_tasklet);
+    }
+}
 static int
 init_periodic_flush_term_dev(void) {
+    periodic_flush_term_dev_tasklet =
+        tasklet_create(flush_term_dev_tasklet_callback, NULL);
+    if(periodic_flush_term_dev_tasklet == NULL) {
+        return -ENOMEM;
+    }
     periodic_flush_term_dev_event =
         create_periodic_event(
             msec_to_duration(50),
             NULL,
-            periodic_flush_term_dev_callback);
+            flush_term_dev_periodic_callback);
     if(periodic_flush_term_dev_event == NULL) {
         return -ENOMEM;
     }

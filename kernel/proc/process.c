@@ -1118,6 +1118,7 @@ process_terminate(int exitcode)
 
     dprintk("PID(%d) reaped all children!\n", process->id);
 
+    // IRQ's should stay disabled from here on
     irq_lock_acquire(&process->status_lock);
 
     DEBUG_ASSERT(KERNEL_ADDR(process->parent) || process->parent == NULL);

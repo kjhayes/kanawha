@@ -241,12 +241,16 @@ udrv_dev_fs_file_read(struct file *file,
             }
             else
             {
+                int irq_flags;
                 res = wait_on_irq_lock_release(&dev->read_wq,
-                                               &dev->read_pkt_queue_lock);
+                                               &dev->read_pkt_queue_lock,
+                                               &irq_flags);
                 if(res)
                 {
                     return res;
                 }
+                enable_restore_irqs(irq_flags);
+                // Could be interrupted here...
                 irq_lock_acquire(&dev->read_pkt_queue_lock);
                 continue;
             }
@@ -410,12 +414,15 @@ udrv_send_user_pkt(struct udrv_dev *dev, struct udrv_pkt *pkt)
     irq_lock_acquire(&dev->read_pkt_queue_lock);
     while(dev->read_pkts_queued > dev->max_read_pkts_queued)
     {
+        int irq_flags;
         res =
-            wait_on_irq_lock_release(&dev->send_wq, &dev->read_pkt_queue_lock);
+            wait_on_irq_lock_release(&dev->send_wq, &dev->read_pkt_queue_lock, &irq_flags);
         if(res)
         {
             return res;
         }
+        enable_restore_irqs(irq_flags);
+        // We oculd be interrupted here...
         irq_lock_acquire(&dev->read_pkt_queue_lock);
     }
     ilist_push_head(&dev->read_pkt_queue, &user_pkt->queue_node);

@@ -202,6 +202,7 @@ x64_handle_exception(struct x64_excp_state *state)
             state->rip);
 
     struct thread_state *cur_thread = current_thread();
+    thread_begin_irq();
 
     if(ring_from > 0)
     {
@@ -317,6 +318,7 @@ exit:
             state->rip = (uint64_t)process->user_ip;
         }
     }
+    thread_end_irq();
     return;
 }
 

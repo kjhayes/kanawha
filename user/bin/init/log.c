@@ -45,8 +45,8 @@ all_term_puts_callback(int dir_fd, const char *file_name, void *_msg)
 int
 all_term_puts(char *msg)
 {
-    int res;
-    res = for_each_file_under("/dev/term/", all_term_puts_callback, msg);
+    int res = 0;
+    // res = for_each_file_under("/dev/term/", all_term_puts_callback, msg);
     return res;
 }
 

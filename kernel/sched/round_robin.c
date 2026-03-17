@@ -167,9 +167,11 @@ rr_sched_hard_resched(struct scheduler *sched)
     } while(1);
 
     *current_ptr = current;
+
+    dprintk("scheduling thread (%lld) on CPU (%ld) # active threads (%ld)\n", (ull_t)current->state->id, current_cpu_id(), ilist_count(&rr_sched->thread_list));
+
     spin_unlock_irq_restore(&rr_sched->list_lock, irq_flags);
 
-    dprintk("scheduling thread (%lld)\n", (ull_t)current->state->id);
     return 0;
 }
 

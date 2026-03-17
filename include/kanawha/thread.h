@@ -89,6 +89,8 @@ struct thread_state
 
     struct vmem_map *mem_map;
 
+    int irq_depth;
+
     unsigned long flags;
     thread_status_t status;
 };
@@ -238,5 +240,30 @@ DECLARE_EXTERN_PERCPU_VAR(struct thread_state *, __current_thread);
 
 const char *
 thread_status_to_string(thread_status_t status);
+
+static inline void
+thread_begin_irq(void) {
+    struct thread_state *cur = current_thread();
+    if(cur) {
+        cur->irq_depth++;
+    }
+}
+
+static inline void
+thread_end_irq(void) {
+    struct thread_state *cur = current_thread();
+    if(cur) {
+        cur->irq_depth--;
+    }
+}
+
+static inline int
+thread_irq_depth(void) {
+    struct thread_state *cur = current_thread();
+    if(cur) {
+        return cur->irq_depth;
+    }
+    return 0; // Assume we are not in an IRQ if we do not have a thread.
+}
 
 #endif

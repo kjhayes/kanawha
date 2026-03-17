@@ -141,12 +141,16 @@ socket_fs_pipe_file_read(struct file *file,
             int can_block = !(flags & FS_FILE_READ_NON_BLOCKING);
             if(can_block)
             {
+                int irq_flags;
                 res = wait_on_irq_lock_release(&socket->pipe.read_wq,
-                                               &socket->lock);
+                                               &socket->lock,
+                                               &irq_flags);
                 if(res)
                 {
                     return res;
                 }
+                enable_restore_irqs(irq_flags);
+                // We could be interrupted here...
                 socket_lock_acquire(socket);
             }
             else
@@ -218,12 +222,16 @@ socket_fs_pipe_file_write(struct file *file,
             int can_block = !(flags & FS_FILE_WRITE_NON_BLOCKING);
             if(can_block)
             {
+                int irq_flags;
                 res = wait_on_irq_lock_release(&socket->pipe.write_wq,
-                                               &socket->lock);
+                                               &socket->lock,
+                                               &irq_flags);
                 if(res)
                 {
                     return res;
                 }
+                enable_restore_irqs(irq_flags);
+                // We could be interrupted here...
                 socket_lock_acquire(socket);
             }
             else
@@ -342,12 +350,16 @@ socket_fs_socket_node_form_connection(struct socket_fs_node *socket,
             socket->socket.status = status_waiting_for_other;
             while(socket->socket.status == status_waiting_for_other)
             {
+                int irq_flags;
                 res = wait_on_irq_lock_release(&socket->socket.unpaired_wq,
-                                               &socket->lock);
+                                               &socket->lock,
+                                               &irq_flags);
                 if(res)
                 {
                     return res;
                 }
+                enable_restore_irqs(irq_flags);
+                // We could be interrupted here...
                 socket_lock_acquire(socket);
             }
             if(socket->socket.status == SOCKET_STATUS_PAIRED)
@@ -380,12 +392,16 @@ socket_fs_socket_node_form_connection(struct socket_fs_node *socket,
                 break;
             }
             // Put ourselves on the pending waitqueue and try again.
+            int irq_flags;
             res = wait_on_irq_lock_release(&socket->socket.pending_wq,
-                                           &socket->lock);
+                                           &socket->lock,
+                                           &irq_flags);
             if(res)
             {
                 return res;
             }
+            enable_restore_irqs(irq_flags);
+            // We could be interrupted here...
             socket_lock_acquire(socket);
             continue;
         }

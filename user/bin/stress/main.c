@@ -4,7 +4,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#define NUM_CHILDREN 1000 // Number of child processes to create
+#define NUM_CHILDREN 400 // Number of child processes to create
 #define STALL 1
 
 #define CHILD(...)
