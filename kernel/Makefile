@@ -44,6 +44,7 @@ obj-y += \
 	kbd.o \
 	strace.o \
 	udrv.o \
+	perf.o \
 
 obj-y += stack.o
 

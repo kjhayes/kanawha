@@ -18,9 +18,17 @@
 #include <kanawha/string.h>
 #include <kanawha/thread.h>
 #include <kanawha/vmem.h>
+#include <kanawha/perf.h>
 
 static DECLARE_PTREE(thread_tree);
 DEFINE_LOCAL_IRQ_LOCK(thread_tree_lock);
+
+DECLARE_LOCAL_PERF_TIMER(thread_init_perf_timer)
+DECLARE_LOCAL_PERF_TIMER(arch_init_thread_state_perf_timer)
+DECLARE_LOCAL_PERF_TIMER(thread_init_map_global_regions_perf_timer)
+DECLARE_LOCAL_PERF_TIMER(thread_init_map_critical_perf_timer)
+#define TIMER_START(_TIMER) perf_timer_start(&_TIMER)
+#define TIMER_STOP(_TIMER) perf_timer_stop(&_TIMER)
 
 static thread_id_t __next_thread_id = 0;
 
@@ -211,6 +219,8 @@ thread_init(struct thread_state *state,
 {
     int res;
 
+    TIMER_START(thread_init_perf_timer);
+
     memset(state, 0, sizeof(*state));
 
     state->func = func;
@@ -225,11 +235,13 @@ thread_init(struct thread_state *state,
     state->mem_map = vmem_map_create();
     if(state->mem_map == NULL)
     {
+        TIMER_STOP(thread_init_perf_timer);
         return -ENOMEM;
     }
 
     spinlock_init(&state->lock);
 
+    TIMER_START(thread_init_map_critical_perf_timer);
     thread_tree_lock_acquire();
 
     get_thread_id(state);
@@ -239,9 +251,11 @@ thread_init(struct thread_state *state,
         eprintk("thread_init: Ran out of unique thread_id_t!\n");
         thread_tree_lock_release();
         vmem_map_destroy(state->mem_map);
+        TIMER_STOP(thread_init_perf_timer);
         return -ENOMEM;
     }
 
+    TIMER_START(thread_init_map_global_regions_perf_timer);
     ilist_node_t *node;
     ilist_for_each(node, &global_vmem_regions)
     {
@@ -262,25 +276,34 @@ thread_init(struct thread_state *state,
                     "virtual address %p (err=%s)\n",
                     global_region->virtual_addr,
                     errnostr(res));
+            TIMER_STOP(thread_init_map_global_regions_perf_timer);
+            TIMER_STOP(thread_init_map_critical_perf_timer);
             thread_tree_lock_release();
             vmem_map_destroy(state->mem_map);
+            TIMER_STOP(thread_init_perf_timer);
             return res;
         }
         dprintk("Mapped\n");
     }
+    TIMER_STOP(thread_init_map_global_regions_perf_timer);
 
     thread_tree_lock_release();
+    TIMER_STOP(thread_init_map_critical_perf_timer);
 
+    TIMER_START(arch_init_thread_state_perf_timer);
     res = arch_init_thread_state(state);
     if(res)
     {
         eprintk("arch_init_thread_state failed (err=%s)!\n", errnostr(res));
         vmem_map_destroy(state->mem_map);
+        TIMER_STOP(thread_init_perf_timer);
         return res;
     }
+    TIMER_STOP(arch_init_thread_state_perf_timer);
 
     thread_set_status(state, THREAD_STATUS_READY);
 
+    TIMER_STOP(thread_init_perf_timer);
     return 0;
 }
 

@@ -19,9 +19,15 @@
 #include <kanawha/uapi/spawn.h>
 #include <kanawha/usermode.h>
 #include <kanawha/vmem.h>
+#include <kanawha/perf.h>
 
 static DECLARE_PTREE(process_pid_tree);
 DEFINE_LOCAL_IRQ_LOCK(process_pid_lock);
+
+DECLARE_LOCAL_PERF_TIMER(process_alloc_perf_timer)
+DECLARE_LOCAL_PERF_TIMER(process_spawn_child_perf_timer)
+#define TIMER_START(_TIMER) perf_timer_start(&_TIMER)
+#define TIMER_STOP(_TIMER) perf_timer_stop(&_TIMER)
 
 static struct process *init_process = NULL;
 
@@ -331,6 +337,8 @@ process_alloc(thread_f *kernel_entry,
 {
     int res;
 
+    TIMER_START(process_alloc_perf_timer);
+
     struct process *process = kzmalloc(sizeof(struct process), KM_KERNEL);
     if(process == NULL)
     {
@@ -412,6 +420,7 @@ process_alloc(thread_f *kernel_entry,
             process->id,
             process->thread.id);
 
+    TIMER_STOP(process_alloc_perf_timer);
     return process;
 
     // err3:
@@ -421,6 +430,7 @@ err2:
 err1:
     kfree(process);
 err0:
+    TIMER_STOP(process_alloc_perf_timer);
     return NULL;
 }
 
@@ -1286,13 +1296,15 @@ process_spawn_child(struct process *parent,
     int res;
     int exitcode;
 
+    TIMER_START(process_spawn_child_perf_timer);
+
     DEBUG_ASSERT(KERNEL_ADDR(parent));
 
     struct process *process =
         process_alloc(spawned_process_kernel_entry, (void *)arg, 0, parent);
     if(process == NULL)
     {
-        return NULL;
+        goto err0;
     }
 
     process->user_ip = user_entry;
@@ -1461,6 +1473,7 @@ process_spawn_child(struct process *parent,
     }
 #endif
 
+    TIMER_STOP(process_spawn_child_perf_timer);
     return process;
 
 err1:
@@ -1470,7 +1483,8 @@ err1:
         "NEED TO HANDLE DEALLOCATING A KILLED PROCESS DURING PROCESS SPAWN\n");
     process_reap_child(parent, process->id, &exitcode, 0);
     DEBUG_ASSERT(exitcode == 1);
-    // err0:
+err0:
+    TIMER_STOP(process_spawn_child_perf_timer);
     return NULL;
 }
 

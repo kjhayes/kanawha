@@ -163,6 +163,17 @@ config DEBUG_DUMP_THREADS_PERIODICALLY_PERIOD
     depends on DEBUG_DUMP_THREADS_PERIODICALLY
     default 60
 
+config DEBUG_DUMP_PERF_METRICS_PERIODICALLY
+    bool "Dump Perf Metrics Periodically"
+    depends on DEBUGGING
+    default n
+
+config DEBUG_DUMP_PERF_METRICS_PERIODICALLY_PERIOD
+    int "Dump Perf Metrics Period (sec)"
+    depends on DEBUG_DUMP_PERF_METRICS_PERIODICALLY
+    default 60
+
+
 config DEBUG_LOG_THREAD_STATE_CHANGES
     bool "Log Thread State Changes"
     depends on DEBUGGING

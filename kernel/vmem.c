@@ -16,6 +16,7 @@
 #include <kanawha/thread.h>
 #include <kanawha/types.h>
 #include <kanawha/vmem.h>
+#include <kanawha/perf.h>
 
 #define VMEM_MAP_SLAB_BUFFER_SIZE 0x1000
 static uint8_t vmem_map_slab_buffer[VMEM_MAP_SLAB_BUFFER_SIZE];
@@ -31,6 +32,10 @@ DEFINE_LOCAL_THREAD_LOCK(vmem_region_slab_lock);
 static uint8_t vmem_region_ref_slab_buffer[VMEM_REGION_REF_SLAB_BUFFER_SIZE];
 static struct slab_allocator *vmem_region_ref_slab_allocator = NULL;
 DEFINE_LOCAL_THREAD_LOCK(vmem_region_ref_slab_lock);
+
+DECLARE_LOCAL_PERF_TIMER(vmem_map_create_perf_timer)
+#define TIMER_START(_TIMER) perf_timer_start(&_TIMER)
+#define TIMER_STOP(_TIMER) perf_timer_stop(&_TIMER)
 
 static int
 init_vmem_mapping_allocators(void)
@@ -104,11 +109,15 @@ struct vmem_map *
 vmem_map_create(void)
 {
     int res;
+
+    TIMER_START(vmem_map_create_perf_timer);
+
     vmem_map_slab_lock_acquire();
     if(vmem_map_slab_allocator == NULL)
     {
         eprintk("Called vmem_map_create before vmem_map_slab_allocator has "
                 "been initialized!\n");
+        TIMER_STOP(vmem_map_create_perf_timer);
         return NULL;
     }
     struct vmem_map *map = slab_alloc(vmem_map_slab_allocator);
@@ -116,6 +125,7 @@ vmem_map_create(void)
     if(map == NULL)
     {
         eprintk("vmem_map_create: slab_alloc failed!\n");
+        TIMER_STOP(vmem_map_create_perf_timer);
         return map;
     }
 
@@ -129,9 +139,11 @@ vmem_map_create(void)
         slab_free(vmem_map_slab_allocator, map);
         vmem_map_slab_lock_release();
         eprintk("arch_vmem_map_init failed! (err=%s)\n", errnostr(res));
+        TIMER_STOP(vmem_map_create_perf_timer);
         return NULL;
     }
 
+    TIMER_STOP(vmem_map_create_perf_timer);
     return map;
 }
 
