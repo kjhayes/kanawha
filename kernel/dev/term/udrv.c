@@ -5,12 +5,18 @@
 #include <kanawha/uapi/udrv/term.h>
 #include <kanawha/udrv.h>
 
+#define UDRV_TERM_DEV_BUFLEN (0x100)
+
 static struct term_driver udrv_term_driver;
 
 struct udrv_term_dev
 {
     struct udrv_dev udrv_dev;
     struct term_dev term_dev;
+
+    size_t buflen;
+    size_t datalen;
+    char *buffer;
 
     char *name;
 };
@@ -33,10 +39,20 @@ term_dev_udrv_create(struct udrv_mount *mnt, const char *name)
         return NULL;
     }
 
+    dev->buflen = UDRV_TERM_DEV_BUFLEN;
+    dev->datalen = 0;
+    dev->buffer = kmalloc(sizeof(char) * dev->buflen, KM_KERNEL);
+    if(dev->buffer == NULL) {
+        kfree(dev->name);
+        kfree(dev);
+        return NULL;
+    }
+
     dev->term_dev.driver = &udrv_term_driver;
     res = register_term_dev(&dev->term_dev, dev->name);
     if(res)
     {
+        kfree(dev->buffer);
         kfree(dev->name);
         kfree(dev);
         return NULL;
@@ -122,6 +138,22 @@ declare_init_desc(fs,
                   "Registering term_dev Userspace Driver Framework");
 
 static int
+udrv_term_dev_flush(struct term_dev *term_dev)
+{
+    struct udrv_term_dev *dev =
+        container_of(term_dev, struct udrv_term_dev, term_dev);
+
+    struct udrv_pkt *pkt = udrv_create_user_pkt(sizeof(*pkt) + dev->datalen);
+    pkt->type = UDRV_TERM_PKT_PUTCHARS;
+    pkt->flags = 0;
+    memcpy(pkt->data, dev->buffer, dev->datalen);
+    dev->datalen = 0;
+    udrv_send_user_pkt(&dev->udrv_dev, pkt);
+
+    return 0;
+}
+
+static int
 udrv_term_dev_putc(struct term_dev *term_dev, char c)
 {
     struct udrv_term_dev *dev =
@@ -129,22 +161,17 @@ udrv_term_dev_putc(struct term_dev *term_dev, char c)
 
     // printk("udrv_term_putc\n");
 
-    // TODO Queue these up and actually do the sending in "flush"
-    //      instead of sending them one by one
-    struct udrv_pkt *pkt = udrv_create_user_pkt(sizeof(*pkt) + 1);
-    pkt->type = UDRV_TERM_PKT_PUTCHARS;
-    pkt->flags = 0;
-    pkt->data[0] = c;
-    udrv_send_user_pkt(&dev->udrv_dev, pkt);
+    if(dev->datalen >= dev->buflen) {
+        udrv_term_dev_flush(term_dev);
+    }
 
-    return 0;
-}
+    dev->buffer[dev->datalen] = c;
+    dev->datalen++;
 
-static int
-udrv_term_dev_flush(struct term_dev *term_dev)
-{
-    struct udrv_term_dev *dev =
-        container_of(term_dev, struct udrv_term_dev, term_dev);
+    if(dev->datalen >= dev->buflen) {
+        udrv_term_dev_flush(term_dev);
+    }
+
     return 0;
 }
 

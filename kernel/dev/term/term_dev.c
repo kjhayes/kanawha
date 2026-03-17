@@ -1,6 +1,7 @@
 
 #include <kanawha/dev/term.h>
 #include <kanawha/init.h>
+#include <kanawha/event.h>
 
 #define TERM_DEV_BUFLEN (0x1000)
 #define TERM_DEV_BUFFER_QUEUE_LEN (8)
@@ -672,3 +673,29 @@ term_dev_cannot_set_baudrate(struct term_dev *dev, baud_t baud)
 {
     return -EINVAL;
 }
+
+// Automatically flushing all term_dev at fixed intervals.
+static void
+flush_term_dev_callback(struct term_dev *dev, void *state)
+{
+    term_dev_flush(dev);
+}
+static void
+periodic_flush_term_dev_callback(void *state)
+{
+    for_each_term_dev(flush_term_dev_callback, NULL);
+}
+static struct periodic_event *periodic_flush_term_dev_event = NULL;
+static int
+init_periodic_flush_term_dev(void) {
+    periodic_flush_term_dev_event =
+        create_periodic_event(
+            msec_to_duration(50),
+            NULL,
+            periodic_flush_term_dev_callback);
+    if(periodic_flush_term_dev_event == NULL) {
+        return -ENOMEM;
+    }
+    return 0;
+}
+declare_init(launch, init_periodic_flush_term_dev);
