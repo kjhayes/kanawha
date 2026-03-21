@@ -117,11 +117,14 @@ tasklet_run(struct tasklet *tasklet)
         return -EBUSY;
     }
 
+    tasklet->running = 1;
+    irq_lock_release(&tasklet->lock);
+
     tasklet->pending = 0;
     mbarrier();
     (*tasklet->func)(tasklet->state);
-
-    irq_lock_release(&tasklet->lock);
+    mbarrier();
+    tasklet->running = 0;
 
     return 0;
 }
@@ -138,12 +141,17 @@ tasklet_handle_pending(struct tasklet *tasklet)
 
     if(tasklet->pending)
     {
+        tasklet->running = 1;
+        irq_lock_release(&tasklet->lock);
         tasklet->pending = 0;
         mbarrier();
         (*tasklet->func)(tasklet->state);
+        mbarrier();
+        tasklet->running = 0;
+    } else {
+        irq_lock_release(&tasklet->lock);
     }
 
-    irq_lock_release(&tasklet->lock);
 
     return 0;
 }
