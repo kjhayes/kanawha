@@ -100,6 +100,9 @@ wait_on_with_callback(struct waitqueue *queue,
         // an interrupt
         printk("thread %ld attempted to wait on a waitqueue while handling an interrupt!\n",
                 (sl_t)cur->id);
+        if(callback != NULL) {
+            (*callback)(priv_state);
+        }
         return -EINTR;
     }
 
@@ -107,6 +110,9 @@ wait_on_with_callback(struct waitqueue *queue,
 
     if(queue->flags & WAITQUEUE_DISABLED)
     {
+        if(callback != NULL) {
+            (*callback)(priv_state);
+        }
         irq_lock_release(&queue->lock);
         return 0; // Should this be an error?
                   // ehhhhhhhhhhhhh... idk -KJH
@@ -117,6 +123,9 @@ wait_on_with_callback(struct waitqueue *queue,
     res = thread_tire(cur);
     if(res)
     {
+        if(callback != NULL) {
+            (*callback)(priv_state);
+        }
         irq_lock_release(&queue->lock);
         return res;
     }

@@ -145,11 +145,11 @@ socket_fs_pipe_file_read(struct file *file,
                 res = wait_on_irq_lock_release(&socket->pipe.read_wq,
                                                &socket->lock,
                                                &irq_flags);
+                enable_restore_irqs(irq_flags);
                 if(res)
                 {
                     return res;
                 }
-                enable_restore_irqs(irq_flags);
                 // We could be interrupted here...
                 socket_lock_acquire(socket);
             }
@@ -226,11 +226,11 @@ socket_fs_pipe_file_write(struct file *file,
                 res = wait_on_irq_lock_release(&socket->pipe.write_wq,
                                                &socket->lock,
                                                &irq_flags);
+                enable_restore_irqs(irq_flags);
                 if(res)
                 {
                     return res;
                 }
-                enable_restore_irqs(irq_flags);
                 // We could be interrupted here...
                 socket_lock_acquire(socket);
             }
@@ -354,11 +354,11 @@ socket_fs_socket_node_form_connection(struct socket_fs_node *socket,
                 res = wait_on_irq_lock_release(&socket->socket.unpaired_wq,
                                                &socket->lock,
                                                &irq_flags);
+                enable_restore_irqs(irq_flags);
                 if(res)
                 {
                     return res;
                 }
-                enable_restore_irqs(irq_flags);
                 // We could be interrupted here...
                 socket_lock_acquire(socket);
             }
@@ -396,11 +396,11 @@ socket_fs_socket_node_form_connection(struct socket_fs_node *socket,
             res = wait_on_irq_lock_release(&socket->socket.pending_wq,
                                            &socket->lock,
                                            &irq_flags);
+            enable_restore_irqs(irq_flags);
             if(res)
             {
                 return res;
             }
-            enable_restore_irqs(irq_flags);
             // We could be interrupted here...
             socket_lock_acquire(socket);
             continue;
