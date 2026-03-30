@@ -61,7 +61,7 @@ x64_route_syscall(struct x64_syscall_state *state)
         (uintptr_t)user_rflags);
 
     struct process *process = current_process();
-    DEBUG_ASSERT(process);
+    DEBUG_ASSERT(KERNEL_ADDR(process));
 
     process->user_ip = user_return;
 
