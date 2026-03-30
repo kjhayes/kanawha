@@ -73,7 +73,7 @@ $$(USER_SYSROOT_BIN_DIR)/$(1): $$(CUR_OUTPUT_DIR)/bin/$(1)/obj.o
 	$$(call qinfo, USER_LD, $$(call rel-dir, $$@, $$(OUTPUT_DIR)))
 	$$(Q)$$(USER_LD) $$(USER_LDFLAGS) $$(LDFLAGS) \
 		$$(CUR_OUTPUT_DIR)/bin/$(1)/obj.o -o $$(USER_SYSROOT_BIN_DIR)/$(1) \
-		-lcrt -lc -lkfb 
+		-lwindd -lkfb -lcrt -lc
 
 endef
 

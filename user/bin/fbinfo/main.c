@@ -20,7 +20,7 @@ main(int argc, const char **argv)
     }
 
     const char *fb_path = argv[1];
-    struct kfb_framebuffer *fb = kfb_load_framebuffer(fb_path);
+    struct kfb_framebuffer *fb = kfb_open_framebuffer(fb_path);
     if(fb == NULL)
     {
         fprintf(stderr, "Failed to load framebuffer \"%s\"!\n", fb_path);

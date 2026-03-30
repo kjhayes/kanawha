@@ -296,7 +296,7 @@ main(int argc, const char **argv)
         panic_usage();
     }
 
-    struct kfb_framebuffer *framebuffer = kfb_load_framebuffer(fb_path);
+    struct kfb_framebuffer *framebuffer = kfb_open_framebuffer(fb_path);
     if(framebuffer == NULL)
     {
         fprintf(stderr, "Failed to open framebuffer \"%s\"!\n", fb_path);

@@ -26,9 +26,14 @@ struct kfb_framebuffer
 };
 
 struct kfb_framebuffer *
-kfb_load_framebuffer(const char *path);
+kfb_open_framebuffer(const char *path);
 int
-kfb_unload_framebuffer(struct kfb_framebuffer *buffer);
+kfb_close_framebuffer(struct kfb_framebuffer *buffer);
+
+struct kfb_framebuffer *
+kfb_attach_framebuffer(fd_t file);
+int
+kfb_deattach_framebuffer(struct kfb_framebuffer *buffer);
 
 struct fb_mode_info *
 kfb_load_mode_info(struct kfb_framebuffer *buffer, int mode);

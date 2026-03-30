@@ -50,6 +50,19 @@ static struct daemon randd = {
     .sockets = randd_sockets,
 };
 
+static const char *windd_args[] = {"windd", NULL};
+static struct daemon_socket windd_sockets[] = {{
+    .env = "WINDD_SOCKET",
+}};
+static struct daemon windd = {
+    .command = "/sys/initrd/windd",
+    .args = windd_args,
+    .status = DAEMON_UNINIT,
+    .restart_on_exit = 1,
+    .num_sockets = 1,
+    .sockets = windd_sockets,
+};
+
 static const char *sh_args[] = {"sh", "/sys/initrd/aidedinit.sh", NULL};
 static struct daemon sh = {
     .command = "/sys/initrd/sh",
@@ -61,6 +74,7 @@ static struct daemon sh = {
 
 static struct daemon *daemons[] = {
     &randd,
+    &windd,
     &sh,
     NULL,
 };

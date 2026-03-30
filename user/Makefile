@@ -5,10 +5,12 @@ libs += \
 	dl \
 	kfb \
 	ksnd \
+	windd \
 
 bins += \
 	init \
-	randd
+	randd \
+	windd
 
 bins += \
     cat \

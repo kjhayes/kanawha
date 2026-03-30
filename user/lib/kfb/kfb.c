@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 static int
 __kfb_set_mode_info(struct kfb_framebuffer *fb, int mode)
@@ -120,13 +121,11 @@ __kfb_unload_mode_info(struct fb_mode_info *info)
 }
 
 struct kfb_framebuffer *
-kfb_load_framebuffer(const char *path)
+kfb_open_framebuffer(const char *path)
 {
     int res;
 
     fd_t buffer_file;
-    fd_t mode_set_file;
-    fd_t mode_info_file;
 
 #ifdef PATHBUFLEN
 #undef PATHBUFLEN
@@ -145,11 +144,32 @@ kfb_load_framebuffer(const char *path)
         return NULL;
     }
 
-    snprintf(path_buf, PATHBUFLEN, "%s/mode", path);
-    path_buf[PATHBUFLEN - 1] = '\0';
-    res = kanawha_sys_open(path_buf,
+    struct kfb_framebuffer *fb = kfb_attach_framebuffer(buffer_file);
+    kanawha_sys_close(buffer_file);
+    return fb;
+}
+
+int
+kfb_close_framebuffer(struct kfb_framebuffer *fb)
+{
+    return kfb_deattach_framebuffer(fb);
+}
+
+struct kfb_framebuffer *
+kfb_attach_framebuffer(fd_t dev_file)
+{
+    int res;
+
+    fd_t buffer_file;
+    fd_t mode_set_file;
+    fd_t mode_info_file;
+
+    buffer_file = dup(dev_file);
+
+    mode_set_file = buffer_file;
+    res = kanawha_sys_open("mode",
                            FILE_PERM_READ | FILE_PERM_WRITE,
-                           0,
+                           FILE_MODE_OPEN_RELATIVE,
                            &mode_set_file);
     if(res)
     {
@@ -157,11 +177,10 @@ kfb_load_framebuffer(const char *path)
         return NULL;
     }
 
-    snprintf(path_buf, PATHBUFLEN, "%s/info", path);
-    path_buf[PATHBUFLEN - 1] = '\0';
-    res = kanawha_sys_open(path_buf,
+    mode_info_file = buffer_file;
+    res = kanawha_sys_open("info",
                            FILE_PERM_READ | FILE_PERM_WRITE,
-                           0,
+                           FILE_MODE_OPEN_RELATIVE,
                            &mode_info_file);
     if(res)
     {
@@ -169,7 +188,6 @@ kfb_load_framebuffer(const char *path)
         kanawha_sys_close(mode_set_file);
         return NULL;
     }
-#undef PATHBUFLEN
 
     struct kfb_framebuffer *fb = malloc(sizeof(struct kfb_framebuffer));
     if(fb == NULL)
@@ -223,10 +241,10 @@ kfb_load_framebuffer(const char *path)
     }
 
     return fb;
-}
 
+}
 int
-kfb_unload_framebuffer(struct kfb_framebuffer *fb)
+kfb_deattach_framebuffer(struct kfb_framebuffer *fb)
 {
     kanawha_sys_close(fb->buffer_file);
     kanawha_sys_close(fb->mode_set_file);
@@ -241,6 +259,7 @@ kfb_unload_framebuffer(struct kfb_framebuffer *fb)
     }
     free(fb);
     return 0;
+
 }
 
 struct fb_mode_info *

@@ -140,7 +140,7 @@ main(int argc, const char **argv)
         exit(EXIT_FAILURE);
     }
 
-    struct kfb_framebuffer *fb = kfb_load_framebuffer(fb_path);
+    struct kfb_framebuffer *fb = kfb_open_framebuffer(fb_path);
     if(fb == NULL)
     {
         fprintf(stderr, "Failed to open framebuffer: \"%s\"!\n", fb_path);
@@ -197,7 +197,7 @@ main(int argc, const char **argv)
 
     deinit_terminal();
     unload_font(fdata);
-    kfb_unload_framebuffer(fb);
+    kfb_close_framebuffer(fb);
 
     return 0;
 }
