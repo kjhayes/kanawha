@@ -17,6 +17,7 @@ obj-y += \
 	byteswap.o \
 	endian.o \
 	fenv.o \
+	threads/ 
 
 obj-$(CONFIG_X64) += x64_syscall.o
 obj-$(CONFIG_RISCV64) += riscv64_syscall.o

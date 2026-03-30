@@ -23,7 +23,13 @@ handle_syscall(syscall_id_t id, struct syscall_args *args, uint64_t *ret_out)
     uint64_t ret_val;
 
     struct process *process = current_process();
-    DEBUG_ASSERT(KERNEL_ADDR(process));
+    if(!KERNEL_ADDR(process)) {
+        eprintk("handle_syscall: invoked from a non-process thread? TID(%ld) thread_flags=0x%lx returning -EINVAL?",
+                (sl_t)current_thread()->id,
+                (ul_t)current_thread()->flags
+                );
+        return -EINVAL;
+    }
 
     DEBUG_ASSERT_MSG(irqs_enabled(), "Handling syscall with IRQ(s) disabled!");
 

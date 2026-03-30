@@ -15,4 +15,6 @@ int windd_server_close_connection(struct window *window);
 struct window *windd_client_open(void);
 int windd_client_close(struct window *window);
 
+int windd_window_disconnected(struct window *win);
+
 #endif

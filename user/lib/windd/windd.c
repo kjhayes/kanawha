@@ -151,3 +151,9 @@ int windd_client_close(struct window *window)
     return 0;
 }
 
+int windd_window_disconnected(struct window *window)
+{
+    // TODO
+    return 0;
+}
+

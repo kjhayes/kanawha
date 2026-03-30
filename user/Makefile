@@ -41,5 +41,6 @@ bins += \
     set \
     sleep \
     udrv_rand \
-    write
+    write \
+	wintest \
 

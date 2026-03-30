@@ -56,7 +56,7 @@ QEMU_DEPS += $(ISO)
 QEMU_FLAGS += -cdrom $(ISO)
 
 QEMU_FLAGS += -serial stdio
-QEMU_FLAGS += -smp 4
+QEMU_FLAGS += -smp 1
 QEMU_FLAGS += -vga cirrus
 QEMU_FLAGS += -device virtio-gpu-pci
 QEMU_FLAGS += -accel kvm 
@@ -82,7 +82,7 @@ ifdef QEMU
 qemu: $(QEMU_DEPS)
 	$(QEMU) $(QEMU_FLAGS)
 qemu-gdb: $(QEMU_DEPS)
-	$(QEMU) $(QEMU_FLAGS) -gdb tcp::1234 -S -no-reboot -no-shutdown
+	$(QEMU) $(QEMU_FLAGS) -gdb tcp::1234 -no-reboot -no-shutdown
 
 endif
 

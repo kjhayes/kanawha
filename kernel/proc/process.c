@@ -239,19 +239,25 @@ __process_remove_pid(struct process *process)
 struct process *
 current_process(void)
 {
-    struct thread_state *thread = current_thread();
+    volatile struct thread_state *thread = current_thread();
     if(thread == NULL)
     {
         // We haven't even started threading yet
+        eprintk("current_process() called without a current_thread()!\n");
+        panic("");
+        *thread;
         return NULL;
     }
 
     if(thread->flags & THREAD_FLAG_PROCESS)
     {
-        return container_of(thread, struct process, thread);
+        return container_of((struct thread_state *)thread, struct process, thread);
     }
 
     // This is a purely kernel thread, no associated process
+    eprintk("current_process() called from a kernel thread!\n");
+    panic("");
+    *thread;
     return NULL;
 }
 

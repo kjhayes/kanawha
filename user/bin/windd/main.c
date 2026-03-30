@@ -6,8 +6,9 @@
 #include <stdlib.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <threads.h>
 
-static int window_main(struct window *window);
+static int window_main(void *window);
 
 int
 main(int argc, const char **argv)
@@ -23,33 +24,24 @@ main(int argc, const char **argv)
     int running = 1;
     while(running)
     {
-
-        do
-        {
-            res = waitpid(-1, NULL, WNOHANG);
-        } while(res > 0);
-
-        if(res < 0)
+        res = waitpid(-1, NULL, WNOHANG);
+        if(res < 0 && res != -EWOULDBLOCK)
         {
             fprintf(stderr, "windd: Failed to wait for children!\n");
         }
 
+        printf("windd: waiting for connection...\n");
         struct window *win = windd_server_await_connection();
         if(win == NULL) {
             continue;
         }
 
-        int child = fork();
-
-        if(child == 0)
-        {
-            res = window_main(win);
+        thrd_t child;
+        res = thrd_create(&child, window_main, win);
+        if(res) {
             windd_server_close_connection(win);
-            return res;
-        }
-        else
-        {
-            windd_server_close_connection(win);
+            fprintf(stderr, "windd: Failed to create child thread for window!\n");
+            continue;
         }
     }
 
@@ -59,13 +51,24 @@ main(int argc, const char **argv)
 }
 
 static int
-window_main(struct window *win)
+window_main(void *_win)
 {
+    struct window *win = _win;
+
+    printf("windd: opened server window thread...\n");
+
     int res;
     while(1)
     {
         // Handle requests for this window
         // TODO
+
+        if(windd_window_disconnected(win)) {
+            break;
+        }
     }
+
+    printf("windd: closing server window thread...\n");
+    return 0;
 }
 
