@@ -62,7 +62,8 @@ fs_node_get(struct fs_node *node)
 
     dprintk("fs_node_get: inode = %p\n", node->cache_node.key);
 
-    atomic_fetch_inc(&node->refcount);
+    int old_count = atomic_fetch_inc(&node->refcount);
+    DEBUG_ASSERT(old_count > 0);
 
     return 0;
 }
