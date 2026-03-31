@@ -11,3 +11,10 @@ config ROUND_ROBIN_SCHED
     help
       Round Robin Scheduler "rr_sched"
 
+config ROUND_ROBIN_SCHED_TIMESLICE_MS
+    int "Round Robin Timeslice (ms)"
+    default 10
+    depends on ROUND_ROBIN_SCHED
+    help
+      Round Robin Scheduler Timeslice length in milliseconds
+

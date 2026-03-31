@@ -12,8 +12,6 @@
 #include <kanawha/vmem.h>
 #include <kanawha/xcall.h>
 
-#define TIMESLICE_MS 10
-
 struct rr_thread
 {
     struct thread_state *state;
@@ -75,7 +73,7 @@ rr_sched_alloc_instance(struct scheduler_type *type)
     spinlock_init(&sched->list_lock);
 
     struct periodic_event *event =
-        create_periodic_event(msec_to_duration(TIMESLICE_MS),
+        create_periodic_event(msec_to_duration(CONFIG_ROUND_ROBIN_SCHED_TIMESLICE_MS),
                               (void *)sched,
                               rr_sched_kick);
 
