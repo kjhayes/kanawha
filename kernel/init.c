@@ -117,9 +117,25 @@ handle_init_stage_generic(const char *stage_name,
     return 0;
 }
 
+#define DEFINE_INIT_STAGE_CHECKS(STAGE, ...)                                  \
+    static int __started_init_stage_ ## STAGE = 0; \
+    static int __completed_init_stage_ ## STAGE = 0; \
+    int started_init_stage_##STAGE(void)                                       \
+    {                                                                          \
+        return __started_init_stage_##STAGE; \
+    } \
+    int completed_init_stage_##STAGE(void)                                       \
+    {                                                                          \
+        return __completed_init_stage_##STAGE; \
+    }
+
+XFOR_INIT_STAGE(DEFINE_INIT_STAGE_CHECKS)
+
 #define DEFINE_INIT_STAGE_HANDLER(STAGE, ...)                                  \
     int handle_init_stage__##STAGE(void)                                       \
     {                                                                          \
+        int res; \
+        \
         extern struct init_stage_event __init_stage_##STAGE##__init_start[];   \
         extern struct init_stage_event __init_stage_##STAGE##__init_end[];     \
                                                                                \
@@ -127,9 +143,13 @@ handle_init_stage_generic(const char *stage_name,
                              (uintptr_t)__init_stage_##STAGE##__init_start) /  \
                             sizeof(struct init_stage_event);                   \
                                                                                \
-        return handle_init_stage_generic(#STAGE,                               \
+        __started_init_stage_##STAGE = 1; \
+        res = handle_init_stage_generic(#STAGE,                               \
                                          num_events,                           \
                                          __init_stage_##STAGE##__init_start);  \
+        __completed_init_stage_##STAGE = 1; \
+        return res; \
     }
 
 XFOR_INIT_STAGE(DEFINE_INIT_STAGE_HANDLER)
+

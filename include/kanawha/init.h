@@ -74,6 +74,12 @@ struct init_stage_event
 
 XFOR_INIT_STAGE(DECLARE_INIT_STAGE_HANDLER)
 
+#define DECLARE_INIT_STAGE_CHECKS(STAGE, ...) \
+    int started_init_stage_ ## STAGE(void); \
+    int completed_init_stage_ ## STAGE(void);
+
+XFOR_INIT_STAGE(DECLARE_INIT_STAGE_CHECKS)
+
 #define declare_init(STAGE, FUNC) declare_init_desc(STAGE, FUNC, NULL)
 
 #define declare_init_desc(STAGE, FUNC, DESC)                                   \
