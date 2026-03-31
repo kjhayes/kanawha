@@ -138,15 +138,15 @@ main(int argc, const char **argv)
             static char cwd_buffer[256];
             getcwd(cwd_buffer, 256);
             cwd_buffer[256 - 1] = '\0';
-            unsigned long num_procs;
+            unsigned long cur_proc;
             res = kanawha_sys_prget(
                     PRINFO_TYPE_SMP,
-                    PRGET_SMP_COUNT,
-                    &num_procs);
+                    PRGET_SMP_CURRENT,
+                    &cur_proc);
             if(res) {
                 printf("[%s] ", cwd_buffer);
             } else {
-                printf("[%s smp(%lu)] ", cwd_buffer, num_procs);
+                printf("[%lu][%s] ", cur_proc, cwd_buffer);
             }
         }
 

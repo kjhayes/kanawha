@@ -15,6 +15,9 @@ smp_prget(long field, unsigned long *value)
         case PRGET_SMP_COUNT:
             *value = total_num_cpus();
             break;
+        case PRGET_SMP_CURRENT:
+            *value = current_cpu_id();
+            break;
         default:
             return -EINVAL;
     }

@@ -7,6 +7,7 @@
 // Information about SMP config
 #define PRINFO_TYPE_SMP (2)
 
-#define PRGET_SMP_COUNT (1)
+#define PRGET_SMP_COUNT   (1)
+#define PRGET_SMP_CURRENT (2)
 
 #endif

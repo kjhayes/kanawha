@@ -74,7 +74,7 @@ static struct daemon sh = {
 
 static struct daemon *daemons[] = {
     &randd,
-    &windd,
+    //&windd,
     &sh,
     NULL,
 };
