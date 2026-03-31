@@ -58,6 +58,22 @@ __procfs_read_parent_pid(unsigned long *out, void *state)
     return 0;
 }
 
+static int
+__procfs_read_running(unsigned long *out, void *state)
+{
+    struct process *proc = state;
+    *out = process_is_running(proc);
+    return 0;
+}
+
+static int
+__procfs_read_cpu(unsigned long *out, void *state)
+{
+    struct process *proc = state;
+    *out = process_current_cpu(proc);
+    return 0;
+}
+
 #ifdef CONFIG_DEBUG_TRACK_PROCESS_EXEC
 static ssize_t
 __procfs_read_tracked_exec(size_t offset, char *buf, size_t buflen, void *state)
@@ -136,6 +152,28 @@ procfs_register_process(struct process *process)
         wprintk("Failed to register procfs \"parent\" node (err=%s)!\n",
                 errnostr(res));
     }
+
+    res = vfs_struct_node_add_unsigned_long_field(data->vfs_struct_node,
+                                                  "running",
+                                                  (void *)process,
+                                                  __procfs_read_running,
+                                                  NULL);
+    if(res)
+    {
+        wprintk("Failed to register procfs \"running\" node (err=%s)!\n",
+                errnostr(res));
+    }
+    res = vfs_struct_node_add_unsigned_long_field(data->vfs_struct_node,
+                                                  "cpu",
+                                                  (void *)process,
+                                                  __procfs_read_cpu,
+                                                  NULL);
+    if(res)
+    {
+        wprintk("Failed to register procfs \"cpu\" node (err=%s)!\n",
+                errnostr(res));
+    }
+
 
 #ifdef CONFIG_DEBUG_TRACK_PROCESS_EXEC
     res = vfs_struct_node_add_buffer_field(data->vfs_struct_node,

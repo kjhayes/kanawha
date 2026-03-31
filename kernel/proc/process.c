@@ -1563,3 +1563,28 @@ arch_on_process_entry(void)
     // provide a strong symbol if necessary.
     return 0;
 }
+
+int
+process_is_running(struct process *process)
+{
+    // unsigned long proc_status = process->status;
+    unsigned long thread_status = process->thread.status;
+    switch(thread_status) {
+        case THREAD_STATUS_RUNNING:
+        case THREAD_STATUS_TIRED:
+            return 1;
+        default:
+            return 0;
+    }
+}
+
+cpu_id_t
+process_current_cpu(struct process *process)
+{
+    cpu_id_t cpu = process->thread.running_on;
+    if(!process_is_running(process)) {
+        return NULL_CPU_ID;
+    }
+    return cpu;
+}
+
