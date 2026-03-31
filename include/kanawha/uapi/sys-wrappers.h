@@ -152,6 +152,16 @@ __attribute__((weak)) int
 kanawha_sys_sigsend(pid_t target, int signal, unsigned long flags);
 
 __attribute__((weak)) int
+kanawha_sys_prget(unsigned long type,
+                  long field,
+                  unsigned long *value);
+
+__attribute__((weak)) int
+kanawha_sys_prset(unsigned long type,
+                  long field,
+                  unsigned long value);
+
+__attribute__((weak)) int
 kanawha_sys_connect(fd_t file, fd_t *connection, unsigned long flags);
 
 __attribute__((weak)) int

@@ -2,6 +2,7 @@
 #include "command.h"
 #include "directive.h"
 #include <kanawha/sys-wrappers.h>
+#include <kanawha/prinfo.h>
 
 #include <ctype.h>
 #include <errno.h>
@@ -137,7 +138,16 @@ main(int argc, const char **argv)
             static char cwd_buffer[256];
             getcwd(cwd_buffer, 256);
             cwd_buffer[256 - 1] = '\0';
-            printf("[%s] ", cwd_buffer);
+            unsigned long num_procs;
+            res = kanawha_sys_prget(
+                    PRINFO_TYPE_SMP,
+                    PRGET_SMP_COUNT,
+                    &num_procs);
+            if(res) {
+                printf("[%s] ", cwd_buffer);
+            } else {
+                printf("[%s smp(%lu)] ", cwd_buffer, num_procs);
+            }
         }
 
         int prev_was_whitespace = 1;
