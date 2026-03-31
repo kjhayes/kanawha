@@ -3,6 +3,8 @@
 #include <kanawha/string.h>
 #include <kanawha/syscall.h>
 
+#define MAX_CWD_PATHLEN (0x1000)
+
 int
 syscall_getcwd(char __user *buffer, size_t buflen)
 {
@@ -39,100 +41,46 @@ syscall_getcwd(char __user *buffer, size_t buflen)
         return -EINVAL;
     }
 
-    size_t len = 0;
-    res = fs_path_get(cwd);
-    if(res)
-    {
-        return res;
-    }
-    do
-    {
-        DEBUG_ASSERT(KERNEL_ADDR(cwd));
-
-        const char *name = fs_path_get_name(cwd);
-        if(cwd == process->root_directory)
-        {
-            name = "";
-        }
-        else if(name == NULL)
-        {
-            name = "";
-        }
-        len += strlen(name);
-
-        if(*name != '/')
-        {
-            len += 1;
-        }
-
-        if(cwd == process->root_directory)
-        {
-            fs_path_put(cwd);
-            break;
-        }
-
-        struct fs_path *parent = fs_path_get_parent(cwd);
-        fs_path_put(cwd);
-        cwd = parent;
-
-        if(cwd == process->working_directory)
-        {
-            // Something is very wrong
-            eprintk("PID(%ld) syscall_getcwd: Found loop traversing from "
-                    "working directory to root directory!\n",
-                    (sl_t)process->id);
-            fs_path_put(cwd);
-            return -EINVAL;
-        }
-    } while(1);
-
-    char *path_buffer = kmalloc(len + 1, KM_KERNEL);
-    if(path_buffer == NULL)
-    {
+    size_t kernel_buflen = buflen > MAX_CWD_PATHLEN ? MAX_CWD_PATHLEN : buflen;
+    char *kernel_buffer = kmalloc(kernel_buflen, KM_KERNEL);
+    if(kernel_buffer == NULL) {
         return -ENOMEM;
     }
 
+    size_t pathlen = 1; // includes the null terminator
+    char *path = kernel_buffer + (kernel_buflen-pathlen);
+    *path = '\0'; // Add the final NULL terminator
+
     {
         cwd = process->working_directory;
-        char *iter = path_buffer + len;
-        size_t room = 0;
         res = fs_path_get(cwd);
         if(res)
         {
-            kfree(path_buffer);
+            kfree(kernel_buffer);
             return res;
         }
         do
         {
-            const char *name = fs_path_get_name(cwd);
-            if(cwd == process->root_directory)
-            {
-                name = "/";
-            }
-            else if(name == NULL)
-            {
-                name = "";
-            }
-            size_t curlen = strlen(name);
-            iter -= curlen;
-            room += curlen;
-            DEBUG_ASSERT(iter >= path_buffer);
-
-            memcpy(iter, name, curlen > room ? room : curlen);
-
-            if(*name != '/')
-            {
-                iter -= 1;
-                room += 1;
-                DEBUG_ASSERT(iter >= path_buffer);
-                *iter = '/';
-            }
-
-            if(cwd == process->root_directory)
-            {
+            if(cwd == process->root_directory) {
                 fs_path_put(cwd);
                 break;
             }
+
+            const char *name = fs_path_get_name(cwd);
+            if(name == NULL)
+            {
+                name = "ERROR_NULL_PATH_NAME";
+            }
+            size_t curlen = strlen(name);
+            path -= (curlen+1);
+            pathlen += curlen+1;
+            if(pathlen > kernel_buflen) {
+                kfree(kernel_buffer);
+                return -ENOMEM;
+            }
+
+            *path = '/';
+            memcpy(path+1, name, curlen);
 
             struct fs_path *parent = fs_path_get_parent(cwd);
             fs_path_put(cwd);
@@ -145,28 +93,22 @@ syscall_getcwd(char __user *buffer, size_t buflen)
                         "traversing from "
                         "working directory to root directory!\n",
                         (sl_t)process->id);
-                kfree(path_buffer);
+                kfree(kernel_buffer);
                 fs_path_put(cwd);
                 return -EINVAL;
             }
         } while(1);
-
-        path_buffer[len] = '\0';
     }
-
-    size_t len_to_write = buflen > len + 1 ? len + 1 : buflen;
 
     res = process_write_usermem(process,
                                 buffer,
-                                (void *)path_buffer,
-                                len_to_write);
+                                (void *)path,
+                                pathlen);
+    kfree(kernel_buffer);
     if(res)
     {
-        kfree(path_buffer);
         return res;
     }
-
-    kfree(path_buffer);
 
     return 0;
 }
