@@ -34,7 +34,7 @@ static int
 kheap_grow(struct kheap *heap)
 {
     int res;
-    printk("kheap_grow amt_free=0x%lx bytes\n", page_alloc_amount_free());
+    // printk("kheap_grow amt_free=0x%lx bytes\n", page_alloc_amount_free());
 
     size_t page_size = (1ULL << CONFIG_HEAP_GROWTH_ORDER);
     if(heap->heap_size - heap->mapped < page_size)
@@ -53,11 +53,11 @@ kheap_grow(struct kheap *heap)
 
     void *page_virt = heap->vbase + heap->mapped;
 
-    printk("kheap_grow: page_phys=%p, page_virt=%p, page_size=%p, mapped=%p\n",
-           (uintptr_t)page_phys,
-           (uintptr_t)page_virt,
-           (uintptr_t)page_size,
-           (uintptr_t)heap->mapped);
+    // printk("kheap_grow: page_phys=%p, page_virt=%p, page_size=%p, mapped=%p\n",
+    //       (uintptr_t)page_phys,
+    //       (uintptr_t)page_virt,
+    //       (uintptr_t)page_size,
+    //       (uintptr_t)heap->mapped);
 
     res = vmem_paged_region_map(heap->region,
                                 heap->mapped,
