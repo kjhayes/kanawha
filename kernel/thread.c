@@ -37,8 +37,6 @@ DECLARE_LOCAL_PERF_TIMER(thread_init_map_critical_perf_timer)
 #define TIMER_START(_TIMER) perf_timer_start(&_TIMER)
 #define TIMER_STOP(_TIMER) perf_timer_stop(&_TIMER)
 
-static thread_id_t __next_thread_id = 0;
-
 // Global Thread Vmem Mapping Structures
 static DECLARE_ILIST(global_vmem_regions);
 static struct slab_allocator *global_vmem_region_slab_allocator = NULL;
@@ -57,45 +55,12 @@ struct thread_global_vmem_region
 static inline void
 get_thread_id(struct thread_state *state)
 {
-    thread_id_t id;
-
-    signed long num_loops = 0;
-
-    /*
-     * This is overly complicated to deal with overflow
-     * but overflow will almost certainly never happen
-     * with a 64-bit thread_id_t
-     */
-    while(1)
-    {
-        id = __next_thread_id;
-        __next_thread_id++;
-        // Signed Overflow
-        if(__next_thread_id < 0)
-        {
-            __next_thread_id = 0;
-        }
-        dprintk("get_thread_id: checking %ld\n", id);
-        struct ptree_node *node = ptree_get(&thread_tree, id);
-        if(node == NULL)
-        {
-            dprintk("get_thread_id: using %ld\n", id);
-            state->id = id;
-            ptree_insert(&thread_tree, &state->tree_node, state->id);
-            return;
-        }
-        dprintk("get_thread_id: %ld already taken\n", id);
-        num_loops++;
-        if(num_loops < 0)
-        {
-            // Overflow,
-            // we've been searching for way too long,
-            // if it's come to this we've somehow exhausted
-            // every single thread_id_t???
-            state->id = NULL_THREAD_ID;
-            return;
-        }
+    int res;
+    res = ptree_insert_any(&thread_tree, &state->tree_node);
+    if(res) {
+        state->id = NULL_THREAD_ID;
     }
+    state->id = (thread_id_t)state->tree_node.key;
 }
 
 DECLARE_PERCPU_VAR(struct thread_state *, __current_thread);
