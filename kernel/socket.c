@@ -9,6 +9,11 @@
 
 #define SOCKET_FS_PIPE_BUFLEN (0x100)
 
+struct socket_fs_node;
+
+static int socket_fs_pipe_ensure_primary_inited(struct socket_fs_node *node);
+static int socket_fs_pipe_ensure_secondary_inited(struct socket_fs_node *node);
+
 struct socket_ring_buffer {
     size_t buflen;
     size_t head;
@@ -130,14 +135,19 @@ struct socket_fs_node
 
         struct
         {
-            struct waitqueue write_wq;
-            struct waitqueue read_wq;
-
             int num_files;
             int num_readers;
             int num_writers;
 
-            struct socket_ring_buffer ringbuf;
+            unsigned primary_inited : 1;
+            struct waitqueue primary_write_wq;
+            struct waitqueue primary_read_wq;
+            struct socket_ring_buffer primary_ringbuf;
+
+            unsigned secondary_inited : 1;
+            struct waitqueue secondary_write_wq;
+            struct waitqueue secondary_read_wq;
+            struct socket_ring_buffer secondary_ringbuf;
 
         } pipe;
     };
@@ -191,7 +201,21 @@ socket_fs_pipe_file_read(struct file *file,
 
     DEBUG_ASSERT(KERNEL_ADDR(buffer));
 
-    struct socket_ring_buffer *ringbuf = &socket->pipe.ringbuf;
+    struct socket_ring_buffer *ringbuf;
+    struct waitqueue *wait_on_wq;
+    struct waitqueue *wake_wq;
+
+    if(!(file->internal_flags & FILE_INTERNAL_FLAG_CLIENT)) {
+        socket_fs_pipe_ensure_primary_inited(socket);
+        ringbuf = &socket->pipe.primary_ringbuf;
+        wait_on_wq = &socket->pipe.primary_read_wq;
+        wake_wq = &socket->pipe.primary_write_wq;
+    } else {
+        socket_fs_pipe_ensure_secondary_inited(socket);
+        ringbuf = &socket->pipe.secondary_ringbuf;
+        wait_on_wq = &socket->pipe.secondary_read_wq;
+        wake_wq = &socket->pipe.secondary_write_wq;
+    }
 
     while(read == 0)
     {
@@ -206,7 +230,7 @@ socket_fs_pipe_file_read(struct file *file,
             if(can_block)
             {
                 int irq_flags;
-                res = wait_on_irq_lock_release(&socket->pipe.read_wq,
+                res = wait_on_irq_lock_release(wait_on_wq,
                                                &socket->lock,
                                                &irq_flags);
                 enable_restore_irqs(irq_flags);
@@ -230,7 +254,7 @@ socket_fs_pipe_file_read(struct file *file,
     socket_lock_release(socket);
     if(read > 0)
     {
-        wake_all(&socket->pipe.write_wq);
+        wake_all(wake_wq);
     }
 
     return read;
@@ -264,7 +288,21 @@ socket_fs_pipe_file_write(struct file *file,
 
     DEBUG_ASSERT(KERNEL_ADDR(buffer));
 
-    struct socket_ring_buffer *ringbuf = &socket->pipe.ringbuf;
+    struct socket_ring_buffer *ringbuf;
+    struct waitqueue *wait_on_wq;
+    struct waitqueue *wake_wq;
+
+    if(!(file->internal_flags & FILE_INTERNAL_FLAG_SERVER)) {
+        socket_fs_pipe_ensure_primary_inited(socket);
+        ringbuf = &socket->pipe.primary_ringbuf;
+        wait_on_wq = &socket->pipe.primary_write_wq;
+        wake_wq = &socket->pipe.primary_read_wq;
+    } else {
+        socket_fs_pipe_ensure_secondary_inited(socket);
+        ringbuf = &socket->pipe.secondary_ringbuf;
+        wait_on_wq = &socket->pipe.secondary_write_wq;
+        wake_wq = &socket->pipe.secondary_read_wq;
+    }
 
     while(written == 0)
     {
@@ -279,7 +317,7 @@ socket_fs_pipe_file_write(struct file *file,
             if(can_block)
             {
                 int irq_flags;
-                res = wait_on_irq_lock_release(&socket->pipe.write_wq,
+                res = wait_on_irq_lock_release(wait_on_wq,
                                                &socket->lock,
                                                &irq_flags);
                 enable_restore_irqs(irq_flags);
@@ -304,7 +342,7 @@ socket_fs_pipe_file_write(struct file *file,
     socket_lock_release(socket);
     if(written > 0)
     {
-        wake_all(&socket->pipe.read_wq);
+        wake_all(wake_wq);
     }
 
     return written;
@@ -330,8 +368,19 @@ socket_fs_pipe_file_poll(struct file *file,
 
     unsigned long triggered = 0;
 
-    struct socket_ring_buffer *read_ringbuf = &socket->pipe.ringbuf;
-    struct socket_ring_buffer *write_ringbuf = &socket->pipe.ringbuf;
+    struct socket_ring_buffer *read_ringbuf;
+    struct socket_ring_buffer *write_ringbuf;
+
+    if(file->internal_flags & FILE_INTERNAL_FLAG_SERVER) {
+        read_ringbuf = &socket->pipe.secondary_ringbuf;
+        write_ringbuf = &socket->pipe.primary_ringbuf;
+    } else if(file->internal_flags & FILE_INTERNAL_FLAG_SERVER) {
+        read_ringbuf = &socket->pipe.primary_ringbuf;
+        write_ringbuf = &socket->pipe.secondary_ringbuf;
+    } else {
+        read_ringbuf = &socket->pipe.primary_ringbuf;
+        write_ringbuf = &socket->pipe.primary_ringbuf;
+    }
 
     if(watching & POLL_WRITE_NONBLOCKING)
     {
@@ -692,21 +741,12 @@ socket_fs_mount_create_pipe(struct socket_fs_mount *mnt, size_t *inode_out)
     node->type = SOCKET_FS_NODE_PIPE;
     irq_lock_init(&node->lock);
 
-    struct socket_ring_buffer *ringbuf = &node->pipe.ringbuf;
-
-    res = socket_ring_buffer_init(ringbuf, SOCKET_FS_PIPE_BUFLEN);
-    if(res) {
-        kfree(node);
-        return res;
-    }
-
+    node->pipe.num_files = 0;
     node->pipe.num_readers = 0;
     node->pipe.num_writers = 0;
 
-    waitqueue_init(&node->pipe.read_wq);
-    waitqueue_name(&node->pipe.read_wq, "pipe-read");
-    waitqueue_init(&node->pipe.write_wq);
-    waitqueue_name(&node->pipe.write_wq, "pipe-write");
+    node->pipe.primary_inited = 0;
+    node->pipe.secondary_inited = 0;
 
     irq_lock_acquire(&mnt->inode_tree_lock);
     ptree_insert_any(&mnt->inode_tree, &node->pnode);
@@ -720,16 +760,56 @@ static int
 socket_fs_mount_destroy_pipe(struct socket_fs_mount *mnt,
                              struct socket_fs_node *node)
 {
-    waitqueue_deinit(&node->pipe.write_wq);
-    waitqueue_deinit(&node->pipe.read_wq);
+    if(node->pipe.primary_inited) {
+        waitqueue_deinit(&node->pipe.primary_write_wq);
+        waitqueue_deinit(&node->pipe.primary_read_wq);
+    }
+    if(node->pipe.secondary_inited) {
+        waitqueue_deinit(&node->pipe.secondary_write_wq);
+        waitqueue_deinit(&node->pipe.secondary_read_wq);
+    }
 
     irq_lock_acquire(&mnt->inode_tree_lock);
     ptree_remove(&mnt->inode_tree, node->pnode.key);
     irq_lock_release(&mnt->inode_tree_lock);
 
-    socket_ring_buffer_deinit(&node->pipe.ringbuf);
+    if(node->pipe.primary_inited) {
+        socket_ring_buffer_deinit(&node->pipe.primary_ringbuf);
+    }
+    if(node->pipe.secondary_inited) {
+        socket_ring_buffer_deinit(&node->pipe.secondary_ringbuf);
+    }
+
     kfree(node);
 
+    return 0;
+}
+
+static int
+socket_fs_pipe_ensure_primary_inited(
+        struct socket_fs_node *node)
+{
+    DEBUG_ASSERT(node->type == SOCKET_FS_NODE_PIPE);
+    if(!node->pipe.primary_inited) {
+        waitqueue_init(&node->pipe.primary_read_wq);
+        waitqueue_init(&node->pipe.primary_write_wq);
+        socket_ring_buffer_init(&node->pipe.primary_ringbuf, SOCKET_FS_PIPE_BUFLEN);
+        node->pipe.primary_inited = 1;
+    }
+    return 0;
+}
+
+static int
+socket_fs_pipe_ensure_secondary_inited(
+        struct socket_fs_node *node)
+{
+    DEBUG_ASSERT(node->type == SOCKET_FS_NODE_PIPE);
+    if(!node->pipe.secondary_inited) {
+        waitqueue_init(&node->pipe.secondary_read_wq);
+        waitqueue_init(&node->pipe.secondary_write_wq);
+        socket_ring_buffer_init(&node->pipe.secondary_ringbuf, SOCKET_FS_PIPE_BUFLEN);
+        node->pipe.secondary_inited = 1;
+    }
     return 0;
 }
 
