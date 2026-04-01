@@ -231,7 +231,7 @@ tasklet_worker_thread(void *__self)
             wprintk("tasklet_worker_thread failed to wait on "
                     "waitqueue?\n");
         }
-        printk("tasklet worker woke up!\n");
+        dprintk("tasklet worker woke up!\n");
 
         // Enable every loop incase some tasklet incorrectly disables
         // interrupts
