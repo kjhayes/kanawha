@@ -411,8 +411,9 @@ parse_cmd(struct simple_cmd *simple)
         if(strcmp(iter->value, "|") == 0)
         {
 
-            fd_t pipe_fd;
-            int res = kanawha_sys_pipe(0, 0, &pipe_fd);
+            fd_t read_end;
+            fd_t write_end;
+            int res = kanawha_sys_pipe(0, 0, &read_end, &write_end);
             if(res)
             {
                 destroy_simple_cmd(simple);
@@ -433,8 +434,8 @@ parse_cmd(struct simple_cmd *simple)
             fd_t primary_stdout = simple->stdout;
             fd_t primary_stderr = simple->stderr;
 
-            simple->stdout = pipe_fd;
-            simple->stderr = pipe_fd;
+            simple->stdout = write_end;
+            simple->stderr = write_end;
             cmd->secondary = parse_cmd(simple);
 
             struct cmd_arg *primary_args = iter->next;
@@ -458,7 +459,7 @@ parse_cmd(struct simple_cmd *simple)
             }
             memset(primary, 0, sizeof(struct simple_cmd));
 
-            primary->stdin = pipe_fd;
+            primary->stdin = read_end;
             primary->stdout = primary_stdout;
             primary->stderr = primary_stderr;
 

@@ -286,3 +286,15 @@ fs_file_flush_all_fs_pages(struct file *file, unsigned long flags)
     }
     return 0;
 }
+
+int
+fs_file_nop_on_open(struct file *file)
+{
+    return 0;
+}
+int
+fs_file_nop_on_close(struct file *file)
+{
+    return 0;
+}
+

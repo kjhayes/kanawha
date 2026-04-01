@@ -44,10 +44,21 @@ popen(const char *command, const char *mode)
 
     __elk_libc_internal__init_sFILE(file);
 
-    fd_t pipe;
-    res = kanawha_sys_pipe(0, 0, &pipe);
+    fd_t child_rp, parent_wp;
+    res = kanawha_sys_pipe(0, 0, &child_rp, &parent_wp);
     if(res)
     {
+        free(file);
+        errno = res;
+        return NULL;
+    }
+
+    fd_t parent_rp, child_wp;
+    res = kanawha_sys_pipe(0, 0, &parent_rp, &child_wp);
+    if(res)
+    {
+        close(child_rp);
+        close(parent_wp);
         free(file);
         errno = res;
         return NULL;
@@ -59,13 +70,12 @@ popen(const char *command, const char *mode)
         // We are the child
         if(*mode == 'r')
         {
-            dup2(pipe, stdout->__fd);
+            dup2(child_wp, stdout->__fd);
         }
         else
         { // mode == 'w'
-            dup2(pipe, stdin->__fd);
+            dup2(child_rp, stdin->__fd);
         }
-        close(pipe);
 
         execl(shell_path, "sh", "-c", command, (char *)0);
 
@@ -75,7 +85,8 @@ popen(const char *command, const char *mode)
     {
         // We are the parent
         file->pfile_pid = pid;
-        file->__fd = pipe;
+        // TODO: This is wrong...
+        file->__fd = parent_rp;
         return (FILE *)file;
     }
 }

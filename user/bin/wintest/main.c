@@ -2,6 +2,7 @@
 #include <windd/windd.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include <unistd.h>
 #include <sys/mman.h>
 #include <kanawha/sys-wrappers.h>
@@ -32,19 +33,15 @@ int main(int argc, const char **argv)
             0,
             &buffer,
             0x1000,
-            MMAP_SHARED|MMAP_PROT_READ|MMAP_PROT_WRITE);
+            MMAP_SHARED|MMAP_PROT_WRITE|MMAP_PROT_READ);
     if(res) {
         fprintf(stderr, "Failed to map first page of connection buffer!\n");
         return -1;
     }
 
-    while(*(char*)buffer == '\0') {
-        printf("waiting...\n");
-    }
+    strcpy((char*)buffer, "Hello World!");
 
-    sleep(1);
-
-    puts((char*)buffer);
+    sleep(5);
 
     windd_client_close(window);
     return 0;

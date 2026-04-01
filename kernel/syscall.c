@@ -228,7 +228,9 @@ handle_syscall(syscall_id_t id, struct syscall_args *args, uint64_t *ret_out)
         ret_val = (uint64_t)(int)syscall_pipe(
             (unsigned long)args->args[0], // flags
             (unsigned long)args->args[1], // mode_flags
-            (fd_t __user *)args->args[2]);
+            (fd_t __user *)args->args[2], // read_out
+            (fd_t __user *)args->args[3]  // write_out
+            );
         break;
     case SYSCALL_ID_INSMOD:
         ret_val =
@@ -309,12 +311,14 @@ handle_syscall(syscall_id_t id, struct syscall_args *args, uint64_t *ret_out)
     case SYSCALL_ID_ACCEPT:
         ret_val = (uint64_t)(int)syscall_accept((fd_t)args->args[0],
                                                 (fd_t __user *)args->args[1],
-                                                (unsigned long)args->args[2]);
+                                                (unsigned long)args->args[2]
+                                                );
         break;
     case SYSCALL_ID_CONNECT:
         ret_val = (uint64_t)(int)syscall_connect((fd_t)args->args[0],
                                                  (fd_t __user *)args->args[1],
-                                                 (unsigned long)args->args[2]);
+                                                 (unsigned long)args->args[2]
+                                                 );
         break;
     case SYSCALL_ID_SOCKET:
         ret_val = (uint64_t)(int)syscall_socket((unsigned long)args->args[0],

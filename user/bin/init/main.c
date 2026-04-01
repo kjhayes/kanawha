@@ -47,7 +47,7 @@ static struct daemon randd = {
     .sockets = randd_sockets,
 };
 
-static const char *windd_args[] = {"windd", NULL};
+static const char *windd_args[] = {"windd", "/dev/fb/vga"};
 static struct daemon_socket windd_sockets[] = {{
     .env = "WINDD_SOCKET",
 }};

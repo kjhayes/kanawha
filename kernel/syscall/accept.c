@@ -9,7 +9,7 @@
 #include <kanawha/uapi/file.h>
 
 int
-syscall_accept(fd_t sock_fd, fd_t __user *connection, unsigned long flags)
+syscall_accept(fd_t sock_fd, fd_t __user *conn, unsigned long flags)
 {
     int res;
 
@@ -51,16 +51,19 @@ syscall_accept(fd_t sock_fd, fd_t __user *connection, unsigned long flags)
     res = file_table_open_node(process->file_table,
                                process,
                                conn_node,
-                               FILE_PERM_READ | FILE_PERM_WRITE,
+                               FILE_PERM_WRITE|FILE_PERM_READ,
                                0,
+                               FILE_INTERNAL_FLAG_SERVER,
                                &conn_fd);
-    fs_node_put(conn_node);
     if(res)
     {
+        fs_node_put(conn_node);
         return res;
     }
 
-    res = process_write_usermem(process, connection, &conn_fd, sizeof(conn_fd));
+    fs_node_put(conn_node);
+
+    res = process_write_usermem(process, conn, &conn_fd, sizeof(conn_fd));
     if(res)
     {
         file_table_close(process->file_table, process, conn_fd);

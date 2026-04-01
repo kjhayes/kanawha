@@ -342,7 +342,8 @@ kanawha_sys_pipe:
     movq $KANAWHA_SYSCALL_ID_PIPE, %rax
     // rdi -> unsigned long flags
     // rsi -> unsigned long mode_flags
-    // rdx -> fd_t *out
+    // rdx -> fd_t *read_out
+    movq %rcx, %r8 // r8 -> fd_t *write_out
     syscall
     retq
 
@@ -483,8 +484,8 @@ kanawha_sys_prset:
 kanawha_sys_connect:
     movq $KANAWHA_SYSCALL_ID_CONNECT, %rax
     // rdi -> fd_t socket
-    // rsi -> fd_t *connection
-    // rdx -> unsigned long flags 
+    // rsi -> fd_t *conn
+    // rdx -> unsigned long flags
     syscall
     retq
 
@@ -493,8 +494,8 @@ kanawha_sys_connect:
 kanawha_sys_accept:
     movq $KANAWHA_SYSCALL_ID_ACCEPT, %rax
     // rdi -> fd_t socket
-    // rsi -> fd_t *connection
-    // rdx -> unsigned long flags 
+    // rsi -> fd_t *conn
+    // rdx -> unsigned long flags
     syscall
     retq
 

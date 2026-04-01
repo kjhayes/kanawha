@@ -144,6 +144,7 @@ syscall_mount(const char __user *src,
                                   src_buf,
                                   FILE_PERM_READ | FILE_PERM_WRITE,
                                   0,
+                                  FILE_INTERNAL_FLAG_MOUNT_TEMP,
                                   &src_fd);
             if(res)
             {

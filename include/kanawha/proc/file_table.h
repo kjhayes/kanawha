@@ -38,6 +38,7 @@ file_table_open_node(struct file_table *table,
                      struct fs_node *node,
                      unsigned long access_flags,
                      unsigned long mode_flags,
+                     unsigned long internal_flags,
                      fd_t *fd);
 
 int
@@ -46,6 +47,7 @@ file_table_open_path(struct file_table *table,
                      struct fs_path *path,
                      unsigned long access_flags,
                      unsigned long mode_flags,
+                     unsigned long internal_flags,
                      fd_t *fd);
 
 int
@@ -55,6 +57,7 @@ file_table_open(struct file_table *table,
                 const char *path,
                 unsigned long access_flags,
                 unsigned long mode_flags,
+                unsigned long internal_flags,
                 fd_t *fd);
 
 int

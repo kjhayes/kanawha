@@ -288,6 +288,7 @@ init_process_kernel_entry(void *in)
                           binary_path,
                           FILE_PERM_READ | FILE_PERM_EXEC,
                           0,
+                          FILE_INTERNAL_FLAG_EXEC_TEMP,
                           &binary_fd);
     fs_path_put(dir_path);
     if(res)

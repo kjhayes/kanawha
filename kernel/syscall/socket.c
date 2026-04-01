@@ -50,6 +50,7 @@ syscall_socket(unsigned long flags, unsigned long mode_flags, fd_t __user *out)
                                socket_path,
                                0, // cannot read/write a socket
                                mode_flags,
+                               FILE_INTERNAL_FLAG_SOCKET,
                                &fd);
     if(res)
     {

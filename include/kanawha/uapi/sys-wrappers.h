@@ -116,7 +116,7 @@ __attribute__((weak)) int
 kanawha_sys_chwdir(fd_t dir);
 
 __attribute__((weak)) int
-kanawha_sys_pipe(unsigned long flags, unsigned long mode_flags, fd_t *out);
+kanawha_sys_pipe(unsigned long flags, unsigned long mode_flags, fd_t *read_out, fd_t *write_out);
 
 __attribute__((weak)) int
 kanawha_sys_insmod(fd_t file, const char *modname, unsigned long flags);
@@ -162,10 +162,10 @@ kanawha_sys_prset(unsigned long type,
                   unsigned long value);
 
 __attribute__((weak)) int
-kanawha_sys_connect(fd_t file, fd_t *connection, unsigned long flags);
+kanawha_sys_connect(fd_t file, fd_t *conn, unsigned long flags);
 
 __attribute__((weak)) int
-kanawha_sys_accept(fd_t file, fd_t *connection, unsigned long flags);
+kanawha_sys_accept(fd_t file, fd_t *conn, unsigned long flags);
 
 __attribute__((weak)) int
 kanawha_sys_socket(unsigned long flags, unsigned long mode_flags, fd_t *out);

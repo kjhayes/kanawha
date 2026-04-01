@@ -180,7 +180,8 @@ typedef int syscall_id_t;
     RET(int)                                                                   \
     ARG(unsigned long, flags)                                                  \
     ARG(unsigned long, mode_flags)                                             \
-    ARG(fd_t __user *, out)
+    ARG(fd_t __user *, read_out) \
+    ARG(fd_t __user *, write_out)
 
 #define SYSCALL_SIG_INSMOD(RET, ARG, ...)                                      \
     RET(int)                                                                   \
@@ -266,13 +267,13 @@ typedef int syscall_id_t;
 #define SYSCALL_SIG_CONNECT(RET, ARG, ...)                                     \
     RET(int)                                                                   \
     ARG(fd_t, socket)                                                          \
-    ARG(fd_t __user *, connection)                                             \
+    ARG(fd_t __user *, conn)                                                   \
     ARG(unsigned long, flags)
 
 #define SYSCALL_SIG_ACCEPT(RET, ARG, ...)                                      \
     RET(int)                                                                   \
     ARG(fd_t, socket)                                                          \
-    ARG(fd_t __user *, connection)                                             \
+    ARG(fd_t __user *, conn)                                             \
     ARG(unsigned long, flags)
 
 #define SYSCALL_SIG_SOCKET(RET, ARG, ...)                                      \

@@ -14,7 +14,7 @@
 #endif
 
 int
-syscall_pipe(unsigned long flags, unsigned long mode_flags, fd_t __user *out)
+syscall_pipe(unsigned long flags, unsigned long mode_flags, fd_t __user *read_out, fd_t __user *write_out)
 {
     int res;
 
@@ -45,23 +45,50 @@ syscall_pipe(unsigned long flags, unsigned long mode_flags, fd_t __user *out)
     }
     fs_node_put(pipe_node);
 
-    fd_t fd;
+    fd_t read_fd;
     res = file_table_open_path(process->file_table,
                                process,
                                pipe_path,
-                               FILE_PERM_READ | FILE_PERM_WRITE,
+                               FILE_PERM_READ,
                                mode_flags,
-                               &fd);
+                               FILE_INTERNAL_FLAG_PIPE,
+                               &read_fd);
     if(res)
     {
         fs_path_put(pipe_path);
         return res;
     }
 
-    res = process_write_usermem(process, out, &fd, sizeof(fd_t));
+    fd_t write_fd;
+    res = file_table_open_path(process->file_table,
+                               process,
+                               pipe_path,
+                               FILE_PERM_WRITE,
+                               mode_flags,
+                               FILE_INTERNAL_FLAG_PIPE,
+                               &write_fd);
     if(res)
     {
-        file_table_close(process->file_table, process, fd);
+        file_table_close(process->file_table, process, read_fd);
+        fs_path_put(pipe_path);
+        return res;
+    }
+
+
+    res = process_write_usermem(process, read_out, &read_fd, sizeof(fd_t));
+    if(res)
+    {
+        file_table_close(process->file_table, process, read_fd);
+        file_table_close(process->file_table, process, write_fd);
+        fs_path_put(pipe_path);
+        return res;
+    }
+
+    res = process_write_usermem(process, write_out, &write_fd, sizeof(fd_t));
+    if(res)
+    {
+        file_table_close(process->file_table, process, read_fd);
+        file_table_close(process->file_table, process, write_fd);
         fs_path_put(pipe_path);
         return res;
     }

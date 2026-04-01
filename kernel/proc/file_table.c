@@ -76,10 +76,10 @@ file_table_clone(struct file_table *parent, struct process *process)
 
     thread_lock_acquire(&parent->lock);
 
-    child->num_open_files = parent->num_open_files;
     thread_lock_init(&child->lock);
     ptree_init(&child->descriptor_tree);
     ilist_init(&child->process_list);
+    child->num_open_files = 0;
 
     struct ptree_node *node = ptree_get_first(&parent->descriptor_tree);
     while(node != NULL)
@@ -90,6 +90,7 @@ file_table_clone(struct file_table *parent, struct process *process)
         struct file *child_file = kzmalloc(sizeof(struct file), KM_KERNEL);
         if(child_file == NULL)
         {
+            thread_lock_release(&parent->lock);
             return -ENOMEM;
         }
 
@@ -98,6 +99,7 @@ file_table_clone(struct file_table *parent, struct process *process)
         child_file->mode_flags = parent_file->mode_flags;
         child_file->access_flags = parent_file->access_flags;
         child_file->status_flags = parent_file->status_flags;
+        child_file->internal_flags = parent_file->internal_flags;
 
         res = fs_path_get(parent_file->path);
         if(res)
@@ -113,6 +115,20 @@ file_table_clone(struct file_table *parent, struct process *process)
         ptree_insert(&child->descriptor_tree,
                      &child_file->table_node,
                      parent_file->table_node.key);
+
+        child->num_open_files++;
+
+        res = direct_file_on_open(child_file);
+        if(res) {
+            eprintk("fs_file_on_open returned %s!\n",
+                    errnostr(res));
+            ptree_remove(&child->descriptor_tree, child_file->table_node.key);
+            child->num_open_files--;
+            thread_lock_release(&parent->lock);
+            fs_path_put(child_file->path);
+            kfree(child_file);
+            return res;
+        }
 
         node = ptree_get_next(node);
     }
@@ -150,6 +166,13 @@ static int
 __file_table_free_descriptor(struct file_table *table, struct file *desc)
 {
     int res;
+
+    res = direct_file_on_close(desc);
+    if(res) {
+        eprintk("fs_file_on_close returned %s!\n",
+                errnostr(res));
+        return res;
+    }
 
     struct ptree_node *removed =
         ptree_remove(&table->descriptor_tree, desc->table_node.key);
@@ -217,6 +240,7 @@ file_table_open_path(struct file_table *table,
                      struct fs_path *path,
                      unsigned long access_flags,
                      unsigned long mode_flags,
+                     unsigned long internal_flags,
                      fd_t *fd)
 {
     int res;
@@ -238,6 +262,7 @@ file_table_open_path(struct file_table *table,
     // desc->status_flags = 0;
     desc->mode_flags = mode_flags;
     desc->access_flags = access_flags;
+    desc->internal_flags = internal_flags;
 
     thread_lock_acquire(&table->lock);
 
@@ -251,6 +276,18 @@ file_table_open_path(struct file_table *table,
     }
 
     table->num_open_files++;
+
+    res = direct_file_on_open(desc);
+    if(res) {
+        eprintk("fs_file_on_open returned %s!\n",
+                errnostr(res));
+        ptree_remove(&table->descriptor_tree, desc->table_node.key);
+        table->num_open_files--;
+        thread_lock_release(&table->lock);
+        fs_path_put(desc->path);
+        kfree(desc);
+        return res;
+    }
 
     thread_lock_release(&table->lock);
 
@@ -266,6 +303,7 @@ file_table_open(struct file_table *table,
                 const char *path_str,
                 unsigned long access_flags,
                 unsigned long mode_flags,
+                unsigned long internal_flags,
                 fd_t *fd)
 {
     int res;
@@ -290,6 +328,7 @@ file_table_open(struct file_table *table,
                                path,
                                access_flags,
                                mode_flags,
+                               internal_flags,
                                fd);
 
     fs_path_put(path);
@@ -302,6 +341,7 @@ file_table_open_node(struct file_table *table,
                      struct fs_node *node,
                      unsigned long access_flags,
                      unsigned long mode_flags,
+                     unsigned long internal_flags,
                      fd_t *fd)
 {
     int res;
@@ -316,6 +356,7 @@ file_table_open_node(struct file_table *table,
                                path,
                                access_flags,
                                mode_flags,
+                               internal_flags,
                                fd);
     fs_path_put(path);
     return res;
@@ -420,6 +461,7 @@ file_table_put_file(struct file_table *table,
 
     DEBUG_ASSERT(desc->refs > 0);
     desc->refs--;
+
     if(desc->refs == 0)
     {
         res = __file_table_free_descriptor(table, desc);
@@ -523,6 +565,7 @@ file_table_dup_into(struct file_table *table,
     dst_file->mode_flags = src_file->mode_flags;
     dst_file->access_flags = src_file->access_flags;
     dst_file->status_flags = src_file->status_flags;
+    dst_file->internal_flags = src_file->internal_flags;
 
     res = fs_path_get(src_file->path);
     if(res)
@@ -542,6 +585,18 @@ file_table_dup_into(struct file_table *table,
     }
 
     table->num_open_files++;
+
+    res = direct_file_on_open(dst_file);
+    if(res) {
+        eprintk("fs_file_on_open returned %s!\n",
+                errnostr(res));
+        ptree_remove(&table->descriptor_tree, dst_file->table_node.key);
+        table->num_open_files--;
+        thread_lock_release(&table->lock);
+        fs_path_put(dst_file->path);
+        kfree(dst_file);
+        return res;
+    }
 
     res = 0;
     *out = dst;
