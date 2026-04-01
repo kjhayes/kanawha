@@ -243,9 +243,9 @@ tasklet_worker_thread(void *__self)
         if(num_handled < 0) {
             wprintk("tasklet_handle_all_pending returned error %s\n", errnostr(num_handled));
         }
-        if(num_handled == 0) {
-            wprintk("tasklet_worker_thread: spurriously awoken (handled no tasklets!)\n");
-        }
+        // if(num_handled == 0) {
+        //     wprintk("tasklet_worker_thread: spurriously awoken (handled no tasklets!)\n");
+        // }
     }
 }
 
