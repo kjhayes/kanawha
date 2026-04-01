@@ -23,6 +23,10 @@ stree_insert_bst(struct stree *tree, struct stree_node *node)
     struct stree_node *parent = tree->root;
     while(parent != NULL)
     {
+        DEBUG_ASSERT(KERNEL_ADDR(node));
+        DEBUG_ASSERT(KERNEL_ADDR(node->key));
+        DEBUG_ASSERT(KERNEL_ADDR(parent));
+        DEBUG_ASSERT(KERNEL_ADDR(parent->key));
         int cmp = strcmp(node->key, parent->key);
         if(cmp < 0)
         {
