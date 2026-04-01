@@ -642,6 +642,7 @@ ide_dev_register(pio_t io_base,
         kfree(dev);
         return -ENOMEM;
     }
+    tasklet_name(dev->cmd_tasklet, "ide_check_current_command");
 
     res = ide_dev_probe(dev);
     if(res)

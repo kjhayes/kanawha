@@ -114,6 +114,7 @@ usb_xhci_init_ports(struct usb_xhci *xhci)
             kfree(xhci->ports);
             return -EINVAL;
         }
+        tasklet_name(xhci->ports[i].status_change_tasklet, "xhci-status-change");
     }
 
     return 0;

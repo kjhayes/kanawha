@@ -11,6 +11,9 @@ tasklet_create(tasklet_f *func, void *state);
 int
 tasklet_destroy(struct tasklet *tasklet);
 
+int
+tasklet_name(struct tasklet *task, const char *name);
+
 // Ensure that the tasklet will run at least once
 // in the future (unless it is destroyed before it can run)
 //

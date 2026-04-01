@@ -3,13 +3,14 @@
 #include <kanawha/kmalloc.h>
 #include <kanawha/list.h>
 #include <kanawha/lock.h>
+#include <kanawha/rwlock.h>
 #include <kanawha/scheduler.h>
 #include <kanawha/stddef.h>
 #include <kanawha/tasklet.h>
 #include <kanawha/thread.h>
 #include <kanawha/waitqueue.h>
 
-DEFINE_LOCAL_IRQ_LOCK(tasklet_lock);
+static DECLARE_RLOCK(tasklet_lock);
 static DECLARE_ILIST(tasklet_list);
 
 static struct waitqueue tasklet_waitqueue;
@@ -38,6 +39,9 @@ struct tasklet
     unsigned pending : 1;
     unsigned running : 1;
 
+    unsigned owned_name : 1;
+    const char *name;
+
     ilist_node_t list_node;
 };
 
@@ -52,14 +56,40 @@ tasklet_create(tasklet_f *func, void *state)
     tasklet->killed = 0;
     tasklet->pending = 0;
     tasklet->running = 0;
+    tasklet->owned_name = 0;
+    tasklet->name = "unnamed-tasklet";
 
     irq_lock_init(&tasklet->lock);
 
-    tasklet_lock_acquire();
+    rlock_write_lock(&tasklet_lock);
     ilist_push_tail(&tasklet_list, &tasklet->list_node);
-    tasklet_lock_release();
+    rlock_write_unlock(&tasklet_lock);
 
     return tasklet;
+}
+
+int
+tasklet_name(struct tasklet *task, const char *name)
+{
+    char *newname = kstrdup(name);
+    if(newname == NULL) {
+        return -ENOMEM;
+    }
+
+    int oldowned = task->owned_name;
+    char *oldname = (char*)task->name;
+    mbarrier();
+
+    task->name = newname;
+    mbarrier(); // without this we could free invalid
+                // memory on a race, with this, we can
+                // only leak memory (better)
+    task->owned_name = 1;
+
+    if(oldowned) {
+        kfree((void*)oldname);
+    }
+    return 0;
 }
 
 int
@@ -82,10 +112,17 @@ tasklet_destroy(struct tasklet *tasklet)
     {
     }
 
-    tasklet_lock_acquire();
+    rlock_write_lock(&tasklet_lock);
     ilist_remove(&tasklet_list, &tasklet->list_node);
-    tasklet_lock_release();
+    rlock_write_unlock(&tasklet_lock);
 
+    if(tasklet->owned_name) {
+        kfree((void*)tasklet->name);
+
+        // pedantic
+        tasklet->owned_name = 0;
+        tasklet->name = NULL;
+    }
     kfree(tasklet);
 
     return 0;
@@ -97,7 +134,7 @@ tasklet_trigger(struct tasklet *tasklet)
     // No need to grab the lock
     tasklet->pending = 1;
     mbarrier();
-    wake_all(&tasklet_waitqueue);
+    wake_single(&tasklet_waitqueue);
     return 0;
 }
 
@@ -120,10 +157,9 @@ tasklet_run(struct tasklet *tasklet)
     tasklet->running = 1;
     irq_lock_release(&tasklet->lock);
 
-    tasklet->pending = 0;
-    mbarrier();
     (*tasklet->func)(tasklet->state);
     mbarrier();
+    tasklet->pending = 0;
     tasklet->running = 0;
 
     return 0;
@@ -145,49 +181,70 @@ tasklet_handle_pending(struct tasklet *tasklet)
         irq_lock_release(&tasklet->lock);
         tasklet->pending = 0;
         mbarrier();
+        dprintk("handling tasklet \"%s\"\n", tasklet->name);
         (*tasklet->func)(tasklet->state);
         mbarrier();
         tasklet->running = 0;
+        return 1;
     } else {
         irq_lock_release(&tasklet->lock);
+        return 0;
     }
-
-
-    return 0;
 }
 
 static int
 tasklet_handle_all_pending(void)
 {
-    tasklet_lock_acquire();
+    int num_handled = 0;
+    int res;
+    rlock_read_lock(&tasklet_lock);
     ilist_node_t *list_node;
     ilist_for_each(list_node, &tasklet_list)
     {
         struct tasklet *tasklet =
             container_of(list_node, struct tasklet, list_node);
-        tasklet_handle_pending(tasklet);
+        res = tasklet_handle_pending(tasklet);
+        if(res < 0) {
+            rlock_read_unlock(&tasklet_lock);
+            return res;
+        }
+        num_handled += res;
     }
-    tasklet_lock_release();
-    return 0;
+    rlock_read_unlock(&tasklet_lock);
+    return num_handled;
 }
 
 static void
 tasklet_worker_thread(void *__self)
 {
+    // Enable IRQ(s) for this thread (ideally forever)
+    enable_irqs();
+
     int res;
     struct tasklet_thread_state *self = __self;
     while(1)
     {
-        // Enable every loop incase some tasklet incorrectly disables
-        // interrupts
-        enable_irqs();
-        tasklet_handle_all_pending();
         res = wait_on(&tasklet_waitqueue);
         if(res)
         {
             // This is very weird...
             wprintk("tasklet_worker_thread failed to wait on "
                     "waitqueue?\n");
+        }
+        printk("tasklet worker woke up!\n");
+
+        // Enable every loop incase some tasklet incorrectly disables
+        // interrupts
+        if(!irqs_enabled()) {
+            wprintk("Tasklet incorrectly disabled interrupts! (re-enabling)\n");
+            enable_irqs();
+        }
+        int num_handled = tasklet_handle_all_pending();
+        if(num_handled < 0) {
+            wprintk("tasklet_handle_all_pending returned error %s\n", errnostr(num_handled));
+        }
+        if(num_handled == 0) {
+            wprintk("tasklet_worker_thread: spurriously awoken (handled no tasklets!)\n");
         }
     }
 }
@@ -208,7 +265,7 @@ tasklet_create_worker(void)
         return NULL;
     }
 
-    res = thread_init(&worker->thread_state, tasklet_worker_thread, worker, 0);
+    res = thread_init(&worker->thread_state, tasklet_worker_thread, worker, THREAD_FLAG_TASKLET);
     if(res)
     {
         kfree(worker);

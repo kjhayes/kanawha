@@ -702,6 +702,7 @@ init_periodic_flush_term_dev(void) {
     if(periodic_flush_term_dev_tasklet == NULL) {
         return -ENOMEM;
     }
+    tasklet_name(periodic_flush_term_dev_tasklet, "periodic_flush_term_dev");
     periodic_flush_term_dev_event =
         create_periodic_event(
             msec_to_duration(50),
