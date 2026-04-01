@@ -998,9 +998,20 @@ __process_reap_parent_lock(struct process *process)
     DEBUG_ASSERT(process->status == PROCESS_STATUS_ZOMBIE);
     DEBUG_ASSERT(process->thread.status == THREAD_STATUS_ABANDONED);
 
+#ifdef CONFIG_PROCFS
+    res = procfs_deregister_process(process);
+    if(res)
+    {
+        eprintk("Failed to deregister process from procfs on termination! "
+                "(err=%s)\n",
+                errnostr(res));
+    }
+#endif
+
     // Remove the process from the hierarchy
     ilist_remove(&process->parent->children, &process->child_node);
     process->parent = NULL;
+
 
     // Free up the PID
     res = __process_remove_pid_lockless(process);
@@ -1155,16 +1166,6 @@ process_terminate(int exitcode)
 
     process->exitcode = exitcode;
     process->status = PROCESS_STATUS_ZOMBIE;
-
-#ifdef CONFIG_PROCFS
-    res = procfs_deregister_process(process);
-    if(res)
-    {
-        eprintk("Failed to deregister process from procfs on termination! "
-                "(err=%s)\n",
-                errnostr(res));
-    }
-#endif
 
     if(process->root_directory)
     {

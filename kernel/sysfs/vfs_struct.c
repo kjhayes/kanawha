@@ -223,7 +223,7 @@ vfs_create_struct_node(struct vfs_mount *mnt, const char *name)
     int res;
 
     struct vfs_struct_node *node;
-    node = kmalloc(sizeof(struct vfs_struct_node), KM_KERNEL);
+    node = kzmalloc(sizeof(struct vfs_struct_node), KM_KERNEL);
     if(node == NULL)
     {
         return NULL;
