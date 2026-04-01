@@ -20,6 +20,13 @@
 #include <kanawha/vmem.h>
 #include <kanawha/perf.h>
 
+static void set_current_thread(struct thread_state *state);
+
+static void
+dump_thread_flags(struct thread_state *thread,
+                  unsigned long flags,
+                  printk_f *printer);
+
 static DECLARE_PTREE(thread_tree);
 DEFINE_LOCAL_IRQ_LOCK(thread_tree_lock);
 
@@ -135,9 +142,29 @@ idle_loop(void)
 struct thread_state *
 current_thread(void)
 {
+    // NOTE: There is a race condition here between obtaining
+    //       the pointer and actually dereferencing the pointer
+    //       Thus we need to disable preemption by disabling interrupts
+    //       TODO: We should add a distinct notion of "preempt_disable"
+    int irq_flags;
+    irq_flags = disable_save_irqs();
     struct thread_state **ptr = percpu_ptr(percpu_addr(__current_thread));
+    // If we were preempted here and then ran on a different
+    // CPU, we might claim to be the wrong thread...
+    // (This took me faaaaaaar too long to realize)
+    struct thread_state *cur = *ptr;
+    enable_restore_irqs(irq_flags);
+    return cur;
+}
 
-    return *ptr;
+static void
+set_current_thread(struct thread_state *state)
+{
+    DEBUG_ASSERT(!irqs_enabled());
+    struct thread_state **ptr = percpu_ptr(percpu_addr(__current_thread));
+    *ptr = state;
+    dprintk("CPU(%ld) setting current thread to id(%ld)\n", (sl_t)current_cpu_id(), (sl_t)state->id);
+    mbarrier();
 }
 
 int
@@ -413,6 +440,8 @@ __thread_switch_threadless(void *in)
     struct thread_state *switching_from = current_thread();
     struct thread_state *switching_to = (struct thread_state *)in;
 
+    DEBUG_ASSERT_MSG(!irqs_enabled(), "IRQ(s) cannot be enabled during __thread_switch_threadless!");
+
     DEBUG_ASSERT(KERNEL_ADDR(switching_to));
 
     // TIRED -> SLEEPING or RUNNING -> READY transition
@@ -436,11 +465,23 @@ __thread_switch_threadless(void *in)
     DEBUG_ASSERT(switching_to->status == THREAD_STATUS_SCHEDULED);
     thread_set_status(switching_to, THREAD_STATUS_RUNNING);
 
+    switching_from->running_on = NULL_CPU_ID;
     switching_to->running_on = current_cpu_id();
-    dprintk("setting current_thread=%p\n", switching_to);
-    *(struct thread_state **)percpu_ptr(percpu_addr(__current_thread)) =
-        switching_to;
+    // if(completed_init_stage_launch()) {
+    //     printk("CPU(%ld) setting &current_thread=%p id(%ld) from id(%ld)",
+    //             (sl_t)current_cpu_id(),
+    //             current_thread_ptr,
+    //             (sl_t)switching_to->id,
+    //             (sl_t)switching_from->id
+    //             );
+    //     dump_thread_flags(switching_to, switching_to->flags, do_printk);
+    //     do_printk("\n");
+    // }
+
+    set_current_thread(switching_to);
+
     DEBUG_ASSERT(current_thread() == switching_to);
+    mbarrier();
 
     dprintk("activating vmem_map of new thread!\n");
     DEBUG_ASSERT(KERNEL_ADDR(switching_to->mem_map));
@@ -695,8 +736,7 @@ thread_abandon(void)
     // We won't return, so we don't need to save the irq state
     disable_irqs();
 
-    struct thread_state *cur_thread =
-        *(struct thread_state **)percpu_ptr(percpu_addr(__current_thread));
+    struct thread_state *cur_thread = current_thread();
 
     if(cur_thread->scheduled == NULL)
     {
@@ -754,9 +794,7 @@ thread_abandon(void)
     }
     spin_unlock(&scheduled->lock);
 
-    dprintk("setting current_thread=%p\n", scheduled);
-    *(struct thread_state **)percpu_ptr(percpu_addr(__current_thread)) =
-        scheduled;
+    set_current_thread(scheduled);
     DEBUG_ASSERT(current_thread() == scheduled);
 
     dprintk("Abandoning thread %p for thread %p\n", cur_thread, scheduled);
@@ -830,9 +868,7 @@ cpu_start_threading(thread_f *func, void *state)
     spin_lock(&current->lock);
     thread_set_status(current, THREAD_STATUS_RUNNING);
     current->running_on = current_cpu_id();
-    dprintk("setting current_thread=%p\n", current);
-    *(struct thread_state **)percpu_ptr(percpu_addr(__current_thread)) =
-        current;
+    set_current_thread(current);
     DEBUG_ASSERT(current_thread() == current);
     spin_unlock(&current->lock);
 
@@ -856,6 +892,10 @@ dump_thread_flags(struct thread_state *thread,
     if(flags & THREAD_FLAG_IDLE)
     {
         (*printer)("[IDLE]");
+    }
+    if(flags & THREAD_FLAG_TASKLET)
+    {
+        (*printer)("[TASKLET]");
     }
     if(flags & THREAD_FLAG_PROCESS)
     {

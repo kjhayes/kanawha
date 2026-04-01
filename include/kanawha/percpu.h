@@ -51,10 +51,10 @@
 
 #define percpu_addr(__VAR) __percpu_ptr__##__VAR
 
-static inline void *
+static inline void * volatile
 percpu_ptr(void __percpu *ptr)
 {
-    return (void *)__arch_percpu_ptr(ptr);
+    return (void * volatile)__arch_percpu_ptr(ptr);
 }
 
 static inline void *

@@ -56,7 +56,7 @@ QEMU_DEPS += $(ISO)
 QEMU_FLAGS += -cdrom $(ISO)
 
 QEMU_FLAGS += -serial stdio
-QEMU_FLAGS += -smp 4
+QEMU_FLAGS += -smp 2
 QEMU_FLAGS += -vga cirrus
 QEMU_FLAGS += -device virtio-gpu-pci
 QEMU_FLAGS += -accel kvm 

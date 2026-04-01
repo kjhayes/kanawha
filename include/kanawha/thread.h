@@ -64,6 +64,7 @@ typedef uint32_t thread_status_t;
 
 #define THREAD_FLAG_IDLE (1ULL << 0)
 #define THREAD_FLAG_PROCESS (1ULL << 1)
+#define THREAD_FLAG_TASKLET (1ULL << 2)
 
 struct thread_state
 {
