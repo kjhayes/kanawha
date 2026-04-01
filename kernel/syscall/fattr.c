@@ -67,6 +67,12 @@ syscall_fattr(fd_t fd, int attr, size_t __user *user_value)
             value |= FACCESS_NON_BLOCKING;
         }
         break;
+    case FILE_ATTR_CONNECTED:
+        res = direct_file_status(file, FILE_STATUS_CONNECTED, &tmp_value);
+        if(res == 0) {
+            value = tmp_value;
+        }
+        break;
     default:
         res = -EINVAL;
         break;

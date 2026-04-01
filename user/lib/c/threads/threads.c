@@ -13,12 +13,14 @@
 struct __libc_thrd_creation_state {
     thrd_start_t func;
     void *state;
+    void *tmp;
     uint8_t inited;
 } __attribute__((packed));
 
 _Static_assert(offsetof(struct __libc_thrd_creation_state, func) == 0, "");
 _Static_assert(offsetof(struct __libc_thrd_creation_state, state) == 8, "");
-_Static_assert(offsetof(struct __libc_thrd_creation_state, inited) == 16, "");
+_Static_assert(offsetof(struct __libc_thrd_creation_state, tmp) == 16, "");
+_Static_assert(offsetof(struct __libc_thrd_creation_state, inited) == 24, "");
 
 extern void _thrd_start(struct __libc_thrd_creation_state * state);
 
@@ -27,7 +29,7 @@ thrd_create(thrd_t *thrd, thrd_start_t func, void *state)
 {
     int res;
 
-    struct __libc_thrd_creation_state _state = {
+    volatile struct __libc_thrd_creation_state _state = {
         .func = func,
         .state = state,
         .inited = 0,
@@ -36,7 +38,7 @@ thrd_create(thrd_t *thrd, thrd_start_t func, void *state)
     pid_t child_pid;
     res = kanawha_sys_spawn(
             _thrd_start,
-            &_state,
+            (void*)&_state,
              SPAWN_ENV_SHARED
             |SPAWN_FILES_SHARED
             |SPAWN_MMAP_SHARED
@@ -81,6 +83,9 @@ _Noreturn void
 thrd_exit(int exitcode)
 {
     kanawha_sys_exit(exitcode);
+
+    // We should never reach here!
+    while(1) {}
 }
 
 int

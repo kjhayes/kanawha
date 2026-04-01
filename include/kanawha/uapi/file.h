@@ -43,6 +43,7 @@ typedef int fd_t;
 #define FILE_ATTR_DATASIZE (3)
 #define FILE_ATTR_TYPES (4)
 #define FILE_ATTR_ACCESS (5)
+#define FILE_ATTR_CONNECTED (6)
 
 #define FILE_TYPE_REGULAR (1ULL << 0)
 #define FILE_TYPE_DIRECTORY (1ULL << 1)

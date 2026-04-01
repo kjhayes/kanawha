@@ -60,6 +60,14 @@ fs_file_cannot_poll(struct file *file,
     return -EINVAL;
 }
 
+int
+fs_file_cannot_status(struct file *file,
+                      unsigned long type,
+                      unsigned long *value)
+{
+    return -EINVAL;
+}
+
 /*
  * Default No-Op (always "succeed") Implementations
  */

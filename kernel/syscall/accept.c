@@ -28,7 +28,7 @@ syscall_accept(fd_t sock_fd, fd_t __user *connection, unsigned long flags)
     unsigned long accept_flags = 0;
     if(sock_desc->mode_flags & FILE_MODE_NON_BLOCK)
     {
-        accept_flags |= FS_NODE_CONNECT_NON_BLOCKING;
+        accept_flags |= FS_NODE_ACCEPT_NON_BLOCKING;
     }
 
     size_t conn_inode;

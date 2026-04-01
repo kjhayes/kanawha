@@ -38,6 +38,7 @@ windd_generic_init(void)
         return res;
     }
 
+    windd_socket = socket;
     windd_inited = 1;
     return 0;
 }
@@ -153,7 +154,12 @@ int windd_client_close(struct window *window)
 
 int windd_window_disconnected(struct window *window)
 {
-    // TODO
-    return 0;
+    int res;
+    unsigned long value;
+    res = kanawha_sys_fattr(window->conn, FILE_ATTR_CONNECTED, &value);
+    if(res) {
+        return res;
+    }
+    return !value;
 }
 

@@ -20,21 +20,18 @@ setstdin(const char *path)
 {
     int file = open(path, O_RDONLY);
     dup2(file, 0);
-    close(file);
 }
 int
 setstdout(const char *path)
 {
     int file = open(path, O_WRONLY);
     dup2(file, 1);
-    close(file);
 }
 int
 setstderr(const char *path)
 {
     int file = open(path, O_WRONLY);
     dup2(file, 2);
-    close(file);
 }
 
 static const char *randd_args[] = {"randd", NULL};
@@ -74,7 +71,7 @@ static struct daemon sh = {
 
 static struct daemon *daemons[] = {
     &randd,
-    //&windd,
+    &windd,
     &sh,
     NULL,
 };

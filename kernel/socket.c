@@ -296,6 +296,22 @@ socket_fs_pipe_file_poll(struct file *file,
     return 0;
 }
 
+static int
+socket_fs_pipe_file_status(struct file *file,
+                           unsigned long type,
+                           unsigned long *value)
+{
+    struct fs_node *node = fs_path_get_fs_node(file->path);
+    switch(type) {
+        case FILE_STATUS_CONNECTED:
+            *value = node->refcount > 1;
+            break;
+        default:
+            return -EINVAL;
+    }
+    return 0;
+}
+
 static struct fs_node_ops socket_fs_pipe_node_ops = {
     .flush = fs_node_flush_nop,
 };
@@ -305,6 +321,7 @@ static struct fs_file_ops socket_fs_pipe_file_ops = {
     .read = socket_fs_pipe_file_read,
     .write = socket_fs_pipe_file_write,
     .poll = socket_fs_pipe_file_poll,
+    .status = socket_fs_pipe_file_status,
 
     .flush = fs_file_nop_flush,
     .seek = fs_file_seek_pinned_zero,

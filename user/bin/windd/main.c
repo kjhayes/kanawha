@@ -30,7 +30,7 @@ main(int argc, const char **argv)
             fprintf(stderr, "windd: Failed to wait for children!\n");
         }
 
-        printf("windd: waiting for connection...\n");
+//        printf("windd: waiting for connection...\n");
         struct window *win = windd_server_await_connection();
         if(win == NULL) {
             continue;
@@ -39,10 +39,11 @@ main(int argc, const char **argv)
         thrd_t child;
         res = thrd_create(&child, window_main, win);
         if(res) {
-            windd_server_close_connection(win);
             fprintf(stderr, "windd: Failed to create child thread for window!\n");
+            windd_server_close_connection(win);
             continue;
         }
+//        printf("windd: finished creating window thread...\n");
     }
 
     windd_server_deinit();
@@ -55,20 +56,17 @@ window_main(void *_win)
 {
     struct window *win = _win;
 
-    printf("windd: opened server window thread...\n");
+    printf("windd: opened window thread...\n");
 
     int res;
     while(1)
     {
-        // Handle requests for this window
-        // TODO
-
         if(windd_window_disconnected(win)) {
             break;
         }
     }
 
-    printf("windd: closing server window thread...\n");
+    printf("windd: closing window thread...\n");
     return 0;
 }
 
