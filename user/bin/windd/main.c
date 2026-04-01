@@ -7,6 +7,8 @@
 #include <sys/wait.h>
 #include <unistd.h>
 #include <threads.h>
+#include <string.h>
+#include <sys/mman.h>
 
 static int window_main(void *window);
 
@@ -54,11 +56,26 @@ main(int argc, const char **argv)
 static int
 window_main(void *_win)
 {
+    int res;
     struct window *win = _win;
 
     printf("windd: opened window thread...\n");
 
-    int res;
+    void *buffer;
+    res = kanawha_sys_mmap(
+            win->conn,
+            0,
+            &buffer,
+            0x1000,
+            MMAP_SHARED|MMAP_PROT_READ|MMAP_PROT_WRITE);
+    if(res) {
+        fprintf(stderr, "Failed to map window connection buffer!\n");
+        windd_server_close_connection(win);
+        return -1;
+    }
+
+    strcpy((char*)buffer, "Hello World!");
+
     while(1)
     {
         if(windd_window_disconnected(win)) {
@@ -67,6 +84,8 @@ window_main(void *_win)
     }
 
     printf("windd: closing window thread...\n");
+    windd_server_close_connection(win);
+
     return 0;
 }
 

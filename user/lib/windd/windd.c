@@ -10,11 +10,6 @@
 #define WINDOW_MODE_CLIENT (0U)
 #define WINDOW_MODE_SERVER (1U)
 
-struct window {
-    int conn;
-    unsigned mode : 1;
-};
-
 static int windd_inited = 0;
 static int windd_socket = -1;
 

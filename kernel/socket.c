@@ -312,7 +312,54 @@ socket_fs_pipe_file_status(struct file *file,
     return 0;
 }
 
-static struct fs_node_ops socket_fs_pipe_node_ops = {
+static int
+socket_fs_pipe_node_read_page (
+        struct fs_node *node,
+        void *buffer,
+        uintptr_t pfn,
+        unsigned long flags)
+{
+    memset(buffer, 0, 1ULL<<VMEM_MIN_PAGE_ORDER);
+    return 0;
+}
+
+static int
+socket_fs_pipe_node_write_page(
+        struct fs_node *node,
+        void *buffer,
+        uintptr_t pfn,
+        unsigned long flags)
+{
+    return 0; // We don't need to do anything, if a page
+              // is unloaded, we simply lose the contents
+}
+
+static int
+socket_fs_pipe_node_getattr(
+    struct fs_node *node,
+    int attr,
+    size_t *value)
+{
+    switch(attr) {
+        case FS_NODE_ATTR_PAGE_ORDER:
+            *value = VMEM_MIN_PAGE_ORDER;
+            break;
+        default:
+            return -EINVAL;
+    }
+    return 0;
+}
+
+static struct fs_node_ops socket_fs_pipe_node_ops =
+{
+    .read_page = socket_fs_pipe_node_read_page,
+    .write_page = socket_fs_pipe_node_write_page,
+    .getattr = socket_fs_pipe_node_getattr,
+
+    .load_page = fs_node_load_page_read_alloc,
+    .unload_page = fs_node_unload_page_free,
+    .flush_page = fs_node_flush_page_nop,
+
     .flush = fs_node_flush_nop,
 };
 FS_NODE_OPS_INIT_UNDEF(socket_fs_pipe_node_ops);

@@ -1,7 +1,10 @@
 #ifndef __KANAWHA__ELK__WINDD_H__
 #define __KANAWHA__ELK__WINDD_H__
 
-struct window;
+struct window {
+    int conn;
+    unsigned mode : 1;
+};
 
 int windd_client_init(void);
 int windd_client_deinit(void);
