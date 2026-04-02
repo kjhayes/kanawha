@@ -15,7 +15,6 @@ static int socket_fs_pipe_ensure_primary_inited(struct socket_fs_node *node);
 static int socket_fs_pipe_ensure_secondary_inited(struct socket_fs_node *node);
 
 struct socket_ring_buffer {
-    size_t buflen;
     size_t head;
     size_t tail;
     void *data;
@@ -23,13 +22,11 @@ struct socket_ring_buffer {
 
 static inline int
 socket_ring_buffer_init(
-        struct socket_ring_buffer *buf,
-        size_t buflen)
+        struct socket_ring_buffer *buf)
 {
-    buf->buflen = buflen;
     buf->head = 0;
     buf->tail = 0;
-    buf->data = kmalloc(buflen, KM_KERNEL);
+    buf->data = kmalloc(SOCKET_FS_PIPE_BUFLEN, KM_KERNEL);
     if(buf->data == NULL) {
         return -ENOMEM;
     }
@@ -41,10 +38,8 @@ socket_ring_buffer_deinit(
         struct socket_ring_buffer *buffer)
 {
     DEBUG_ASSERT(KERNEL_ADDR(buffer));
-    if(buffer->data != NULL) {
-        DEBUG_ASSERT(KERNEL_ADDR(buffer->data));
-        kfree(buffer->data);
-    }
+    DEBUG_ASSERT(KERNEL_ADDR(buffer->data));
+    kfree(buffer->data);
     return 0;
 }
 
@@ -52,6 +47,8 @@ static inline int
 socket_ring_buffer_empty(
         struct socket_ring_buffer *buf)
 {
+    DEBUG_ASSERT(buf->head < SOCKET_FS_PIPE_BUFLEN);
+    DEBUG_ASSERT(buf->tail < SOCKET_FS_PIPE_BUFLEN);
     return buf->head == buf->tail;
 }
 
@@ -59,7 +56,9 @@ static inline int
 socket_ring_buffer_full(
         struct socket_ring_buffer *buf)
 {
-    return ((buf->tail+1) % buf->buflen) == buf->head;
+    DEBUG_ASSERT(buf->head < SOCKET_FS_PIPE_BUFLEN);
+    DEBUG_ASSERT(buf->tail < SOCKET_FS_PIPE_BUFLEN);
+    return ((buf->head+1) % SOCKET_FS_PIPE_BUFLEN) == buf->tail;
 }
 
 static inline ssize_t
@@ -69,12 +68,17 @@ socket_ring_buffer_read(
         size_t datalen)
 {
     ssize_t read = 0;
+
     while(datalen > 0 && !socket_ring_buffer_empty(buf))
     {
+        DEBUG_ASSERT(KERNEL_ADDR(buf));
+        DEBUG_ASSERT(buf->head < SOCKET_FS_PIPE_BUFLEN);
+        DEBUG_ASSERT(buf->tail < SOCKET_FS_PIPE_BUFLEN);
+        DEBUG_ASSERT(KERNEL_ADDR(buf->data));
         *(uint8_t *)data =
             ((uint8_t *)buf->data)[buf->tail];
-        buf->tail = (buf->tail + 1) % buf->buflen;
-        read += 1;
+        buf->tail = (buf->tail + 1) % SOCKET_FS_PIPE_BUFLEN;
+        read++;
         datalen--;
         data++;
     }
@@ -88,15 +92,21 @@ socket_ring_buffer_write(
         size_t datalen)
 {
     ssize_t written = 0;
+
     while(datalen > 0 && !socket_ring_buffer_full(buf))
     {
+        DEBUG_ASSERT(KERNEL_ADDR(buf));
+        DEBUG_ASSERT(buf->head < SOCKET_FS_PIPE_BUFLEN);
+        DEBUG_ASSERT(buf->tail < SOCKET_FS_PIPE_BUFLEN);
+        DEBUG_ASSERT(KERNEL_ADDR(buf->data));
         ((uint8_t *)buf->data)[buf->head] =
             *(uint8_t *)data;
-        buf->head = (buf->head + 1) % buf->buflen;
-        written += 1;
+        buf->head = (buf->head + 1) % SOCKET_FS_PIPE_BUFLEN;
+        written++;
         datalen--;
         data++;
     }
+
     return written;
 }
 
@@ -136,8 +146,8 @@ struct socket_fs_node
         struct
         {
             int num_files;
-            int num_readers;
-            int num_writers;
+            int num_clients;
+            int num_servers;
 
             unsigned primary_inited : 1;
             struct waitqueue primary_write_wq;
@@ -206,12 +216,20 @@ socket_fs_pipe_file_read(struct file *file,
     struct waitqueue *wake_wq;
 
     if(!(file->internal_flags & FILE_INTERNAL_FLAG_CLIENT)) {
-        socket_fs_pipe_ensure_primary_inited(socket);
+        res = socket_fs_pipe_ensure_primary_inited(socket);
+        if(res) {
+            socket_lock_release(socket);
+            return res;
+        }
         ringbuf = &socket->pipe.primary_ringbuf;
         wait_on_wq = &socket->pipe.primary_read_wq;
         wake_wq = &socket->pipe.primary_write_wq;
     } else {
-        socket_fs_pipe_ensure_secondary_inited(socket);
+        res = socket_fs_pipe_ensure_secondary_inited(socket);
+        if(res) {
+            socket_lock_release(socket);
+            return res;
+        }
         ringbuf = &socket->pipe.secondary_ringbuf;
         wait_on_wq = &socket->pipe.secondary_read_wq;
         wake_wq = &socket->pipe.secondary_write_wq;
@@ -293,12 +311,20 @@ socket_fs_pipe_file_write(struct file *file,
     struct waitqueue *wake_wq;
 
     if(!(file->internal_flags & FILE_INTERNAL_FLAG_SERVER)) {
-        socket_fs_pipe_ensure_primary_inited(socket);
+        res = socket_fs_pipe_ensure_primary_inited(socket);
+        if(res) {
+            socket_lock_release(socket);
+            return res;
+        }
         ringbuf = &socket->pipe.primary_ringbuf;
         wait_on_wq = &socket->pipe.primary_write_wq;
         wake_wq = &socket->pipe.primary_read_wq;
     } else {
-        socket_fs_pipe_ensure_secondary_inited(socket);
+        res = socket_fs_pipe_ensure_secondary_inited(socket);
+        if(res) {
+            socket_lock_release(socket);
+            return res;
+        }
         ringbuf = &socket->pipe.secondary_ringbuf;
         wait_on_wq = &socket->pipe.secondary_write_wq;
         wake_wq = &socket->pipe.secondary_read_wq;
@@ -353,6 +379,8 @@ socket_fs_pipe_file_poll(struct file *file,
                          unsigned long watching,
                          unsigned long *triggered_out)
 {
+    int res;
+
     struct fs_node *node = fs_path_get_fs_node(file->path);
     if(node == NULL)
     {
@@ -372,12 +400,33 @@ socket_fs_pipe_file_poll(struct file *file,
     struct socket_ring_buffer *write_ringbuf;
 
     if(file->internal_flags & FILE_INTERNAL_FLAG_SERVER) {
+        res = socket_fs_pipe_ensure_primary_inited(socket);
+        if(res) {
+            socket_lock_release(socket);
+            return res;
+        }
+        res = socket_fs_pipe_ensure_secondary_inited(socket);
+        if(res) {
+            socket_lock_release(socket);
+            return res;
+        }
         read_ringbuf = &socket->pipe.secondary_ringbuf;
         write_ringbuf = &socket->pipe.primary_ringbuf;
     } else if(file->internal_flags & FILE_INTERNAL_FLAG_SERVER) {
+        res = socket_fs_pipe_ensure_primary_inited(socket);
+        if(res) {
+            socket_lock_release(socket);
+            return res;
+        }
+        res = socket_fs_pipe_ensure_secondary_inited(socket);
+        if(res) {
+            socket_lock_release(socket);
+            return res;
+        }
         read_ringbuf = &socket->pipe.primary_ringbuf;
         write_ringbuf = &socket->pipe.secondary_ringbuf;
     } else {
+        socket_fs_pipe_ensure_primary_inited(socket);
         read_ringbuf = &socket->pipe.primary_ringbuf;
         write_ringbuf = &socket->pipe.primary_ringbuf;
     }
@@ -422,7 +471,13 @@ socket_fs_pipe_file_status(struct file *file,
 
     switch(type) {
         case FILE_STATUS_CONNECTED:
-            *value = socket->pipe.num_files > 1;
+            if(file->internal_flags & FILE_INTERNAL_FLAG_SERVER) {
+                *value = socket->pipe.num_clients > 0;
+            } else if (file->internal_flags & FILE_INTERNAL_FLAG_CLIENT) {
+                *value = socket->pipe.num_servers > 0;
+            } else {
+                *value = socket->pipe.num_files > 1;
+            }
             break;
         default:
             socket_lock_release(socket);
@@ -490,19 +545,19 @@ socket_fs_pipe_file_on_open(
 
     socket->pipe.num_files++;
 
-    if(file->access_flags & FILE_PERM_READ) {
-        socket->pipe.num_readers++;
+    if(file->internal_flags & FILE_INTERNAL_FLAG_CLIENT) {
+        socket->pipe.num_clients++;
     }
-    if(file->access_flags & FILE_PERM_WRITE) {
-        socket->pipe.num_writers++;
+    if(file->internal_flags & FILE_INTERNAL_FLAG_SERVER) {
+        socket->pipe.num_servers++;
     }
 
-//    printk("socket_fs_pipe_file_on_open: pipe(%ld) total(%ld) readers(%ld) writers(%ld)\n",
-//            (sl_t)socket->pnode.key,
-//            (sl_t)socket->pipe.num_files,
-//            (sl_t)socket->pipe.num_readers,
-//            (sl_t)socket->pipe.num_writers
-//          );
+    dprintk("socket_fs_pipe_file_on_open: pipe(%ld) total(%ld) clients(%ld) servers(%ld)\n",
+            (sl_t)socket->pnode.key,
+            (sl_t)socket->pipe.num_files,
+            (sl_t)socket->pipe.num_clients,
+            (sl_t)socket->pipe.num_servers
+          );
 
     socket_lock_release(socket);
 
@@ -529,21 +584,21 @@ socket_fs_pipe_file_on_close(
 
     socket->pipe.num_files--;
 
-    if(file->access_flags & FILE_PERM_READ) {
-        DEBUG_ASSERT(socket->pipe.num_readers > 0);
-        socket->pipe.num_readers--;
+    if(file->internal_flags & FILE_INTERNAL_FLAG_CLIENT) {
+        DEBUG_ASSERT(socket->pipe.num_clients > 0);
+        socket->pipe.num_clients--;
     }
-    if(file->access_flags & FILE_PERM_WRITE) {
-        DEBUG_ASSERT(socket->pipe.num_writers > 0);
-        socket->pipe.num_writers--;
+    if(file->internal_flags & FILE_INTERNAL_FLAG_SERVER) {
+        DEBUG_ASSERT(socket->pipe.num_servers > 0);
+        socket->pipe.num_servers--;
     }
 
-//    printk("socket_fs_pipe_file_on_close: pipe(%ld) total(%ld) readers(%ld) writers(%ld)\n",
-//            (sl_t)socket->pnode.key,
-//            (sl_t)socket->pipe.num_files,
-//            (sl_t)socket->pipe.num_readers,
-//            (sl_t)socket->pipe.num_writers
-//          );
+    dprintk("socket_fs_pipe_file_on_close: pipe(%ld) total(%ld) clients(%ld) servers(%ld)\n",
+            (sl_t)socket->pnode.key,
+            (sl_t)socket->pipe.num_files,
+            (sl_t)socket->pipe.num_clients,
+            (sl_t)socket->pipe.num_servers
+          );
 
     socket_lock_release(socket);
 
@@ -742,8 +797,8 @@ socket_fs_mount_create_pipe(struct socket_fs_mount *mnt, size_t *inode_out)
     irq_lock_init(&node->lock);
 
     node->pipe.num_files = 0;
-    node->pipe.num_readers = 0;
-    node->pipe.num_writers = 0;
+    node->pipe.num_clients= 0;
+    node->pipe.num_servers = 0;
 
     node->pipe.primary_inited = 0;
     node->pipe.secondary_inited = 0;
@@ -789,11 +844,17 @@ static int
 socket_fs_pipe_ensure_primary_inited(
         struct socket_fs_node *node)
 {
+    int res;
     DEBUG_ASSERT(node->type == SOCKET_FS_NODE_PIPE);
     if(!node->pipe.primary_inited) {
         waitqueue_init(&node->pipe.primary_read_wq);
         waitqueue_init(&node->pipe.primary_write_wq);
-        socket_ring_buffer_init(&node->pipe.primary_ringbuf, SOCKET_FS_PIPE_BUFLEN);
+        res = socket_ring_buffer_init(&node->pipe.primary_ringbuf);
+        if(res) {
+            waitqueue_deinit(&node->pipe.primary_read_wq);
+            waitqueue_deinit(&node->pipe.primary_write_wq);
+            return res;
+        }
         node->pipe.primary_inited = 1;
     }
     return 0;
@@ -803,11 +864,17 @@ static int
 socket_fs_pipe_ensure_secondary_inited(
         struct socket_fs_node *node)
 {
+    int res;
     DEBUG_ASSERT(node->type == SOCKET_FS_NODE_PIPE);
     if(!node->pipe.secondary_inited) {
         waitqueue_init(&node->pipe.secondary_read_wq);
         waitqueue_init(&node->pipe.secondary_write_wq);
-        socket_ring_buffer_init(&node->pipe.secondary_ringbuf, SOCKET_FS_PIPE_BUFLEN);
+        res = socket_ring_buffer_init(&node->pipe.secondary_ringbuf);
+        if(res) {
+            waitqueue_deinit(&node->pipe.secondary_read_wq);
+            waitqueue_deinit(&node->pipe.secondary_write_wq);
+            return res;
+        }
         node->pipe.secondary_inited = 1;
     }
     return 0;
