@@ -43,4 +43,5 @@ bins += \
     udrv_rand \
     write \
 	wintest \
+	badapple \
 

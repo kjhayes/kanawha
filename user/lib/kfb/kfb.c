@@ -559,10 +559,12 @@ __kfb_convert_from_rgba(uint32_t *rgba, unsigned long to_format, void *to_data)
     case GFX_FORMAT_ASCII:
         {
             char c;
-            if(avg > 0x80) {
+            if(avg > 0xC0) {
+                c = '@';
+            } else if(avg > 0x80) {
                 c = '#';
             } else if(avg > 0x40) {
-                c = '|';
+                c = '*';
             } else if(avg > 0x20) {
                 c = '.';
             } else {

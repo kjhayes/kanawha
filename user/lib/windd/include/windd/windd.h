@@ -88,4 +88,6 @@ int windd_window_get_position(struct window *win, struct window_position *pos);
 
 int windd_window_disconnected(struct window *win);
 
+int windd_window_set_non_blocking(struct window *window);
+
 #endif

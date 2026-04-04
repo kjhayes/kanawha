@@ -12,10 +12,32 @@
 #include <kfb/kfb.h>
 #include <kanawha/gfx.h>
 
+#define EVENT_QUEUE_LENGTH (64)
+
 struct window_ctx {
     struct window *window;
     struct window_ctx *next;
+
+    int evt_queue_lock;
+    unsigned long evt_queue_len;
+    unsigned long evt_queue_head;
+    unsigned long evt_queue_tail;
+    struct input_event *evt_queue;
 };
+
+static int
+window_ctx_lock_evt_queue(
+        struct window_ctx *ctx)
+{
+    while(__atomic_fetch_or(&ctx->evt_queue_lock, 1, __ATOMIC_SEQ_CST)) {}
+}
+
+static int
+window_ctx_unlock_evt_queue(
+        struct window_ctx *ctx)
+{
+    __atomic_fetch_and(&ctx->evt_queue_lock, 0, __ATOMIC_SEQ_CST);
+}
 
 struct input_ctx {
     int lock;
@@ -25,7 +47,6 @@ struct input_ctx {
     float mouse_y_sens;
 };
 static struct input_ctx input = {};
-
 
 static unsigned long window_lock = 0;
 static struct window_ctx *window_list = NULL;
@@ -47,6 +68,16 @@ attach_window_ctx(struct window *win)
 {
     struct window_ctx *ctx = malloc(sizeof(struct window_ctx));
     ctx->window = win;
+
+    ctx->evt_queue_lock = 0;
+    ctx->evt_queue_len = EVENT_QUEUE_LENGTH;
+    ctx->evt_queue_head = 0;
+    ctx->evt_queue_tail = 0;
+    ctx->evt_queue = malloc(sizeof(struct input_event) * ctx->evt_queue_len);
+    if(ctx->evt_queue == NULL) {
+        free(ctx);
+        return NULL;
+    }
 
     window_lock_acquire();
     if(window_list == NULL) {
@@ -90,6 +121,7 @@ destroy_window_ctx(struct window_ctx *ctx)
 
     // ctx is no longer in the global list
     windd_server_close_connection(ctx->window);
+    free(ctx->evt_queue);
     free(ctx);
     return 0;
 }
@@ -102,6 +134,15 @@ struct render_ctx {
 static struct render_ctx render = {
     .fb = NULL,
 };
+
+static inline unsigned long
+compute_topbar_height(void) {
+    unsigned long height = render.minfo->layer_infos[0].layout.height / 30;
+    if(height < 1) {
+        height = 1;
+    }
+    return height;
+}
 
 static int
 render_init(const char *path, int mode) 
@@ -203,6 +244,41 @@ render_main(void *_n)
         };
         render_fill_all(bg_color.raw);
 
+        unsigned long topbar_height = compute_topbar_height();
+        if(topbar_height <= 0) {
+            topbar_height = 1;
+        }
+
+        union {
+            uint32_t raw;
+            struct {
+                uint8_t r;
+                uint8_t g;
+                uint8_t b;
+                uint8_t a;
+            };
+        } topbar_color = {
+            .r = 0x20,
+            .g = 0x50,
+            .b = 0x60,
+            .a = 0xFF,
+        };
+
+        union {
+            uint32_t raw;
+            struct {
+                uint8_t r;
+                uint8_t g;
+                uint8_t b;
+                uint8_t a;
+            };
+        } close_color = {
+            .r = 0x80,
+            .g = 0x30,
+            .b = 0x40,
+            .a = 0xFF,
+        };
+
         // Draw all windows
         window_lock_acquire();
         struct window_ctx *wc = window_list;
@@ -226,6 +302,18 @@ render_main(void *_n)
                             win->layout.height,
                             0, 0,
                             &win->layout);
+                        render_square(
+                                topbar_color.raw,
+                                win->layout.width,
+                                topbar_height,
+                                win->position.x,
+                                win->position.y - topbar_height);
+                        render_square(
+                                close_color.raw,
+                                topbar_height < win->layout.width ? topbar_height : win->layout.width,
+                                topbar_height,
+                                win->position.x,
+                                win->position.y - topbar_height);
                     }
                     //printf("rendering window at %d,%d of size %d,%d, first_byte=0x%x\n",
                     //        (int)win->position.x,
@@ -277,8 +365,8 @@ input_init(void)
     input.lock = 0;
     input.mouse_x = 0;
     input.mouse_y = 0;
-    input.mouse_x_sens = 0.5;
-    input.mouse_y_sens = -0.5;
+    input.mouse_x_sens = 0.2;
+    input.mouse_y_sens = -0.2;
     return 0;
 }
 
@@ -376,14 +464,97 @@ handle_input_event(
         //        );
     }
 
-    if(!eat_input) {
-        res = windd_window_send_input(active_window->window, evt);
-        if(res) {
-            fprintf(stderr, "windd: failed to send input event to active window!\n");
-            input_lock_release();
-            window_lock_release();
-            return 0;
+    if(evt->type == INPUT_EVT_KEY &&
+      (evt->key == INPUT_KEY_MOUSE_LEFT || evt->key == INPUT_KEY_MOUSE_RIGHT))
+    {
+        int over_topbar = 0;
+        int over_close_button;
+        struct window_ctx *mouse_pred = NULL;
+        struct window_ctx *mouse_window = NULL;
+        {
+            struct window_ctx *iter_pred = NULL;
+            struct window_ctx *iter = window_list;
+            for(struct window_ctx *iter = window_list; iter != NULL; iter_pred = iter, iter = iter->next) {
+                // Check if the mouse in in this window's region
+                if(!(iter->window->position_valid && iter->window->layout_valid)) {
+                    continue;
+                }
+
+                unsigned long left = iter->window->position.x;
+                unsigned long right = left + iter->window->layout.width;
+
+                if(input.mouse_x < left || input.mouse_x >= right) {
+                    // Does not intersect in the X-axis
+                    continue;
+                }
+
+                unsigned long topbar_height = compute_topbar_height();
+                unsigned long top = iter->window->position.y - topbar_height;
+                unsigned long bottom = iter->window->position.y + iter->window->layout.height;
+                if(input.mouse_y < top || input.mouse_y >= bottom) {
+                    // Does not intersect in the Y-axis
+                    continue;
+                }
+
+                mouse_pred = iter_pred;
+                mouse_window = iter;
+                if(input.mouse_y < iter->window->position.y) {
+                    // We are hovering over the topbar
+                    over_topbar = 1;
+                    if(input.mouse_x < left + topbar_height) {
+                        // We are hovering over the close botton
+                        over_close_button = 1;
+                    } else {
+                        over_close_button = 0;
+                    }
+                } else {
+                    over_topbar = 0;
+                    over_close_button = 0;
+                }
+            }
         }
+
+        if(mouse_window) {
+            printf("windd: mouse event on window! (close=%d,topbar=%d)\n",
+                    (int)(over_close_button),
+                    (int)(over_topbar && !over_close_button)
+                    );
+            if(mouse_window->next) {
+                // We want to focus the mouse window
+                // Remove it from the list
+                if(window_list == mouse_window) {
+                    window_list = mouse_window->next;
+                } else {
+                    mouse_pred->next = mouse_window->next;
+                }
+                mouse_window->next = NULL;
+
+                // Add it to the end of the list
+                struct window_ctx *iter = window_list;
+                while(iter && iter->next) {
+                    iter = iter->next;
+                }
+                if(iter != NULL) {
+                    iter->next = mouse_window;
+                } else {
+                    window_list = mouse_window;
+                }
+
+                eat_input = 1;
+            }
+        } 
+    }
+
+    if(!eat_input) {
+        window_ctx_lock_evt_queue(active_window);
+        // Enqueue the event
+        if(((active_window->evt_queue_head+1)%active_window->evt_queue_len) == active_window->evt_queue_tail) {
+            // The queue is full, drop the last event
+            active_window->evt_queue_tail = (active_window->evt_queue_tail+1)%active_window->evt_queue_len;
+        }
+        active_window->evt_queue[active_window->evt_queue_head] = *evt;
+        active_window->evt_queue_head = (active_window->evt_queue_head+1) % active_window->evt_queue_len;
+        window_ctx_unlock_evt_queue(active_window);
     }
 
     input_lock_release();
@@ -509,6 +680,42 @@ main(int argc, const char **argv)
 }
 
 static int
+window_input_main(void *_ctx) {
+    int res;
+    struct window_ctx *ctx = _ctx;
+    
+    int running = 1;
+
+    // TODO This thread should be able to block waiting for input
+    // for the window... This is busy polling at the moment
+    while(running) {
+        int received_evt = 0;
+        struct input_event evt;
+
+        while(!received_evt) {
+            window_ctx_lock_evt_queue(ctx);
+            if(ctx->evt_queue_tail != ctx->evt_queue_head) {
+                evt = ctx->evt_queue[ctx->evt_queue_tail];
+                ctx->evt_queue_tail = (ctx->evt_queue_tail + 1) % ctx->evt_queue_len;
+                received_evt = 1;
+            }
+            window_ctx_unlock_evt_queue(ctx);
+
+            if(!received_evt) {
+                usleep(10000); // Sleep for a 10 milliseconds
+            }
+        }
+
+        res = windd_window_send_input(ctx->window, &evt);
+        if(res) {
+            fprintf(stderr, "windd: failed to send input event to active window!\n");
+        }
+    }
+
+    return 0;
+}
+
+static int
 window_main(void *_win)
 {
     int res;
@@ -522,6 +729,14 @@ window_main(void *_win)
             windd_server_close_connection(win);
             return -EINVAL;
         }
+    }
+
+    thrd_t input_thrd;
+    res = thrd_create(&input_thrd, window_input_main, ctx);
+    if(res) {
+        fprintf(stderr, "windd: failed to create window input thread!\n");
+        destroy_window_ctx(ctx);
+        return res;
     }
 
     {
