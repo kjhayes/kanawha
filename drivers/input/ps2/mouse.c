@@ -59,7 +59,34 @@ ps2_mouse_recv_callback(struct ps2_port *port, void *priv_data, uint8_t recv)
 
             dprintk("PS/2 Mouse Event! (%d,%d)\n", delta_x, delta_y);
 
-            input_driver_enqueue_event(&mouse->input_dev, &evt);
+            if(delta_x != 0 && delta_y != 0) {
+                input_driver_enqueue_event(&mouse->input_dev, &evt);
+            }
+
+            if(flags & (1<<0)) {
+                // Left mouse button pressed
+                struct input_event evt = {
+                    .type = INPUT_EVT_KEY,
+                    .key = INPUT_KEY_MOUSE_LEFT,
+                };
+                input_driver_enqueue_event(&mouse->input_dev, &evt);
+            }
+            if(flags & (1<<1)) {
+                // Right mouse button pressed
+                struct input_event evt = {
+                    .type = INPUT_EVT_KEY,
+                    .key = INPUT_KEY_MOUSE_RIGHT,
+                };
+                input_driver_enqueue_event(&mouse->input_dev, &evt);
+            }
+            if(flags & (1<<2)) {
+                // Middle mouse button pressed
+                struct input_event evt = {
+                    .type = INPUT_EVT_KEY,
+                    .key = INPUT_KEY_MOUSE_MIDDLE,
+                };
+                input_driver_enqueue_event(&mouse->input_dev, &evt);
+            }
         }
         else
         {
