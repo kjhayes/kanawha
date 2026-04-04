@@ -24,14 +24,14 @@ struct input_ctx {
 };
 
 struct input_ctx *
-create_stdin_input_ctx(void)
+create_file_input_ctx(FILE *file)
 {
     struct input_ctx *ctx = malloc(sizeof(*ctx));
     if(ctx == NULL) {
         return NULL;
     }
     ctx->type = INPUT_CTX_TYPE_FILE;
-    ctx->file.file = stdin;
+    ctx->file.file = file;
     return ctx;
 }
 

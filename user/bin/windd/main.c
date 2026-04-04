@@ -17,6 +17,16 @@ struct window_ctx {
     struct window_ctx *next;
 };
 
+struct input_ctx {
+    int lock;
+    long mouse_x;
+    long mouse_y;
+    float mouse_x_sens;
+    float mouse_y_sens;
+};
+static struct input_ctx input = {};
+
+
 static unsigned long window_lock = 0;
 static struct window_ctx *window_list = NULL;
 static inline int
@@ -39,8 +49,16 @@ attach_window_ctx(struct window *win)
     ctx->window = win;
 
     window_lock_acquire();
-    ctx->next = window_list;
-    window_list = ctx;
+    if(window_list == NULL) {
+        window_list = ctx;
+    } else {
+        struct window_ctx *last = window_list;
+        while(last->next) {
+            last = last->next;
+        }
+        ctx->next = NULL;
+        last->next = ctx;
+    }
     window_lock_release();
 
     return ctx;
@@ -226,6 +244,23 @@ render_main(void *_n)
             } 
             wc = wc->next;
         }
+
+        // Draw the mouse
+        unsigned long mouse_width = render.minfo->layer_infos[0].layout.width / 50;
+        unsigned long mouse_height = render.minfo->layer_infos[0].layout.height / 50;
+        if(mouse_width < 1) {
+            mouse_width = 1;
+        }
+        if(mouse_height < 1) {
+            mouse_height = 1;
+        }
+        
+        render_square(0xFFFFFFFF,
+                      mouse_width,
+                      mouse_height,
+                      input.mouse_x,
+                      input.mouse_y);
+
         window_lock_release();
 
         // Flush the context
@@ -235,23 +270,29 @@ render_main(void *_n)
     }
 }
 
-struct input_ctx {
-    fd_t file;
-};
-static struct input_ctx input = {};
-
 static int
-input_init(const char *path)
+input_init(void)
 {
     int res;
-    fd_t file;
-    res = kanawha_sys_open(path, FILE_PERM_READ, FILE_MODE_CLOSE_ON_EXEC, &file);
-    if(res) {
-        return res;
-    }
-    input.file = file;
+    input.lock = 0;
+    input.mouse_x = 0;
+    input.mouse_y = 0;
+    input.mouse_x_sens = 0.5;
+    input.mouse_y_sens = -0.5;
     return 0;
 }
+
+static int
+input_lock_acquire(void) {
+    while(__atomic_fetch_or(&input.lock, 1, __ATOMIC_SEQ_CST)) {}
+}
+
+static int
+input_lock_release(void) {
+    __atomic_fetch_and(&input.lock, 0, __ATOMIC_SEQ_CST);
+}
+
+static int shift_pressed = 0;
 
 static int
 handle_input_event(
@@ -259,6 +300,7 @@ handle_input_event(
 {
     int res;
 
+    input_lock_acquire();
     window_lock_acquire();
     struct window_ctx *active_window = window_list;
     while(active_window && active_window->next) {
@@ -266,28 +308,105 @@ handle_input_event(
     }
     if(active_window == NULL) {
         fprintf(stderr, "windd: no active windows, losing input event!\n");
+        input_lock_release();
         window_lock_release();
         return 0;
     }
 
-    res = windd_window_send_input(active_window->window, evt);
-    if(res) {
-        fprintf(stderr, "windd: failed to send input event to active window!\n");
-        window_lock_release();
-        return 0;
+    int eat_input = 0;
+
+    if(evt->type == INPUT_EVT_KEY) {
+        if(evt->key == INPUT_KEY_LSHIFT) {
+            switch(evt->motion) {
+                case INPUT_MOTION_PRESSED:
+                case INPUT_MOTION_HELD:
+                    shift_pressed = 1;
+                    break;
+                case INPUT_MOTION_RELEASED:
+                    shift_pressed = 0;
+                    break;
+            }
+        }
+        else if(evt->key == INPUT_KEY_TAB) {
+            if(evt->motion == INPUT_MOTION_PRESSED) {
+                struct window_ctx *first = window_list;
+                if(first != NULL) {
+                    struct window_ctx *last = first;
+                    struct window_ctx *second_to_last = NULL;
+                    while(last->next) {
+                        second_to_last = last;
+                        last = last->next;
+                    }
+                    if(first != last) {
+                        second_to_last->next = NULL;
+                        last->next = first;
+                        window_list = last;
+                    }
+                }
+            }
+            eat_input = 1;
+        }
+    }
+    if(evt->type == INPUT_EVT_MOUSE) {
+        long width = render.minfo->layer_infos[0].layout.width;
+        long height = render.minfo->layer_infos[0].layout.height;
+
+        long mouse_delta_x = evt->mouse_delta_x * input.mouse_x_sens;
+        long mouse_delta_y = evt->mouse_delta_y * input.mouse_y_sens;
+        input.mouse_x += mouse_delta_x;
+        if(input.mouse_x < 0) {
+            input.mouse_x = 0;
+        }
+        if(input.mouse_x >= width) {
+            input.mouse_x = width-1;
+        }
+
+        input.mouse_y += mouse_delta_y;
+        if(input.mouse_y < 0) {
+            input.mouse_y = 0;
+        }
+        if(input.mouse_y >= height) {
+            input.mouse_y = height - 1;
+        }
+        //printf("mouse_delta(%ld,%ld) mouse(%ld,%ld)\n",
+        //        (long)mouse_delta_x,
+        //        (long)mouse_delta_y,
+        //        (long)input.mouse_x,
+        //        (long)input.mouse_y
+        //        );
     }
 
+    if(!eat_input) {
+        res = windd_window_send_input(active_window->window, evt);
+        if(res) {
+            fprintf(stderr, "windd: failed to send input event to active window!\n");
+            input_lock_release();
+            window_lock_release();
+            return 0;
+        }
+    }
+
+    input_lock_release();
     window_lock_release();
     return 0;
 }
 
 static int
-input_main(void *_ctx) {
+input_main(void *_path) {
     int res;
+
+    const char *path = _path;
+    int file;
+    res = kanawha_sys_open(path, FILE_PERM_READ, FILE_MODE_CLOSE_ON_EXEC, &file);
+    if(res) {
+        fprintf(stderr, "windd: failed to open input file: %s\n", path);
+        return -1;
+    }
+
     int running = 1;
     while(running) {
         struct input_event evt;
-        ssize_t amt_read = read(input.file, &evt, sizeof(evt));
+        ssize_t amt_read = read(file, &evt, sizeof(evt));
         if(amt_read == 0) {
             running = 0;
             break;
@@ -306,7 +425,7 @@ static int window_main(void *window);
 
 static void
 usage(FILE *out) {
-    fprintf(out, "windd [FRAMEBUFFER] [FB-MODE] [INPUT-DEV]\n");
+    fprintf(out, "windd [FRAMEBUFFER] [FB-MODE] [INPUT-DEV(S) ...]\n");
 }
 
 int
@@ -329,7 +448,7 @@ main(int argc, const char **argv)
         return res;
     }
 
-    res = input_init(argv[3]);
+    res = input_init();
     if(res) {
         fprintf(stderr, "windd: failed to setup input context!\n");
     }
@@ -340,12 +459,15 @@ main(int argc, const char **argv)
         return res;
     }
 
-    thrd_t input_thread;
-    res = thrd_create(&input_thread, input_main, NULL);
-    if(res) {
-        fprintf(stderr, "windd: failed to launch the input thread!\n");
-        windd_server_deinit();
-        return res;
+    // Launch all of the input threads...
+    for(int i = 3; i < argc; i++) {
+        thrd_t input_thread;
+        res = thrd_create(&input_thread, input_main, (void*)argv[i]);
+        if(res) {
+            fprintf(stderr, "windd: failed to launch the input thread!\n");
+            windd_server_deinit();
+            return res;
+        }
     }
 
     thrd_t render_thread;

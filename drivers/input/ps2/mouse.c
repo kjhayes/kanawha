@@ -49,8 +49,8 @@ ps2_mouse_recv_callback(struct ps2_port *port, void *priv_data, uint8_t recv)
             mbarrier();
             spin_unlock(&mouse->recv_lock);
 
-            int delta_x = x_raw * ((flags & (1 << 4)) ? -1 : 1);
-            int delta_y = y_raw * ((flags & (1 << 3)) ? -1 : 1);
+            int delta_x = (int)x_raw - (((int)flags << 4) & 0x100);
+            int delta_y = (int)y_raw - (((int)flags << 3) & 0x100);
 
             struct input_event evt;
             evt.type = INPUT_EVT_MOUSE;

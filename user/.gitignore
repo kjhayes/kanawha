@@ -56,3 +56,6 @@ build/
 .config.old
 compile_commands.json
 .cache/
+
+bin/badapple/
+

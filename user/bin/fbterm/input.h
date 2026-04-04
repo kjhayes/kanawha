@@ -2,11 +2,12 @@
 #define __FBTERM_INPUT_H__
 
 #include <windd/windd.h>
+#include <stdio.h>
 
 struct input_ctx;
 
 struct input_ctx *
-create_stdin_input_ctx(void);
+create_file_input_ctx(FILE *file);
 
 struct input_ctx *
 create_windd_input_ctx(struct window *win);
