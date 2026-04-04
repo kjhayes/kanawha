@@ -3,6 +3,7 @@
 #include <kanawha/fs/mount.h>
 #include <kanawha/fs/node.h>
 #include <kanawha/kmalloc.h>
+#include <kanawha/page_alloc.h>
 #include <kanawha/uapi/poll.h>
 #include <kanawha/uapi/syscall.h>
 #include <kanawha/waitqueue.h>
@@ -18,6 +19,11 @@ struct socket_ring_buffer {
     size_t head;
     size_t tail;
     void *data;
+};
+
+struct socket_page {
+    void __phys *addr;
+    struct ptree_node ptree_node;
 };
 
 static inline int
@@ -159,6 +165,9 @@ struct socket_fs_node
             struct waitqueue secondary_read_wq;
             struct socket_ring_buffer secondary_ringbuf;
 
+            irq_lock_t page_tree_lock;
+            struct ptree page_tree;
+
         } pipe;
     };
 };
@@ -216,6 +225,7 @@ socket_fs_pipe_file_read(struct file *file,
     struct waitqueue *wake_wq;
 
     if(!(file->internal_flags & FILE_INTERNAL_FLAG_CLIENT)) {
+        // We are a server or a simple pipe...
         res = socket_fs_pipe_ensure_primary_inited(socket);
         if(res) {
             socket_lock_release(socket);
@@ -225,6 +235,7 @@ socket_fs_pipe_file_read(struct file *file,
         wait_on_wq = &socket->pipe.primary_read_wq;
         wake_wq = &socket->pipe.primary_write_wq;
     } else {
+        // We are a client...
         res = socket_fs_pipe_ensure_secondary_inited(socket);
         if(res) {
             socket_lock_release(socket);
@@ -244,6 +255,32 @@ socket_fs_pipe_file_read(struct file *file,
 
         if(read == 0)
         {
+            // Checking if we should declare EOF
+            int can_eof = 0;
+            if(file->internal_flags & FILE_INTERNAL_FLAG_SERVER) {
+                if(socket->pipe.num_clients <= 0) {
+                    can_eof = 1;
+                }
+            }
+            else if(file->internal_flags & FILE_INTERNAL_FLAG_CLIENT) {
+                if(socket->pipe.num_servers <= 0) {
+                    can_eof = 1;
+                }
+            }
+            else {
+                if(socket->pipe.num_files < 2) {
+                    can_eof = 1;
+                }
+            }
+
+            if(can_eof) {
+                socket_lock_release(socket);
+                // We read nothing, and there is no one
+                // else connected to this socket to possibly
+                // provide more data...
+                return 0;
+            }
+
             int can_block = !(flags & FS_FILE_READ_NON_BLOCKING);
             if(can_block)
             {
@@ -311,6 +348,7 @@ socket_fs_pipe_file_write(struct file *file,
     struct waitqueue *wake_wq;
 
     if(!(file->internal_flags & FILE_INTERNAL_FLAG_SERVER)) {
+        // We are a client or a simple pipe
         res = socket_fs_pipe_ensure_primary_inited(socket);
         if(res) {
             socket_lock_release(socket);
@@ -319,7 +357,9 @@ socket_fs_pipe_file_write(struct file *file,
         ringbuf = &socket->pipe.primary_ringbuf;
         wait_on_wq = &socket->pipe.primary_write_wq;
         wake_wq = &socket->pipe.primary_read_wq;
+
     } else {
+        // We are a server...
         res = socket_fs_pipe_ensure_secondary_inited(socket);
         if(res) {
             socket_lock_release(socket);
@@ -332,6 +372,31 @@ socket_fs_pipe_file_write(struct file *file,
 
     while(written == 0)
     {
+        // Checking if we should declare EOF
+        int can_eof = 0;
+        if(file->internal_flags & FILE_INTERNAL_FLAG_SERVER) {
+            if(socket->pipe.num_clients <= 0) {
+                can_eof = 1;
+            }
+        }
+        else if(file->internal_flags & FILE_INTERNAL_FLAG_CLIENT) {
+            if(socket->pipe.num_servers <= 0) {
+                can_eof = 1;
+            }
+        }
+        else {
+            if(socket->pipe.num_files < 2) {
+                can_eof = 1;
+            }
+        }
+
+        if(can_eof) {
+            socket_lock_release(socket);
+            // If no one is connected, there is no point
+            // in writing anything in the first place.
+            return 0;
+        }
+
         ssize_t cur_written = socket_ring_buffer_write(ringbuf, buffer, amount);
         amount -= cur_written;
         buffer += cur_written;
@@ -490,25 +555,58 @@ socket_fs_pipe_file_status(struct file *file,
 }
 
 static int
-socket_fs_pipe_node_read_page (
+socket_fs_pipe_node_load_page (
         struct fs_node *node,
-        void *buffer,
         uintptr_t pfn,
-        unsigned long flags)
+        unsigned long flags,
+        void __phys **addr)
 {
-    memset(buffer, 0, 1ULL<<VMEM_MIN_PAGE_ORDER);
+    int res;
+
+    struct socket_fs_node *socket = node->backing.priv_state;
+    DEBUG_ASSERT(KERNEL_ADDR(socket));
+    DEBUG_ASSERT(socket->type == SOCKET_FS_NODE_PIPE);
+
+    irq_lock_acquire(&socket->pipe.page_tree_lock);
+    struct socket_page *pg;
+    {
+        struct ptree_node *pnode = ptree_get(&socket->pipe.page_tree, pfn);
+        if(pnode == NULL) {
+            pg = kmalloc(sizeof(*pg), KM_KERNEL);
+            if(pg == NULL) {
+                irq_lock_release(&socket->pipe.page_tree_lock);
+                return -ENOMEM;
+            }
+
+            res = page_alloc(VMEM_MIN_PAGE_ORDER, &pg->addr, PAGE_ALLOC_64BIT);
+            if(res) {
+                irq_lock_release(&socket->pipe.page_tree_lock);
+                kfree(pg);
+                return res;
+            }
+            memset_p(pg->addr, 0, 1ULL<<VMEM_MIN_PAGE_ORDER);
+
+            ptree_insert(&socket->pipe.page_tree, &pg->ptree_node, pfn);
+        }
+        else {
+            pg = container_of(pnode, struct socket_page, ptree_node);
+        }
+    }
+    *addr = pg->addr;
+    irq_lock_release(&socket->pipe.page_tree_lock);
+
     return 0;
 }
 
 static int
-socket_fs_pipe_node_write_page(
+socket_fs_pipe_node_unload_page(
         struct fs_node *node,
-        void *buffer,
         uintptr_t pfn,
-        unsigned long flags)
+        unsigned long flags,
+        void __phys *addr)
 {
-    return 0; // We don't need to do anything, if a page
-              // is unloaded, we simply lose the contents
+    int res;
+    return 0;
 }
 
 static int
@@ -584,13 +682,44 @@ socket_fs_pipe_file_on_close(
 
     socket->pipe.num_files--;
 
+    // If the final client/server disconnects, we need
+    // to wake all of the opposite side which may be sleeping
+    // (they should now read/write EOF instead of blocking)
+    int wake_all_servers = 0;
+    int wake_all_clients = 0;
+
     if(file->internal_flags & FILE_INTERNAL_FLAG_CLIENT) {
         DEBUG_ASSERT(socket->pipe.num_clients > 0);
         socket->pipe.num_clients--;
+        if(socket->pipe.num_clients == 0) {
+            wake_all_servers = 1;
+        }
     }
     if(file->internal_flags & FILE_INTERNAL_FLAG_SERVER) {
         DEBUG_ASSERT(socket->pipe.num_servers > 0);
         socket->pipe.num_servers--;
+        if(socket->pipe.num_servers == 0) {
+            wake_all_clients = 1;
+        }
+    }
+
+    if(wake_all_clients && socket->pipe.num_clients > 0) {
+        printk("socket: waking all clients!\n");
+        if(socket->pipe.primary_inited) {
+            wake_all(&socket->pipe.primary_write_wq);
+        }
+        if(socket->pipe.secondary_inited) {
+            wake_all(&socket->pipe.secondary_read_wq);
+        }
+    }
+    if(wake_all_servers && socket->pipe.num_servers > 0) {
+        printk("socket: waking all servers!\n");
+        if(socket->pipe.secondary_inited) {
+            wake_all(&socket->pipe.secondary_write_wq);
+        }
+        if(socket->pipe.primary_inited) {
+            wake_all(&socket->pipe.primary_read_wq);
+        }
     }
 
     dprintk("socket_fs_pipe_file_on_close: pipe(%ld) total(%ld) clients(%ld) servers(%ld)\n",
@@ -607,12 +736,11 @@ socket_fs_pipe_file_on_close(
 
 static struct fs_node_ops socket_fs_pipe_node_ops =
 {
-    .read_page = socket_fs_pipe_node_read_page,
-    .write_page = socket_fs_pipe_node_write_page,
+    .load_page = socket_fs_pipe_node_load_page,
+    .unload_page = socket_fs_pipe_node_unload_page,
+
     .getattr = socket_fs_pipe_node_getattr,
 
-    .load_page = fs_node_load_page_read_alloc,
-    .unload_page = fs_node_unload_page_free,
     .flush_page = fs_node_flush_page_nop,
 
     .flush = fs_node_flush_nop,
@@ -803,6 +931,9 @@ socket_fs_mount_create_pipe(struct socket_fs_mount *mnt, size_t *inode_out)
     node->pipe.primary_inited = 0;
     node->pipe.secondary_inited = 0;
 
+    irq_lock_init(&node->pipe.page_tree_lock);
+    ptree_init(&node->pipe.page_tree);
+
     irq_lock_acquire(&mnt->inode_tree_lock);
     ptree_insert_any(&mnt->inode_tree, &node->pnode);
     irq_lock_release(&mnt->inode_tree_lock);
@@ -822,6 +953,17 @@ socket_fs_mount_destroy_pipe(struct socket_fs_mount *mnt,
     if(node->pipe.secondary_inited) {
         waitqueue_deinit(&node->pipe.secondary_write_wq);
         waitqueue_deinit(&node->pipe.secondary_read_wq);
+    }
+
+    // Never release this lock...
+    irq_lock_acquire(&node->pipe.page_tree_lock);
+    struct ptree_node *pnode = ptree_get_first(&node->pipe.page_tree);
+    while(pnode) {
+        struct socket_page *pg = container_of(pnode, struct socket_page, ptree_node);
+        ptree_remove(&node->pipe.page_tree, pg->ptree_node.key);
+        page_free(VMEM_MIN_PAGE_ORDER, pg->addr);
+        kfree(pg);
+        pnode = ptree_get_first(&node->pipe.page_tree);
     }
 
     irq_lock_acquire(&mnt->inode_tree_lock);

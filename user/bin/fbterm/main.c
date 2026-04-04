@@ -6,6 +6,7 @@
 #include <kanawha/spawn.h>
 #include <kanawha/sys-wrappers.h>
 #include <kfb/kfb.h>
+#include <windd/windd.h>
 #include <poll.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -16,6 +17,7 @@
 #include "color.h"
 #include "font.h"
 #include "render.h"
+#include "input.h"
 #include "term.h"
 
 static const char *prog_name = "fbterm";
@@ -123,7 +125,7 @@ main(int argc, const char **argv)
         }
     }
 
-    if(font_path == NULL || fb_path == NULL)
+    if(font_path == NULL)
     {
         panic_usage();
     }
@@ -139,25 +141,53 @@ main(int argc, const char **argv)
         fprintf(stderr, "Failed to load font \"%s\"!\n", font_path);
         exit(EXIT_FAILURE);
     }
+    
+    struct window *window = NULL;
+    struct render_ctx *render = NULL;
+    struct input_ctx *input = NULL;
 
-    struct kfb_framebuffer *fb = kfb_open_framebuffer(fb_path);
-    if(fb == NULL)
-    {
-        fprintf(stderr, "Failed to open framebuffer: \"%s\"!\n", fb_path);
+    if(fb_path != NULL) {
+        struct kfb_framebuffer *fb = kfb_open_framebuffer(fb_path);
+        if(fb == NULL)
+        {
+            fprintf(stderr, "Failed to open framebuffer: \"%s\"!\n", fb_path);
+            exit(EXIT_FAILURE);
+        }
+
+        res = kfb_set_current_mode(fb, mode);
+        if(res)
+        {
+            fprintf(stderr, "Failed to set framebuffer mode to %d!\n", mode);
+            exit(EXIT_FAILURE);
+        }
+        render = create_fb_render_ctx(fb, layer);
+        input = create_stdin_input_ctx();
+    } else {
+        windd_client_init();
+        window = windd_client_open();
+        if(window == NULL) {
+            fprintf(stderr, "failed to create window!\n");
+            exit(EXIT_FAILURE);
+        }
+        render = create_windd_render_ctx(window);
+        input = create_windd_input_ctx(window);
+    }
+    
+    if(input == NULL) {
+        fprintf(stderr, "failed to create input context!\n");
         exit(EXIT_FAILURE);
     }
 
-    res = kfb_set_current_mode(fb, mode);
-    if(res)
-    {
-        fprintf(stderr, "Failed to set framebuffer mode to %d!\n", mode);
+
+    if(render == NULL) {
+        fprintf(stderr, "failed to create render context!\n");
         exit(EXIT_FAILURE);
     }
 
 #define TERM_WIDTH 80
 #define TERM_HEIGHT 50
 
-    res = init_terminal(stdin, log_file, TERM_WIDTH, TERM_HEIGHT, mode);
+    res = init_terminal(log_file, TERM_WIDTH, TERM_HEIGHT);
     if(res)
     {
         fprintf(stderr, "Failed to allocate terminal buffer!\n");
@@ -173,23 +203,14 @@ main(int argc, const char **argv)
 
     while(terminal_data.running)
     {
-        render_update(&terminal_data, fdata, fb, layer);
+        render_update(&terminal_data, fdata, render);
 
-        ansi_terminal_update(&terminal_data);
+        ansi_terminal_update(&terminal_data, input);
         for(size_t __i = 0; __i < 256; __i++)
         {
-            struct pollfd pollfd[1];
-            pollfd[0].fd = fileno(terminal_data.input_file);
-            pollfd[0].events = POLLIN | POLLPRI;
-            res = poll(pollfd, 1, 0);
-            if(res > 0 && (pollfd[0].revents & (POLLIN | POLLPRI)))
-            {
-                // Only update the terminal if we know we can read
-                // at least 1 character
-                ansi_terminal_update(&terminal_data);
-            }
-            else
-            {
+            if(input_poll(input)) {
+                ansi_terminal_update(&terminal_data, input);
+            } else {
                 break;
             }
         }
@@ -197,7 +218,12 @@ main(int argc, const char **argv)
 
     deinit_terminal();
     unload_font(fdata);
-    kfb_close_framebuffer(fb);
-
+    destroy_input_ctx(input);
+    destroy_render_ctx(render);
+    if(window) {
+        windd_client_close(window);
+        window = NULL;
+        windd_client_deinit();
+    }
     return 0;
 }

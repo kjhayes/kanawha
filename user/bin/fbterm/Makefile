@@ -5,4 +5,6 @@ obj-y += \
 	font.o \
 	render.o \
 	ansi.o \
+	render_backend.o \
+	input.o \
 

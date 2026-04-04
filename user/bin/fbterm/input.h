@@ -1,0 +1,27 @@
+#ifndef __FBTERM_INPUT_H__
+#define __FBTERM_INPUT_H__
+
+#include <windd/windd.h>
+
+struct input_ctx;
+
+struct input_ctx *
+create_stdin_input_ctx(void);
+
+struct input_ctx *
+create_windd_input_ctx(struct window *win);
+
+int
+destroy_input_ctx(
+        struct input_ctx *ctx);
+
+char
+input_getc(
+        struct input_ctx *ctx);
+
+// Returns 0 if no data can be read immediately
+int
+input_poll(
+        struct input_ctx *ctx);
+
+#endif

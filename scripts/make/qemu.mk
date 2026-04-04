@@ -16,6 +16,8 @@ QEMU_FLAGS += -trace "virtio_*"
 #               -device ahci,id=ahci \
 #               -device ide-hd,drive=ahcidisk,bus=ahci.0
 
+QEMU_FLAGS += -display gtk
+
 QEMU_FLAGS += -device virtio-rng
 
 # QEMU_FLAGS += -audio driver=pa,model=virtio

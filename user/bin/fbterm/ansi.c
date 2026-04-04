@@ -2,6 +2,7 @@
 #include "ansi.h"
 #include "palette.h"
 #include "term.h"
+#include "input.h"
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -219,20 +220,21 @@ handle_sgr(struct terminal_data *tdata, int *param, int num_param)
 }
 
 static void
-handle_csi(struct terminal_data *tdata)
+handle_csi(struct terminal_data *tdata,
+           struct input_ctx *idata)
 {
     char c;
 
     size_t num_parameter_bytes = 0;
     char parameter_bytes[16 + 1];
-    c = fgetc(tdata->input_file);
+    c = input_getc(idata);
     while(num_parameter_bytes < 16)
     {
         if(0x30 <= c && c <= 0x3F)
         {
             parameter_bytes[num_parameter_bytes] = c;
             num_parameter_bytes++;
-            c = fgetc(tdata->input_file);
+            c = input_getc(idata);
         }
         else
         {
@@ -249,7 +251,7 @@ handle_csi(struct terminal_data *tdata)
         {
             intermediate_bytes[num_intermediate_bytes] = c;
             num_intermediate_bytes++;
-            c = fgetc(tdata->input_file);
+            c = input_getc(idata);
         }
         else
         {
@@ -484,20 +486,21 @@ handle_csi(struct terminal_data *tdata)
 }
 
 static inline void
-handle_escape(struct terminal_data *tdata)
+handle_escape(struct terminal_data *tdata,
+              struct input_ctx *idata)
 {
-    char c = fgetc(tdata->input_file);
+    char c = input_getc(idata);
 
     switch(c)
     {
     case '[':
-        return handle_csi(tdata);
+        return handle_csi(tdata, idata);
 
     // ^[(* and ^[)* Try to set the character set, ignore them.
     case '(':
     case ')':
         LOG(tdata, "Cannot handle alternative character sets!\n");
-        fgetc(tdata->input_file);
+        input_getc(idata);
         break;
     // ^[=* and ^[>* Try to enter/exit alternate keypad modes, ignore them.
     case '=':
@@ -530,9 +533,9 @@ ansi_terminal_init(struct terminal_data *tdata)
 }
 
 int
-ansi_terminal_update(struct terminal_data *tdata)
+ansi_terminal_update(struct terminal_data *tdata, struct input_ctx *idata)
 {
-    char c = fgetc(tdata->input_file);
+    char c = input_getc(idata);
 
     switch(c)
     {
@@ -567,13 +570,7 @@ ansi_terminal_update(struct terminal_data *tdata)
         LOG(tdata, "Received BEL (ignoring...)\n");
         break;
     case 033:
-        handle_escape(tdata);
-        break;
-    case('p' - 'a') + 1: // Ctrl-P
-        tdata->req_fb_mode++;
-        break;
-    case('o' - 'a') + 1: // Ctrl-O
-        tdata->req_fb_mode--;
+        handle_escape(tdata, idata);
         break;
     default:
         if(isprint(c))

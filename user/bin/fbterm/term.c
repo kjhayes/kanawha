@@ -10,6 +10,10 @@ struct terminal_data terminal_data = {0};
 int
 terminal_resize(struct terminal_data *tdata, size_t width, size_t height)
 {
+    if(tdata->width == width && tdata->height == height) {
+        return 0;
+    }
+
     free(tdata->redraw_buffer);
     free(tdata->character_buffer);
     free(tdata->fg_color_buffer);
@@ -70,18 +74,14 @@ terminal_resize(struct terminal_data *tdata, size_t width, size_t height)
 }
 
 int
-init_terminal(FILE *input_file,
-              FILE *log_file,
+init_terminal(FILE *log_file,
               size_t width,
-              size_t height,
-              size_t fb_mode)
+              size_t height)
 {
     struct terminal_data *tdata = &terminal_data;
     memset(tdata, 0, sizeof(struct terminal_data));
 
     tdata->log_file = log_file;
-    tdata->cur_fb_mode = fb_mode;
-    tdata->req_fb_mode = fb_mode;
 
     tdata->redraw_buffer = NULL;
     tdata->character_buffer = NULL;
@@ -91,7 +91,6 @@ init_terminal(FILE *input_file,
     terminal_resize(tdata, width, height);
 
     tdata->running = 1;
-    tdata->input_file = input_file;
     tdata->cursor_x = 0;
     tdata->cursor_y = 0;
     tdata->cur_fg_color.r = 0xFF;
@@ -475,3 +474,4 @@ terminal_clear_line(struct terminal_data *tdata, size_t __y)
     }
     terminal_mark_redraw_line(tdata, __y);
 }
+

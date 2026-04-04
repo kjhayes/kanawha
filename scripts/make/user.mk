@@ -55,7 +55,7 @@ endef
 define include-lib =
 
 userincludes: $$(CUR_OUTPUT_DIR)/lib/$(1).api
-$$(CUR_OUTPUT_DIR)/lib/$(1).api: $$(CUR_SOURCE_DIR)/lib/$(1)/include
+$$(CUR_OUTPUT_DIR)/lib/$(1).api: $$(CUR_SOURCE_DIR)/lib/$(1)/include/
 	$$(call qinfo, CP, $$(call rel-dir, $$(USER_SYSROOT_INCLUDE_DIR)/$(1), $$(OUTPUT_DIR)))
 	$$(Q)cp -RT $$(CUR_SOURCE_DIR)/lib/$(1)/include $$(USER_SYSROOT_INCLUDE_DIR)
 	$$(call qinfo, TOUCH, $$(call rel-dir, $$@, $$(OUTPUT_DIR)))
@@ -69,7 +69,7 @@ $(CUR_OUTPUT_DIR)/bin/$(1)/obj.o: uapi userincludes userlibs FORCE
 	$(Q)$(MAKE) -C $(CUR_SOURCE_DIR)/bin/$(1) -f $(MK_SCRIPTS_DIR)/userbuild.mk obj
 
 userbins: $$(USER_SYSROOT_BIN_DIR)/$(1)
-$$(USER_SYSROOT_BIN_DIR)/$(1): $$(CUR_OUTPUT_DIR)/bin/$(1)/obj.o
+$$(USER_SYSROOT_BIN_DIR)/$(1): $$(CUR_OUTPUT_DIR)/bin/$(1)/obj.o $$(foreach lib,$$(libs),$$(USER_SYSROOT_LIB_DIR)/lib$$(lib).a)
 	$$(call qinfo, USER_LD, $$(call rel-dir, $$@, $$(OUTPUT_DIR)))
 	$$(Q)$$(USER_LD) $$(USER_LDFLAGS) $$(LDFLAGS) \
 		$$(CUR_OUTPUT_DIR)/bin/$(1)/obj.o -o $$(USER_SYSROOT_BIN_DIR)/$(1) \

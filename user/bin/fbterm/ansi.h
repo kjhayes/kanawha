@@ -3,11 +3,14 @@
 
 #include "palette.h"
 #include "term.h"
+#include "input.h"
 
 int
 ansi_terminal_init(struct terminal_data *tdata);
 int
-ansi_terminal_update(struct terminal_data *tdata);
+ansi_terminal_update(
+        struct terminal_data *tdata,
+        struct input_ctx *idata);
 
 extern struct palette ansi256;
 

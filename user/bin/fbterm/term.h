@@ -2,6 +2,7 @@
 #define __CABIN_FBTERM__TERM_H__
 
 #include "color.h"
+#include <kanawha/gfx.h>
 #include <stddef.h>
 #include <stdio.h>
 
@@ -17,15 +18,11 @@ extern struct terminal_data
 
     // State Data
     volatile int running;
-    FILE *input_file;
 
     // Logging
     FILE *log_file;
 
     // Draw Data
-    size_t req_fb_mode;
-    size_t cur_fb_mode;
-
     size_t cursor_x;
     size_t cursor_y;
     color_t cur_fg_color;
@@ -54,11 +51,9 @@ extern struct terminal_data
 
 // "input" must outlive this terminal
 int
-init_terminal(FILE *input,
-              FILE *log_file,
+init_terminal(FILE *log_file,
               size_t width,
-              size_t height,
-              size_t mode);
+              size_t height);
 
 void
 deinit_terminal(void);
@@ -134,5 +129,7 @@ terminal_clear_cursor_line(struct terminal_data *tdata);
 
 void
 terminal_clear_line(struct terminal_data *tdata, size_t __y);
+
+char terminal_getc(struct terminal_data *tdata);
 
 #endif

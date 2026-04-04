@@ -1,7 +1,9 @@
 
 #include "font.h"
 #include "term.h"
+#include "render.h"
 #include <kfb/kfb.h>
+#include <kanawha/gfx.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -12,12 +14,12 @@ render_graphical_glyph(size_t x,
                        size_t y,
                        struct terminal_data *tdata,
                        struct font_data *fdata,
-                       struct kfb_framebuffer *fb,
-                       int layer)
+                       struct gfx_layout *layout,
+                       void *buffer,
+                       size_t buflen)
 {
-    size_t layer_width = fb->current_mode_info->layer_infos[layer].layout.width;
-    size_t layer_height =
-        fb->current_mode_info->layer_infos[layer].layout.height;
+    size_t layer_width = layout->width;
+    size_t layer_height = layout->height;
     char c = terminal_data.character_buffer[x + (y * tdata->width)];
     color_t fg_color = terminal_data.fg_color_buffer[x + (y * tdata->width)];
     color_t bg_color = terminal_data.bg_color_buffer[x + (y * tdata->width)];
@@ -43,36 +45,34 @@ render_graphical_glyph(size_t x,
         .b = bg_color.b,
         .a = bg_color.a,
     };
-    kfb_blit_image_brightness_as_color_onto_layer(fb,
-                                                  layer,
-                                                  fg_img,
-                                                  offset_x,
-                                                  offset_y,
-                                                  layer_width / tdata->width,
-                                                  layer_height / tdata->height,
-                                                  kfb_fg_color);
-    kfb_blit_image_brightness_as_color_onto_layer(fb,
-                                                  layer,
-                                                  bg_img,
-                                                  offset_x,
-                                                  offset_y,
-                                                  layer_width / tdata->width,
-                                                  layer_height / tdata->height,
-                                                  kfb_bg_color);
+    kfb_blit_image_brightness_as_color(buffer,
+                                       layer_width / tdata->width,
+                                       layer_height / tdata->height,
+                                       offset_x,
+                                       offset_y,
+                                       layout,
+                                       fg_img,
+                                       kfb_fg_color);
+    kfb_blit_image_brightness_as_color(buffer,
+                                       layer_width / tdata->width,
+                                       layer_height / tdata->height,
+                                       offset_x,
+                                       offset_y,
+                                       layout,
+                                       bg_img,
+                                       kfb_bg_color);
 }
 
 static inline void
 render_ascii_glyph(size_t x,
                    size_t y,
                    struct terminal_data *tdata,
-                   struct kfb_framebuffer *fb,
-                   int layer)
+                   struct gfx_layout *layout,
+                   void *buffer,
+                   size_t buflen)
 {
-    struct fb_layer_info *layer_info =
-        &fb->current_mode_info->layer_infos[layer];
-
-    size_t width = layer_info->layout.width;
-    size_t height = layer_info->layout.height;
+    size_t width = layout->width;
+    size_t height = layout->height;
 
     // Minimum of both dimensions
     if(tdata->width < width)
@@ -94,24 +94,24 @@ render_ascii_glyph(size_t x,
     }
 
     size_t offset;
-    switch(layer_info->layout.order)
+    switch(layout->order)
     {
     case GFX_ORDER_ROW_MAJOR:
-        offset = x + (y * layer_info->layout.width);
+        offset = x + (y * layout->width);
         break;
     case GFX_ORDER_COLUMN_MAJOR:
-        offset = y + (x * layer_info->layout.height);
+        offset = y + (x * layout->height);
         break;
     default:
         return;
     }
 
-    offset *= layer_info->layout.stride;
-    offset += layer_info->layout.offset;
+    offset *= layout->stride;
+    offset += layout->offset;
 
     char c = terminal_data.character_buffer[x + (y * tdata->width)];
 
-    kfb_framebuffer_copy_direct(fb, offset, &c, 1);
+    ((uint8_t*)buffer)[offset] = c;
 
     return;
 }
@@ -120,14 +120,12 @@ static inline void
 render_vga_attr(size_t x,
                 size_t y,
                 struct terminal_data *tdata,
-                struct kfb_framebuffer *fb,
-                int layer)
+                struct gfx_layout *layout,
+                void *buffer,
+                size_t buflen)
 {
-    struct fb_layer_info *layer_info =
-        &fb->current_mode_info->layer_infos[layer];
-
-    size_t width = layer_info->layout.width;
-    size_t height = layer_info->layout.height;
+    size_t width = layout->width;
+    size_t height = layout->height;
 
     // Minimum of both dimensions
     if(tdata->width < width)
@@ -149,20 +147,20 @@ render_vga_attr(size_t x,
     }
 
     size_t offset;
-    switch(layer_info->layout.order)
+    switch(layout->order)
     {
     case GFX_ORDER_ROW_MAJOR:
-        offset = x + (y * layer_info->layout.width);
+        offset = x + (y * layout->width);
         break;
     case GFX_ORDER_COLUMN_MAJOR:
-        offset = y + (x * layer_info->layout.height);
+        offset = y + (x * layout->height);
         break;
     default:
         return;
     }
 
-    offset *= layer_info->layout.stride;
-    offset += layer_info->layout.offset;
+    offset *= layout->stride;
+    offset += layout->offset;
 
     char attr = 0x0;
 
@@ -223,7 +221,7 @@ render_vga_attr(size_t x,
         }
     }
 
-    kfb_framebuffer_copy_direct(fb, offset, &attr, 1);
+    ((uint8_t*)buffer)[offset] = attr;
 
     return;
 }
@@ -232,34 +230,32 @@ static inline void
 render_all(int force,
            struct terminal_data *tdata,
            struct font_data *fdata,
-           struct kfb_framebuffer *fb,
+           struct gfx_layout *layout,
+           void *buffer,
+           size_t buflen,
            int *render_changed)
 {
-    for(size_t layer = 0; layer < fb->current_mode_info->layer_count; layer++)
+    for(size_t y = 0; y < tdata->height; y++)
     {
-        for(size_t y = 0; y < tdata->height; y++)
+        for(size_t x = 0; x < tdata->width; x++)
         {
-            for(size_t x = 0; x < tdata->width; x++)
+            if(force || terminal_data.redraw_buffer[x + (y * tdata->width)])
             {
-                if(force || terminal_data.redraw_buffer[x + (y * tdata->width)])
+                *render_changed = 1;
+                switch(layout->format)
                 {
-                    *render_changed = 1;
-                    switch(
-                        fb->current_mode_info->layer_infos[layer].layout.format)
-                    {
-                    case GFX_FORMAT_ASCII:
-                    case GFX_FORMAT_VGA_CHAR:
-                        render_ascii_glyph(x, y, tdata, fb, layer);
-                        break;
-                    case GFX_FORMAT_VGA_ATTR:
-                        render_vga_attr(x, y, tdata, fb, layer);
-                        break;
-                    default:
-                        render_graphical_glyph(x, y, tdata, fdata, fb, layer);
-                        break;
-                    }
-                    terminal_data.redraw_buffer[x + (y * tdata->width)] = 0;
+                case GFX_FORMAT_ASCII:
+                case GFX_FORMAT_VGA_CHAR:
+                    render_ascii_glyph(x, y, tdata, layout, buffer, buflen);
+                    break;
+                case GFX_FORMAT_VGA_ATTR:
+                    render_vga_attr(x, y, tdata, layout, buffer, buflen);
+                    break;
+                default:
+                    render_graphical_glyph(x, y, tdata, fdata, layout, buffer, buflen);
+                    break;
                 }
+                terminal_data.redraw_buffer[x + (y * tdata->width)] = 0;
             }
         }
     }
@@ -270,7 +266,7 @@ static int first_update = 1;
 int
 render_update(struct terminal_data *tdata,
               struct font_data *fdata,
-              struct kfb_framebuffer *fb)
+              struct render_ctx *ctx)
 {
     int res;
 
@@ -282,45 +278,48 @@ render_update(struct terminal_data *tdata,
         first_update = 0;
     }
 
-    if(tdata->cur_fb_mode != tdata->req_fb_mode)
-    {
-        res = kfb_set_current_mode(fb, tdata->req_fb_mode);
-        if(res)
-        {
-            tdata->req_fb_mode = tdata->cur_fb_mode;
-        }
-        else
-        {
-            tdata->cur_fb_mode = tdata->req_fb_mode;
-            size_t pix_width, pix_height;
-            switch(fb->current_mode_info->layer_infos[0].layout.format)
-            {
-            case GFX_FORMAT_ASCII:
-            case GFX_FORMAT_VGA_CHAR:
-            case GFX_FORMAT_VGA_ATTR:
-                terminal_resize(
-                    tdata,
-                    fb->current_mode_info->layer_infos[0].layout.width,
-                    fb->current_mode_info->layer_infos[0].layout.height);
-                break;
-            default:
-                pix_width = fb->current_mode_info->layer_infos[0].layout.width;
-                pix_height =
-                    fb->current_mode_info->layer_infos[0].layout.height;
-                terminal_resize(tdata,
-                                pix_width / fdata->width,
-                                pix_height / fdata->height);
-                break;
-            }
-        }
-        force = 1;
-    }
+    struct gfx_layout layout;
+    void *buffer;
+    size_t buflen;
 
-    int render_changed = 0;
-    render_all(force, tdata, fdata, fb, &render_changed);
-    if(render_changed || force)
-    {
-        kfb_flush_framebuffer(fb);
+    size_t layer_i = 0;
+
+    while(1) {
+        res = render_ctx_begin(ctx, layer_i, &layout, &buffer, &buflen);
+        if(res) {
+            break;
+        }
+
+        size_t pix_width, pix_height;
+        switch(layout.format)
+        {
+        case GFX_FORMAT_ASCII:
+        case GFX_FORMAT_VGA_CHAR:
+        case GFX_FORMAT_VGA_ATTR:
+            terminal_resize(
+                tdata,
+                layout.width,
+                layout.height);
+            break;
+        default:
+            pix_width = layout.width;
+            pix_height = layout.height;
+            terminal_resize(tdata,
+                            pix_width / fdata->width,
+                            pix_height / fdata->height);
+            break;
+        }
+
+        int render_changed = 0;
+        render_all(force, tdata, fdata,
+                   &layout,
+                   buffer,
+                   buflen,
+                   &render_changed);
+
+        render_ctx_end(ctx, layer_i, render_changed || force);
+
+        layer_i++;
     }
 
     return 0;
