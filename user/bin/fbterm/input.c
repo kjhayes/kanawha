@@ -400,7 +400,7 @@ input_getc(
                 int res;
                 struct input_event evt;
 
-                while(1) {
+                while(!windd_window_disconnected(ctx->windd.win)) {
                     res = windd_window_recv_input(ctx->windd.win, &evt);
                     if(res == 0) {
                         char c;

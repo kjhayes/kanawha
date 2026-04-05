@@ -358,6 +358,7 @@ int windd_window_poll(struct window *win)
     int res;
 
     windd_window_lock_read(win);
+
     if(win->partial_msg == NULL) {
         struct window_msg msg_hdr;
         ssize_t hdramt = read(win->conn, &msg_hdr, sizeof(struct window_msg));
@@ -666,12 +667,5 @@ int windd_window_disconnected(struct window *window)
         return res;
     }
     return !value;
-}
-
-int
-windd_window_set_non_blocking(
-        struct window *window)
-{
-    return kanawha_sys_faccess(window->conn, FACCESS_NON_BLOCKING, FACCESS_MODE_SET);
 }
 

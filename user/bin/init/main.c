@@ -48,7 +48,7 @@ static struct daemon randd = {
 };
 
 static const char *windd_args[] = {"windd",
-    "/dev/fb/vga", "4",
+    "/dev/fb/vga", "0",
     "/dev/input/ps2-kbd-0",
     "/dev/input/ps2-mouse-0",
 };

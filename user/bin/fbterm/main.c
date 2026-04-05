@@ -239,7 +239,7 @@ main(int argc, const char **argv)
         windd_client_init();
         window = windd_client_open();
         if(window == NULL) {
-            fprintf(stderr, "failed to create window!\n");
+            fprintf(stderr, "fbterm: failed to create window!\n");
             exit(EXIT_FAILURE);
         }
         render = create_windd_render_ctx(window);
@@ -289,6 +289,11 @@ main(int argc, const char **argv)
 
     while(terminal_data.running)
     {
+        if(window) {
+            if(windd_window_disconnected(window)) {
+                break;
+            }
+        }
         render_update(&terminal_data, fdata, render);
 
         ansi_terminal_update(&terminal_data, input_from_shell);

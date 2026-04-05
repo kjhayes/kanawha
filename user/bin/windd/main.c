@@ -18,6 +18,8 @@ struct window_ctx {
     struct window *window;
     struct window_ctx *next;
 
+    unsigned closed : 1;
+
     int evt_queue_lock;
     unsigned long evt_queue_len;
     unsigned long evt_queue_head;
@@ -69,6 +71,7 @@ attach_window_ctx(struct window *win)
     struct window_ctx *ctx = malloc(sizeof(struct window_ctx));
     ctx->window = win;
 
+    ctx->closed = 0;
     ctx->evt_queue_lock = 0;
     ctx->evt_queue_len = EVENT_QUEUE_LENGTH;
     ctx->evt_queue_head = 0;
@@ -395,7 +398,7 @@ handle_input_event(
         active_window = active_window->next;
     }
     if(active_window == NULL) {
-        fprintf(stderr, "windd: no active windows, losing input event!\n");
+        // fprintf(stderr, "windd: no active windows, losing input event!\n");
         input_lock_release();
         window_lock_release();
         return 0;
@@ -515,11 +518,16 @@ handle_input_event(
         }
 
         if(mouse_window) {
-            printf("windd: mouse event on window! (close=%d,topbar=%d)\n",
-                    (int)(over_close_button),
-                    (int)(over_topbar && !over_close_button)
-                    );
-            if(mouse_window->next) {
+            //printf("windd: mouse event on window! (close=%d,topbar=%d)\n",
+            //        (int)(over_close_button),
+            //        (int)(over_topbar && !over_close_button)
+            //        );
+            if(over_close_button && evt->key == INPUT_KEY_MOUSE_LEFT && evt->motion == INPUT_MOTION_PRESSED) {
+                printf("marking window as closed!\n");
+                mouse_window->closed = 1;
+                eat_input = 1;
+            }
+            else if(mouse_window->next) {
                 // We want to focus the mouse window
                 // Remove it from the list
                 if(window_list == mouse_window) {
@@ -688,7 +696,9 @@ window_input_main(void *_ctx) {
 
     // TODO This thread should be able to block waiting for input
     // for the window... This is busy polling at the moment
-    while(running) {
+    // If the window stops reading input the close button may not work
+    // as well...
+    while(running && !ctx->closed) {
         int received_evt = 0;
         struct input_event evt;
 
@@ -716,6 +726,44 @@ window_input_main(void *_ctx) {
 }
 
 static int
+window_poll_main(void *_ctx)
+{
+    struct window_ctx *ctx = _ctx;
+
+    struct gfx_layout *backing = &render.minfo->layer_infos[0].layout;
+
+    if(backing->width < 1 || backing->height < 1) {
+        destroy_window_ctx(ctx);
+        return -EINVAL;
+    }
+
+    struct gfx_layout layout = {
+        .order = backing->order,
+        .width = backing->width/2,
+        .height = backing->height/2,
+        .format = backing->format,
+        .stride = backing->stride,
+        .offset = 0,
+    };
+    windd_window_server_set_layout(ctx->window, &layout); 
+    struct window_position position = {
+        .x = rand() % (backing->width/2),
+        .y = rand() % (backing->height/2),
+    };
+    windd_window_server_set_position(ctx->window, &position);
+
+    while(1)
+    {
+        printf("windd: poll...\n");
+        windd_window_poll(ctx->window);
+        printf("windd: poll DONE\n");
+        if(windd_window_disconnected(ctx->window)) {
+            return 0;
+        }
+    }
+}
+
+static int
 window_main(void *_win)
 {
     int res;
@@ -739,39 +787,26 @@ window_main(void *_win)
         return res;
     }
 
-    {
-        struct gfx_layout *backing = &render.minfo->layer_infos[0].layout;
-
-        if(backing->width < 1 || backing->height < 1) {
-            destroy_window_ctx(ctx);
-            return -EINVAL;
-        }
-
-        struct gfx_layout layout = {
-            .order = backing->order,
-            .width = backing->width/2,
-            .height = backing->height/2,
-            .format = backing->format,
-            .stride = backing->stride,
-            .offset = 0,
-        };
-        windd_window_server_set_layout(ctx->window, &layout); 
-        struct window_position position = {
-            .x = rand() % (backing->width/2),
-            .y = rand() % (backing->height/2),
-        };
-        windd_window_server_set_position(ctx->window, &position);
+    thrd_t poll_thrd;
+    res = thrd_create(&poll_thrd, window_poll_main, ctx);
+    if(res) {
+        fprintf(stderr, "windd: failed to create window input thread!\n");
+        destroy_window_ctx(ctx);
+        return res;
     }
 
-    while(1)
-    {
-        printf("windd: poll...\n");
-        windd_window_poll(ctx->window);
-        printf("windd: poll DONE\n");
-        if(windd_window_disconnected(ctx->window)) {
-            break;
-        }
+    while(waitpid(-1, NULL, WNOHANG) == 0 && !ctx->closed) {
+        // BUSY WAITING... Sad...
+        sleep(1); // This doesn't need to be fast (sleep for a whole second)
     }
+
+    printf("windd: window_main, killing children...\n");
+    kill(input_thrd.pid, SIGQUIT);
+    kill(poll_thrd.pid, SIGQUIT);
+
+    printf("windd: window_main, waiting for children...\n");
+    waitpid(input_thrd.pid, NULL, 0);
+    waitpid(poll_thrd.pid, NULL, 0);
 
     printf("windd: closing window thread...\n");
     destroy_window_ctx(ctx);
