@@ -1098,14 +1098,14 @@ process_terminate(int exitcode)
     // Keep reaping children until we have none
     while(!ilist_empty(&process->children))
     {
-        printk("Still waiting on children:\n");
-        ilist_for_each(child_node, &process->children)
-        {
-            struct process *child =
-                container_of(child_node, struct process, child_node);
-            dump_process(do_printk, child);
-        }
-        dump_threads(do_printk);
+        //printk("Still waiting on children:\n");
+        //ilist_for_each(child_node, &process->children)
+        //{
+        //    struct process *child =
+        //        container_of(child_node, struct process, child_node);
+        //    dump_process(do_printk, child);
+        //}
+        //dump_threads(do_printk);
         process_hierarchy_lock_release(process);
         pid_t to_reap_id;
         res = process_get_reapable_child(process, 0, &to_reap_id);
