@@ -68,6 +68,7 @@ ps2_mouse_recv_callback(struct ps2_port *port, void *priv_data, uint8_t recv)
                 struct input_event evt = {
                     .type = INPUT_EVT_KEY,
                     .key = INPUT_KEY_MOUSE_LEFT,
+                    .motion = INPUT_MOTION_PRESSED,
                 };
                 input_driver_enqueue_event(&mouse->input_dev, &evt);
             }
@@ -76,6 +77,7 @@ ps2_mouse_recv_callback(struct ps2_port *port, void *priv_data, uint8_t recv)
                 struct input_event evt = {
                     .type = INPUT_EVT_KEY,
                     .key = INPUT_KEY_MOUSE_RIGHT,
+                    .motion = INPUT_MOTION_PRESSED,
                 };
                 input_driver_enqueue_event(&mouse->input_dev, &evt);
             }
@@ -84,6 +86,7 @@ ps2_mouse_recv_callback(struct ps2_port *port, void *priv_data, uint8_t recv)
                 struct input_event evt = {
                     .type = INPUT_EVT_KEY,
                     .key = INPUT_KEY_MOUSE_MIDDLE,
+                    .motion = INPUT_MOTION_PRESSED,
                 };
                 input_driver_enqueue_event(&mouse->input_dev, &evt);
             }
