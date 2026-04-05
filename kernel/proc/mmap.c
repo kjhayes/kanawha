@@ -337,6 +337,8 @@ mmap_region_reclaim_page(struct mmap_region *region, struct mmap_page *page)
 static int
 mmap_file_prot_check(struct file *desc, unsigned long mmap_flags)
 {
+    DEBUG_ASSERT(KERNEL_ADDR(desc));
+
     unsigned long mmap_type = (mmap_flags & MMAP_FLAGS_TYPE_MASK);
 
     if((mmap_flags & MMAP_PROT_READ) &&
@@ -473,6 +475,10 @@ mmap_map_region(struct process *process,
     {
         struct file *desc =
             file_table_get_file(process->file_table, process, file);
+        if(desc == NULL) {
+            res = -EINVAL;
+            goto err0;
+        }
 
         res = mmap_file_prot_check(desc, mmap_flags);
         if(res)
