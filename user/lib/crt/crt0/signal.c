@@ -45,6 +45,7 @@ __elk_crt__handle_signal(void **return_addr_ptr)
     case SIGNAL_ID_MEMFAULT:
     case SIGNAL_ID_PROTFAULT:
     case SIGNAL_ID_DECODEFAULT:
+    default:
         printf("Exiting due to signal! (%p)\n", (void *)return_addr);
         fflush(stdout);
         exit(-1);
