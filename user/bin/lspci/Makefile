@@ -1,5 +1,6 @@
 
 obj-y += \
 	main.o \
-	dump.o
+	dump.o \
+	pciids.o \
 

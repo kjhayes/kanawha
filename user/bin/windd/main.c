@@ -906,16 +906,16 @@ window_poll_main(void *_ctx)
 
     struct gfx_layout layout = {
         .order = backing->order,
-        .width = backing->width/2,
-        .height = backing->height/2,
+        .width = (3*backing->width)/4,
+        .height = (3*backing->height)/4,
         .format = backing->format,
         .stride = backing->stride,
         .offset = 0,
     };
     windd_window_server_set_layout(ctx->window, &layout); 
     struct window_position position = {
-        .x = (rand() % (backing->width/2)),
-        .y = (rand() % (backing->height/2)) + compute_topbar_height(),
+        .x = (rand() % ((3*backing->width)/4)),
+        .y = (rand() % ((3*backing->height)/4)) + compute_topbar_height(),
     };
     windd_window_server_set_position(ctx->window, &position);
 

@@ -6,13 +6,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "pciids.h"
 
 const char *progname = "lspci";
 
 __attribute__((noreturn)) static void
 panic_usage(void)
 {
-    fprintf(stderr, "Usage: %s [-s SYSFS_PCI_DIR] [-i]\n");
+    fprintf(stderr, "Usage: %s [-s SYSFS_PCI_DIR] [-p PCI_IDS_PATH] [-i]\n",
+            progname);
     exit(EXIT_FAILURE);
 }
 
@@ -30,18 +32,22 @@ main(int argc, const char **argv)
     }
 
     const char *sysfs_pci_dir_path = "/sys/pci/";
+    const char *pciids_path = "/sys/initrd/pci.ids";
 
     int interactive = 0;
 
     {
         int opt;
-        while((opt = getopt(argc, (char **)argv, "s:i")) != -1)
+        while((opt = getopt(argc, (char **)argv, "s:p:i")) != -1)
         {
             switch(opt)
             {
             // Handle Any Short Options
             case 's':
                 sysfs_pci_dir_path = optarg;
+                break;
+            case 'p':
+                pciids_path = optarg;
                 break;
             case 'i':
                 interactive = 1;
@@ -65,6 +71,11 @@ main(int argc, const char **argv)
             // Handle any positional arguments
             panic_usage();
         }
+    }
+
+    res = init_pciids(pciids_path);
+    if(res) {
+        fprintf(stderr, "Warning: failed to read PCI ID database file!\n");
     }
 
     fd_t sysfs_pci_dir;

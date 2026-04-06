@@ -6,6 +6,7 @@ char *
 fgets_unlocked(char *restrict s, int n, FILE *restrict stream)
 {
     char *stashed_s = s;
+    int num_read = 0;
     while(n > 1)
     {
         char c = fgetc(stream);
@@ -14,6 +15,7 @@ fgets_unlocked(char *restrict s, int n, FILE *restrict stream)
         {
             break;
         }
+        num_read++;
         s++;
         n--;
         if(c == '\n')
@@ -24,6 +26,9 @@ fgets_unlocked(char *restrict s, int n, FILE *restrict stream)
     if(n >= 1)
     {
         *s = '\0';
+    }
+    if(num_read == 0) {
+        return NULL;
     }
     return stashed_s;
 }

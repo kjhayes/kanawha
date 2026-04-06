@@ -16,7 +16,7 @@
 #include "root.h"
 
 #define WINDD_FB_PATH_STR "/dev/fb/vga"
-#define WINDD_FB_MODE_STR "0"
+#define WINDD_FB_MODE_STR "1"
 
 int
 setstdin(const char *path)
