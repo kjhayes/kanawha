@@ -383,7 +383,8 @@ mmap_file_prot_check(struct file *desc, unsigned long mmap_flags)
 // Needs the mmap->lock to be held,
 // and set's region->tree_node.key to a valid mmap_offset
 static int
-__mmap_locked_hint_offset(struct mmap *mmap,
+__mmap_locked_hint_offset(struct process *process,
+                          struct mmap *mmap,
                           uintptr_t *hint_offset,
                           size_t size)
 {
@@ -393,7 +394,15 @@ __mmap_locked_hint_offset(struct mmap *mmap,
 
     if(size >= mmap_size)
     {
-        wprintk("Process MMAP requested too large of a region!\n");
+        wprintk("process(%ld)[\"%s\"] MMAP requested too large of a region! (requested=0x%lx, mmap_size=0x%lx)\n",
+                (sl_t)process->id,
+#ifdef CONFIG_DEBUG_TRACK_PROCESS_EXEC
+                (process->tracked_exec ? process->tracked_exec : ""),
+#else
+                "",
+#endif /* CONFIG_DEBUG_TRACK_PROCESS_EXEC */
+                (ul_t)size,
+                (ul_t)mmap_size);
         return -ENOMEM;
     }
 
@@ -549,7 +558,7 @@ mmap_map_region(struct process *process,
     spin_lock(&mmap->lock);
 
     // This will find us a valid offset
-    res = __mmap_locked_hint_offset(mmap, hint_offset, size);
+    res = __mmap_locked_hint_offset(process, mmap, hint_offset, size);
     if(res)
     {
         goto err3;
@@ -744,7 +753,7 @@ mmap_find_free_region(struct process *process,
     spin_lock(&mmap->lock);
 
     // This will find us a valid offset
-    res = __mmap_locked_hint_offset(mmap, hint_offset, size);
+    res = __mmap_locked_hint_offset(process, mmap, hint_offset, size);
     if(res)
     {
         goto err;

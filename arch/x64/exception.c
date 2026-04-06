@@ -160,10 +160,10 @@ x64_unhandled_exception(struct x64_excp_state *state)
     printk("===== UNHANDLED \"%s\" EXCEPTION ===== (#%s)\n",
            desc_str,
            mnemonic);
-    printk("\tVECTOR=0x%x", state->vector);
+    printk("\tVECTOR=0x%x\n", state->vector);
     if(errcode_valid)
     {
-        printk(", ERR=0x%x", (unsigned)state->error_code);
+        printk("ERR=0x%x\n", (unsigned)state->error_code);
     }
     printk("\n");
     printk("\tRFLAGS=%p\n", (uintptr_t)state->rflags);

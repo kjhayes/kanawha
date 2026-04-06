@@ -43,6 +43,9 @@ window_ctx_unlock_evt_queue(
 
 struct input_ctx {
     int lock;
+    unsigned shift_pressed : 1;
+    unsigned ctrl_pressed : 1;
+    unsigned dragging_window : 1;
     long mouse_x;
     long mouse_y;
     float mouse_x_sens;
@@ -51,6 +54,7 @@ struct input_ctx {
 static struct input_ctx input = {};
 
 static unsigned long window_lock = 0;
+static int window_count;
 static struct window_ctx *window_list = NULL;
 static inline int
 window_lock_acquire(void) {
@@ -58,11 +62,113 @@ window_lock_acquire(void) {
     {
         thrd_yield();
     }
+
+    // if(window_count > 0) {
+    //     printf("windd: window_list on acquire lock: {");
+    //     struct window_ctx *iter = window_list;
+    //     int first = 1;
+    //     while(iter) {
+    //         if(!first) {
+    //             printf(", ");
+    //         } else {
+    //             first = 0;
+    //         }
+    //         printf("%p", iter);
+    //         iter = iter->next;
+    //     }
+    //     printf("}\n");
+    // }
 }
 static inline int
 window_lock_release(void) {
-    window_lock = 0;
+
+    // if(window_count > 0) {
+    //     printf("windd: window_list on release lock: {");
+    //     struct window_ctx *iter = window_list;
+    //     int first = 1;
+    //     while(iter) {
+    //         if(!first) {
+    //             printf(", ");
+    //         } else {
+    //             first = 0;
+    //         }
+    //         printf("%p", iter);
+    //         iter = iter->next;
+    //     }
+    //     printf("}\n");
+    // }
+
     __atomic_fetch_and(&window_lock, 0, __ATOMIC_SEQ_CST);
+}
+
+static inline int
+__window_list_insert_lockless(
+        struct window_ctx *ctx,
+        int focus)
+{
+    ctx->next = NULL;
+    if(window_list == NULL) {
+        window_list = ctx;
+    }
+    else if(focus) {
+        struct window_ctx *last = window_list;
+        while(last->next) {
+            last = last->next;
+        }
+        last->next = ctx;
+    } else {
+        ctx->next = window_list;
+        window_list = ctx;
+    }
+    window_count++;
+    return 0;
+}
+
+static inline int
+window_list_insert(struct window_ctx *ctx, int focus)
+{
+    int res;
+    window_lock_acquire();
+    res = __window_list_insert_lockless(ctx, focus);
+    window_lock_release();
+    return res;
+}
+
+static inline int
+__window_list_remove_lockless(
+        struct window_ctx *ctx)
+{
+    if(window_list == ctx) {
+        window_list = ctx->next;
+        ctx->next = NULL;
+    } else {
+        struct window_ctx *pred = window_list;
+        struct window_ctx *iter = pred->next;
+        while(iter) {
+            if(iter == ctx) {
+                break;
+            }
+            pred = iter;
+            iter = iter->next;
+        }
+        if(iter == NULL || pred == NULL || pred->next != iter) {
+            return -EINVAL;
+        }
+        pred->next = ctx->next;
+        ctx->next = NULL;
+    }
+    window_count--;
+    return 0;
+}
+
+static inline int
+window_list_remove(struct window_ctx *ctx)
+{
+    int res;
+    window_lock_acquire();
+    res = __window_list_remove_lockless(ctx);
+    window_lock_release();
+    return res;
 }
 
 static struct window_ctx *
@@ -82,18 +188,7 @@ attach_window_ctx(struct window *win)
         return NULL;
     }
 
-    window_lock_acquire();
-    if(window_list == NULL) {
-        window_list = ctx;
-    } else {
-        struct window_ctx *last = window_list;
-        while(last->next) {
-            last = last->next;
-        }
-        ctx->next = NULL;
-        last->next = ctx;
-    }
-    window_lock_release();
+    window_list_insert(ctx, 1);
 
     return ctx;
 }
@@ -102,25 +197,12 @@ static int
 destroy_window_ctx(struct window_ctx *ctx)
 {
     // Remove this window from the list
-    window_lock_acquire();
-    if(window_list == ctx) {
-        window_list = ctx->next;
-        ctx->next = NULL;
-    } else {
-        struct window_ctx *pred = NULL;
-        pred = window_list;
-        while(pred && pred->next != ctx) {
-            pred = pred->next;
-        }
-        if(pred == NULL || pred->next != ctx) {
-            window_lock_release();
-            fprintf(stderr, "window_list is corrupted!\n");
-            return -EINVAL;
-        }
-        pred->next = ctx->next;
-        ctx->next = NULL;
+    int res;
+    res = window_list_remove(ctx);
+    if(res) {
+        fprintf(stderr, "windd: tried to destroy an invalid window_ctx!\n");
+        return res;
     }
-    window_lock_release();
 
     // ctx is no longer in the global list
     windd_server_close_connection(ctx->window);
@@ -130,6 +212,7 @@ destroy_window_ctx(struct window_ctx *ctx)
 }
 
 struct render_ctx {
+    int req_mode;
     struct kfb_framebuffer *fb;
     struct fb_mode_info *minfo;
 };
@@ -158,6 +241,7 @@ render_init(const char *path, int mode)
         return -1;
     }
 
+    render.req_mode = mode;
     if(mode >= 0) {
         kfb_set_current_mode(render.fb, mode);
     }
@@ -225,11 +309,34 @@ render_flush(void)
 static int
 render_main(void *_n)
 {
+    int res;
+
     srand(time(NULL));
     (void)_n;
 
     int running = 1;
     while(running) {
+
+        int cur_mode = kfb_get_current_mode(render.fb);
+        int req_mode = render.req_mode;
+        if(cur_mode != req_mode) {
+            struct fb_mode_info *n_minfo = kfb_load_mode_info(render.fb, req_mode);
+            if(n_minfo == NULL) {
+                render.req_mode = cur_mode;
+            } else {
+                struct fb_mode_info *o_minfo = render.minfo;
+                render.minfo = n_minfo;
+                kfb_unload_mode_info(render.fb, o_minfo);
+                res = kfb_set_current_mode(render.fb, req_mode);
+                if(res) {
+                    printf("failed to set framebuffer mode to %d!\n", req_mode);
+                    render.req_mode = cur_mode;
+                    req_mode = cur_mode;
+                }
+
+            }
+        }
+        
         // Draw the background
         union {
             uint32_t raw;
@@ -291,32 +398,34 @@ render_main(void *_n)
                 if(render.fb->have_buffer_data && render.minfo != NULL) {
                     windd_window_reload_buffer(win);
                     windd_window_lock_buffer(win);
-                    for(size_t li = 0; li < render.minfo->layer_count; li++) {
-                        struct fb_layer_info *linfo = &render.minfo->layer_infos[li];
-                        kfb_blit(
-                            render.fb->buffer_data,
-                            win->layout.width,
-                            win->layout.height,
-                            win->position.x,
-                            win->position.y,
-                            &linfo->layout,
-                            win->buffer,
-                            win->layout.width,
-                            win->layout.height,
-                            0, 0,
-                            &win->layout);
-                        render_square(
-                                topbar_color.raw,
+                    if(win->buffer_size > 0) {
+                        for(size_t li = 0; li < render.minfo->layer_count; li++) {
+                            struct fb_layer_info *linfo = &render.minfo->layer_infos[li];
+                            kfb_blit(
+                                render.fb->buffer_data,
                                 win->layout.width,
-                                topbar_height,
+                                win->layout.height,
                                 win->position.x,
-                                win->position.y - topbar_height);
-                        render_square(
-                                close_color.raw,
-                                topbar_height < win->layout.width ? topbar_height : win->layout.width,
-                                topbar_height,
-                                win->position.x,
-                                win->position.y - topbar_height);
+                                win->position.y,
+                                &linfo->layout,
+                                win->buffer,
+                                win->layout.width,
+                                win->layout.height,
+                                0, 0,
+                                &win->layout);
+                            render_square(
+                                    topbar_color.raw,
+                                    win->layout.width,
+                                    topbar_height,
+                                    win->position.x,
+                                    win->position.y - topbar_height);
+                            render_square(
+                                    close_color.raw,
+                                    topbar_height < win->layout.width ? topbar_height : win->layout.width,
+                                    topbar_height,
+                                    win->position.x,
+                                    win->position.y - topbar_height);
+                        }
                     }
                     //printf("rendering window at %d,%d of size %d,%d, first_byte=0x%x\n",
                     //        (int)win->position.x,
@@ -336,6 +445,8 @@ render_main(void *_n)
             wc = wc->next;
         }
 
+        window_lock_release();
+
         // Draw the mouse
         unsigned long mouse_width = render.minfo->layer_infos[0].layout.width / 50;
         unsigned long mouse_height = render.minfo->layer_infos[0].layout.height / 50;
@@ -345,14 +456,16 @@ render_main(void *_n)
         if(mouse_height < 1) {
             mouse_height = 1;
         }
-        
-        render_square(0xFFFFFFFF,
+
+        uint32_t mouse_color = 0xFFFFFFFF;
+        if(input.dragging_window) {
+            mouse_color = 0xFF2288DD;
+        }
+        render_square(mouse_color,
                       mouse_width,
                       mouse_height,
                       input.mouse_x,
                       input.mouse_y);
-
-        window_lock_release();
 
         // Flush the context
         render_flush();
@@ -366,10 +479,13 @@ input_init(void)
 {
     int res;
     input.lock = 0;
+    input.dragging_window = 0;
     input.mouse_x = 0;
     input.mouse_y = 0;
-    input.mouse_x_sens = 0.2;
-    input.mouse_y_sens = -0.2;
+    input.mouse_x_sens = 0.3;
+    input.mouse_y_sens = -0.3;
+    input.shift_pressed = 0;
+    input.ctrl_pressed = 0;
     return 0;
 }
 
@@ -382,8 +498,6 @@ static int
 input_lock_release(void) {
     __atomic_fetch_and(&input.lock, 0, __ATOMIC_SEQ_CST);
 }
-
-static int shift_pressed = 0;
 
 static int
 handle_input_event(
@@ -411,14 +525,25 @@ handle_input_event(
             switch(evt->motion) {
                 case INPUT_MOTION_PRESSED:
                 case INPUT_MOTION_HELD:
-                    shift_pressed = 1;
+                    input.shift_pressed = 1;
                     break;
                 case INPUT_MOTION_RELEASED:
-                    shift_pressed = 0;
+                    input.shift_pressed = 0;
                     break;
             }
         }
-        else if(evt->key == INPUT_KEY_TAB) {
+        else if(evt->key == INPUT_KEY_LCTRL) {
+            switch(evt->motion) {
+                case INPUT_MOTION_PRESSED:
+                case INPUT_MOTION_HELD:
+                    input.ctrl_pressed = 1;
+                    break;
+                case INPUT_MOTION_RELEASED:
+                    input.ctrl_pressed = 0;
+                    break;
+            }
+        }
+        else if(evt->key == INPUT_KEY_TAB && input.shift_pressed) {
             if(evt->motion == INPUT_MOTION_PRESSED) {
                 struct window_ctx *first = window_list;
                 if(first != NULL) {
@@ -437,13 +562,33 @@ handle_input_event(
             }
             eat_input = 1;
         }
+        else if(evt->key == INPUT_KEY_0 && input.ctrl_pressed) {
+            if(evt->motion == INPUT_MOTION_PRESSED) {
+                render.req_mode++;
+            }
+            eat_input = 1;
+        }
+        else if(evt->key == INPUT_KEY_9 && input.ctrl_pressed) {
+            if(evt->motion == INPUT_MOTION_PRESSED) {
+                if(render.req_mode > 0) {
+                    render.req_mode--;
+                }
+            }
+            eat_input = 1;
+        }
     }
     if(evt->type == INPUT_EVT_MOUSE) {
         long width = render.minfo->layer_infos[0].layout.width;
         long height = render.minfo->layer_infos[0].layout.height;
 
-        long mouse_delta_x = evt->mouse_delta_x * input.mouse_x_sens;
-        long mouse_delta_y = evt->mouse_delta_y * input.mouse_y_sens;
+        float res_factor = (float)height/100;
+
+        long mouse_delta_x = evt->mouse_delta_x * (input.mouse_x_sens * res_factor);
+        long mouse_delta_y = evt->mouse_delta_y * (input.mouse_y_sens * res_factor);
+
+        long orig_mouse_x = input.mouse_x;
+        long orig_mouse_y = input.mouse_y;
+
         input.mouse_x += mouse_delta_x;
         if(input.mouse_x < 0) {
             input.mouse_x = 0;
@@ -459,6 +604,24 @@ handle_input_event(
         if(input.mouse_y >= height) {
             input.mouse_y = height - 1;
         }
+
+        long true_mouse_x_delta = input.mouse_x - orig_mouse_x;
+        long true_mouse_y_delta = input.mouse_y - orig_mouse_y;
+
+        if(input.dragging_window) {
+            if(active_window != NULL) {
+                if(active_window->window->position_valid) {
+                    long new_x = active_window->window->position.x + true_mouse_x_delta;
+                    long new_y = active_window->window->position.y + true_mouse_y_delta;
+                    struct window_position pos = {
+                        .x = new_x,
+                        .y = new_y,
+                    };
+                    windd_window_server_set_position(active_window->window, &pos);
+                }
+            }
+        }
+
         //printf("mouse_delta(%ld,%ld) mouse(%ld,%ld)\n",
         //        (long)mouse_delta_x,
         //        (long)mouse_delta_y,
@@ -526,6 +689,9 @@ handle_input_event(
                 printf("marking window as closed!\n");
                 mouse_window->closed = 1;
                 eat_input = 1;
+            }
+            else if(over_topbar && evt->key == INPUT_KEY_MOUSE_LEFT && evt->motion == INPUT_MOTION_PRESSED) {
+                input.dragging_window = !input.dragging_window;
             }
             else if(mouse_window->next) {
                 // We want to focus the mouse window
@@ -647,6 +813,8 @@ main(int argc, const char **argv)
             windd_server_deinit();
             return res;
         }
+        printf("windd: launched input thread for \"%s\" PID(%ld)\n",
+                argv[i], (long)input_thread.pid);
     }
 
     thrd_t render_thread;
@@ -656,6 +824,8 @@ main(int argc, const char **argv)
         windd_server_deinit();
         return res;
     }
+    printf("windd: launched render thread PID(%ld)\n",
+          (long)render_thread.pid);
 
     int running = 1;
     while(running)
@@ -691,14 +861,12 @@ static int
 window_input_main(void *_ctx) {
     int res;
     struct window_ctx *ctx = _ctx;
-    
-    int running = 1;
 
     // TODO This thread should be able to block waiting for input
     // for the window... This is busy polling at the moment
     // If the window stops reading input the close button may not work
     // as well...
-    while(running && !ctx->closed) {
+    while(!ctx->closed) {
         int received_evt = 0;
         struct input_event evt;
 
@@ -733,7 +901,6 @@ window_poll_main(void *_ctx)
     struct gfx_layout *backing = &render.minfo->layer_infos[0].layout;
 
     if(backing->width < 1 || backing->height < 1) {
-        destroy_window_ctx(ctx);
         return -EINVAL;
     }
 
@@ -747,12 +914,12 @@ window_poll_main(void *_ctx)
     };
     windd_window_server_set_layout(ctx->window, &layout); 
     struct window_position position = {
-        .x = rand() % (backing->width/2),
-        .y = rand() % (backing->height/2),
+        .x = (rand() % (backing->width/2)),
+        .y = (rand() % (backing->height/2)) + compute_topbar_height(),
     };
     windd_window_server_set_position(ctx->window, &position);
 
-    while(1)
+    while(!ctx->closed)
     {
         printf("windd: poll...\n");
         windd_window_poll(ctx->window);
@@ -761,6 +928,8 @@ window_poll_main(void *_ctx)
             return 0;
         }
     }
+
+    return 0;
 }
 
 static int
@@ -768,7 +937,8 @@ window_main(void *_win)
 {
     int res;
     struct window_ctx *ctx;
-    printf("windd: opened window thread...\n");
+    printf("windd: opened window thread (win=%p) PID(%d)\n",
+            _win, (int)getpid());
 
     {
         struct window *win = _win;
@@ -791,6 +961,8 @@ window_main(void *_win)
     res = thrd_create(&poll_thrd, window_poll_main, ctx);
     if(res) {
         fprintf(stderr, "windd: failed to create window input thread!\n");
+        kill(input_thrd.pid, SIGQUIT);
+        waitpid(input_thrd.pid, NULL, 0);
         destroy_window_ctx(ctx);
         return res;
     }

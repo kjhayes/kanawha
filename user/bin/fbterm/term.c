@@ -102,6 +102,7 @@ init_terminal(FILE *log_file,
     tdata->cur_bg_color.b = 0x00;
     tdata->cur_bg_color.a = 0xFF;
 
+    tdata->raw = 0;
     tdata->echo_on = 1;
     tdata->bold_on = 0;
     tdata->italic_on = 0;

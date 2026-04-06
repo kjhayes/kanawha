@@ -581,9 +581,9 @@ ansi_terminal_update(struct terminal_data *tdata, struct input_ctx *idata)
         }
         else
         {
-            LOG(tdata,
-                "Unexpected un-printable character 0x%x\n",
-                (unsigned int)c);
+            //LOG(tdata,
+            //    "Unexpected un-printable character 0x%x\n",
+            //    (unsigned int)c);
             terminal_put_at_cursor(tdata, '?');
             terminal_advance_cursor(tdata);
         }

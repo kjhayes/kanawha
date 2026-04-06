@@ -99,7 +99,17 @@ shell_input_main(void *_input_ctx)
     int running = 1;
     while(running) {
         char c = input_getc(ctx);
-        write(shell.shell_stdout_hijack, &c, 1);
+        if(terminal_data.echo_on) {
+            if(c == 8 || c == 127) {
+                char bs_seq[3];
+                bs_seq[0] = '\b';
+                bs_seq[1] = ' ';
+                bs_seq[2] = '\b';
+                write(shell.shell_stdout_hijack, &bs_seq, 3);
+            } else {
+                write(shell.shell_stdout_hijack, &c, 1);
+            }
+        }
         write(shell.shell_stdin, &c, 1);
     }
 }

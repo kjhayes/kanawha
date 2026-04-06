@@ -30,6 +30,7 @@ extern struct terminal_data
     size_t tabsize;
     size_t last_character;
 
+    unsigned raw : 1;
     unsigned echo_on : 1;
     unsigned bold_on : 1;
     unsigned italic_on : 1;

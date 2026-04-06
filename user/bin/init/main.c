@@ -15,6 +15,9 @@
 #include "log.h"
 #include "root.h"
 
+#define WINDD_FB_PATH_STR "/dev/fb/vga"
+#define WINDD_FB_MODE_STR "0"
+
 int
 setstdin(const char *path)
 {
@@ -48,7 +51,7 @@ static struct daemon randd = {
 };
 
 static const char *windd_args[] = {"windd",
-    "/dev/fb/vga", "0",
+    WINDD_FB_PATH_STR, WINDD_FB_MODE_STR,
     "/dev/input/ps2-kbd-0",
     "/dev/input/ps2-mouse-0",
 };

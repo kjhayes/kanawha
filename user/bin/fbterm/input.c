@@ -95,17 +95,18 @@ handle_windd_input_event(
     {
 
         int no_char = 0;
-        int ctrl_char = 0;
         char c;
         switch(key)
         {
         case INPUT_KEY_LCTRL:
             ctx->windd.ctrl_pressed = 1;
-            ctrl_char = 1;
             return -EAGAIN;
         case INPUT_KEY_LSHIFT:
             ctx->windd.shift_pressed = 1;
-            ctrl_char = 1;
+            return -EAGAIN;
+        case INPUT_KEY_MOUSE_LEFT:
+        case INPUT_KEY_MOUSE_RIGHT:
+        case INPUT_KEY_MOUSE_MIDDLE:
             return -EAGAIN;
         default:
             break;
@@ -370,20 +371,12 @@ handle_windd_input_event(
             }
         }
 
-        if(!no_char && !ctrl_char)
+        if(no_char)
         {
-            *c_out = c;
-            return 0;
+            c = '?';
         }
-        else if(no_char)
-        {
-            *c_out = '?';
-            return 0;
-        }
-        else
-        { // ctrl_char
-          // Do nothing
-        }
+        *c_out = c;
+        return 0;
     }
     return -EAGAIN;
 }

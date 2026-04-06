@@ -30,6 +30,8 @@ window_init_common(
     win->buffer_size = 0;
     win->buffer = NULL;
 
+    win->partial_msg = NULL;
+
     win->input_lock = 0;
     win->input_head = 0;
     win->input_tail = 0;
@@ -376,13 +378,15 @@ int windd_window_poll(struct window *win)
 
         struct window_msg *msg =
             malloc(msg_hdr.datalen + sizeof(struct window_msg));
-        if(msg == NULL && msg_hdr.datalen > 0) {
+        if(msg == NULL) {
             windd_window_unlock_read(win);
             return -ENOMEM;
         }
 
         memcpy(msg, &msg_hdr, sizeof(struct window_msg));
         win->partial_msg = msg;
+    } else {
+        //printf("windd_window: partial read!\n");
     }
 
     struct window_msg *msg = win->partial_msg;
@@ -417,22 +421,32 @@ int windd_window_reload_buffer(
     int res;
     windd_window_lock_buffer(win);
 
-    size_t req_len = win->layout.offset + (win->layout.width * win->layout.height) * win->layout.stride;
-
-    if(req_len == win->buffer_size) {
+    if(!win->layout_valid) {
         windd_window_unlock_buffer(win);
         return 0;
     }
 
-    kanawha_sys_munmap(win->buffer);
-    win->buffer = NULL;
-    win->buffer_size = 0;
+    size_t req_len = win->layout.offset + (win->layout.width * win->layout.height) * win->layout.stride;
 
     // Round up to the nearest page...
     req_len += 0xFFF;
     req_len &= ~0xFFF;
 
+    if(req_len == win->buffer_size) {
+        windd_window_unlock_buffer(win);
+        return 0;
+    }
+    //printf("windd_window_reload_buffer: need to remap buffer (req=0x%lx, cur=0x%lx) buffer=%p\n",
+    //        (unsigned long)req_len,
+    //        (unsigned long)win->buffer_size,
+    //        win->buffer);
 
+    kanawha_sys_munmap(win->buffer);
+    win->buffer = NULL;
+    win->buffer_size = 0;
+
+    //printf("windd_window_reload_buffer: mapping 0x%lx bytes!\n",
+    //        (unsigned long)req_len);
     res = kanawha_sys_mmap(
             win->conn,
             0,
