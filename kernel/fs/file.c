@@ -266,6 +266,7 @@ fs_file_paged_seek(struct file *file, ssize_t offset, int whence)
     {
         file->seek_offset = data_size;
     }
+
     return file->seek_offset;
 }
 

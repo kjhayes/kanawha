@@ -18,14 +18,15 @@ static int found_subclass = 0;
 
 static int currently_class = 0;
 static int32_t current_vendor = -1;
-static char vendor_name[BUFLEN+1] = {0};
+static off_t vendor_name_offset = -1;
 static int32_t current_device = -1;
-static char device_name[BUFLEN+1] = {0};
+static off_t device_name_offset = -1;
 static int32_t current_subsystem_vendor = -1;
 static int32_t current_subsystem_device = -1;
-static char subsystem_name[BUFLEN+1] = {0};
+static off_t subsystem_name_offset = -1;
 
 static int eof = 0;
+static off_t line_tell = 0;
 static char linebuf[BUFLEN+1] = {0};
 
 int init_pciids(const char *path)
@@ -60,11 +61,13 @@ begin_id_iterator(void)
     found_class = 0;
     found_subclass = 0;
 
-    memset(vendor_name, 0, BUFLEN);
-    memset(device_name, 0, BUFLEN);
-    memset(subsystem_name, 0, BUFLEN);
+    vendor_name_offset = -1;
+    device_name_offset = -1;
+    subsystem_name_offset = -1;
+
     memset(linebuf, 0, BUFLEN);
     fseek(pciid_file, 0, SEEK_SET);
+    line_tell = ftell(pciid_file);
     return 0;
 }
 
@@ -111,6 +114,7 @@ step_id_iterator(void) {
     while(1) {
         // Step over empty lines
         if(strlen(linebuf) == 0) {
+            line_tell = ftell(pciid_file);
             char *r = fgets(linebuf, BUFLEN, pciid_file);
             if(r == NULL) {
                 // End of stream
@@ -120,6 +124,7 @@ step_id_iterator(void) {
         }
         // Step over any comments
         if(linebuf[0] == '#') {
+            line_tell = ftell(pciid_file);
             char *r = fgets(linebuf, BUFLEN, pciid_file);
             if(r == NULL) {
                 // End of stream
@@ -135,6 +140,7 @@ step_id_iterator(void) {
             iter++;
         }
         if(*iter == '\0') {
+            line_tell = ftell(pciid_file);
             char *r = fgets(linebuf, BUFLEN, pciid_file);
             if(r == NULL) {
                 // End of stream
@@ -170,14 +176,10 @@ step_id_iterator(void) {
                                     linebuf);
                             return 0;
                         }
-                        char *str = device_hex + 4;
-                        while(isspace(*str)) {
-                            str++;
-                        }
                         current_subsystem_vendor = subsystem_vendor;
                         current_subsystem_device = subsystem_device;
                         if(subsystem_vendor >= 0 && subsystem_device >= 0) {
-                            strncpy(subsystem_name, str, BUFLEN);
+                            subsystem_name_offset = line_tell + 2 + 4 + 1 + 4 + 1;
                         }
                     }
                 } else {
@@ -190,13 +192,9 @@ step_id_iterator(void) {
                                     linebuf);
                             return 0;
                         }
-                        char *str = hex + 4;
-                        while(isspace(*str)) {
-                            str++;
-                        }
                         current_device = device;
                         if(device >= 0) {
-                            strncpy(device_name, str, BUFLEN);
+                            device_name_offset = line_tell + 1 + 4 + 1;
                         }
                     } else {
                         // The subsystem does not exist...
@@ -220,12 +218,9 @@ step_id_iterator(void) {
                     return 0;
                 }
                 char *str = hex + 4;
-                while(isspace(*str)) {
-                    str++;
-                }
                 current_vendor = vendor;
                 if(vendor >= 0) {
-                    strncpy(vendor_name, str, BUFLEN);
+                    vendor_name_offset = line_tell + 0 + 4 + 1;
                 }
             } else {
                 found_device = 1;
@@ -233,11 +228,11 @@ step_id_iterator(void) {
             }
         }
 
+        line_tell = ftell(pciid_file);
         char *r = fgets(linebuf, BUFLEN, pciid_file);
         if(r == NULL) {
             // End of stream, but we can ignore it
         }
-
         return 1;
     }
 }
@@ -279,82 +274,58 @@ lookup_pciid(
             // TODO
         } else {
             if(current_vendor == vendor) {
-                if(!id->vendor_valid) {
-                    id->vendor = strdup(vendor_name);
-                    if(id->vendor != NULL) {
-                        id->vendor_valid = 1;
-                        found_vendor = 1;
-                    }
-                }
+                found_vendor = 1;
                 if(current_device == device) {
-                    if(!id->device_valid) {
-                        id->device = strdup(device_name);
-                        if(id->device != NULL) {
-                            id->device_valid = 1;
-                            found_device = 1;
-                        }
-                    }
+                    found_device = 1;
                     if((current_subsystem_vendor == subsystem_vendor)
                      &&(current_subsystem_device == subsystem_id)) {
-                        if(!id->subsystem_valid) {
-                            id->subsystem = strdup(subsystem_name);
-                            if(id->subsystem != NULL) {
-                                id->subsystem_valid = 1;
-                                found_subsystem = 1;
-                            }
-                        }
+                        found_subsystem = 1;
                     }
                 }
             }
         }
     }
 
-    if(id->vendor_valid) {
-        char *c = (char*)id->vendor;
-        while(*c) {
-            if(isspace(*c)) {
-                *c = ' ';
+    char buffer[BUFLEN];
+    if(found_vendor) {
+        fseek(pciid_file, vendor_name_offset, SEEK_SET);
+        fgets(buffer, BUFLEN, pciid_file);
+        buffer[BUFLEN-1] = '\0';
+        id->vendor = strdup(buffer);
+        if(id->vendor) {
+            id->vendor_valid = 1;
+            ssize_t i = strlen(id->vendor)-1;
+            while(i >= 0 && isspace(id->vendor[i])) {
+                ((char*)id->vendor)[i] = '\0';
             }
-            c++;
         }
     }
-    if(id->device_valid) {
-        char *c = (char*)id->device;
-        while(*c) {
-            if(isspace(*c)) {
-                *c = ' ';
+    if(found_device) {
+        fseek(pciid_file, device_name_offset, SEEK_SET);
+        fgets(buffer, BUFLEN, pciid_file);
+        buffer[BUFLEN-1] = '\0';
+        id->device = strdup(buffer);
+        if(id->device) {
+            id->device_valid = 1;
+            ssize_t i = strlen(id->device)-1;
+            while(i >= 0 && isspace(id->device[i])) {
+                ((char*)id->device)[i] = '\0';
             }
-            c++;
         }
     }
-    if(id->subsystem_valid) {
-        char *c = (char*)id->subsystem;
-        while(*c) {
-            if(isspace(*c)) {
-                *c = ' ';
+    if(found_subsystem) {
+        fseek(pciid_file, subsystem_name_offset, SEEK_SET);
+        fgets(buffer, BUFLEN, pciid_file);
+        buffer[BUFLEN-1] = '\0';
+        id->subsystem = strdup(buffer);
+        if(id->subsystem) {
+            id->subsystem_valid = 1;
+            ssize_t i = strlen(id->subsystem)-1;
+            while(i >= 0 && isspace(id->subsystem[i])) {
+                ((char*)id->subsystem)[i] = '\0';
             }
-            c++;
         }
     }
-    if(id->class_valid) {
-        char *c = (char*)id->class;
-        while(*c) {
-            if(isspace(*c)) {
-                *c = ' ';
-            }
-            c++;
-        }
-    }
-    if(id->subclass_valid) {
-        char *c = (char*)id->subclass;
-        while(*c) {
-            if(isspace(*c)) {
-                *c = ' ';
-            }
-            c++;
-        }
-    }
-
     return id;
 }
 

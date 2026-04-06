@@ -9,7 +9,7 @@ fgets_unlocked(char *restrict s, int n, FILE *restrict stream)
     int num_read = 0;
     while(n > 1)
     {
-        char c = fgetc(stream);
+        char c = fgetc_unlocked(stream);
         *s = c;
         if(c == EOF)
         {
