@@ -914,8 +914,8 @@ window_poll_main(void *_ctx)
     };
     windd_window_server_set_layout(ctx->window, &layout); 
     struct window_position position = {
-        .x = (rand() % ((3*backing->width)/4)),
-        .y = (rand() % ((3*backing->height)/4)) + compute_topbar_height(),
+        .x = (rand() % ((backing->width)/4)),
+        .y = (rand() % ((backing->height)/4)) + compute_topbar_height(),
     };
     windd_window_server_set_position(ctx->window, &position);
 
