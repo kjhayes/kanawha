@@ -8,11 +8,8 @@ rewind(FILE *stream)
     fseek(stream, 0, SEEK_SET);
     stream->eof = 0;
     stream->error = 0;
-    if(stream->peek_buflen > 0)
-    {
-        free(stream->peek_buffer);
-        stream->peek_buflen = 0;
-        stream->peek_buffer = NULL;
-    }
+
+    __elk_libc_internal__file_purge(stream);
+
     return;
 }

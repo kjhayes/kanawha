@@ -19,21 +19,12 @@ fread_unlocked(void *restrict ptr,
 
     ssize_t total_read = 0;
 
-    while(file->peek_datalen > 0 && total_size > 0)
-    {
-        *(char *)ptr = __elk_libc_internal__file_getc(file);
-        ptr++;
-        total_size--;
-        total_read++;
-    }
-
     while(total_size > 0)
     {
         ssize_t read =
             __elk_libc_internal__file_read(file, ptr + total_read, total_size);
         if(read < 0)
         {
-            // TODO: Setup ferror()
             stream->error = (int)read;
             return 0;
         }

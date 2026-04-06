@@ -104,11 +104,12 @@ main(int argc, const char **argv)
         script_size = ftell(script_file);
         fseek(script_file, 0, SEEK_SET);
 
-        script_buffer = malloc(script_size);
+        script_buffer = malloc(script_size+1);
         if(script_buffer == NULL)
         {
             return -1;
         }
+        memset(script_buffer, 0, script_size+1);
 
         size_t to_read = script_size;
         char *buf_iter = script_buffer;
@@ -117,12 +118,14 @@ main(int argc, const char **argv)
             ssize_t read = fread(buf_iter, 1, to_read, script_file);
             if(read <= 0)
             {
-                fprintf(stderr, "Failed to read script \"%s\"!\n", argv[1]);
+                fprintf(stderr, "Failed to read script \"%s\" (err=%ld, script_size=%ld, read=%ld)!\n", argv[1], read, (long)script_size, (long)(script_size-to_read));
                 return -1;
             }
             buf_iter += read;
             to_read -= read;
         }
+
+        printf("Script: %s\n", script_buffer);
 
         fclose(script_file);
     }

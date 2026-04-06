@@ -12,11 +12,6 @@ fseek(FILE *stream, long int offset, int whence)
 
     flockfile(stream);
 
-    if(whence == SEEK_CUR) {
-        size_t peeked = stream->peek_datalen;
-        offset -= peeked;
-    }
-
     // Drop all buffered data
     __elk_libc_internal__file_purge(stream);
 
@@ -25,6 +20,7 @@ fseek(FILE *stream, long int offset, int whence)
     if(res < 0)
     {
         // TODO set errno
+        funlockfile(stream);
         return -1;
     }
 

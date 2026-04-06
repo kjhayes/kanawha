@@ -7,11 +7,10 @@
 void
 funlockfile(FILE *filehandle)
 {
-    int res = -1;
-    while(res != 0)
-    {
+    int res;
+    do {
         res = sem_wait(&filehandle->owner_sem);
-    }
+    } while(res != 0);
 
     filehandle->owner_pid = -1;
 

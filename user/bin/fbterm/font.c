@@ -28,12 +28,14 @@ load_font(const char *path)
     size_t read = fread(&psf_1_header, sizeof(struct psf_1_header), 1, file);
     if(read != 1)
     {
+        fprintf(stderr, "failed to load font \"%s\": could not read PSF1 header!\n", path);
         fclose(file);
         return NULL;
     }
 
     if(psf_1_header.magic[0] != 0x36 || psf_1_header.magic[1] != 0x04)
     {
+        fprintf(stderr, "failed to load font \"%s\": header was invalid!\n", path);
         fclose(file);
         return NULL;
     }
@@ -42,6 +44,7 @@ load_font(const char *path)
     uint8_t *font_data = malloc(font_data_size);
     if(font_data == NULL)
     {
+        fprintf(stderr, "failed to load font \"%s\": failed to allocate data buffer!\n", path);
         fclose(file);
         return NULL;
     }
@@ -49,6 +52,7 @@ load_font(const char *path)
     read = fread(font_data, font_data_size, 1, file);
     if(read != 1)
     {
+        fprintf(stderr, "failed to load font \"%s\": failed to read font data!\n", path);
         free(font_data);
         fclose(file);
         return NULL;
@@ -60,6 +64,7 @@ load_font(const char *path)
     if(fdata == NULL)
     {
         free(font_data);
+        fprintf(stderr, "failed to load font \"%s\": failed to allocate font data!\n", path);
         return NULL;
     }
     memset(fdata, 0, sizeof(struct font_data));
@@ -73,6 +78,7 @@ load_font(const char *path)
     {
         free(font_data);
         free(fdata);
+        fprintf(stderr, "failed to load font \"%s\": failed to allocate glyph data!\n", path);
         return NULL;
     }
     memset(fdata->glyphs, 0, sizeof(struct image *) * fdata->num_glyphs);
@@ -103,6 +109,7 @@ load_font(const char *path)
             free(bg_img);
             free(fg_pixel_data);
             free(bg_pixel_data);
+            fprintf(stderr, "failed to load font \"%s\": failed to load glyph!\n", path);
             return NULL;
         }
 

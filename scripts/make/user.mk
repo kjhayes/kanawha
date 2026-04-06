@@ -47,7 +47,7 @@ define build-lib =
 $$(CUR_OUTPUT_DIR)/lib/$(1)/obj.o: uapi userincludes FORCE
 	$$(Q)$$(MAKE) -C $$(CUR_SOURCE_DIR)/lib/$(1) -f $$(MK_SCRIPTS_DIR)/userbuild.mk obj
 
-userlibs: $$(USER_SYSROOT_LIB_DIR)/lib$(1).a
+userlibs: $$(USER_SYSROOT_LIB_DIR)/lib$(1).a userincludes
 $$(USER_SYSROOT_LIB_DIR)/lib$(1).a: $$(CUR_OUTPUT_DIR)/lib/$(1)/obj.o
 	$$(call qinfo, USER_LD, $$(call rel-dir, $$@, $$(OUTPUT_DIR)))
 	$$(Q)$$(USER_LD) -r $$(USER_LDFLAGS) $$(LDFLAGS) \

@@ -143,7 +143,13 @@ signal_on_return_to_userspace(struct process *process)
     process->user_ip = process->signal_state.signal_entry;
     process->signal_state.interrupted = 1;
 
-    printk("Delivering Signal to Userspace: interrupted=%p, entry=%p\n",
+    printk("Delivering Signal to PID(%ld)[\"%s\"]: interrupted=%p, entry=%p\n",
+           (sl_t)process->id,
+#ifdef CONFIG_DEBUG_TRACK_PROCESS_EXEC
+           process->tracked_exec ? process->tracked_exec : "",
+#else
+           "",
+#endif
            process->signal_state.interrupted_user_ip,
            process->user_ip);
 

@@ -25,6 +25,10 @@ syscall_read(fd_t file, void __user *dst, size_t size)
            (void *)dst);
 #endif
 
+    if(size == 0) {
+        return -EINVAL;
+    }
+
     struct file *desc = file_table_get_file(process->file_table, process, file);
 
     if(desc == NULL)
