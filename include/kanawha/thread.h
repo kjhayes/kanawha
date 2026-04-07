@@ -94,6 +94,8 @@ struct thread_state
 
     unsigned long flags;
     thread_status_t status;
+
+    time_t creation_timestamp;
 };
 
 int

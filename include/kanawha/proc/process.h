@@ -48,9 +48,6 @@ struct process
     int exitcode;
     int status;
 
-    // Timestamp
-    duration_t creation_timestamp;
-
     // Waiting on this process to terminate
     struct waitqueue wait_queue;
     // Waiting on any of this processes' children to terminate

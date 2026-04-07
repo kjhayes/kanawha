@@ -233,6 +233,8 @@ thread_init(struct thread_state *state,
     state->scheduled = NULL;
     state->irq_depth = 0;
 
+    state->creation_timestamp = current_timestamp();
+
     state->mem_map = vmem_map_create();
     if(state->mem_map == NULL)
     {

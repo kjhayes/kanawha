@@ -18,7 +18,7 @@ syscall_time(unsigned long flags)
         value = current_timestamp();
         break;
     case TIME_PROC:
-        value = current_timestamp() - process->creation_timestamp;
+        value = current_timestamp() - process->thread.creation_timestamp;
         break;
     default:
         value = 0;

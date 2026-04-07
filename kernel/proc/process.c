@@ -356,8 +356,6 @@ process_alloc(thread_f *kernel_entry,
     waitqueue_init(&process->wait_queue);
     waitqueue_init(&process->child_wait_queue);
 
-    process->creation_timestamp = current_timestamp();
-
     process->root_directory = NULL;
     process->working_directory = NULL;
     process->mmap = NULL;
