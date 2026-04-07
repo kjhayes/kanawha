@@ -31,10 +31,14 @@
 // (This could take some time depending on the type of allocator)
 #define PAGE_ALLOCATOR_AMOUNT_FREE_SIG(RET, ARG, ...) RET(size_t)
 
+// Returns the total number of bytes which are owned by this page allocator
+#define PAGE_ALLOCATOR_AMOUNT_TOTAL_SIG(RET, ARG, ...) RET(size_t)
+
 #define PAGE_ALLOCATOR_OP_LIST(OP, ...)                                        \
     OP(alloc, PAGE_ALLOCATOR_ALLOC_SIG, ##__VA_ARGS__)                         \
     OP(free, PAGE_ALLOCATOR_FREE_SIG, ##__VA_ARGS__)                           \
-    OP(amount_free, PAGE_ALLOCATOR_AMOUNT_FREE_SIG, ##__VA_ARGS__)
+    OP(amount_free, PAGE_ALLOCATOR_AMOUNT_FREE_SIG, ##__VA_ARGS__)\
+    OP(amount_total, PAGE_ALLOCATOR_AMOUNT_TOTAL_SIG, ##__VA_ARGS__)
 
 struct page_allocator_ops
 {
@@ -68,6 +72,8 @@ page_alloc(order_t order, void __phys **addr, unsigned long flags);
 int
 page_free(order_t order, void __phys *addr);
 
+size_t
+page_alloc_amount_total(void);
 size_t
 page_alloc_amount_free(void);
 size_t

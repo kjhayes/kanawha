@@ -280,6 +280,24 @@ page_free(order_t order, void __phys *addr)
 }
 
 size_t
+page_alloc_amount_total(void)
+{
+    size_t amount = 0;
+    ilist_node_t *node;
+    struct page_allocator *alloc;
+
+    ilist_for_each(node, &page_allocator_list)
+    {
+        alloc = container_of(node, struct page_allocator, list_node);
+        irq_lock_acquire(&alloc->lock);
+        amount += page_allocator_amount_total(alloc);
+        irq_lock_release(&alloc->lock);
+    }
+
+    return amount;
+}
+
+size_t
 page_alloc_amount_free(void)
 {
     size_t amount = 0;

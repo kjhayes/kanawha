@@ -10,8 +10,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <elk-libc-internal/ringbuf.h>
 
-#define __ELK_LIBC_INTERNAL__INITIAL_FILE_PREFETCH_BUFLEN (256)
+#define __ELK_LIBC_INTERNAL__INITIAL_FILE_PREFETCH_BUFLEN (0x1000)
 
 struct __sFILE
 {

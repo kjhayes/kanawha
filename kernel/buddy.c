@@ -91,6 +91,12 @@ buddy_region_total_free(struct buddy_region *region)
     return size;
 }
 
+static size_t
+buddy_region_total_owned(struct buddy_region *region)
+{
+    return region->region_size;
+}
+
 static inline int
 buddy_order_push_page(struct buddy_order *order, struct buddy_page *page)
 {
@@ -614,6 +620,13 @@ buddy_page_allocator_free(void *state, order_t order, void __phys *addr)
 }
 
 static size_t
+buddy_page_allocator_amount_total(void *state)
+{
+    struct buddy_region *region = (struct buddy_region *)state;
+    return buddy_region_total_owned(region);
+}
+
+static size_t
 buddy_page_allocator_amount_free(void *state)
 {
     struct buddy_region *region = (struct buddy_region *)state;
@@ -623,6 +636,7 @@ buddy_page_allocator_amount_free(void *state)
 static struct page_allocator_ops buddy_page_allocator_ops = {
     .alloc = buddy_page_allocator_alloc,
     .free = buddy_page_allocator_free,
+    .amount_total = buddy_page_allocator_amount_total,
     .amount_free = buddy_page_allocator_amount_free,
 };
 

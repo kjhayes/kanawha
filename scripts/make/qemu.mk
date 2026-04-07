@@ -63,7 +63,7 @@ QEMU_FLAGS += -vga cirrus
 QEMU_FLAGS += -device virtio-gpu-pci
 QEMU_FLAGS += -accel kvm 
 QEMU_FLAGS += -machine q35
-QEMU_FLAGS += -m 4G
+QEMU_FLAGS += -m 1G
 endif
 
 # ifdef CONFIG_RISCV64

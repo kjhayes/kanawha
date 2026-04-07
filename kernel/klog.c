@@ -142,6 +142,10 @@ static struct fs_node_ops klog_fs_node_ops;
 static struct fs_file_ops klog_fs_file_ops;
 static struct vfs_node klog_fs_node = {0};
 
+static struct fs_node_ops kmem_total_fs_node_ops;
+static struct fs_file_ops kmem_total_fs_file_ops;
+static struct vfs_node kmem_total_fs_node = {0};
+
 static struct fs_node_ops kmem_free_fs_node_ops;
 static struct fs_file_ops kmem_free_fs_file_ops;
 static struct vfs_node kmem_free_fs_node = {0};
@@ -163,7 +167,6 @@ klog_init_fs_mount(void)
 
     klog_fs_node.fs_file_ops = &klog_fs_file_ops;
     klog_fs_node.fs_node_ops = &klog_fs_node_ops;
-
     res = vfs_mount_insert_node_and_link_root(mnt, &klog_fs_node, "klog");
     if(res)
     {
@@ -171,10 +174,19 @@ klog_init_fs_mount(void)
         return res;
     }
 
+    kmem_total_fs_node.fs_file_ops = &kmem_total_fs_file_ops;
+    kmem_total_fs_node.fs_node_ops = &kmem_total_fs_node_ops;
+    res = vfs_mount_insert_node_and_link_root(mnt, &kmem_total_fs_node, "mem_total");
+    if(res)
+    {
+        vfs_mount_destroy(mnt);
+        return res;
+    }
+
+
     kmem_free_fs_node.fs_file_ops = &kmem_free_fs_file_ops;
     kmem_free_fs_node.fs_node_ops = &kmem_free_fs_node_ops;
-
-    res = vfs_mount_insert_node_and_link_root(mnt, &kmem_free_fs_node, "free");
+    res = vfs_mount_insert_node_and_link_root(mnt, &kmem_free_fs_node, "mem_free");
     if(res)
     {
         vfs_mount_destroy(mnt);
@@ -250,6 +262,35 @@ static struct fs_file_ops klog_fs_file_ops = {
     .seek = fs_file_seek_pinned_zero,
 };
 FS_FILE_OPS_INIT_UNDEF(klog_fs_file_ops);
+
+static ssize_t
+kmem_total_fs_file_read(struct file *file,
+                       void *buffer,
+                       ssize_t amount,
+                       unsigned long flags)
+{
+    if(file->seek_offset != 0)
+    {
+        return 0;
+    }
+    size_t total = page_alloc_amount_total();
+    snprintk(buffer, amount, "%lu", total);
+    ((char *)buffer)[amount - 1] = '\0';
+    return strlen(buffer);
+}
+
+static struct fs_node_ops kmem_total_fs_node_ops = {
+    .flush = fs_node_flush_nop,
+};
+FS_NODE_OPS_INIT_UNDEF(kmem_total_fs_node_ops);
+
+static struct fs_file_ops kmem_total_fs_file_ops = {
+    .read = kmem_total_fs_file_read,
+    .write = fs_file_eof_write,
+    .flush = fs_file_nop_flush,
+    .seek = fs_file_seek_pinned_zero,
+};
+FS_FILE_OPS_INIT_UNDEF(kmem_total_fs_file_ops);
 
 static ssize_t
 kmem_free_fs_file_read(struct file *file,

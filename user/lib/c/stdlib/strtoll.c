@@ -1,16 +1,13 @@
 
 #include "elk-libc-internal/null.h"
+#include <stdio.h>
 
 extern int
 isspace(int c);
-extern int
-tolower(int c);
 
 static int
 interp_char(char c, int base)
 {
-    c = tolower(c);
-
     int value = -1;
     if('0' <= c && c <= '9')
     {
@@ -19,6 +16,9 @@ interp_char(char c, int base)
     else if('a' <= c && c <= 'z')
     {
         value = 10 + (c - 'a');
+    }
+    else if('A' <= c && c <= 'Z') {
+        value = 10 + (c - 'A');
     }
     return value;
 }
@@ -99,7 +99,7 @@ strtoll(const char *restrict nptr, char **restrict endptr_out, int base)
     {
 
         char c = *riter;
-        int digit_value = interp_char(c, base);
+        long long int digit_value = interp_char(c, base);
 
         // Don't bother computing the power for zero(s)
         if(digit_value > 0)
@@ -122,5 +122,6 @@ strtoll(const char *restrict nptr, char **restrict endptr_out, int base)
         *endptr_out = (char *)endptr;
     }
 
-    return value * sign;
+    long long int final = value * sign;
+    return final;
 }

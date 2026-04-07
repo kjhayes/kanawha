@@ -44,4 +44,5 @@ bins += \
     write \
 	wintest \
 	badapple \
+	sysplot \
 
