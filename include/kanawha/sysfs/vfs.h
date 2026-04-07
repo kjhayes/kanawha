@@ -73,6 +73,12 @@ vfs_mount_insert_node_and_link_root(struct vfs_mount *mnt,
                                     struct vfs_node *node,
                                     const char *name);
 
+int
+vfs_mount_insert_and_link(struct vfs_mount *mnt,
+                          struct vfs_node *node,
+                          const char *name,
+                          struct vfs_node *parent);
+
 // fs_file_ops
 int
 vfs_dir_lookup(struct fs_node *fs_node,

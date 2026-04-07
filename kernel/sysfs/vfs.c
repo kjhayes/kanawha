@@ -440,3 +440,29 @@ vfs_mount_insert_node_and_link_root(struct vfs_mount *mnt,
 
     return 0;
 }
+
+int
+vfs_mount_insert_and_link(struct vfs_mount *mnt,
+                          struct vfs_node *node,
+                          const char *name,
+                          struct vfs_node *parent)
+{
+    int res;
+
+    size_t inode;
+    res = vfs_mount_insert_node(mnt, node, &inode);
+    if(res)
+    {
+        return res;
+    }
+
+    res = vfs_node_link(parent, name, inode);
+    if(res)
+    {
+        vfs_mount_remove_node(mnt, node);
+        return res;
+    }
+
+    return 0;
+}
+

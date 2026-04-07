@@ -7,6 +7,8 @@
 #include <kanawha/cpu.h>
 #include <kanawha/ptree.h>
 
+#define X64_CPU_NAME_BUFLEN (16)
+
 struct x64_cpu
 {
     struct cpu cpu;
@@ -16,6 +18,8 @@ struct x64_cpu
 
     struct gdt64 *gdt;
     void *tss_segment;
+
+    char name[X64_CPU_NAME_BUFLEN];
 
     struct ptree_node apic_tree_node;
 };

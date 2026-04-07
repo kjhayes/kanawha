@@ -109,6 +109,7 @@ struct registry_node
         int res;                                                               \
                                                                                \
         struct registry_node *reg_node = &member->REG_NODE_FIELD;              \
+        memset(reg_node, 0, sizeof(*reg_node));                                \
         reg_node->snode.key = name;                                            \
                                                                                \
         res = INIT_FUNCTION(member);                                           \
@@ -314,29 +315,33 @@ struct registry_node
         ilist_push_tail(&SNAME##_registry_owner_list, &owner->list_node);      \
                                                                                \
         ilist_node_t *iter;                                                    \
-        ilist_for_each(iter, &(SNAME##_registry_unowned_list))                 \
-        {                                                                      \
-            struct SNAME *member =                                             \
-                container_of(iter, struct SNAME, REG_NODE_FIELD.owner_node);   \
-            struct registry_node *reg_node = &member->REG_NODE_FIELD;          \
-                                                                               \
-            res = (*owner->probe)(member);                                     \
-            if(res)                                                            \
-            {                                                                  \
-                continue;                                                      \
-            }                                                                  \
-            res = (*owner->receive)(member);                                   \
-            if(res)                                                            \
-            {                                                                  \
-                continue;                                                      \
-            }                                                                  \
-                                                                               \
-            ilist_remove(&(SNAME##_registry_unowned_list), iter);              \
-            ilist_push_tail(&owner->owned_list, iter);                         \
-            reg_node->owner = (void *)owner;                                   \
-                                                                               \
-            break;                                                             \
-        }                                                                      \
+        int registered; \
+        do {                                                                   \
+            registered = 0; \
+            ilist_for_each(iter, &(SNAME##_registry_unowned_list))                 \
+            {                                                                      \
+                struct SNAME *member =                                             \
+                    container_of(iter, struct SNAME, REG_NODE_FIELD.owner_node);   \
+                struct registry_node *reg_node = &member->REG_NODE_FIELD;          \
+                                                                                   \
+                res = (*owner->probe)(member);                                     \
+                if(res)                                                            \
+                {                                                                  \
+                    continue;                                                      \
+                }                                                                  \
+                res = (*owner->receive)(member);                                   \
+                if(res)                                                            \
+                {                                                                  \
+                    continue;                                                      \
+                }                                                                  \
+                                                                                   \
+                ilist_remove(&(SNAME##_registry_unowned_list), iter);              \
+                ilist_push_tail(&owner->owned_list, iter);                         \
+                reg_node->owner = (void *)owner;                                   \
+                registered = 1; \
+                break;                                                             \
+            }                                                                      \
+        } while(registered); \
                                                                                \
         SNAME##_registry_lock_release();                                       \
         return 0;                                                              \

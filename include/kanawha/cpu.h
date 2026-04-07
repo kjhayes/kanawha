@@ -2,6 +2,7 @@
 #define __KANAWHA__CPU_H__
 
 #include <kanawha/stddef.h>
+#include <kanawha/registry.h>
 
 // CPU ID's must be non-negative and contiguous
 typedef int cpu_id_t;
@@ -16,14 +17,10 @@ struct cpu
 
     unsigned long flags;
 
+    struct registry_node registry_node;
+
     void *percpu_data;
 };
-
-int
-bsp_register_smp_cpu(struct cpu *cpu, int is_bsp);
-
-int
-unregister_smp_cpu(struct cpu *cpu);
 
 size_t
 total_num_cpus(void);
@@ -35,9 +32,18 @@ cpu_from_id(cpu_id_t id);
 cpu_id_t
 current_cpu_id(void);
 
-// Should only be used once during initialization (assumes preemption is
-// disabled)
+// Assumes preemption is disabled
+static inline struct cpu *
+current_cpu(void)
+{
+    return cpu_from_id(current_cpu_id());
+}
+
+// Should only be used once during initialization
+// (assumes preemption is disabled)
 int
 set_current_cpu_id(cpu_id_t id);
+
+DECLARE_REGISTRY(cpu);
 
 #endif

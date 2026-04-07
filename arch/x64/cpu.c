@@ -29,16 +29,22 @@ x64_bsp_register_smp_cpu(struct x64_cpu *cpu, apic_id_t apic_id, int is_bsp)
     cpu->apic.id = apic_id;
     cpu->apic_tree_node.key = (uintptr_t)apic_id;
 
+    snprintk(cpu->name, X64_CPU_NAME_BUFLEN,
+             "apic%lu", (ul_t)apic_id);
+    cpu->name[X64_CPU_NAME_BUFLEN-1] = '\0';
+
     if(is_bsp)
     {
-        printk("BSP (%d) APICID = 0x%08x\n", cpu->cpu.id, cpu->apic.id);
+        cpu->cpu.flags |= CPU_FLAG_IS_BSP;
+        printk("BSP APICID = 0x%08x\n", cpu->apic.id);
     }
     else
     {
-        printk("AP (%d) APICID = 0x%08x\n", cpu->cpu.id, cpu->apic.id);
+        cpu->cpu.flags &= ~CPU_FLAG_IS_BSP;
+        printk("AP APICID = 0x%08x\n", cpu->apic.id);
     }
-
-    res = bsp_register_smp_cpu(&cpu->cpu, is_bsp);
+    
+    res = register_cpu(&cpu->cpu, cpu->name);
     if(res)
     {
         apic_tree_lock_release();

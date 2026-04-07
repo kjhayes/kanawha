@@ -24,8 +24,6 @@ obj-y += \
 	usermode.o \
 	syscall.o \
 	exec_type.o \
-	cpu.o \
-	percpu.o \
 	mmio.o \
 	dma.o \
 	symbol.o \
@@ -48,6 +46,7 @@ obj-y += \
 
 obj-y += stack.o
 
+obj-y += cpu/
 obj-y += kmalloc/
 obj-y += dev/
 obj-y += fs/

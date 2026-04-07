@@ -108,6 +108,10 @@ const static struct sysfs_mnt sys_sysfs_mnts[] = {
         .dir = "udrv",
         .sysfs = "udrv",
     },
+    {
+        .dir = "cpu",
+        .sysfs = "cpu",
+    },
 };
 
 struct fs_mnt
