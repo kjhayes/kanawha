@@ -95,7 +95,11 @@ struct thread_state
     unsigned long flags;
     thread_status_t status;
 
-    time_t creation_timestamp;
+    struct {
+        time_t creation_timestamp;
+        time_t last_scheduled_timestamp;
+        time_t last_unscheduled_timestamp;
+    } timing;
 };
 
 int

@@ -233,7 +233,10 @@ thread_init(struct thread_state *state,
     state->scheduled = NULL;
     state->irq_depth = 0;
 
-    state->creation_timestamp = current_timestamp();
+    time_t now = current_timestamp();
+    state->timing.creation_timestamp = now;
+    state->timing.last_scheduled_timestamp = now;
+    state->timing.last_unscheduled_timestamp = now;
 
     state->mem_map = vmem_map_create();
     if(state->mem_map == NULL)
@@ -391,6 +394,11 @@ thread_schedule(struct thread_state *state)
 
     thread_set_status(state, THREAD_STATUS_SCHEDULED);
     cur_thread->scheduled = state;
+
+    time_t timestamp = current_timestamp();
+    cur_thread->timing.last_unscheduled_timestamp = timestamp;
+    cur_thread->scheduled->timing.last_scheduled_timestamp = timestamp;
+
     // printk("Scheduling thread(%ld) to take over from thread(%ld)\n",
     //         (sl_t)state->id,
     //         (sl_t)cur_thread->id);
@@ -434,16 +442,6 @@ __thread_switch_threadless(void *in)
 
     switching_from->running_on = NULL_CPU_ID;
     switching_to->running_on = current_cpu_id();
-    // if(completed_init_stage_launch()) {
-    //     printk("CPU(%ld) setting &current_thread=%p id(%ld) from id(%ld)",
-    //             (sl_t)current_cpu_id(),
-    //             current_thread_ptr,
-    //             (sl_t)switching_to->id,
-    //             (sl_t)switching_from->id
-    //             );
-    //     dump_thread_flags(switching_to, switching_to->flags, do_printk);
-    //     do_printk("\n");
-    // }
 
     set_current_thread(switching_to);
 
@@ -463,30 +461,6 @@ __thread_switch_threadless(void *in)
 
     panic("Returned from arch_thread_run_thread!\n");
 }
-
-// static __noreturn void
-//__thread_sleep_threadless(void *in)
-//{
-//     // We should be running with IRQ(s) disabled, and thus pinned to the
-//     current CPU struct thread_state *sleeping = current_thread(); struct
-//     thread_state *switching_to = (struct thread_state *)in;
-//
-//     sleeping->status = THREAD_STATUS_SLEEPING;
-//     switching_to->status = THREAD_STATUS_RUNNING;
-//     switching_to->running_on = current_cpu_id();
-//     dprintk("setting current_thread=%p\n", switching_to);
-//     *(struct thread_state **)percpu_ptr(percpu_addr(__current_thread)) =
-//     switching_to; DEBUG_ASSERT(current_thread() == switching_to);
-//
-//     vmem_map_activate(switching_to->mem_map);
-//
-//     spin_unlock(&sleeping->lock);
-//     spin_unlock(&switching_to->lock);
-//
-//     arch_thread_run_thread(switching_to);
-//
-//     panic("Returned from arch_thread_run_thread!\n");
-// }
 
 int
 thread_yield(void)
@@ -621,79 +595,6 @@ thread_wake(struct thread_state *thread)
 
     return 0;
 }
-
-/*
-int
-thread_switch(struct thread_state *state)
-{
-    int res;
-
-    struct thread_state *cur_thread;
-    cur_thread = *(struct
-thread_state**)percpu_ptr(percpu_addr(__current_thread)); struct thread_state
-*to_restore = cur_thread;
-
-    // We switch threads with IRQ(s) disabled
-    int irq_flags = disable_save_irqs();
-
-    spin_lock(&state->lock);
-    switch(state->status) {
-        case THREAD_STATUS_SCHEDULED:
-            state->status = THREAD_STATUS_RUNNING;
-            state->running_on = current_cpu_id();
-            break;
-        default:
-            // Try to schedule the thread,
-            spin_unlock(&state->lock);
-            enable_restore_irqs(irq_flags);
-            eprintk("Tried to switch to unscheduled thread!\n");
-            return -EINVAL;
-    }
-    spin_unlock(&state->lock);
-
-    // Weird state from the perspective of another CPU
-    // (two threads claim to be running on the current CPU?)
-    // but because interrupts are disabled, we should always
-    // see ourselves as having a singular current thread, even if we can see
-    // other CPU(s) in this weird limbo state
-
-    spin_lock(&cur_thread->lock);
-
-    switch(cur_thread->status) {
-        case THREAD_STATUS_RUNNING:
-            cur_thread->running_on = NULL_CPU_ID;
-            cur_thread->status = THREAD_STATUS_READY;
-            break;
-        default:
-            panic("thread_switch: current_thread->status !=
-THREAD_STATUS_RUNNING");
-    }
-
-    // If we assume that all thread switches go through this function, then
-this isn't necessary,
-    // but to be safe, we won't make that assumption for now, and possibly set
-the "current_thread"
-    // more than is strictly necessary.
-    *(struct thread_state **)percpu_ptr(percpu_addr(current_thread)) = state;
-
-    spin_unlock(&cur_thread->lock);
-
-    // From the perspective of another CPU we are now running the new thread,
-    // even though we haven't actually changed our register state, stack, etc.
-
-    res = arch_thread_switch(state, to_restore);
-
-    // We are now back from running the other thread, restore our
-"current_thread" pointer
-    *(struct thread_state **)percpu_ptr(percpu_addr(current_thread)) =
-to_restore;
-
-    // Restore our IRQ state
-    enable_restore_irqs(irq_flags);
-
-    return res;
-}
-*/
 
 __noreturn void
 thread_abandon(void)
@@ -1041,117 +942,6 @@ thread_relax_mapping(void *virtual_addr)
 {
     return -EUNIMPL;
 }
-
-// Testing
-
-// static void
-// thread_test_thread_switch(void *in)
-//{
-//     printk("thread_test_thread_switch (current_thread=%p)\n",
-//             current_thread());
-//
-//     struct thread_state *next_thread = in;
-//     int res = thread_schedule(next_thread);
-//     if(res) {
-//         eprintk("thread_test_thread_switch: Failed to schedule next thread!
-//         (err=%s)\n",
-//                 errnostr(res));
-//     }
-//     thread_switch(next_thread);
-// }
-//
-// static void
-// thread_test_thread_abandon(void *in)
-//{
-//     printk("thread_test_thread_abandon (current_thread=%p)\n",
-//             current_thread());
-//
-//     struct thread_state *next_thread = in;
-//     int res = thread_schedule(next_thread);
-//     if(res) {
-//         eprintk("thread_test_thread_abandon: Failed to schedule next thread!
-//         (err=%s)\n",
-//                 errnostr(res));
-//     }
-//     thread_abandon(next_thread);
-// }
-//
-// static int
-// thread_test(void)
-//{
-//     int res;
-//
-//     struct thread_state thread_1;
-//     struct thread_state thread_2;
-//
-//     int irq_flags = disable_save_irqs();
-//
-//     res = thread_init(
-//             &thread_1,
-//             thread_test_thread_switch,
-//             current_thread(),
-//             0);
-//     if(res) {
-//         enable_restore_irqs(irq_flags);
-//         return res;
-//     }
-//
-//     res = thread_init(
-//             &thread_2,
-//             thread_test_thread_abandon,
-//             current_thread(),
-//             0);
-//     if(res) {
-//         enable_restore_irqs(irq_flags);
-//         return res;
-//     }
-//
-//     printk("Scheduling thread1\n");
-//     res = thread_schedule(&thread_1);
-//     if(res) {
-//         enable_restore_irqs(irq_flags);
-//         return res;
-//     }
-//     printk("Switching to thread1\n");
-//     res = thread_switch(&thread_1);
-//     if(res) {
-//         enable_restore_irqs(irq_flags);
-//         return res;
-//     }
-//     printk("Returned from thread1\n");
-//
-//     printk("Scheduling thread2\n");
-//     res = thread_schedule(&thread_2);
-//     if(res) {
-//         enable_restore_irqs(irq_flags);
-//         return res;
-//     }
-//     printk("Switching to thread2\n");
-//     res = thread_switch(&thread_2);
-//     if(res) {
-//         enable_restore_irqs(irq_flags);
-//         return res;
-//     }
-//     printk("Returned from thread2\n");
-//
-//     if(thread_1.status != THREAD_STATUS_READY)
-//     {
-//         eprintk("thread_test FAIL: thread_1 is not ready!\n");
-//         return -EINVAL;
-//     }
-//     if(thread_2.status != THREAD_STATUS_ABANDONED)
-//     {
-//         eprintk("thread_test FAIL: thread_2 was not abandoned!\n");
-//         return -EINVAL;
-//     }
-//
-//     thread_deinit(&thread_1);
-//     thread_deinit(&thread_2);
-//
-//     enable_restore_irqs(irq_flags);
-//     return 0;
-// }
-// declare_init_desc(smp, thread_test, "Running Thread Test(s)");
 
 const char *
 thread_status_to_string(thread_status_t status)
