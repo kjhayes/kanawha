@@ -20,6 +20,7 @@ struct cpu_fs_node
 
     struct vfs_node id_node;
     struct vfs_node bsp_node;
+    struct vfs_node idle_node;
 };
 
 static struct vfs_mount *cpu_fs_mount = NULL;
@@ -32,6 +33,9 @@ static struct fs_file_ops id_file_ops;
 
 static struct fs_node_ops bsp_node_ops;
 static struct fs_file_ops bsp_file_ops;
+
+static struct fs_node_ops idle_node_ops;
+static struct fs_file_ops idle_file_ops;
 
 static int
 cpu_fs_probe_cpu(struct cpu *cpu)
@@ -83,8 +87,22 @@ cpu_fs_receive_cpu(struct cpu *cpu)
         goto err3;
     }
 
+    node->idle_node.fs_node_ops = &idle_node_ops;
+    node->idle_node.fs_file_ops = &idle_file_ops;
+    res = vfs_mount_insert_and_link(
+            cpu_fs_mount,
+            &node->idle_node,
+            "idle",
+            &node->vfs_node);
+    if(res) {
+        goto err4;
+    }
+
+
     return 0;
 
+err4:
+    vfs_mount_remove_node(cpu_fs_mount, &node->bsp_node);
 err3:
     vfs_mount_remove_node(cpu_fs_mount, &node->id_node);
 err2:
@@ -240,4 +258,52 @@ static struct fs_file_ops bsp_file_ops = {
     .read = bsp_file_read,
 };
 FS_FILE_OPS_INIT_UNDEF(bsp_file_ops);
+
+// "idle" Node
+
+static ssize_t
+idle_file_read(
+        struct file *file,
+        void *buffer,
+        ssize_t buflen,
+        unsigned long flags)
+{
+    if(file->seek_offset != 0) {
+        return 0;
+    }
+
+    if(buflen == 0) {
+        return -EINVAL;
+    }
+
+    struct fs_node *fs_node = fs_path_get_fs_node(file->path);
+    struct cpu_fs_node *cpu_node = container_of(fs_node->backing.priv_state,
+                                                struct cpu_fs_node,
+                                                idle_node);
+
+    ssize_t idle_percent = cpu_idle_percentage(cpu_node->cpu->id);
+    if(idle_percent < 0) {
+        wprintk("cpufs: failed to read CPU(%ld) idle percentage! (err=%s)\n",
+                (sl_t)cpu_node->cpu->id,
+                errnostr(idle_percent));
+        return idle_percent;
+    }
+
+    snprintk(buffer, buflen, "%d", (int)idle_percent);
+    size_t len = strnlen(buffer, buflen);
+
+    return len;
+}
+             
+
+static struct fs_node_ops idle_node_ops = {
+};
+FS_NODE_OPS_INIT_UNDEF(idle_node_ops);
+static struct fs_file_ops idle_file_ops = {
+    .seek = fs_file_seek_pinned_zero,
+    .flush = fs_file_nop_flush,
+
+    .read = idle_file_read,
+};
+FS_FILE_OPS_INIT_UNDEF(idle_file_ops);
 

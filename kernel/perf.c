@@ -47,7 +47,7 @@ int perf_timer_init(struct perf_timer *metric)
     metric->max = 0;
     metric->min = -1ULL;
 
-    metric->current_start = 0;
+    metric->current_start = NULL_TIME;
 
     metric->metric.display = &perf_timer_display;
     return 0;
@@ -71,7 +71,7 @@ void perf_timer_stop(struct perf_timer *metric)
 {
     time_t start = metric->current_start;
     time_t end = current_timestamp();
-    if(end < start) {
+    if(!times_are_sequential(start, end)) {
         metric->count++;
         return; // Ignore this data point's duration
     }

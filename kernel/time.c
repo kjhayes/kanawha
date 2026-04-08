@@ -3,14 +3,23 @@
 #include <kanawha/event.h>
 #include <kanawha/init.h>
 #include <kanawha/time.h>
+#include <kanawha/clk.h>
 
-static time_t system_timestamp = 0;
+static duration_t system_timestamp = 0;
 static struct periodic_event *tick_event = NULL;
 
 time_t
 current_timestamp(void)
 {
-    return system_timestamp;
+    duration_t clk = 0;
+    if(clk_mono_valid()) {
+        clk = clk_mono_current();
+    }
+    time_t time = {
+        .clk_mono = clk,
+        .tick = system_timestamp,
+    };
+    return time;
 }
 
 static void

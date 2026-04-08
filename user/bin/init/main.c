@@ -15,8 +15,8 @@
 #include "log.h"
 #include "root.h"
 
-#define WINDD_FB_PATH_STR "/dev/fb/vga"
-#define WINDD_FB_MODE_STR "1"
+#define WINDD_FB_PATH_STR "/dev/fb/virtio-gpu-0"
+#define WINDD_FB_MODE_STR "0"
 
 int
 setstdin(const char *path)
@@ -76,10 +76,19 @@ static struct daemon sh = {
     .num_sockets = 0,
 };
 
+static const char *sysplot_args[] = {"sysplot", NULL};
+static struct daemon sysplot = {
+    .command = "/sys/initrd/sysplot",
+    .args = sysplot_args,
+    .restart_on_exit = 0,
+    .status = DAEMON_UNINIT,
+    .num_sockets = 0,
+};
 static struct daemon *daemons[] = {
     &randd,
     &windd,
     &sh,
+    &sysplot,
     NULL,
 };
 

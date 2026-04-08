@@ -46,4 +46,9 @@ set_current_cpu_id(cpu_id_t id);
 
 DECLARE_REGISTRY(cpu);
 
+// >= 0 -> runtime percentage of this CPU's idle thread
+// < 0 -> errno value
+ssize_t
+cpu_idle_percentage(cpu_id_t id);
+
 #endif

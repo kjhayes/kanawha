@@ -24,8 +24,6 @@ typedef long thread_id_t;
 typedef void(thread_f)(void *in);
 typedef __noreturn void(threadless_f)(void *in);
 
-typedef uint32_t thread_status_t;
-
 /*
  * Valid THREAD_STATUS Transitions
  *
@@ -52,15 +50,29 @@ typedef uint32_t thread_status_t;
  *
  */
 
-#define THREAD_STATUS_PREPARING 0 // Still in the process of being created
-#define THREAD_STATUS_READY 1     // Not currently running but may be scheduled
-#define THREAD_STATUS_SCHEDULED 2 // (transition stage from READY -> RUNNING)
-#define THREAD_STATUS_RUNNING 3   // Currently running on some processor
-#define THREAD_STATUS_TIRED                                                    \
-    4 // Currently running, will go to sleep on next thread switch
-#define THREAD_STATUS_SLEEPING 5 // Sleeping cannot be scheduled
-#define THREAD_STATUS_ABANDONED                                                \
-    6 // Can never be run again without reinitialization
+typedef enum {
+    // Still in the process of being created
+    THREAD_STATUS_PREPARING = 0,
+
+    // Not currently running but may be scheduled
+    THREAD_STATUS_READY,
+    // (transition stage from READY -> RUNNING)
+    THREAD_STATUS_SCHEDULED,
+
+    // Currently running on some processor
+    THREAD_STATUS_RUNNING,
+
+    // Currently running, will go to sleep on next thread switch
+    THREAD_STATUS_TIRED,
+
+    // Sleeping cannot be scheduled
+    THREAD_STATUS_SLEEPING,
+
+    // Can never be run again without reinitialization
+    THREAD_STATUS_ABANDONED,
+} thread_status_t;
+
+#define NUM_THREAD_STATUSES (THREAD_STATUS_ABANDONED+1)
 
 #define THREAD_FLAG_IDLE (1ULL << 0)
 #define THREAD_FLAG_PROCESS (1ULL << 1)
@@ -99,6 +111,12 @@ struct thread_state
         time_t creation_timestamp;
         time_t last_scheduled_timestamp;
         time_t last_unscheduled_timestamp;
+
+        duration_t back_duration;
+        duration_t back_runtime;
+        time_t front_start;
+        duration_t front_runtime;
+
     } timing;
 };
 
@@ -141,6 +159,10 @@ pin_thread_specific(struct thread_state *thread, cpu_id_t cpu);
 // Returns NULL if the idle thread has not been created on the current CPU
 struct thread_state *
 idle_thread(void);
+
+// Gets the idle_thread of any CPU
+struct thread_state *
+cpu_idle_thread(cpu_id_t cpu);
 
 // To be called from within a scheduler, checks to make sure that a thread
 // can be run on the current processor, and changes the threads status
@@ -272,5 +294,26 @@ thread_irq_depth(void) {
     }
     return 0; // Assume we are not in an IRQ if we do not have a thread.
 }
+
+// Read the current runtime sample for
+// this thread (runtime -> duration that this thread has
+//                         been running for
+//              sample_length -> length of the current sample)
+int
+thread_get_runtime(
+        struct thread_state *thread,
+        duration_t *runtime,
+        duration_t *sample_length);
+
+// >=0 -> percent of current same period this thread
+//        has been running
+// <0 -> errno value
+ssize_t
+thread_get_running_percentage(
+        struct thread_state *thread);
+
+size_t
+thread_status_count(
+        thread_status_t status);
 
 #endif

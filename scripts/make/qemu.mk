@@ -58,8 +58,8 @@ QEMU_DEPS += $(ISO)
 QEMU_FLAGS += -cdrom $(ISO)
 
 QEMU_FLAGS += -serial stdio
-QEMU_FLAGS += -smp 2
-QEMU_FLAGS += -vga cirrus
+QEMU_FLAGS += -smp 8
+QEMU_FLAGS += -vga none 
 QEMU_FLAGS += -device virtio-gpu-pci
 QEMU_FLAGS += -accel kvm 
 QEMU_FLAGS += -machine q35

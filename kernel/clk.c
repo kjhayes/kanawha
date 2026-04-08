@@ -5,7 +5,7 @@
 #include <kanawha/errno.h>
 #include <kanawha/time.h>
 
-DEFINE_LOCAL_THREAD_LOCK(clk_source_lock);
+DEFINE_LOCAL_IRQ_LOCK(clk_source_lock);
 static struct clk_dev *clk_source = NULL;
 
 int

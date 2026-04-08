@@ -2,6 +2,7 @@
 #include <windd/windd.h>
 #include <kfb/kfb.h>
 #include <stdlib.h>
+#include <string.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <kanawha/time.h>
@@ -41,7 +42,11 @@ register_metric(
     lock_metrics();
     if(num_metrics == metrics_buflen) {
         metrics_buflen++;
-        metrics = realloc(metrics, sizeof(struct metric *) * (metrics_buflen));
+        struct metric **n_metrics = malloc(sizeof(struct metric *) * (metrics_buflen));
+        if(metrics != NULL) {
+            memcpy(n_metrics, metrics, sizeof(struct metric*) * num_metrics);
+        }
+        metrics = n_metrics;
         if(metrics == NULL) {
             abort();
         }
@@ -89,6 +94,7 @@ render_main(void *_win) {
         lock_metrics();
         for(size_t mi = 0; mi < num_metrics; mi++) {  
             struct metric *m = metrics[mi];
+            //printf("update(%s)\n", m->name);
             (*m->update)(m);
         }
         for(size_t mi = 0; mi < num_metrics; mi++) {
@@ -173,13 +179,52 @@ init_mem_metric(void) {
         .name = "memory",
         .update = mem_update,
         .color = {
-            .r = 0xF0,
+            .r = 0x00,
             .g = 0x80,
-            .b = 0x20,
+            .b = 0x00,
             .a = 0xFF,
         },
     };
     register_metric(&m);
+}
+
+struct cpu_metric {
+    const char *name;
+    struct metric metric;
+};
+
+static void
+cpu_update(struct metric *metric)
+{
+    //printf("cpu_update()\n");
+    struct cpu_metric *m = ((void*)metric) - offsetof(struct cpu_metric, metric);
+    char pathbuf[128];
+    snprintf(pathbuf, 128, "/sys/cpu/%s/idle", m->name);
+    pathbuf[127] = '\0';
+    //printf("reading file %s\n", pathbuf);
+
+    size_t idle_percent = read_file_to_number(pathbuf);
+    metric->cur = 100 - idle_percent;
+}
+
+static void
+init_cpu_metric(const char *name) {
+    struct cpu_metric *cpu = malloc(sizeof(struct cpu_metric));
+    cpu->name = name;
+    cpu->metric = (struct metric){
+        .min = 0,
+        .max = 100,
+        .cur = 0,
+        .name = "cpu",
+        .update = cpu_update,
+        .color = {
+            .r = 0x80,
+            .g = 0x00,
+            .b = 0x00,
+            .a = 0xFF,
+        },
+    };
+    register_metric(&cpu->metric);
 }
 
 int main(int argc, const char **argv)
@@ -201,6 +246,14 @@ int main(int argc, const char **argv)
 
     // Register all of our metrics
     init_mem_metric();
+    init_cpu_metric("apic0");
+    init_cpu_metric("apic1");
+    init_cpu_metric("apic2");
+    init_cpu_metric("apic3");
+    init_cpu_metric("apic4");
+    init_cpu_metric("apic5");
+    init_cpu_metric("apic6");
+    init_cpu_metric("apic7");
 
     window_poll_main(window);
 

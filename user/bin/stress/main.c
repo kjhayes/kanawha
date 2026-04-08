@@ -4,8 +4,8 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#define NUM_CHILDREN 400 // Number of child processes to create
-#define STALL 1
+#define NUM_CHILDREN 1000 // Number of child processes to create
+#define STALL 1000000000
 
 #define CHILD(...)
 #define PARENT(...) printf(__VA_ARGS__)

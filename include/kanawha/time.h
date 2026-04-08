@@ -90,8 +90,13 @@ freq_to_ghz(freq_t freq)
 
 // For now, duration_t is always measured in nano-seconds,
 // but we want the API to keep this flexible in the future
-typedef size_t time_t;
-typedef time_t duration_t;
+typedef size_t duration_t;
+typedef struct {
+    duration_t tick;
+    duration_t clk_mono;
+} time_t;
+
+#define NULL_TIME ((time_t){.tick = 0, .clk_mono = 0})
 
 typedef size_t sec_t;
 typedef size_t msec_t;
@@ -139,7 +144,54 @@ nsec_to_duration(nsec_t nsec)
 static inline duration_t
 duration_between(time_t before, time_t after)
 {
-    return after - before;
+    if(before.tick == after.tick) {
+        if(before.clk_mono > after.clk_mono) {
+            // TODO clk_mono overflowed...
+            return 0;
+        } else {
+            return after.clk_mono - before.clk_mono;
+        }
+    } else {
+        return after.tick - before.tick;
+    }
+}
+
+static inline int
+times_are_sequential(time_t earlier, time_t later)
+{
+    if(earlier.tick < later.tick) {
+        return 1;
+    }
+    if(earlier.tick > later.tick) {
+        return 0;
+    }
+    if(earlier.clk_mono < later.clk_mono) {
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
+static inline duration_t 
+time_to_duration(time_t time)
+{
+    return time.tick;
+}
+
+static inline nsec_t
+time_to_nsec(time_t time)
+{
+    return duration_to_nsec(time_to_duration(time));
+}
+static inline msec_t
+time_to_msec(time_t time)
+{
+    return duration_to_msec(time_to_duration(time));
+}
+static inline sec_t
+time_to_sec(time_t time)
+{
+    return duration_to_sec(time_to_duration(time));
 }
 
 static inline duration_t

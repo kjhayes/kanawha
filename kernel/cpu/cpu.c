@@ -7,6 +7,7 @@
 #include <kanawha/stddef.h>
 #include <kanawha/string.h>
 #include <kanawha/registry.h>
+#include <kanawha/thread.h>
 
 DEFINE_LOCAL_THREAD_LOCK(system_cpus_lock);
 static struct cpu *system_cpus[CONFIG_MAX_CPUS] = {0};
@@ -114,4 +115,17 @@ DEFINE_REGISTRY(
         cpu_on_register,
         cpu_on_unregister
         )
+
+ssize_t
+cpu_idle_percentage(
+        cpu_id_t cpu)
+{
+    struct thread_state *idle = cpu_idle_thread(cpu);
+    if(idle == NULL) {
+        printk("cpu_idle_percentage: failed to get CPU(%ld) idle thread!\n",
+                (sl_t)cpu);
+        return -EINVAL;
+    }
+    return thread_get_running_percentage(idle);
+}
 

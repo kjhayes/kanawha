@@ -20,6 +20,8 @@
 #include <kanawha/vmem.h>
 #include <kanawha/perf.h>
 
+#define THREAD_RUNTIME_MAX_SAMPLE_MSEC (100)
+
 static void set_current_thread(struct thread_state *state);
 
 static void
@@ -66,9 +68,33 @@ get_thread_id(struct thread_state *state)
 DECLARE_PERCPU_VAR(struct thread_state *, __current_thread);
 DECLARE_STATIC_PERCPU_VAR(struct thread_state *, __idle_thread);
 
+DEFINE_LOCAL_IRQ_LOCK(thread_status_count_lock);
+static size_t thread_status_counts[NUM_THREAD_STATUSES] = { 0 };
+
+size_t
+thread_status_count(
+        thread_status_t status)
+{
+    size_t count;
+    DEBUG_ASSERT(status < NUM_THREAD_STATUSES);
+    thread_status_count_lock_acquire();
+    count = thread_status_counts[status];
+    thread_status_count_lock_release();
+    return count;
+}
+
 static inline void
 thread_set_status(struct thread_state *thread, thread_status_t status)
 {
+    if(status == THREAD_STATUS_PREPARING) {
+        // We should not previously have had a status
+        thread_status_count_lock_acquire();
+        thread->status = status;
+        thread_status_counts[thread->status]++;
+        thread_status_count_lock_release();
+        return;
+    }
+
     // We should have the lock held already...
     DEBUG_ASSERT(!(thread->flags & THREAD_FLAG_IDLE)
                  || (status == THREAD_STATUS_READY)
@@ -84,7 +110,13 @@ thread_set_status(struct thread_state *thread, thread_status_t status)
            thread_status_to_string(thread->status),
            thread_status_to_string(status));
 #endif
+
+    thread_status_count_lock_acquire();
+    DEBUG_ASSERT(thread_status_counts[thread->status] > 0);
+    thread_status_counts[thread->status]--;
     thread->status = status;
+    thread_status_counts[thread->status]++;
+    thread_status_count_lock_release();
 }
 
 __noreturn void
@@ -97,6 +129,14 @@ idle_loop(void)
         if(!irqs_enabled()) {
             panic("Running the idle thread with interrupts disabled!\n");
         }
+
+        size_t num_ready = thread_status_count(THREAD_STATUS_READY);
+        if(num_ready > total_num_cpus()) {
+            wprintk("Running idle thread when there are %lu threads ready!\n", num_ready);
+        }
+
+        arch_halt();
+
         // if(current_cpu_id() == 0 && clk_mono_valid()) {
         //     printk("clk_mono = 0x%lx\n",
         //             clk_mono_current());
@@ -211,6 +251,13 @@ idle_thread(void)
     return *ptr;
 }
 
+struct thread_state *
+cpu_idle_thread(cpu_id_t cpu)
+{
+    struct thread_state **ptr = percpu_ptr_specific(percpu_addr(__idle_thread), cpu);
+    return *ptr;
+}
+
 int
 thread_init(struct thread_state *state,
             thread_f *func,
@@ -226,17 +273,22 @@ thread_init(struct thread_state *state,
     state->func = func;
     state->in = in;
     state->flags = flags;
-    state->status = THREAD_STATUS_PREPARING;
     state->pinned_to = NULL_CPU_ID;
     state->pin_refs = 0;
     state->waitqueue = NULL;
     state->scheduled = NULL;
     state->irq_depth = 0;
+    thread_set_status(state, THREAD_STATUS_PREPARING);
 
     time_t now = current_timestamp();
     state->timing.creation_timestamp = now;
     state->timing.last_scheduled_timestamp = now;
     state->timing.last_unscheduled_timestamp = now;
+
+    state->timing.back_duration = 0;
+    state->timing.back_runtime = 0;
+    state->timing.front_start = now;
+    state->timing.front_runtime = 0;
 
     state->mem_map = vmem_map_create();
     if(state->mem_map == NULL)
@@ -395,9 +447,29 @@ thread_schedule(struct thread_state *state)
     thread_set_status(state, THREAD_STATUS_SCHEDULED);
     cur_thread->scheduled = state;
 
-    time_t timestamp = current_timestamp();
-    cur_thread->timing.last_unscheduled_timestamp = timestamp;
-    cur_thread->scheduled->timing.last_scheduled_timestamp = timestamp;
+    { // update timing info
+        time_t timestamp = current_timestamp();
+
+        duration_t runtime =
+            duration_between(
+                cur_thread->timing.last_scheduled_timestamp,
+                timestamp);
+        cur_thread->timing.front_runtime += runtime;
+
+        duration_t sample_len =
+            duration_between(
+                cur_thread->timing.front_start,
+                timestamp);
+        if(sample_len > msec_to_duration(THREAD_RUNTIME_MAX_SAMPLE_MSEC)) {
+            cur_thread->timing.back_duration = sample_len;
+            cur_thread->timing.back_runtime = runtime;
+            cur_thread->timing.front_start = timestamp;
+            cur_thread->timing.front_runtime = 0;
+        }
+
+        cur_thread->timing.last_unscheduled_timestamp = timestamp;
+        cur_thread->scheduled->timing.last_scheduled_timestamp = timestamp;
+    }
 
     // printk("Scheduling thread(%ld) to take over from thread(%ld)\n",
     //         (sl_t)state->id,
@@ -955,3 +1027,62 @@ thread_status_to_string(thread_status_t status)
            : status == THREAD_STATUS_ABANDONED ? "ABANDONED"
                                                : "ERROR-INVALID-STATUS";
 }
+
+int
+thread_get_runtime(
+        struct thread_state *thread,
+        duration_t *runtime_out,
+        duration_t *sample_length_out)
+{
+    // Use the back sample info
+    duration_t runtime = thread->timing.back_duration;
+    duration_t sample_length = thread->timing.back_duration;
+
+    // Add in the front sample info
+    runtime += thread->timing.front_runtime;
+    sample_length += duration_between(thread->timing.front_start,
+                                      current_timestamp());
+
+    // Check if the thread is currently running
+    if(times_are_sequential(
+                thread->timing.last_unscheduled_timestamp,
+                thread->timing.last_scheduled_timestamp))
+    {
+        // The thread has been scheduled more recently
+        // than it has been unscheduled, we will assume 
+        // it is currently running...
+        duration_t live_sample_len = duration_between(
+                thread->timing.last_scheduled_timestamp,
+                current_timestamp());
+        runtime += live_sample_len;
+        sample_length += live_sample_len;
+    }
+
+    *runtime_out = runtime;
+    *sample_length_out = sample_length;
+    return 0;
+}
+
+ssize_t
+thread_get_running_percentage(
+        struct thread_state *thread)
+{
+    int res;
+    duration_t runtime;
+    duration_t sample;
+    res = thread_get_runtime(
+            thread,
+            &runtime,
+            &sample);
+    if(res < 0) {
+        return res;
+    }
+    if(sample <= 0) {
+        return 0;
+    }
+    if(runtime > sample) {
+        runtime = sample;
+    }
+    return (100*runtime) / sample;
+}
+

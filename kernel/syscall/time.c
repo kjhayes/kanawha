@@ -11,14 +11,14 @@ syscall_time(unsigned long flags)
     unsigned long type = (flags >> 0) & 0b11;
     unsigned long unit = (flags >> 2) & 0b11;
 
-    time_t value;
+    duration_t value;
     switch(type)
     {
     case TIME_SYS:
-        value = current_timestamp();
+        value = time_to_duration(current_timestamp());
         break;
     case TIME_PROC:
-        value = current_timestamp() - process->thread.timing.creation_timestamp;
+        value = duration_between(process->thread.timing.creation_timestamp, current_timestamp());
         break;
     default:
         value = 0;

@@ -127,6 +127,9 @@ recurse:
     uncle = NULL;
     if(parent)
     {
+        if(parent->color != PTREE_COLOR_RED) {
+            return;
+        }
         uncle = parent->left == bottom ? parent->right : parent->left;
     }
     else
