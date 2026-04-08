@@ -210,7 +210,7 @@ cpu_update(struct metric *metric)
 static void
 init_cpu_metric(const char *name) {
     struct cpu_metric *cpu = malloc(sizeof(struct cpu_metric));
-    cpu->name = name;
+    cpu->name = strdup(name);
     cpu->metric = (struct metric){
         .min = 0,
         .max = 100,
@@ -246,14 +246,27 @@ int main(int argc, const char **argv)
 
     // Register all of our metrics
     init_mem_metric();
-    init_cpu_metric("apic0");
-    init_cpu_metric("apic1");
-    init_cpu_metric("apic2");
-    init_cpu_metric("apic3");
-    init_cpu_metric("apic4");
-    init_cpu_metric("apic5");
-    init_cpu_metric("apic6");
-    init_cpu_metric("apic7");
+
+    { // init all of our metrics
+        int dir;
+        res = kanawha_sys_open("/sys/cpu", FILE_PERM_READ, 0, &dir);
+        if(res) {
+            perror("failed to open \"/sys/cpu\"\n");
+            exit(EXIT_FAILURE);
+        }
+
+        res = kanawha_sys_dirbegin(dir);
+        while(res == 0) {
+            char cpu_name[128];
+            kanawha_sys_dirname(dir, cpu_name, 128);
+            cpu_name[127] = '\0';
+            printf("found cpu \"%s\"\n", cpu_name);
+            init_cpu_metric(cpu_name);
+            res = kanawha_sys_dirnext(dir);
+        }
+
+        kanawha_sys_close(dir);
+    }
 
     window_poll_main(window);
 
