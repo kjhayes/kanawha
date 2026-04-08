@@ -178,6 +178,16 @@ rr_sched_soft_resched(struct scheduler *sched)
 {
     int res;
     dprintk("rr_sched_soft_resched CPU (%ld)\n", (sl_t)current_cpu_id());
+
+    struct thread_state *cur = current_thread();
+    if(cur != NULL) {
+        duration_t runtime = duration_between(cur->timing.last_scheduled_timestamp, current_timestamp());
+        if(runtime < msec_to_duration(CONFIG_ROUND_ROBIN_SCHED_TIMESLICE_MS)) {
+            // Don't reschedule yet...
+            return 0;
+        }
+    }
+
     res = rr_sched_hard_resched(sched);
     if(res)
     {
