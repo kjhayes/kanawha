@@ -7,7 +7,7 @@
 #include <kanawha/stddef.h>
 #include <kanawha/string.h>
 #include <kanawha/timer.h>
-#include <kanawha/timer_dev.h>
+#include <kanawha/dev/timer.h>
 #include <kanawha/xcall.h>
 
 #include <arch/riscv64/cpu.h>

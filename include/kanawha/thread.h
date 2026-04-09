@@ -107,17 +107,10 @@ struct thread_state
     unsigned long flags;
     thread_status_t status;
 
-    struct {
-        time_t creation_timestamp;
-        time_t last_scheduled_timestamp;
-        time_t last_unscheduled_timestamp;
+    time_t creation_timestamp;
+    time_t last_scheduled_timestamp;
 
-        duration_t back_duration;
-        duration_t back_runtime;
-        time_t front_start;
-        duration_t front_runtime;
-
-    } timing;
+    unsigned long running_tracker;
 };
 
 int
@@ -203,6 +196,11 @@ thread_wake(struct thread_state *thread);
 // (returns negative errno if we fail to switch threads at all)
 int
 thread_switch(void);
+
+// Try and reschedule the current thread
+// (no promises...)
+int
+thread_yield(void);
 
 // Abandon the current thread and begin running
 // a thread which was previously scheduled via
@@ -318,5 +316,11 @@ size_t
 thread_status_count(
         thread_status_t status);
 
+ssize_t
+thread_running_percentage(
+        struct thread_state *thread);
+
+ssize_t
+all_threads_running_percentage(void);
 
 #endif

@@ -8,7 +8,6 @@
 #include <kanawha/stddef.h>
 #include <kanawha/string.h>
 #include <kanawha/time.h>
-#include <kanawha/timer.h>
 #include <kanawha/vmem.h>
 #include <kanawha/xcall.h>
 
@@ -181,7 +180,7 @@ rr_sched_soft_resched(struct scheduler *sched)
 
     struct thread_state *cur = current_thread();
     if(cur != NULL) {
-        duration_t runtime = duration_between(cur->timing.last_scheduled_timestamp, current_timestamp());
+        duration_t runtime = duration_between(cur->last_scheduled_timestamp, current_timestamp());
         if(runtime < msec_to_duration(CONFIG_ROUND_ROBIN_SCHED_TIMESLICE_MS)) {
             // Don't reschedule yet...
             return 0;

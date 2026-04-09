@@ -126,6 +126,6 @@ cpu_idle_percentage(
                 (sl_t)cpu);
         return -EINVAL;
     }
-    return thread_get_running_percentage(idle);
+    return thread_running_percentage(idle);
 }
 

@@ -344,7 +344,8 @@ total_cpu_percent_fs_file_read(struct file *file,
     {
         return 0;
     }
-    snprintk(buffer, amount, "%lu", (ul_t)threads_total_running_percentage());
+    int percent = all_threads_running_percentage();
+    snprintk(buffer, amount, "%lu", (ul_t)percent);
     ((char *)buffer)[amount - 1] = '\0';
     return strlen(buffer);
 }

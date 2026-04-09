@@ -33,7 +33,6 @@ obj-y += \
 	waitqueue.o \
 	socket.o \
 	xcall.o \
-	timer.o \
 	time.o \
 	event.o \
 	sleep.o \

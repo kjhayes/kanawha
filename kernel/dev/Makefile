@@ -9,4 +9,5 @@ obj-y += \
 	term/ \
 	input/ \
 	snd/ \
+	timer/ \
 

@@ -3,7 +3,6 @@
 #include <kanawha/event.h>
 #include <kanawha/mbarrier.h>
 #include <kanawha/sleep.h>
-#include <kanawha/timer.h>
 #include <kanawha/waitqueue.h>
 
 static void
@@ -33,12 +32,6 @@ thread_sleep(duration_t duration, unsigned long flags)
 {
     int res;
 
-    // Make our own waitqueue and wait on it until a timer
-    // wakes us up.
-
-    //    // Do it the dumb way
-    //    clk_delay(duration);
-
     struct waitqueue queue;
     res = waitqueue_init(&queue);
     if(res)
@@ -48,18 +41,8 @@ thread_sleep(duration_t duration, unsigned long flags)
 
     waitqueue_name(&queue, "sleep");
 
-    // printk("Setting Sleep One-Shot Timer\n");
-
     struct periodic_event *evt =
         create_periodic_event(duration, &queue, thread_sleep_callback);
-
-    // res = timer_set_oneshot(
-    //     duration,
-    //     thread_sleep_callback,
-    //     &queue);
-    // if(res) {
-    //     return res;
-    // }
 
     dprintk("thread_sleep: waiting on queue...\n");
     res = wait_on(&queue);

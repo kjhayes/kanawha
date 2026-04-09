@@ -78,7 +78,7 @@ static int
 __procfs_read_idle(unsigned long *out, void *state)
 {
     struct process *proc = state;
-    ssize_t percent = thread_get_running_percentage(&proc->thread);
+    ssize_t percent = thread_running_percentage(&proc->thread);
     if(percent < 0) {
         return percent;
     }

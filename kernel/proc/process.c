@@ -14,7 +14,6 @@
 #include <kanawha/string.h>
 #include <kanawha/sysfs/sysfs.h>
 #include <kanawha/thread.h>
-#include <kanawha/timer.h>
 #include <kanawha/types.h>
 #include <kanawha/uapi/spawn.h>
 #include <kanawha/usermode.h>

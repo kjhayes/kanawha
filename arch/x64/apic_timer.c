@@ -8,8 +8,7 @@
 #include <kanawha/irq_domain.h>
 #include <kanawha/printk.h>
 #include <kanawha/stddef.h>
-#include <kanawha/timer.h>
-#include <kanawha/timer_dev.h>
+#include <kanawha/dev/timer.h>
 #include <kanawha/types.h>
 #include <kanawha/xcall.h>
 
@@ -437,10 +436,10 @@ register_cpu_lapic_timer(struct x64_cpu *cpu)
     timer->alarm_func = NULL;
     timer->periodic = 0;
 
-    res = provide_timer(&timer->timer_dev, 0);
+    res = register_timer_dev(&timer->timer_dev, timer->name);
     if(res)
     {
-        eprintk("Failed to provide APIC Timer %ld as timer source! (err=%s)\n",
+        eprintk("Failed to register APIC Timer %ld as a timer device! (err=%s)\n",
                 (sl_t)cpu->apic.id,
                 errnostr(res));
     }

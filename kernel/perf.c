@@ -1,6 +1,5 @@
 
 #include <kanawha/perf.h>
-#include <kanawha/timer.h>
 
 static void
 perf_counter_display(
