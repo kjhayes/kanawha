@@ -15,6 +15,9 @@ static int
 vfprintf_state_flush(
         struct vfprintf_state *state)
 {
+    if(state->datalen == 0) {
+        return 0;
+    }
     ssize_t written = fwrite(state->buffer, state->datalen, 1, state->stream);
     if(written < 0) {
         return written;

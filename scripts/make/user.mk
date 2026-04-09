@@ -31,6 +31,7 @@ $(CUR_OUTPUT_DIR)/kanawha.api: $(KERNEL_AUTOCONF) $(INCLUDE_DIR)/kanawha/uapi/
 	$(Q)touch $@
 
 USER_COMMON_FLAGS += \
+	-ffreestanding \
 	-I$(USER_SYSROOT_INCLUDE_DIR) \
 
 USER_COMMON_FLAGS += -g

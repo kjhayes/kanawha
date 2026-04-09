@@ -15,6 +15,10 @@ fwrite_unlocked(const void *restrict ptr,
 {
     struct __sFILE *file = (struct __sFILE *)stream;
 
+    if(size == 0) {
+        return -EINVAL;
+    }
+
     size_t total_size = size * nmemb;
     ssize_t total_written = 0;
 
