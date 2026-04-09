@@ -146,7 +146,7 @@ duration_between(time_t before, time_t after)
 {
     if(before.tick == after.tick) {
         if(before.clk_mono > after.clk_mono) {
-            // TODO clk_mono overflowed...
+            // clk_mono overflowed, approximate.
             return 0;
         } else {
             return after.clk_mono - before.clk_mono;

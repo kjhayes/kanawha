@@ -45,4 +45,5 @@ bins += \
 	wintest \
 	badapple \
 	sysplot \
+	ps \
 

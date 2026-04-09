@@ -661,6 +661,7 @@ fs_file_deattached_poll(struct file *file,
     return -ENODEV;
 }
 
+
 static struct fs_node_ops fs_node_deattached_node_ops = {
     .read_page = fs_node_deattached_read_page,
     .write_page = fs_node_deattached_write_page,
@@ -678,6 +679,7 @@ static struct fs_node_ops fs_node_deattached_node_ops = {
     .symlink = fs_node_deattached_symlink,
     .unlink = fs_node_deattached_unlink,
 };
+FS_NODE_OPS_INIT_UNDEF(fs_node_deattached_node_ops);
 
 static struct fs_file_ops fs_node_deattached_file_ops = {
     .read = fs_file_deattached_read,
@@ -688,7 +690,10 @@ static struct fs_file_ops fs_node_deattached_file_ops = {
     .dir_next = fs_file_deattached_dir_next,
     .dir_readattr = fs_file_deattached_dir_readattr,
     .dir_readname = fs_file_deattached_dir_readname,
+    .on_open = fs_file_nop_on_open,
+    .on_close = fs_file_nop_on_close,
 };
+FS_FILE_OPS_INIT_UNDEF(fs_node_deattached_file_ops);
 
 int
 fs_node_deattach_backing(struct fs_node *node)

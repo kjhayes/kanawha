@@ -20,7 +20,7 @@
 #include <kanawha/vmem.h>
 #include <kanawha/perf.h>
 
-#define THREAD_RUNTIME_MAX_SAMPLE_MSEC (100)
+#define THREAD_RUNTIME_MAX_SAMPLE_MSEC (1000)
 
 static void set_current_thread(struct thread_state *state);
 
@@ -448,27 +448,42 @@ thread_schedule(struct thread_state *state)
     cur_thread->scheduled = state;
 
     { // update timing info
-        time_t timestamp = current_timestamp();
+        time_t now = current_timestamp();
+
+        printk("TID(%ld -> %ld) timing_update at: %lu\n", (long)cur_thread->id, (long)state->id, time_to_nsec(now));
 
         duration_t runtime =
             duration_between(
                 cur_thread->timing.last_scheduled_timestamp,
-                timestamp);
+                now);
         cur_thread->timing.front_runtime += runtime;
 
-        duration_t sample_len =
+        duration_t front_sample_len =
             duration_between(
                 cur_thread->timing.front_start,
-                timestamp);
-        if(sample_len > msec_to_duration(THREAD_RUNTIME_MAX_SAMPLE_MSEC)) {
-            cur_thread->timing.back_duration = sample_len;
-            cur_thread->timing.back_runtime = runtime;
-            cur_thread->timing.front_start = timestamp;
+                now);
+
+        if(times_are_sequential(
+                    cur_thread->timing.last_scheduled_timestamp,
+                    cur_thread->timing.front_start)) {
+            wprintk("last-sched(%lu) < front_start(%lu)\n",
+                    time_to_duration(cur_thread->timing.last_scheduled_timestamp),
+                    time_to_duration(cur_thread->timing.front_start)
+                   );
+        } else {
+            DEBUG_ASSERT(front_sample_len >= cur_thread->timing.front_runtime);
+        }
+
+
+        if(front_sample_len > msec_to_duration(THREAD_RUNTIME_MAX_SAMPLE_MSEC)) {
+            cur_thread->timing.back_duration = front_sample_len;
+            cur_thread->timing.back_runtime = cur_thread->timing.front_runtime;
+            cur_thread->timing.front_start = now;
             cur_thread->timing.front_runtime = 0;
         }
 
-        cur_thread->timing.last_unscheduled_timestamp = timestamp;
-        cur_thread->scheduled->timing.last_scheduled_timestamp = timestamp;
+        cur_thread->timing.last_unscheduled_timestamp = now;
+        state->timing.last_scheduled_timestamp = now;
     }
 
     // printk("Scheduling thread(%ld) to take over from thread(%ld)\n",
@@ -1048,6 +1063,10 @@ thread_get_runtime(
                 thread->timing.last_unscheduled_timestamp,
                 thread->timing.last_scheduled_timestamp))
     {
+        if(thread->running_on == NULL_CPU_ID) {
+            wprintk("thread_get_runtime: thread should be running yet has no CPU!\n");
+        }
+
         // The thread has been scheduled more recently
         // than it has been unscheduled, we will assume 
         // it is currently running...
@@ -1080,9 +1099,44 @@ thread_get_running_percentage(
     if(sample <= 0) {
         return 0;
     }
+
+    printk("thread_get_percentage: computing over runtime %lu and sample %lu\n",
+            runtime, sample);
+
     if(runtime > sample) {
         runtime = sample;
     }
     return (100*runtime) / sample;
+}
+
+ssize_t
+threads_total_running_percentage(void)
+{
+    ssize_t percent = 0;
+
+    thread_tree_lock_acquire();
+
+    struct ptree_node *pnode = ptree_get_first(&thread_tree);
+    while(pnode) {
+
+        struct thread_state *s = container_of(
+                pnode,
+                struct thread_state,
+                tree_node);
+
+        ssize_t cur = thread_get_running_percentage(s);
+        if(cur >= 0) {
+            percent += cur;
+        } else {
+            wprintk("failed to get thread running percentage for thread %ld\n",
+                    (sl_t)s->id);
+        }
+
+        pnode = ptree_get_next(pnode);
+    }
+
+    thread_tree_lock_release();
+
+    return percent;
 }
 

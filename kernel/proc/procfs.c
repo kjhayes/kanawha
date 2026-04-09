@@ -125,7 +125,7 @@ procfs_register_process(struct process *process)
     struct procfs_process_data *data = &process->procfs_data;
 
     char namebuf[64];
-    snprintk(namebuf, 64, "proc%ld", (sl_t)process->id);
+    snprintk(namebuf, 64, "%ld", (sl_t)process->id);
     namebuf[63] = '\0';
 
     data->vfs_struct_node = vfs_create_struct_node(procfs_mount, namebuf);

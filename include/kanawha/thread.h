@@ -312,8 +312,11 @@ ssize_t
 thread_get_running_percentage(
         struct thread_state *thread);
 
+ssize_t threads_total_running_percentage(void);
+
 size_t
 thread_status_count(
         thread_status_t status);
+
 
 #endif
