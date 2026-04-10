@@ -115,10 +115,25 @@ riscv64_dt_cpu_init(struct dt_driver *driver, struct dt_node *node)
     }
     memset(cpu, 0, sizeof(struct riscv64_cpu));
 
+    {
+        char namebuf[32];
+        snprintk(namebuf, 32, "hart%ld", current_hartid());
+        namebuf[32-1] = '\0';
+        cpu->name = kstrdup(namebuf);
+        if(cpu->name == NULL) {
+            cpu->name = "";
+        }
+    }
+
     int is_bsp = (hartid == current_hartid());
 
     dprintk("hartid=0x%lx, is_bsp = %d\n", (ul_t)hartid, is_bsp);
-    res = bsp_register_smp_cpu(&cpu->cpu, is_bsp);
+    if(is_bsp) {
+        cpu->cpu.flags |= CPU_FLAG_IS_BSP;
+    } else {
+        cpu->cpu.flags &= ~CPU_FLAG_IS_BSP;
+    }
+    res = register_cpu(&cpu->cpu, cpu->name);
     if(res)
     {
         eprintk("Failed to register CPU for HartID(%lu)\n", hartid);

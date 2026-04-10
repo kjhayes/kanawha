@@ -425,7 +425,10 @@ __mmap_locked_hint_offset(struct process *process,
         if((mmap_size - size) < cur_offset)
         {
             // Would run off the end of user memory
-            wprintk("Process MMAP ran out of virtual memory!\n");
+            wprintk("Process MMAP ran out of virtual memory! (mmap_size=0x%lx, size=0x%lx, cur_offset=0x%lx)\n",
+                    (ul_t)mmap_size,
+                    (ul_t)size,
+                    (ul_t)cur_offset);
             return -ENOMEM;
         }
 

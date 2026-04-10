@@ -215,10 +215,10 @@ riscv64_route_trap(struct riscv64_excp_state *state)
     }
 
 exit:
-    new_thread = query_resched();
-    if(new_thread != NULL)
+    soft_resched();
+    if(current_thread_is_rescheduled())
     {
-        thread_switch(new_thread);
+        thread_switch();
     }
     else
     {

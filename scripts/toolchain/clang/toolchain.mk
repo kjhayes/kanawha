@@ -2,10 +2,12 @@
 ifdef CONFIG_X64
 KERNEL_AFLAGS += -mllvm -asm-macro-max-nesting-depth=1024
 KERNEL_COMMON_FLAGS += -fno-omit-frame-pointer
+USER_CROSS_COMPILE_PREFIX := x86_64-kanawha-
 endif
 ifdef CONFIG_RISCV64
 KERNEL_AFLAGS += -mllvm -asm-macro-max-nesting-depth=1024
 LLVM_FLAGS += -target riscv64
+USER_CROSS_COMPILE_PREFIX := riscv64-unknown-elf-
 endif
 
 # Clang-18 doesn't respect -mcmodel=large for assembly files
@@ -26,7 +28,6 @@ KERNEL_OBJDUMP := $(OBJDUMP)
 
 # We do not have a version of clang building
 # for kanawha, so we still use GCC for userspace
-USER_CROSS_COMPILE_PREFIX := x86_64-kanawha-
 USER_CC      := $(USER_CROSS_COMPILE_PREFIX)gcc
 USER_CPP     := $(USER_CROSS_COMPILE_PREFIX)gcc -E
 USER_LD      := $(USER_CROSS_COMPILE_PREFIX)ld

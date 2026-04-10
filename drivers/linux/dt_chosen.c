@@ -124,7 +124,7 @@ linux_chosen_dt_probe_initrd(struct dt_node *node)
         return;
     }
 
-    const char *ramfile_name = "dt-initrd";
+    const char *ramfile_name = "initrd";
     printk("Creating ramfile \"%s\" from Device Tree initrd...\n",
            ramfile_name);
     res = create_ramfile(ramfile_name, (void __phys *)(uintptr_t)start, size);

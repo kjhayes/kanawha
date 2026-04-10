@@ -10,6 +10,7 @@ typedef uint64_t hartid_t;
 struct riscv64_cpu
 {
     struct cpu cpu;
+    char *name;
 };
 
 DECLARE_EXTERN_PERCPU_VAR(hartid_t, riscv64_hartid);

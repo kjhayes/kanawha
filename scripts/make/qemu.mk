@@ -49,6 +49,8 @@ QEMU_FLAGS += \
 		-drive file=nvme.img,if=none,id=nvm,format=raw \
  		-device nvme,serial=deadbeef,drive=nvm
 
+QEMU_FLAGS += -device virtio-gpu-pci
+
 #QEMU_FLAGS += -device e1000e
 
 ifdef CONFIG_X64
@@ -60,25 +62,25 @@ QEMU_FLAGS += -cdrom $(ISO)
 QEMU_FLAGS += -serial stdio
 QEMU_FLAGS += -smp 8
 QEMU_FLAGS += -vga none 
-QEMU_FLAGS += -device virtio-gpu-pci
 QEMU_FLAGS += -accel kvm 
 QEMU_FLAGS += -machine q35
 QEMU_FLAGS += -m 1G
 endif
 
-# ifdef CONFIG_RISCV64
-# QEMU := $(QEMU_PREFIX)qemu-system-riscv64
-# QEMU_FLAGS += -kernel $(KANAWHA_OUTPUT_DIR)/kanawha.bin
-# QEMU_FLAGS += -bios default
-# QEMU_FLAGS += -serial stdio
-# QEMU_FLAGS += -M virt
-# QEMU_FLAGS += -m 2G
-# 
-# QEMU_DEPS += $(OUTPUT_DIR)/initrd
-# QEMU_FLAGS += -initrd $(OUTPUT_DIR)/initrd
-# 
-# #QEMU_FLAGS += -machine dumpdtb=virt.dtb
-# endif
+ifdef CONFIG_RISCV64
+QEMU := $(QEMU_PREFIX)qemu-system-riscv64
+QEMU_FLAGS += -kernel $(OUTPUT_DIR)/kanawha.bin
+QEMU_FLAGS += -bios default
+QEMU_FLAGS += -serial stdio
+QEMU_FLAGS += -M virt
+QEMU_FLAGS += -m 2G
+
+QEMU_DEPS += $(OUTPUT_DIR)/initrd
+QEMU_DEPS += $(OUTPUT_DIR)/kanawha.bin
+QEMU_FLAGS += -initrd $(OUTPUT_DIR)/initrd
+
+#QEMU_FLAGS += -machine dumpdtb=virt.dtb
+endif
 
 ifdef QEMU
 qemu: $(QEMU_DEPS)

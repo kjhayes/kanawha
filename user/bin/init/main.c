@@ -15,6 +15,8 @@
 #include "log.h"
 #include "root.h"
 
+#define TERM_PATH "/dev/term/serial"
+
 #define WINDD_FB_PATH_STR "/dev/fb/virtio-gpu-0"
 #define WINDD_FB_MODE_STR "0"
 
@@ -103,9 +105,9 @@ main(int argc, const char **argv)
         return res;
     }
 
-    setstdin("/dev/term/COM1");
-    setstdout("/dev/term/COM1");
-    setstderr("/dev/term/COM1");
+    setstdin(TERM_PATH);
+    setstdout(TERM_PATH);
+    setstderr(TERM_PATH);
 
     printf_enabled = 1;
 

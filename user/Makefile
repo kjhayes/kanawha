@@ -43,7 +43,6 @@ bins += \
     udrv_rand \
     write \
 	wintest \
-	badapple \
 	sysplot \
 	ps \
 

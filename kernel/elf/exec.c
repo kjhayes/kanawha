@@ -322,9 +322,10 @@ exec_elf64_handle_segment(struct process *process, fd_t file, Elf64_Phdr *phdr)
         // so we can ignore it.
         return 0;
     default:
-        printk("Ignoring Unsupported ELF Segment \"%s\" offset=%p, "
+        printk("Ignoring Unsupported ELF Segment \"%s\" (0x%lx) offset=%p, "
                "memsz=%p\n",
                elf_get_phdr_type_string(phdr->p_type),
+               (ul_t)phdr->p_type,
                phdr->p_offset,
                phdr->p_memsz);
         break;

@@ -1,5 +1,6 @@
 
 #include <kanawha/sleep.h>
+#include <sys/types.h>
 #include <kanawha/sys-wrappers.h>
 
 int

@@ -1,7 +1,11 @@
 #ifndef __KANAWHA__UAPI_FB_H__
 #define __KANAWHA__UAPI_FB_H__
 
+#ifdef KANAWHA_BUILDING_KERNEL
 #include <kanawha/uapi/gfx.h>
+#else
+#include <kanawha/gfx.h>
+#endif
 
 // Layer Info
 struct fb_layer_info

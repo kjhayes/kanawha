@@ -6,7 +6,6 @@
 #include <kanawha/kmalloc.h>
 #include <kanawha/stddef.h>
 #include <kanawha/string.h>
-#include <kanawha/timer.h>
 #include <kanawha/dev/timer.h>
 #include <kanawha/xcall.h>
 
@@ -17,6 +16,8 @@
 
 #define SBI_TIMER_EXTID 0x54494D45
 #define HLIC_TIMER_HWIRQ 5
+
+#define NAMEBUFLEN (32)
 
 struct sbi_timer
 {
@@ -31,6 +32,8 @@ struct sbi_timer
     duration_t period;
 
     alarm_f *func;
+
+    char name[NAMEBUFLEN];
 };
 
 static int
@@ -276,6 +279,9 @@ sbi_timer_setup_cpu(cpu_id_t id)
     timer->timer_dev.driver = &sbi_timer_driver;
     timer->timer_dev.alarm_count = 1;
 
+    snprintk(timer->name, NAMEBUFLEN, "sbi-timer-%ld", (sl_t)id);
+    timer->name[NAMEBUFLEN-1] = '\0';
+
     struct irq_desc *desc = riscv64_hlic_irq_desc(HLIC_TIMER_HWIRQ, id);
     if(desc == NULL)
     {
@@ -291,7 +297,7 @@ sbi_timer_setup_cpu(cpu_id_t id)
         return -EINVAL;
     }
 
-    res = provide_timer(&timer->timer_dev, 0);
+    res = register_timer_dev(&timer->timer_dev, timer->name);
     if(res)
     {
         wprintk("Failed to provide timer from SBI timer! (err=%s)\n",

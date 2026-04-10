@@ -1213,7 +1213,7 @@ process_terminate(int exitcode)
     // if we are preempted, then we will never be scheduled again to return.
     irq_lock_release_no_enable_irqs(&process->status_lock);
 
-    dprintk("PID(%ld) finished process terminate!\n", process->id);
+    LOG("PID(%ld) finished process terminate!\n", process->id);
     return 0;
 
 #undef LOG

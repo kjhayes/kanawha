@@ -1,7 +1,11 @@
 #ifndef __KANAWHA__UAPI_UDRV_FB_H__
 #define __KANAWHA__UAPI_UDRV_FB_H__
 
+#ifdef KANAWHA_BUILDING_KERNEL
 #include <kanawha/uapi/fb.h>
+#else
+#include <kanawha/fb.h>
+#endif 
 
 #define UDRV_FB_PKT_PROVIDE_MODE_INFO (1) // User -> Kernel
 struct udrv_fb_pkt_provide_mode_info
