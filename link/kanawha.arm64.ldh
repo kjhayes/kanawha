@@ -11,11 +11,11 @@ ENTRY( arm64_kernel_entry )
 
 PHDRS
 {
-  hdrs PT_LOAD PHDRS FLAGS(0);
   text PT_LOAD FLAGS(5);
   data PT_LOAD FLAGS(6);
   rodata PT_LOAD FLAGS(4);
-  boot PT_LOAD FLAGS(7);
+  boottext PT_LOAD FLAGS(5);
+  bootdata PT_LOAD FLAGS(6);
   note PT_NULL FLAGS(0);
 }
 
@@ -30,18 +30,14 @@ SECTIONS
   __kernel_boot_start = .;
   __kernel_phys_start = .;
 
-  .hdrs : AT(ADDR(.hdrs)) {
-      *(.hdrs*) *(.hdrs.*)
-  } :hdrs
-
   .boot.text ALIGN(16) : AT(ADDR(.boot.text)) {
       KEEP(*(.boot.text*))
       KEEP(*(.boot.text.*))
-  } :boot = 0xcccccccc
+  } :boottext = 0xcccccccc
   .boot.data ALIGN(0x1000) : AT(ADDR(.boot.data)) {
       KEEP(*(.boot.data*))
       KEEP(*(.boot.data.*))
-  } :boot = 0
+  } :bootdata = 0
 
   __kernel_boot_end = .;
 

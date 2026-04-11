@@ -15,4 +15,11 @@ config ARM64_KERNEL_VIRTUAL_BASE
   help
     What virtual address to link the kernel at
 
+config ARM64_BOOT_STACK_SIZE
+  hex "Boot Stack Size"
+  default 0x1000
+  help
+    How big should the statically allocated
+    kernel boot stack be?
+
 endmenu
