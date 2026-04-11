@@ -76,17 +76,27 @@ QEMU_FLAGS += -M virt
 QEMU_FLAGS += -m 2G
 
 QEMU_DEPS += $(OUTPUT_DIR)/initrd
-QEMU_DEPS += $(OUTPUT_DIR)/kanawha.bin
+QEMU_DEPS += $(OUTPUT_DIR)/kanawha.o
 QEMU_FLAGS += -initrd $(OUTPUT_DIR)/initrd
 
 #QEMU_FLAGS += -machine dumpdtb=virt.dtb
+endif
+
+ifdef CONFIG_ARM64
+QEMU := $(QEMU_PREFIX)qemu-system-aarch64
+QEMU_FLAGS += -kernel $(OUTPUT_DIR)/kanawha.o
+QEMU_FLAGS += -machine virt
+QEMU_FLAGS += -cpu cortex-a57 
 endif
 
 ifdef QEMU
 qemu: $(QEMU_DEPS)
 	$(QEMU) $(QEMU_FLAGS)
 qemu-gdb: $(QEMU_DEPS)
-	$(QEMU) $(QEMU_FLAGS) -gdb tcp::1234 -no-reboot -no-shutdown
+	$(QEMU) $(QEMU_FLAGS) -gdb tcp::1234 \
+		-S \
+		# -no-reboot \
+		# -no-shutdown \
 
 endif
 

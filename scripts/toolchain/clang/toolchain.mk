@@ -9,6 +9,12 @@ KERNEL_AFLAGS += -mllvm -asm-macro-max-nesting-depth=1024
 LLVM_FLAGS += -target riscv64
 USER_CROSS_COMPILE_PREFIX := riscv64-unknown-elf-
 endif
+ifdef CONFIG_RISCV64
+KERNEL_AFLAGS += -mllvm -asm-macro-max-nesting-depth=1024
+LLVM_FLAGS += -target aarch64
+USER_CROSS_COMPILE_PREFIX := aarch64-linux-gnu-
+endif
+
 
 # Clang-18 doesn't respect -mcmodel=large for assembly files
 CC  := clang-17 $(LLVM_FLAGS)

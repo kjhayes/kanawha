@@ -1,0 +1,18 @@
+menu "ARM64 Options"
+    depends on ARM64
+
+config ARM64_LINKED_PHYS_BASE
+  hex "Physical Base to Use When Linking"
+  default 0x10000
+  help
+    What physical base we should link the kernel to assume.
+    This value should also be greater than 0x0 to provide
+    space for the ELF program headers section
+
+config ARM64_KERNEL_VIRTUAL_BASE
+  hex "Virtual Address of the Kernel"
+  default 0xFFFFFFC000000000
+  help
+    What virtual address to link the kernel at
+
+endmenu

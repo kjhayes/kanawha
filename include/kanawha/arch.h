@@ -15,6 +15,7 @@ typedef enum arch
     ARCH_X86,     // 32-bit
     ARCH_X64,     // 64-bit
     ARCH_RISCV64, // 64-bit
+    ARCH_ARM64,   // 64-bit
 } arch_t;
 
 typedef enum endian
@@ -30,6 +31,9 @@ typedef enum endian
 #endif
 #ifdef CONFIG_RISCV64
 #include <arch/riscv64/arch.h>
+#endif
+#ifdef CONFIG_ARM64
+#include <arch/arm64/arch.h>
 #endif
 
 #ifndef KERNEL_ARCH

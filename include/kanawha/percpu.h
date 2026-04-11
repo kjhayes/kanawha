@@ -21,6 +21,8 @@
 #include <arch/x64/percpu.h>
 #elif defined(CONFIG_RISCV64)
 #include <arch/riscv64/percpu.h>
+#elif defined(CONFIG_ARM64)
+#include <arch/arm64/percpu.h>
 #else
 #error "Architecture did not define percpu.h!"
 #endif

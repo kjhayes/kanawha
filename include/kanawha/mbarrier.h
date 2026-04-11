@@ -5,6 +5,8 @@
 #include <arch/x64/mbarrier.h>
 #elif defined(CONFIG_RISCV64)
 #include <arch/riscv64/mbarrier.h>
+#elif defined(CONFIG_ARM64)
+#include <arch/arm64/mbarrier.h>
 #else
 #error "Architecture did not define mbarrier.h"
 #endif

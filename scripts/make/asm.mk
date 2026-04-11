@@ -4,7 +4,7 @@ endef
 
 -include $(MK_SCRIPTS_DIR)/include.mk
 
-KERNEL_OBJDUMPFLAGS += -S
+KERNEL_OBJDUMPFLAGS += -Sd
 
 ifdef KERNEL_OBJDUMP
 

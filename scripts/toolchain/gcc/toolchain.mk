@@ -7,6 +7,11 @@ ifdef CONFIG_RISCV64
 KERNEL_CROSS_COMPILE_PREFIX ?= riscv64-unknown-elf-
 USER_CROSS_COMPILE_PREFIX ?= riscv64-unknown-elf-
 endif
+ifdef CONFIG_ARM64
+KERNEL_CROSS_COMPILE_PREFIX ?= aarch64-linux-gnu-
+USER_CROSS_COMPILE_PREFIX ?= aarch64-linux-gnu-
+endif
+
 
 CC  := gcc
 CPP := cpp
@@ -30,3 +35,9 @@ USER_AS      := $(USER_CROSS_COMPILE_PREFIX)$(AS)
 USER_OBJCOPY := $(USER_CROSS_COMPILE_PREFIX)$(OBJCOPY)
 USER_OBJDUMP := $(USER_CROSS_COMPILE_PREFIX)$(OBJDUMP)
 
+# For some reason ARM64 is having trouble finding libgcc
+# on my current system (IDK why) -KJH
+ifdef CONFIG_ARM64
+ARM64_LIBGCC_PATH = $(shell $(KERNEL_CC) -print-libgcc-file-name)
+KERNEL_LDFLAGS += -L$(dir $(ARM64_LIBGCC_PATH)) -lgcc
+endif

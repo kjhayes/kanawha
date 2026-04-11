@@ -46,6 +46,9 @@ endif
 ifdef CONFIG_RISCV64
 	ARCH := riscv64
 endif
+ifdef CONFIG_ARM64
+	ARCH := arm64
+endif
 
 ifdef ARCH
 -include $(SCRIPTS_DIR)/arch/$(ARCH)/arch.mk

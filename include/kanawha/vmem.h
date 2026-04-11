@@ -7,6 +7,8 @@
 #include <arch/x64/vmem.h>
 #elif defined(CONFIG_RISCV64)
 #include <arch/riscv64/vmem.h>
+#elif defined(CONFIG_ARM64)
+#include <arch/arm64/vmem.h>
 #else
 #error "Architecture did not provide vmem.h!"
 #endif

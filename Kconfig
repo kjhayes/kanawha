@@ -12,6 +12,10 @@ choice
     bool "RISCV64"
     select DEVICETREE
     select DEVICETREE_REQUIRED
+  config ARM64
+    bool "ARM64"
+    select DEVICETREE
+    select DEVICETREE_REQUIRED
 endchoice
 
 choice

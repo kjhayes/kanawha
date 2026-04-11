@@ -5,6 +5,9 @@
 #ifdef CONFIG_X64
 #include <arch/x64/atomic.h>
 #endif
+#ifdef CONFIG_ARM64
+#include <arch/arm64/atomic.h>
+#endif
 
 // Default type implementations
 #ifndef ATOMIC_BOOL_TYPE
@@ -28,6 +31,42 @@ typedef ATOMIC_UCOUNTER_TYPE uatomic_val_t;
 /*
  * atomic_t
  */
+
+#ifdef USE_SYNC_BUILTINS
+
+#ifndef arch_atomic_fetch_inc
+#define arch_atomic_fetch_inc(__v) __sync_fetch_and_add((__v), 1)
+#endif
+
+#ifndef arch_atomic_fetch_dec
+#define arch_atomic_fetch_dec(__v) __sync_fetch_and_add((__v), -1)
+#endif
+
+#ifndef arch_atomic_fetch_or
+#define arch_atomic_fetch_or(__v, __x) __sync_fetch_and_or((__v), (__x))
+#endif
+
+#ifndef arch_atomic_fetch_and
+#define arch_atomic_fetch_and(__v, __x) __sync_fetch_and_and((__v), (__x))
+#endif
+
+#ifndef arch_atomic_set
+#define arch_atomic_set(__v, __x) __sync_lock_test_and_set((__v), (__x))
+#endif
+
+#ifndef arch_atomic_bool_test_and_set
+#define arch_atomic_bool_test_and_set(__b) __sync_lock_test_and_set((__b), 1)
+#endif
+
+#ifndef arch_atomic_bool_clear
+#define arch_atomic_bool_clear(__b) __sync_lock_release((__b), 1)
+#endif
+
+#ifndef arch_atomic_bool_check
+#define arch_atomic_bool_check(__b) (__sync_synchronize(), *(__b))
+#endif
+
+#endif
 
 static inline atomic_t
 atomic_fetch_inc(atomic_t *);
