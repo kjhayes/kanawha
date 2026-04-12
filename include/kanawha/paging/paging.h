@@ -135,7 +135,8 @@ arch_get_vmem_region_paging_state(
 
 extern int
 arch_paging_set_pt_root(
-        void __phys *pt_root);
+        void __phys *pt_root,
+        int root_level);
 
 extern int
 arch_paging_flush_tlb(

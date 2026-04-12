@@ -5,28 +5,30 @@
 #include <arch/x64/sysreg.h>
 #include <arch/x64/mmu.h>
 
+// We only use up to PML4
 #define NUM_LEVELS 4
 
 const static order_t
-x64_level_num_entries_order[NUM_LEVELS] = {
-    9, 9, 9, 9,
+x64_level_num_entries_order[] = {
+    9, 9, 9, 9, 9,
 };
 
 const static order_t
-x64_level_entry_order[NUM_LEVELS] = {
-    3, 3, 3, 3,
+x64_level_entry_order[] = {
+    3, 3, 3, 3,, 3
 };
 
 const static order_t
-x64_level_entry_region_order[NUM_LEVELS] = {
+x64_level_entry_region_order[] = {
     12,
     21,
     30,
     39,
+    48,
 };
 
 const static unsigned long
-x64_level_flags[NUM_LEVELS] = {
+x64_level_flags[] = {
     // PT
     0
     |PAGING_LEVEL_FLAG_CAN_BE_LEAF
@@ -44,6 +46,9 @@ x64_level_flags[NUM_LEVELS] = {
 #endif
     ,
     // PML4
+    0
+    ,
+    // PML5
     0
     ,
 };
@@ -408,10 +413,8 @@ arch_get_vmem_region_paging_state(
 
 int
 arch_paging_set_pt_root(
-        void __phys *pt_root,
-        int root_level)
+        void __phys *pt_root)
 {
-    DEBUG_ASSERT(root_level == 3);
     uint64_t cr3 = (uint64_t)pt_root;
     write_cr3(cr3);
     return 0;

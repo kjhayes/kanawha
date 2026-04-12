@@ -1882,7 +1882,7 @@ arch_vmem_map_activate(struct vmem_map *map)
     struct vmem_map_paging_state *state =
         vmem_map_get_paging_state(map);
 
-    return arch_paging_set_pt_root(state->pt_root);
+    return arch_paging_set_pt_root(state->pt_root, state->pt_level);
 }
 
 static void
