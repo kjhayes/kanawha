@@ -242,7 +242,6 @@ current_process(void)
     if(thread == NULL)
     {
         // We haven't even started threading yet
-        panic("current_process() called without a current_thread()!\n");
         return NULL;
     }
 

@@ -40,6 +40,7 @@ mmio_create_mmio_map(void)
                                  NULL);
     if(__mmio_vmem_region == NULL)
     {
+        eprintk("mmio_create_mmio_map: failed to create paged vmem region!\n");
         return -ENOMEM;
     }
 
@@ -56,6 +57,8 @@ mmio_create_mmio_map(void)
 
     if(res)
     {
+        eprintk("mmio_create_mmio_map: failed find and reserve virtual memory range!\n");
+        virt_mem_flags_dump();
         vmem_region_destroy(__mmio_vmem_region);
         return res;
     }
@@ -67,6 +70,7 @@ mmio_create_mmio_map(void)
     res = vmem_force_mapping(__mmio_vmem_region, mmio_region_base);
     if(res)
     {
+        eprintk("mmio_create_mmio_map: failed to force mapping!\n");
         vmem_region_destroy(__mmio_vmem_region);
         return res;
     }

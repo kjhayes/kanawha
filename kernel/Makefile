@@ -58,6 +58,7 @@ obj-y += net/
 obj-y += sysfs/
 obj-y += gfx/
 obj-y += panic/
+obj-y += paging/
 
 obj-y += memdump.o
 

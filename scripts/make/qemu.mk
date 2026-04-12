@@ -91,12 +91,14 @@ endif
 
 ifdef QEMU
 qemu: $(QEMU_DEPS)
-	$(QEMU) $(QEMU_FLAGS)
+	$(QEMU) $(QEMU_FLAGS) \
+		-no-reboot \
+		-no-shutdown
 qemu-gdb: $(QEMU_DEPS)
 	$(QEMU) $(QEMU_FLAGS) -gdb tcp::1234 \
 		-S \
-		# -no-reboot \
-		# -no-shutdown \
+		-no-reboot \
+		-no-shutdown
 
 endif
 

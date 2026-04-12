@@ -13,7 +13,6 @@ obj-y += \
 	apic_timer.o \
 	ioapic.o \
 	pit/ \
-	vmem.o \
 	thread.o \
 	usermode.o \
 	syscall.o \
@@ -23,11 +22,13 @@ obj-y += \
 	xcall.o \
 	vendor.o \
 	fault.o \
+	page_fault.o \
 	mem_flags.o \
 	lapic/ \
 	cpuid.o \
 	process.o \
 	prinfo.o \
+	idmap.o
 
 obj-$(CONFIG_X64_MULTIBOOT2_BOOT) += mb2_boot.o
 
@@ -36,3 +37,5 @@ obj-$(CONFIG_X64_BOOT_SERIAL) += boot_serial.o
 
 obj-$(CONFIG_X64_TEST_VOLATILITY_THREAD) += volatile_thread.o
 
+obj-$(CONFIG_X64_IMPLEMENT_VMEM_DIRECTLY) += vmem.o
+obj-$(CONFIG_PAGING) += paging.o

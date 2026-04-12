@@ -6,6 +6,7 @@ choice
     bool "x86_64"
     select PORT_IO
     select ACPI
+    select PAGING
     select ACPI_REQUIRED
     select BUILD_GRUB_ISOIMAGE
   config RISCV64
@@ -160,6 +161,13 @@ config MODULES
     def_bool y
 config PORT_IO
     def_bool n
+config PAGING
+    def_bool n
+config IMPLEMENT_VMEM_DIRECTLY
+    def_bool n
+config VMEM_VIA_PAGING
+    def_bool y
+    depends on !IMPLEMENT_VMEM_DIRECTLY
 config SMP
     def_bool y
     depends on MAX_CPUS > 1

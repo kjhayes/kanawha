@@ -24,121 +24,6 @@ dump_page_table(printk_f *printer,
                 void *virt_base,
                 int is_root);
 
-static struct irq_action *x64_pf_action = NULL;
-
-static int
-x64_vmem_page_fault_handler(struct excp_state *gen_excp_state,
-                            struct irq_action *action)
-{
-    int res;
-
-    uintptr_t faulting_address = (uintptr_t)read_cr2();
-    struct vmem_map *current = vmem_map_get_current();
-
-    struct x64_excp_state *excp_state = (struct x64_excp_state *)gen_excp_state;
-
-    unsigned long pf_flags = 0;
-
-    pf_flags |=
-        (excp_state->error_code & (1ULL << 0)) == 0 ? PF_FLAG_NOT_PRESENT : 0;
-    pf_flags |= (excp_state->error_code & (1ULL << 1)) == 0 ? PF_FLAG_READ : 0;
-    pf_flags |= excp_state->error_code & (1ULL << 1) ? PF_FLAG_WRITE : 0;
-    pf_flags |= excp_state->error_code & (1ULL << 2) ? PF_FLAG_USERMODE : 0;
-    pf_flags |= excp_state->error_code & (1ULL << 4) ? PF_FLAG_EXEC : 0;
-
-    res = vmem_map_handle_page_fault(gen_excp_state,
-                                     (void *)faulting_address,
-                                     pf_flags,
-                                     current);
-
-    if(res)
-    {
-
-        // Kernel Fault ((noreturn))
-        eprintk("x64_vmem_page_fault_handler: Failed to handle page fault "
-                "(err=%s)\n",
-                errnostr(res));
-
-        x64_unhandled_exception((struct x64_excp_state *)excp_state);
-
-        // This should never happen but let's be safe
-        return -EINVAL;
-    }
-
-    dprintk("Page Fault Handled!\n");
-    return IRQ_HANDLED;
-}
-
-static int
-x64_install_page_fault_handler(void)
-{
-    // Defer as long as the vector domain is still NULL
-    if(x64_vector_irq_domain == NULL)
-    {
-        return -EDEFER;
-    }
-
-    x64_pf_action = irq_install_handler(x64_vector_irq_desc(14),
-                                        NULL, // priv_state
-                                        x64_vmem_page_fault_handler);
-
-    if(x64_pf_action == NULL)
-    {
-        return -EINVAL;
-    }
-    return 0;
-}
-declare_init_desc(dynamic,
-                  x64_install_page_fault_handler,
-                  "Installing x64 Page Fault Handler");
-
-static int
-x64_virt_flags_static_init(void)
-{
-    int res;
-
-    struct mem_flags *vflags = get_virt_mem_flags();
-    printk("Setting Region [%p - %p) as Canonical Low Memory\n",
-           0x0,
-           X64_PML4_LOWMEM_SIZE);
-
-    res = mem_flags_clear_flags(vflags,
-                                0x0,
-                                X64_PML4_LOWMEM_SIZE,
-                                VIRT_MEM_FLAGS_NONCANON);
-    if(res)
-    {
-        return res;
-    }
-
-    printk("Setting Region [%p - %p) as Canonical High Memory\n",
-           X64_PML4_HIGHMEM_BASE,
-           X64_PML4_HIGHMEM_BASE + (X64_PML4_HIGHMEM_SIZE - 1));
-
-    res = mem_flags_clear_flags(vflags,
-                                X64_PML4_HIGHMEM_BASE,
-                                X64_PML4_HIGHMEM_SIZE - 1,
-                                VIRT_MEM_FLAGS_NONCANON);
-    if(res)
-    {
-        return res;
-    }
-
-    res = mem_flags_set_flags(vflags,
-                              X64_PML4_HIGHMEM_BASE,
-                              X64_PML4_HIGHMEM_SIZE - 1,
-                              VIRT_MEM_FLAGS_HIGHMEM);
-    if(res)
-    {
-        return res;
-    }
-
-    return 0;
-}
-declare_init_desc(mem_flags,
-                  x64_virt_flags_static_init,
-                  "Setting x64 Virtual Memory Types");
-
 static inline size_t
 pt_level_table_index(int level, void *addr)
 {
@@ -148,7 +33,6 @@ pt_level_table_index(int level, void *addr)
         return X64_PT_INDEX_OF_ADDR((uintptr_t)addr);
     case 2:
         return X64_PD_INDEX_OF_ADDR((uintptr_t)addr);
-        ;
     case 3:
         return X64_PDPT_INDEX_OF_ADDR((uintptr_t)addr);
     case 4:
@@ -2147,43 +2031,6 @@ arch_vmem_map_flush(struct vmem_map *map)
 
     return 0;
 }
-
-static struct vmem_region *identity_map_region = NULL;
-
-static int
-x64_map_identity_map_region(void)
-{
-    int res;
-
-    size_t phys_mem_mapping_size = (1ULL << CONFIG_X64_IDENTITY_MAP_ORDER);
-    identity_map_region = vmem_region_create_direct(
-        0x0,
-        phys_mem_mapping_size,
-        VMEM_REGION_EXEC | VMEM_REGION_WRITE | VMEM_REGION_READ);
-
-    if(identity_map_region == NULL)
-    {
-        eprintk("OOM Error when initializing default kernel vmem_region!\n");
-        return -ENOMEM;
-    }
-
-    res = vmem_force_mapping(identity_map_region,
-                             (void *)CONFIG_X64_VIRTUAL_BASE);
-    if(res)
-    {
-        eprintk("Failed to map identity map vmem_region into default "
-                "vmem_map! "
-                "(err=%s)\n",
-                errnostr(res));
-        return res;
-    }
-
-    return 0;
-}
-
-declare_init_desc(vmem,
-                  x64_map_identity_map_region,
-                  "Creating Identity Map Virtual Memory Region");
 
 void
 arch_dump_vmem_map(printk_f *printer, struct vmem_map *map)

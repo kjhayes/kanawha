@@ -41,6 +41,14 @@ choice
     bool "Multiboot2"
 endchoice
 
+config X64_IMPLEMENT_VMEM_DIRECTLY
+  bool "Implement vmem Directly"
+  default y
+  select IMPLEMENT_VMEM_DIRECTLY
+  help
+    Provide implementation of vmem subsystem directly
+    instead of using the paging subsystem.
+
 config X64_ASSUME_2MB_PAGES
   bool "Assume Support for 2MB Pages"
   default n
