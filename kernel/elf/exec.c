@@ -321,6 +321,9 @@ exec_elf64_handle_segment(struct process *process, fd_t file, Elf64_Phdr *phdr)
         // we don't map a stack for userspace
         // so we can ignore it.
         return 0;
+    case PT_RISCV_ATTRIBUTES:
+        // Don't do anything with this information yet
+        return 0;
     default:
         printk("Ignoring Unsupported ELF Segment \"%s\" (0x%lx) offset=%p, "
                "memsz=%p\n",
