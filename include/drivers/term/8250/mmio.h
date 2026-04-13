@@ -18,6 +18,7 @@ register_mmio_uart_8250(const char *name,
                         struct mmio_uart_8250 *uart,
                         void __mmio *mmio_base,
                         size_t mmio_size,
-                        int reg_shift);
+                        int reg_shift,
+                        irq_t irq);
 
 #endif

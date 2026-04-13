@@ -70,12 +70,38 @@ dt_8250_init_node(struct dt_driver *driver, struct dt_node *node)
 
     const char *name = dt_node_get_name(node);
 
+    size_t num_irqs;
+    res = dt_node_irq_count(node, &num_irqs);
+    if(res) {
+        wprintk("Device Tree 8250 Driver Failed to get number of IRQ's (err=%s)!\n",
+                errnostr(res));
+        kfree(uart);
+        return res;
+    }
+
+    if(num_irqs != 1) {
+        wprintk("Device Tree 8250 Driver Unexpected Number of IRQ's (num=%ld)!\n",
+                (sl_t)num_irqs);
+        kfree(uart);
+        return res;
+    }
+
+    irq_t irq;
+    res = dt_node_read_irq(node, 0, &irq);
+    if(res) {
+        wprintk("Device Tree 8250 Driver Failed to get IRQ! (err=%s)\n",
+                errnostr(res));
+        kfree(uart);
+        return res;
+    }
+
     printk("Registering Device Tree 8250 Device \"%s\"\n", name);
     res = register_mmio_uart_8250(name,
                                   &uart->uart,
                                   uart->mmio_base,
                                   uart->mmio_size,
-                                  shift);
+                                  shift,
+                                  irq);
     if(res)
     {
         mmio_unmap(uart->mmio_base, uart->mmio_size);

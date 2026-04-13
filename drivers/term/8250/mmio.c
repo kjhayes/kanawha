@@ -101,13 +101,15 @@ register_mmio_uart_8250(const char *name,
                         struct mmio_uart_8250 *uart,
                         void __mmio *mmio_base,
                         size_t mmio_size,
-                        int reg_shift)
+                        int reg_shift,
+                        irq_t irq)
 {
     int res;
 
     uart->mmio_base = mmio_base;
     uart->mmio_size = mmio_size;
     uart->reg_shift = reg_shift;
+    uart->uart_8250.irq = irq;
 
     res = register_uart_8250(name,
                              &uart->uart_8250,

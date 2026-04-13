@@ -91,6 +91,8 @@ vprintk_putc(struct vprintk_state *state, char c)
         }
     }
 
+    DEBUG_ASSERT(KERNEL_ADDR(state));
+    DEBUG_ASSERT(KERNEL_ADDR(state->buffer));
     state->buffer[state->buffer_head] = c;
     state->buffer_head += 1;
     return 0;

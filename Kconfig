@@ -167,6 +167,7 @@ config IMPLEMENT_VMEM_DIRECTLY
     def_bool n
 config VMEM_VIA_PAGING
     def_bool y
+    depends on PAGING
     depends on !IMPLEMENT_VMEM_DIRECTLY
 config SMP
     def_bool y

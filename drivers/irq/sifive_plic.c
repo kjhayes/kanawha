@@ -9,16 +9,6 @@
 #include <kanawha/kmalloc.h>
 #include <kanawha/mmio.h>
 
-static int
-sifive_plic_ctx_irq_handler(struct excp_state *excp_state,
-                            struct irq_action *action)
-{
-    printk("sifive_plic IRQ!\n");
-    struct sifive_plic_context *ctx = action->handler_data.priv_data;
-    DEBUG_ASSERT(KERNEL_ADDR(ctx));
-
-    return IRQ_UNHANDLED;
-}
 
 struct sifive_plic_context
 {
@@ -26,7 +16,8 @@ struct sifive_plic_context
     irq_t irq;
     struct irq_action *action;
 
-    void __mmio *mmio_block;
+    void __mmio *enable_bitmap;
+    void __mmio *reg_block;
 };
 
 struct sifive_plic
@@ -37,33 +28,154 @@ struct sifive_plic
     void __mmio *mmio_base;
     size_t mmio_size;
 
+    size_t num_irqs;
+
     size_t ctx_count;
     struct sifive_plic_context *contexts;
 
     struct irq_domain *irq_domain;
 };
 
+static hwirq_t
+sifive_plic_context_claim(
+        struct sifive_plic_context *ctx)
+{
+    uint32_t value = mmio_readl(ctx->reg_block + 4);
+    return (hwirq_t) value;
+}
+
+static void
+sifive_plic_context_complete(
+        struct sifive_plic_context *ctx, hwirq_t hwirq)
+{
+    mmio_writel(ctx->reg_block + 4, (uint32_t)hwirq);
+}
+static int
+sifive_plic_ctx_irq_handler(struct excp_state *excp_state,
+                            struct irq_action *action)
+{
+    int res;
+
+    struct sifive_plic_context *ctx = action->handler_data.priv_data;
+    DEBUG_ASSERT(KERNEL_ADDR(ctx));
+    struct sifive_plic *plic = ctx->plic;
+    DEBUG_ASSERT(KERNEL_ADDR(plic));
+
+    hwirq_t hwirq;
+    hwirq = sifive_plic_context_claim(ctx);
+    if(hwirq == 0) {
+        return IRQ_NONE;
+    }
+
+    irq_t irq;
+    irq = irq_domain_revmap(plic->irq_domain, hwirq);
+    if(irq == IRQ_NONE) {
+        return IRQ_UNHANDLED;
+    }
+
+    struct irq_desc *desc = irq_to_desc(irq);
+    if(desc == NULL) {
+        return IRQ_UNHANDLED;
+    }
+
+    res = handle_irq(desc, excp_state);
+
+    sifive_plic_context_complete(ctx, hwirq);
+
+    return res;
+}
+
+static int
+sifive_plic_context_set_priority(
+        struct sifive_plic_context *ctx,
+        uint32_t priority)
+{
+    mmio_writel(ctx->reg_block + 0, priority);
+    return 0;
+}
+
+static int
+sifive_plic_set_hwirq_priority(
+        struct sifive_plic *plic,
+        hwirq_t hwirq,
+        uint32_t priority)
+{
+    mmio_writel(plic->mmio_base + (4 * hwirq), priority);
+    return 0;
+}
+
 static int
 sifive_plic_mask_irq(struct irq_dev *irq_dev, hwirq_t hwirq)
 {
-    return -EUNIMPL;
+    int res;
+
+    struct sifive_plic *plic = container_of(irq_dev, struct sifive_plic, irq_dev);
+    if(hwirq >= plic->num_irqs) {
+        return -EINVAL;
+    }
+
+    res = sifive_plic_set_hwirq_priority(plic, hwirq, 0);
+    if(res) {
+        // This should be fine... but unexpected
+        wprintk("sifive_plic_mask_irq: failed to set hwirq priority to zero! (weird)\n");
+    }
+
+    for(size_t i = 0; i < plic->ctx_count; i++) {
+        struct sifive_plic_context *ctx = &plic->contexts[i];
+
+        if(ctx->irq != NULL_IRQ) {
+            size_t offset = hwirq / 32;
+            size_t bit = hwirq % 32;
+            uint32_t bits = mmio_readl(((uint32_t*)ctx->enable_bitmap) + offset);
+            bits &= ~(1ULL<<bit);
+            mmio_writel(((uint32_t*)ctx->enable_bitmap) + offset, bits);
+        }
+    }
+    return 0;
 }
 
 static int
 sifive_plic_unmask_irq(struct irq_dev *irq_dev, hwirq_t hwirq)
 {
-    return -EUNIMPL;
+    int res;
+
+    struct sifive_plic *plic = container_of(irq_dev, struct sifive_plic, irq_dev);
+    if(hwirq >= plic->num_irqs) {
+        return -EINVAL;
+    }
+
+    res = sifive_plic_set_hwirq_priority(plic, hwirq, 1);
+    if(res) {
+        return res;
+    }
+
+    for(size_t i = 0; i < plic->ctx_count; i++) {
+        struct sifive_plic_context *ctx = &plic->contexts[i];
+
+        if(ctx->irq != NULL_IRQ) {
+            size_t offset = hwirq / 32;
+            size_t bit = hwirq % 32;
+            uint32_t bits = mmio_readl(ctx->enable_bitmap + offset);
+            bits |= (1ULL<<bit);
+            mmio_writel(ctx->enable_bitmap + offset, bits);
+        }
+    }
+    return 0;
 }
 
 static int
 sifive_plic_ack_irq(struct irq_dev *irq_dev, hwirq_t hwirq)
 {
-    return -EUNIMPL;
+    // Everything is routed into our IRQ handler
+    // which does ACK/EOI
+    return 0;
 }
 static int
 sifive_plic_eoi_irq(struct irq_dev *irq_dev, hwirq_t hwirq)
 {
-    return -EUNIMPL;
+    // Everything is routed into our IRQ handler
+    // which does ACK/EOI
+    return 0;
 }
 static unsigned long
 sifive_plic_irq_status(struct irq_dev *irq_dev, hwirq_t hwirq)
@@ -134,7 +246,9 @@ sifive_plic_dt_init(struct dt_driver *driver, struct dt_node *node)
         return res;
     }
 
-    plic->irq_domain = alloc_irq_domain_linear(0, irq_count);
+    plic->num_irqs = irq_count;
+
+    plic->irq_domain = alloc_irq_domain_linear(1, irq_count);
     if(plic->irq_domain == NULL)
     {
         mmio_unmap(plic->mmio_base, plic->mmio_size);
@@ -194,7 +308,8 @@ sifive_plic_dt_init(struct dt_driver *driver, struct dt_node *node)
 
         if(irq == NULL_IRQ)
         {
-            plic->contexts[i].mmio_block = NULL;
+            plic->contexts[i].reg_block = NULL;
+            plic->contexts[i].enable_bitmap = NULL;
             plic->contexts[i].action = NULL;
             printk("SiFive PLIC Context(%lu) Does Not Exist\n", (ul_t)i);
         }
@@ -209,8 +324,17 @@ sifive_plic_dt_init(struct dt_driver *driver, struct dt_node *node)
                       (ul_t)i);
             }
 
-            plic->contexts[i].mmio_block =
-                plic->mmio_base + 0x200000ULL + (i * 0x1000ULL);
+            size_t enable_bitmap_offset = 0x2000ull + (i * 0x80ull);
+            if(enable_bitmap_offset >= plic->mmio_size) {
+                panic("sifive_plic: enable_bitmap_offset >= plic->mmio_size!\n");
+            }
+            size_t reg_block_offset = 0x200000ull + (i * 0x1000ull);
+            if(reg_block_offset >= plic->mmio_size) {
+                panic("sifive_plic: reg_block_offset >= plic->mmio_size!\n");
+            }
+
+            plic->contexts[i].enable_bitmap = plic->mmio_base + enable_bitmap_offset;
+            plic->contexts[i].reg_block = plic->mmio_base + reg_block_offset;
             plic->contexts[i].action =
                 irq_install_handler(parent_desc,
                                     &plic->contexts[i],
@@ -220,8 +344,26 @@ sifive_plic_dt_init(struct dt_driver *driver, struct dt_node *node)
                 panic("Failed to install PLIC IRQ handler!\n");
             }
             printk("SiFive PLIC Context(%lu) IRQ=0x%lx\n", (ul_t)i, (ul_t)irq);
+            res = unmask_irq(irq);
+            if(res) {
+                panic("Failed to unmask IRQ for PLIC Context(%lu) (err=%s)\n",
+                        (ul_t)i,
+                        errnostr(res));
+            }
+
+            sifive_plic_context_set_priority(&plic->contexts[i], 0);
         }
     }
+
+    // TODO handle errors
+    register_irq_dev(&plic->irq_dev, "sifive-plic");
+
+    // TODO handle errors
+    irq_domain_set_all_irq_dev(
+            plic->irq_domain,
+            &plic->irq_dev);
+
+    node->driver_state = plic;
 
     return 0;
 }
@@ -239,7 +381,22 @@ sifive_plic_dt_xlate_irq(struct dt_driver *driver,
                          const fdt32_t *cells,
                          size_t cell_count)
 {
-    return NULL_IRQ;
+    if(cell_count != 1) {
+        wprintk("sifive_plic cannot translate hwirq with "
+                "more than 1 cell! (cells=%d)\n",
+                (s_t)cell_count);
+        return NULL_IRQ;
+    }
+    hwirq_t hwirq = fdttoh32(cells[0]);
+
+    struct sifive_plic *plic = node->driver_state;
+    irq_t irq = irq_domain_revmap(plic->irq_domain, hwirq);
+
+    printk("sifive_plic_xlate_irq hwirq(%ld) -> irq(%ld)\n",
+            (sl_t)hwirq,
+            (sl_t)irq);
+
+    return irq;
 }
 
 struct dt_driver_ops sifive_plic_dt_driver_ops = {

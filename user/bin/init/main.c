@@ -88,7 +88,7 @@ static struct daemon sysplot = {
 };
 static struct daemon *daemons[] = {
     &randd,
-    &windd,
+    // &windd,
     &sh,
     &sysplot,
     NULL,

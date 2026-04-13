@@ -76,7 +76,7 @@ QEMU_FLAGS += -M virt
 QEMU_FLAGS += -m 2G
 
 QEMU_DEPS += $(OUTPUT_DIR)/initrd
-QEMU_DEPS += $(OUTPUT_DIR)/kanawha.o
+QEMU_DEPS += $(OUTPUT_DIR)/kanawha.bin
 QEMU_FLAGS += -initrd $(OUTPUT_DIR)/initrd
 
 #QEMU_FLAGS += -machine dumpdtb=virt.dtb

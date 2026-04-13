@@ -446,8 +446,8 @@ dt_node_interrupts_extended_read_irq(struct dt_node *node,
                 if(irq_out)
                 {
                     *irq_out = irq;
-                    return 0;
                 }
+                return 0;
             }
             cur_irq_index++;
             i += interrupt_cells;

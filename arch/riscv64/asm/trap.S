@@ -12,7 +12,7 @@
 .align 2
 __riscv64_trap_entry:
 
-    // Swap tp with sscratch
+    // Swap tp with sscratch (sscratch is invalid here)
     csrrw tp, sscratch, tp
 
     // Stash t0 to get a working register
@@ -60,7 +60,7 @@ __riscv64_trap_entry_common:
 
     // Restore t0
     ld t0, 8(tp)
-    // Restore tp
+    // Restore tp and sscratch (sscratch should be valid again)
     csrrw tp, sscratch, tp
 
     PUSH_CALLEE_REGS();

@@ -1632,10 +1632,9 @@ mmap_page_fault_handler(struct excp_state *state,
 
     if((pf_flags & PF_FLAG_USERMODE) == 0)
     {
-        eprintk("Kernel attempted to access process mmap region directly! "
+        panic("Kernel attempted to access process mmap region directly! "
                 "(mmap_offset=%p)\n",
                 offset);
-        return PAGE_FAULT_UNHANDLED;
     }
 
     int res;

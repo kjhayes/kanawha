@@ -109,6 +109,7 @@ static void
 riscv64_unhandled_interrupt(struct riscv64_excp_state *state)
 {
     unhandled_interrupt((struct excp_state *)state);
+    panic("riscv64_unhandled_interrupt!");
 }
 
 void
@@ -117,7 +118,6 @@ riscv64_route_trap(struct riscv64_excp_state *state)
     struct thread_state *cur_thread = current_thread();
     struct thread_state *new_thread;
 
-    // TODO update process->user_ip if we came from usermode
     if((state->sstatus & SSTATUS_MASK_SPP) == 0)
     {
         struct process *process = current_process();
