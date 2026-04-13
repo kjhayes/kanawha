@@ -78,6 +78,7 @@ riscv64_boot_bsp_init(void __phys *kernel_phys_base,
 
     klog_init();
     printk_init();
+    panic_printk_init();
 
     res = handle_init_stage__boot();
     if(res)

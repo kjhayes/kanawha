@@ -20,6 +20,15 @@ config PCI_ALLOC_UNINITIALIZED_MMIO_BARS
       If the kernel comes across an uninitialized MMIO BAR (physical address 0)
       then it will attempt to allocate physical memory and re-map the BAR to the memory
 
+config POLLING_PCI_MAILBOX
+    bool "Allow Polling for PCI MSI/MSI-X Interrupts"
+    depends on PCI
+    default n
+    help
+      Provide a polling implementation for the PCI mailbox
+      subsystem incase a suitable IRQ-chip cannot be found
+      in a system.
+
 menu "PCI Configuration Space Access Mechanisms"
 depends on PCI
 

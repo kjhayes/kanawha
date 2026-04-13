@@ -123,7 +123,7 @@ virtio_pci_cap_bar_readb(struct virtio_pci_device *dev,
 static inline uint16_t
 virtio_pci_cap_bar_readw(struct virtio_pci_device *dev,
                          struct virtio_pci_cap *cap,
-                         uint32_t offset)
+                         size_t offset)
 {
     DEBUG_ASSERT(offset < cap->length);
     return pci_bar_readw(cap->bar, offset + cap->offset);
@@ -132,7 +132,7 @@ virtio_pci_cap_bar_readw(struct virtio_pci_device *dev,
 static inline uint32_t
 virtio_pci_cap_bar_readl(struct virtio_pci_device *dev,
                          struct virtio_pci_cap *cap,
-                         uint32_t offset)
+                         size_t offset)
 {
     DEBUG_ASSERT(offset < cap->length);
     return pci_bar_readl(cap->bar, offset + cap->offset);
@@ -141,7 +141,7 @@ virtio_pci_cap_bar_readl(struct virtio_pci_device *dev,
 static inline uint64_t
 virtio_pci_cap_bar_readq(struct virtio_pci_device *dev,
                          struct virtio_pci_cap *cap,
-                         uint32_t offset)
+                         size_t offset)
 {
     DEBUG_ASSERT(offset < cap->length);
     return pci_bar_readq(cap->bar, offset + cap->offset);
@@ -150,7 +150,7 @@ virtio_pci_cap_bar_readq(struct virtio_pci_device *dev,
 static inline void
 virtio_pci_cap_bar_writeb(struct virtio_pci_device *dev,
                           struct virtio_pci_cap *cap,
-                          uint32_t offset,
+                          size_t offset,
                           uint8_t val)
 {
     DEBUG_ASSERT(offset < cap->length);
@@ -160,7 +160,7 @@ virtio_pci_cap_bar_writeb(struct virtio_pci_device *dev,
 static inline void
 virtio_pci_cap_bar_writew(struct virtio_pci_device *dev,
                           struct virtio_pci_cap *cap,
-                          uint32_t offset,
+                          size_t offset,
                           uint16_t val)
 {
     DEBUG_ASSERT(offset < cap->length);
@@ -170,7 +170,7 @@ virtio_pci_cap_bar_writew(struct virtio_pci_device *dev,
 static inline void
 virtio_pci_cap_bar_writel(struct virtio_pci_device *dev,
                           struct virtio_pci_cap *cap,
-                          uint32_t offset,
+                          size_t offset,
                           uint32_t val)
 {
     DEBUG_ASSERT(offset < cap->length);
@@ -180,7 +180,7 @@ virtio_pci_cap_bar_writel(struct virtio_pci_device *dev,
 static inline void
 virtio_pci_cap_bar_writeq(struct virtio_pci_device *dev,
                           struct virtio_pci_cap *cap,
-                          uint32_t offset,
+                          size_t offset,
                           uint64_t val)
 {
     DEBUG_ASSERT(offset < cap->length);

@@ -251,8 +251,6 @@ current_process(void)
     }
 
     // This is a purely kernel thread, no associated process
-    panic("current_process() called from a kernel thread! (id=%ld)\n",
-            (sl_t)thread->id);
     return NULL;
 }
 

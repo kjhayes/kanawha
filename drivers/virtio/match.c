@@ -63,7 +63,7 @@ virtio_try_match(struct virtio_driver *driver, struct virtio_device *device)
     res = virtio_device_init_queues(device);
     if(res)
     {
-        eprintk("virtio_try_match: Failed to initialize device queues! "
+        printk("virtio_try_match: Failed to initialize device queues! "
                 "(err=%s)\n",
                 errnostr(res));
         return res;

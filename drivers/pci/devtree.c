@@ -82,8 +82,7 @@ pci_ecam_dt_init_node(struct dt_driver *driver, struct dt_node *node)
         }
     }
 
-    res =
-        pci_probe_segment_with_assumed_buses(0, bus_start, bus_end - bus_start);
+    res = pci_probe_segment_with_assumed_buses(0, bus_start, bus_end - bus_start);
     if(res)
     {
         return res;

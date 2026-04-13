@@ -47,6 +47,11 @@ config PANIC_BUFFER_SIZE
     help
       Size of the panic static buffer in bytes
 
+config PANIC_STOP_ALL_CPUS
+    bool "Panic Stops All CPU(s)"
+    default y
+    depends on X64
+
 config PRINTK_MAX_HANDLERS
     int "printk Maximum Handlers"
     default 8

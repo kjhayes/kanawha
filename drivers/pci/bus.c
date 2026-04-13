@@ -48,7 +48,6 @@ pci_probe_bus(struct pci_segment *segment, uint8_t bus_index)
     bus->bus_index = bus_index;
     bus->segment = segment;
     ilist_init(&bus->device_list);
-
     ilist_push_tail(&segment->bus_list, &bus->segment_node);
 
     for(size_t dev_index = 0; dev_index < PCI_MAX_DEVICES_PER_BUS; dev_index++)

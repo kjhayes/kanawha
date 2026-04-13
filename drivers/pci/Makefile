@@ -22,3 +22,5 @@ pci-$(CONFIG_SYSFS_PCI) += sysfs.o
 
 pci-$(CONFIG_PCIE_ACPI_MCFG) += mcfg.o
 
+pci-$(CONFIG_POLLING_PCI_MAILBOX) += poll.o
+

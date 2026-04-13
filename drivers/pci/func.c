@@ -7,6 +7,7 @@
 #include <kanawha/page_alloc.h>
 #include <kanawha/string.h>
 #include <kanawha/types.h>
+#include <kanawha/mem_flags.h>
 
 static int
 pci_probe_bridge(struct pci_func *func)
@@ -50,8 +51,9 @@ pci_setup_bars(struct pci_func *func)
 #ifdef CONFIG_PORT_IO
             bar->type = PCI_BAR_PIO;
 #else
-            eprintk("Found Port PCI Bar without CONFIG_PORT_IO set!\n");
-            return -EINVAL;
+            eprintk("Found Port PCI Bar without CONFIG_PORT_IO set (ignoring)!\n");
+            bar->type = PCI_BAR_NONE;
+            continue;
 #endif
         }
         else
@@ -156,16 +158,39 @@ pci_setup_bars(struct pci_func *func)
                 {
                     order = 12;
                 }
-                unsigned long flags = 0;
+                int is_64_bit;
                 if(bar->mmio.type == 2)
                 {
                     // 64-bit bar
+                    is_64_bit = 1;
                 }
                 else
                 {
-                    flags |= PAGE_ALLOC_32BIT;
+                    is_64_bit = 0;
                 }
-                res = page_alloc(order, &bar->phys_addr, flags);
+                uintptr_t reserved_base;
+                res = mem_flags_find_and_reserve(
+                        get_phys_mem_flags(),
+                        bar->size,
+                        order,
+                        PHYS_MEM_FLAGS_AVAIL // must be available...
+                       |((!is_64_bit) ? PHYS_MEM_FLAGS_32_BIT : 0)
+                       ,
+                        // Must NOT be...
+                        PHYS_MEM_FLAGS_RAM
+                       |PHYS_MEM_FLAGS_FW_RESV
+                       |PHYS_MEM_FLAGS_KERNEL
+                       |PHYS_MEM_FLAGS_MMIO
+                       |PHYS_MEM_FLAGS_SAVE
+                       |PHYS_MEM_FLAGS_DEFECT
+                       |PHYS_MEM_FLAGS_FW_IGNORE
+                       |PHYS_MEM_FLAGS_PAGE_ALLOC
+                       |PHYS_MEM_FLAGS_16_BIT
+                       |(is_64_bit ? PHYS_MEM_FLAGS_32_BIT : 0)
+                       ,
+                       0,
+                       PHYS_MEM_FLAGS_AVAIL,
+                       &reserved_base); 
                 if(res)
                 {
                     wprintk("Failed to remap uninitialized "
@@ -175,6 +200,7 @@ pci_setup_bars(struct pci_func *func)
                 }
                 else
                 {
+                    bar->phys_addr = (void __phys *)reserved_base;
                     pci_func_raw_write_bar(
                         func,
                         bar_index,
@@ -194,16 +220,22 @@ pci_setup_bars(struct pci_func *func)
                 }
             }
 #endif
-
-            bar->mmio.base = mmio_map((void __phys *)bar->phys_addr, size);
-            if(bar->mmio.base == NULL)
-            {
-                eprintk("Failed to map PCI MMIO BAR "
-                        "(phys_addr=%p) (err=%s)\n",
-                        bar->phys_addr);
+            if(bar->phys_addr != 0) {
+                bar->mmio.base = mmio_map((void __phys *)bar->phys_addr, size);
+                if(bar->mmio.base == NULL)
+                {
+                    eprintk("Failed to map PCI MMIO BAR "
+                            "(phys_addr=%p) (err=%s)\n",
+                            bar->phys_addr);
+                    bar->type = PCI_BAR_NONE;
+                    continue;
+                }
+            } else {
+                eprintk("PCI MMIO BAR mapped to address zero!\n");
                 bar->type = PCI_BAR_NONE;
                 continue;
             }
+            printk("Mapped MMIO PCI Bar to %p\n", bar->mmio.base);
 #ifdef CONFIG_PORT_IO
         }
 #endif

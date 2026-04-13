@@ -1,4 +1,6 @@
 
+DTC ?= $(shell command -v dtc 2> /dev/null)
+
 QEMU_PREFIX :=
 #QEMU_PREFIX := ~/qemu/build/
 
@@ -99,6 +101,20 @@ qemu-gdb: $(QEMU_DEPS)
 		-S \
 		-no-reboot \
 		-no-shutdown
+
+ifdef CONFIG_DEVICETREE
+qemu-dtb: ${OUTPUT_DIR}/qemu.dtb
+${OUTPUT_DIR}/qemu.dtb:  ${QEMU_DEPS}
+	${QEMU} ${QEMU_FLAGS} \
+		-machine dumpdtb=$@
+
+ifeq (${DTC},)
+else
+qemu-dts: ${OUTPUT_DIR}/qemu.dts
+${OUTPUT_DIR}/qemu.dts:  ${OUTPUT_DIR}/qemu.dtb
+	${DTC} -I dtb -O dts -o $@ $<
+endif
+endif
 
 endif
 

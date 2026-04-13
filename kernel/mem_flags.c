@@ -529,7 +529,7 @@ phys_mem_flags_static_init(void)
         (struct mem_flags_entry *)__phys_mem_flags_buffer;
     spinlock_init(&__phys_mem_flags.lock);
 
-    int res = mem_flags_clear_all(&__phys_mem_flags, 0);
+    int res = mem_flags_clear_all(&__phys_mem_flags, PHYS_MEM_FLAGS_AVAIL);
     if(res)
     {
         return res;
