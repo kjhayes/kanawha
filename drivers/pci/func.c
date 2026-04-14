@@ -247,28 +247,42 @@ int
 pci_probe_func(struct pci_device *device, uint8_t index)
 {
     int res;
+    int reprobe = 0;
 
     struct pci_bus *bus = device->bus;
+
+    struct pci_func *func = NULL;
+    struct ptree_node *device_tree_node = ptree_get(&device->function_tree, index);
+    if(device_tree_node != NULL) {
+        reprobe = 1;
+        func = container_of(device_tree_node, struct pci_func, device_node);
+    }
+
     uint16_t vendor_id;
     pci_bus_readw(bus, device->index, index, PCI_CFG_VENDOR_ID, &vendor_id);
-
     if(vendor_id == 0xFFFF)
     {
+        if(reprobe) {
+            panic("PCI Function Stopped Existing on Re-probe!\n");
+        }
         return -ENXIO;
     }
 
-    struct pci_func *func = kmalloc(sizeof(struct pci_func), KM_KERNEL);
     if(func == NULL)
     {
-        eprintk("Failed to allocate PCI device struct!\n");
-        return -ENOMEM;
+        func = kmalloc(sizeof(struct pci_func), KM_KERNEL);
+        if(func == NULL)
+        {
+            eprintk("Failed to allocate PCI device struct!\n");
+            return -ENOMEM;
+        }
+
+        func->segment = bus->segment;
+        func->index = index;
+
+        ptree_insert(&device->function_tree, &func->device_node, index);
+        func->device = device;
     }
-
-    func->segment = bus->segment;
-    func->index = index;
-
-    ilist_push_tail(&device->function_list, &func->device_node);
-    func->device = device;
 
     pci_bus_readw(bus,
                   device->index,
@@ -312,9 +326,9 @@ pci_probe_func(struct pci_device *device, uint8_t index)
         {
             eprintk("Failed to initialize PCI device BAR(s)! (err=%s)\n",
                     errnostr(res));
-            ilist_remove(&device->function_list, &func->device_node);
-            kfree(func);
-            return res;
+            for(size_t i = 0; i < 6; i++) {
+                func->bars[i].type = PCI_BAR_NONE;
+            }
         }
 
         res = pci_func_init_caps(func);
@@ -323,10 +337,6 @@ pci_probe_func(struct pci_device *device, uint8_t index)
             eprintk("Failed to initialize PCI device capabilities! "
                     "(err=%s)\n",
                     errnostr(res));
-            // TODO deinit bars
-            ilist_remove(&device->function_list, &func->device_node);
-            kfree(func);
-            return res;
         }
     }
     else
@@ -340,21 +350,16 @@ pci_probe_func(struct pci_device *device, uint8_t index)
     res = pci_func_init_irqs(func);
     if(res)
     {
-        pci_func_deinit_caps(func);
-        ilist_remove(&device->function_list, &func->device_node);
-        kfree(func);
-        return res;
+        eprintk("Failed to initialize PCI device irqs! (err=%s)\n",
+                errnostr(res));
     }
 
-    res = register_pci_func(func);
-    if(res)
-    {
-        // TODO deinit bars
-        // TODO deinit irqs
-        pci_func_deinit_caps(func);
-        ilist_remove(&device->function_list, &func->device_node);
-        kfree(func);
-        return res;
+    if(!reprobe) {
+        res = register_pci_func(func);
+        if(res)
+        {
+            return res;
+        }
     }
 
     return 0;

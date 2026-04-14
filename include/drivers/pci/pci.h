@@ -24,18 +24,18 @@ struct pci_segment
 {
     uint16_t segment_id;
 
-    ilist_node_t global_node;
+    struct ptree_node global_node;
 
-    ilist_t bus_list;
+    struct ptree bus_tree;
 };
 
 struct pci_bus
 {
     struct pci_segment *segment;
 
-    ilist_node_t segment_node;
+    struct ptree_node segment_node;
 
-    ilist_t device_list;
+    struct ptree device_tree;
 
     uint8_t bus_index;
 };
@@ -45,10 +45,10 @@ struct pci_device
     struct pci_segment *segment;
     struct pci_bus *bus;
 
-    ilist_node_t bus_node;
+    struct ptree_node bus_node;
     ilist_node_t driver_node;
 
-    ilist_t function_list;
+    struct ptree function_tree;
     uint8_t index;
 };
 
@@ -60,8 +60,8 @@ struct pci_func
 
     void *driver_priv_state;
 
+    struct ptree_node device_node;
     ilist_node_t global_node;
-    ilist_node_t device_node;
     ilist_node_t driver_node;
 
     uint8_t index;

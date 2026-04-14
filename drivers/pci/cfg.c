@@ -7,8 +7,8 @@
 #include <kanawha/spinlock.h>
 #include <kanawha/stddef.h>
 
-static DECLARE_SPINLOCK(pci_segment_list_lock);
-static DECLARE_ILIST(pci_segment_list);
+DEFINE_LOCAL_THREAD_LOCK(pci_segment_tree_lock);
+static DECLARE_PTREE(pci_segment_tree);
 
 static DECLARE_RLOCK(pci_cam_list_lock);
 static DECLARE_ILIST(pci_cam_list);
@@ -64,17 +64,11 @@ pci_probe_segment_with_assumed_buses(uint16_t segment_id,
     struct pci_segment *segment = NULL;
 
     // Find the segment if it already exists, or create a new structure for it
-    spin_lock(&pci_segment_list_lock);
-    ilist_node_t *node;
-    ilist_for_each(node, &pci_segment_list)
-    {
-        struct pci_segment *seg =
-            container_of(node, struct pci_segment, global_node);
-        if(seg->segment_id == segment_id)
-        {
-            segment = seg;
-            break;
-        }
+    pci_segment_tree_lock_acquire();
+    struct ptree_node *node;
+    node = ptree_get(&pci_segment_tree, segment_id);
+    if(node != NULL) {
+        segment = container_of(node, struct pci_segment, global_node);
     }
 
     // The segment does not already exist, create it
@@ -87,16 +81,16 @@ pci_probe_segment_with_assumed_buses(uint16_t segment_id,
         {
             eprintk("Ran out of memory when allocating PCI segment "
                     "struct!\n");
-            spin_unlock(&pci_segment_list_lock);
+            pci_segment_tree_lock_release();
             return -ENOMEM;
         }
-        ilist_init(&segment->bus_list);
+        ptree_init(&segment->bus_tree);
 
         segment->segment_id = segment_id;
 
-        ilist_push_tail(&pci_segment_list, &segment->global_node);
+        ptree_insert(&pci_segment_tree, &segment->global_node, segment_id);
     }
-    spin_unlock(&pci_segment_list_lock);
+    pci_segment_tree_lock_release();
 
     // This should never happen (should have failed before this)
     if(segment == NULL)

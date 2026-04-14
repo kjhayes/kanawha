@@ -9,27 +9,39 @@ pci_probe_device(struct pci_bus *bus, uint8_t dev_index)
 {
     int res;
 
+    struct pci_device *device = NULL;
+    struct ptree_node *bus_tree_node = ptree_get(&bus->device_tree, dev_index);
+    if(bus_tree_node != NULL) {
+        device = container_of(bus_tree_node, struct pci_device, bus_node);
+    }
+
     uint16_t probe_id;
     pci_bus_readw(bus, dev_index, 0, PCI_CFG_VENDOR_ID, &probe_id);
     if(probe_id == 0xFFFF)
     {
         // Device does not exist
+        if(device != NULL) {
+            panic("PCI Device Stopped Existing on Re-probe!\n");
+        }
         return -ENXIO;
     }
 
-    struct pci_device *device;
-    device = kmalloc(sizeof(struct pci_device), KM_KERNEL);
     if(device == NULL)
     {
-        kfree(device);
-        return -ENOMEM;
-    }
-    device->segment = bus->segment;
-    device->bus = bus;
-    device->index = dev_index;
-    ilist_init(&device->function_list);
+        device = kmalloc(sizeof(struct pci_device), KM_KERNEL);
+        if(device == NULL)
+        {
+            kfree(device);
+            return -ENOMEM;
+        }
+        device->segment = bus->segment;
+        device->bus = bus;
+        device->index = dev_index;
 
-    ilist_push_tail(&bus->device_list, &device->bus_node);
+        ptree_init(&device->function_tree);
+
+        ptree_insert(&bus->device_tree, &device->bus_node, dev_index);
+    }
 
     // Iterate over the functions
     uint8_t func_index = 0;
