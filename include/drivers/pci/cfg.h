@@ -127,12 +127,13 @@ DEFINE_OP_LIST_WRAPPERS(PCI_CAM_OP_LIST,
 
 // Segment Registration
 
+struct pci_segment *
+pci_segment_create_or_get(uint16_t segment_id);
+
 int
-pci_probe_segment(uint16_t segment_id);
-int
-pci_probe_segment_with_assumed_buses(uint16_t segment_id,
-                                     size_t assumed_bus_start,
-                                     size_t assumed_bus_count);
+pci_segment_probe(struct pci_segment *segment,
+                  size_t assumed_bus_start,
+                  size_t assumed_bus_count);
 
 // PCI Segment Config Access
 

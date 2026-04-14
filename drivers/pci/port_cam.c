@@ -202,11 +202,19 @@ register_default_port_pci_cam(void)
     {
         return res;
     }
-    res = pci_probe_segment(0);
+
+    struct pci_segment *segment = pci_segment_create_or_get(0);
+    if(segment == NULL) {
+        eprintk("Failed to create or get PCI segment 0!\n");
+        return -ENXIO;
+    }
+
+    res = pci_segment_probe(segment, 0, PCI_MAX_BUSES_PER_SEGMENT);
     if(res)
     {
         return res;
     }
+
     return 0;
 }
 declare_init_desc(early_device,

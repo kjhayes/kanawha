@@ -13,27 +13,6 @@ static DECLARE_PTREE(pci_segment_tree);
 static DECLARE_RLOCK(pci_cam_list_lock);
 static DECLARE_ILIST(pci_cam_list);
 
-static int
-pci_segment_enumerate(struct pci_segment *segment,
-                      size_t assumed_bus_start,
-                      size_t assumed_bus_count)
-{
-    int res;
-    for(size_t bus_index = 0; bus_index < assumed_bus_count; bus_index++)
-    {
-        size_t bus = assumed_bus_start + bus_index;
-
-        res = pci_probe_bus(segment, bus);
-        if(res)
-        {
-            wprintk("Failed to probe PCI bus %lu! (err=%s)\n",
-                    (ul_t)bus,
-                    errnostr(res));
-        }
-    }
-    return 0;
-}
-
 int
 register_pci_cam(struct pci_cam *cam, unsigned long flags)
 {
@@ -46,18 +25,8 @@ register_pci_cam(struct pci_cam *cam, unsigned long flags)
     return 0;
 }
 
-int
-pci_probe_segment(uint16_t segment_id)
-{
-    return pci_probe_segment_with_assumed_buses(segment_id,
-                                                0,
-                                                PCI_MAX_BUSES_PER_SEGMENT);
-}
-
-int
-pci_probe_segment_with_assumed_buses(uint16_t segment_id,
-                                     size_t assumed_bus_start,
-                                     size_t assumed_bus_count)
+struct pci_segment *
+pci_segment_create_or_get(uint16_t segment_id)
 {
     int res;
 
@@ -82,7 +51,7 @@ pci_probe_segment_with_assumed_buses(uint16_t segment_id,
             eprintk("Ran out of memory when allocating PCI segment "
                     "struct!\n");
             pci_segment_tree_lock_release();
-            return -ENOMEM;
+            return NULL;
         }
         ptree_init(&segment->bus_tree);
 
@@ -92,26 +61,27 @@ pci_probe_segment_with_assumed_buses(uint16_t segment_id,
     }
     pci_segment_tree_lock_release();
 
-    // This should never happen (should have failed before this)
-    if(segment == NULL)
+    return segment;
+}
+
+int
+pci_segment_probe(struct pci_segment *segment,
+                  size_t assumed_bus_start,
+                  size_t assumed_bus_count)
+{
+    int res;
+    for(size_t bus_index = 0; bus_index < assumed_bus_count; bus_index++)
     {
-        eprintk("Failed to find/create PCI segment %lu!\n", segment_id);
-        return -ENXIO;
+        size_t bus = assumed_bus_start + bus_index;
+
+        res = pci_probe_bus(segment, bus);
+        if(res)
+        {
+            wprintk("Failed to probe PCI bus %lu! (err=%s)\n",
+                    (ul_t)bus,
+                    errnostr(res));
+        }
     }
-
-    printk("Probing PCI Segment %lu\n", segment->segment_id);
-
-    // Enumerate the devices we find in the segment
-    res = pci_segment_enumerate(segment, assumed_bus_start, assumed_bus_count);
-    if(res)
-    {
-        eprintk("Encountered error (%s) when enumerating devices of PCI "
-                "Segment %lu!\n",
-                errnostr(res),
-                segment->segment_id);
-        return res;
-    }
-
     return 0;
 }
 

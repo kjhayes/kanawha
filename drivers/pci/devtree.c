@@ -82,7 +82,13 @@ pci_ecam_dt_init_node(struct dt_driver *driver, struct dt_node *node)
         }
     }
 
-    res = pci_probe_segment_with_assumed_buses(0, bus_start, bus_end - bus_start);
+    struct pci_segment *segment = pci_segment_create_or_get(0);
+    if(segment == NULL) {
+        wprintk("Failed to obtain PCI segment 0!\n");
+        return -ENXIO;
+    }
+
+    res = pci_segment_probe(segment, bus_start, bus_end - bus_start);
     if(res)
     {
         return res;
