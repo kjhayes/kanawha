@@ -181,7 +181,12 @@ register_pci_cam(struct pci_cam *cam, unsigned long flags);
 int
 register_pci_driver(struct pci_driver *driver);
 
-int
-register_pci_func(struct pci_func *func);
+int pci_for_each_func(int(*callback)(struct pci_func *func));
+int pci_segment_for_each_func(struct pci_segment *segment,
+                              int(*callback)(struct pci_func *func));
+int pci_bus_for_each_func(struct pci_bus *bus,
+                          int(*callback)(struct pci_func *func));
+int pci_device_for_each_func(struct pci_device *device,
+                             int(*callback)(struct pci_func *func));
 
 #endif

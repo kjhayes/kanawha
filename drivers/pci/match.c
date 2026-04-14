@@ -131,7 +131,7 @@ register_pci_driver(struct pci_driver *driver)
     return 0;
 }
 
-int
+static int
 register_pci_func(struct pci_func *func)
 {
     int res;
@@ -166,3 +166,11 @@ register_pci_func(struct pci_func *func)
     spin_unlock(&pci_match_lock);
     return 0;
 }
+
+static int
+register_all_pci_funcs(void)
+{
+    return pci_for_each_func(register_pci_func);
+}
+declare_init(device, register_all_pci_funcs);
+

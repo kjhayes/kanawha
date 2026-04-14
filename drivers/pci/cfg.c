@@ -324,3 +324,86 @@ pci_segment_writel(struct pci_segment *segment,
 
     return -EINVAL;
 }
+
+int
+pci_for_each_func(int(*callback)(struct pci_func *func))
+{
+    int res;
+    pci_segment_tree_lock_acquire();
+    struct ptree_node *pnode = ptree_get_first(&pci_segment_tree);
+    while(pnode) {
+        struct pci_segment *segment =
+            container_of(pnode, struct pci_segment, global_node);
+        res = pci_segment_for_each_func(
+                segment,
+                callback);
+        if(res) {
+            pci_segment_tree_lock_release();
+            return res;
+        }
+        pnode = ptree_get_next(pnode);
+    }
+    pci_segment_tree_lock_release();
+    return 0;
+}
+
+int
+pci_segment_for_each_func(
+        struct pci_segment *segment,
+        int(*callback)(struct pci_func *func))
+{
+    int res;
+    struct ptree_node *pnode = ptree_get_first(&segment->bus_tree);
+    while(pnode) {
+        struct pci_bus *bus =
+            container_of(pnode, struct pci_bus, segment_node);
+        res = pci_bus_for_each_func(
+                bus,
+                callback);
+        if(res) {
+            return res;
+        }
+        pnode = ptree_get_next(pnode);
+    }
+    return 0;
+}
+
+int
+pci_bus_for_each_func(
+        struct pci_bus *bus,
+        int(*callback)(struct pci_func *func))
+{
+    int res;
+    struct ptree_node *pnode = ptree_get_first(&bus->device_tree);
+    while(pnode) {
+        struct pci_device *device =
+            container_of(pnode, struct pci_device, bus_node);
+        res = pci_device_for_each_func(
+                device,
+                callback);
+        if(res) {
+            return res;
+        }
+        pnode = ptree_get_next(pnode);
+    }
+    return 0;
+}
+
+int
+pci_device_for_each_func(
+        struct pci_device *device,
+        int(*callback)(struct pci_func *func))
+{
+    int res;
+    struct ptree_node *pnode = ptree_get_first(&device->function_tree);
+    while(pnode) {
+        struct pci_func *func =
+            container_of(pnode, struct pci_func, device_node);
+        res = (*callback)(func);
+        if(res) {
+            return res;
+        }
+        pnode = ptree_get_next(pnode);
+    }
+    return 0;
+}

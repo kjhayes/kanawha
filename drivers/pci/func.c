@@ -247,14 +247,12 @@ int
 pci_probe_func(struct pci_device *device, uint8_t index)
 {
     int res;
-    int reprobe = 0;
 
     struct pci_bus *bus = device->bus;
 
     struct pci_func *func = NULL;
     struct ptree_node *device_tree_node = ptree_get(&device->function_tree, index);
     if(device_tree_node != NULL) {
-        reprobe = 1;
         func = container_of(device_tree_node, struct pci_func, device_node);
     }
 
@@ -262,7 +260,7 @@ pci_probe_func(struct pci_device *device, uint8_t index)
     pci_bus_readw(bus, device->index, index, PCI_CFG_VENDOR_ID, &vendor_id);
     if(vendor_id == 0xFFFF)
     {
-        if(reprobe) {
+        if(func != NULL) {
             panic("PCI Function Stopped Existing on Re-probe!\n");
         }
         return -ENXIO;
@@ -352,14 +350,6 @@ pci_probe_func(struct pci_device *device, uint8_t index)
     {
         eprintk("Failed to initialize PCI device irqs! (err=%s)\n",
                 errnostr(res));
-    }
-
-    if(!reprobe) {
-        res = register_pci_func(func);
-        if(res)
-        {
-            return res;
-        }
     }
 
     return 0;
