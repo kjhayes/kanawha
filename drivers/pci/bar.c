@@ -31,9 +31,12 @@ pci_bar_readb(struct pci_bar *bar, size_t offset)
                   offset,
                   bar->phys_addr + offset);
         return mmio_readb(bar->mmio.base + offset);
-#ifdef CONFIG_PORT_IO
     case PCI_BAR_PIO:
+#ifdef CONFIG_PORT_IO
         return inb(bar->pio.base + offset);
+#else
+        eprintk("pci_bar_readb on PCI_BAR_PIO without CONFIG_PORT_IO!");
+        return 0;
 #endif
     case PCI_BAR_NONE:
         panic("pci_bar_readb on PCI_BAR_NONE!");
@@ -53,9 +56,12 @@ pci_bar_readw(struct pci_bar *bar, size_t offset)
                   offset,
                   bar->phys_addr + offset);
         return mmio_readw(bar->mmio.base + offset);
-#ifdef CONFIG_PORT_IO
     case PCI_BAR_PIO:
+#ifdef CONFIG_PORT_IO
         return inw(bar->pio.base + offset);
+#else
+        eprintk("pci_bar_readw on PCI_BAR_PIO without CONFIG_PORT_IO!");
+        return 0;
 #endif
     case PCI_BAR_NONE:
         panic("pci_bar_readw on PCI_BAR_NONE!");
@@ -75,9 +81,12 @@ pci_bar_readl(struct pci_bar *bar, size_t offset)
                   offset,
                   bar->phys_addr + offset);
         return mmio_readl(bar->mmio.base + offset);
-#ifdef CONFIG_PORT_IO
     case PCI_BAR_PIO:
+#ifdef CONFIG_PORT_IO
         return inl(bar->pio.base + offset);
+#else
+        eprintk("pci_bar_readl on PCI_BAR_PIO without CONFIG_PORT_IO!");
+        return 0;
 #endif
     case PCI_BAR_NONE:
         panic("pci_bar_readl on PCI_BAR_NONE!");
@@ -97,9 +106,12 @@ pci_bar_readq(struct pci_bar *bar, size_t offset)
                   offset,
                   bar->phys_addr + offset);
         return mmio_readq(bar->mmio.base + offset);
-#ifdef CONFIG_PORT_IO
     case PCI_BAR_PIO:
+#ifdef CONFIG_PORT_IO
         eprintk("Tried to read 64-bit value from a Port I/O PCI BAR!\n");
+        return 0;
+#else
+        eprintk("pci_bar_readq on PCI_BAR_PIO without CONFIG_PORT_IO!");
         return 0;
 #endif
     case PCI_BAR_NONE:
@@ -122,9 +134,12 @@ pci_bar_writeb(struct pci_bar *bar, size_t offset, uint8_t val)
                   bar->phys_addr + offset);
         mmio_writeb(bar->mmio.base + offset, val);
         break;
-#ifdef CONFIG_PORT_IO
     case PCI_BAR_PIO:
+#ifdef CONFIG_PORT_IO
         outb(bar->pio.base + offset, val);
+        break;
+#else
+        eprintk("pci_bar_writeb to PCI_BAR_PIO without CONFIG_PORT_IO!\n");
         break;
 #endif
     case PCI_BAR_NONE:
@@ -144,9 +159,12 @@ pci_bar_writew(struct pci_bar *bar, size_t offset, uint16_t val)
                   bar->phys_addr + offset);
         mmio_writew(bar->mmio.base + offset, val);
         break;
-#ifdef CONFIG_PORT_IO
     case PCI_BAR_PIO:
+#ifdef CONFIG_PORT_IO
         outw(bar->pio.base + offset, val);
+        break;
+#else
+        eprintk("pci_bar_writew to PCI_BAR_PIO without CONFIG_PORT_IO!\n");
         break;
 #endif
     case PCI_BAR_NONE:
@@ -167,9 +185,12 @@ pci_bar_writel(struct pci_bar *bar, size_t offset, uint32_t val)
                   bar->phys_addr + offset);
         mmio_writel(bar->mmio.base + offset, val);
         break;
-#ifdef CONFIG_PORT_IO
     case PCI_BAR_PIO:
+#ifdef CONFIG_PORT_IO
         outl(bar->pio.base + offset, val);
+        break;
+#else
+        eprintk("pci_bar_writel to PCI_BAR_PIO without CONFIG_PORT_IO!\n");
         break;
 #endif
     case PCI_BAR_NONE:
@@ -189,9 +210,12 @@ pci_bar_writeq(struct pci_bar *bar, size_t offset, uint64_t val)
                   bar->phys_addr + offset);
         mmio_writeq(bar->mmio.base + offset, val);
         break;
-#ifdef CONFIG_PORT_IO
     case PCI_BAR_PIO:
+#ifdef CONFIG_PORT_IO
         eprintk("Tried to write 64-bit value to a Port I/O PCI BAR!\n");
+        break;
+#else
+        eprintk("pci_bar_writeq to PCI_BAR_PIO without CONFIG_PORT_IO!\n");
         break;
 #endif
     case PCI_BAR_NONE:

@@ -48,13 +48,7 @@ pci_setup_bars(struct pci_func *func)
         uint64_t original = (uint32_t)pci_func_raw_read_bar(func, bar_index);
         if(original & 1)
         {
-#ifdef CONFIG_PORT_IO
             bar->type = PCI_BAR_PIO;
-#else
-            eprintk("Found Port PCI Bar without CONFIG_PORT_IO set (ignoring)!\n");
-            bar->type = PCI_BAR_NONE;
-            continue;
-#endif
         }
         else
         {
@@ -95,11 +89,8 @@ pci_setup_bars(struct pci_func *func)
         }
 
         dprintk("masked=0x%llx\n", (ull_t)masked);
-#ifdef CONFIG_PORT_IO
         masked &= ~(bar->type == PCI_BAR_PIO ? 0x3ULL : 0xFULL);
-#else
-        masked &= ~0xFULL;
-#endif
+
         dprintk("masked=0x%llx\n", (ull_t)masked);
         uint64_t size_mask = 0xFFFFFFFFULL;
         if(bar->type == PCI_BAR_MMIO)
@@ -137,7 +128,6 @@ pci_setup_bars(struct pci_func *func)
 
         bar->size = size;
 
-#ifdef CONFIG_PORT_IO
         if(bar->type == PCI_BAR_PIO)
         {
             bar->phys_addr = (void __phys *)(uintptr_t)(original & ~0x3ULL);
@@ -145,7 +135,6 @@ pci_setup_bars(struct pci_func *func)
         }
         else
         {
-#endif
             // MMIO
             bar->phys_addr = (void __phys *)(uintptr_t)(original & ~0xFULL);
 
@@ -236,9 +225,7 @@ pci_setup_bars(struct pci_func *func)
                 continue;
             }
             printk("Mapped MMIO PCI Bar to %p\n", bar->mmio.base);
-#ifdef CONFIG_PORT_IO
         }
-#endif
     }
     return 0;
 }
