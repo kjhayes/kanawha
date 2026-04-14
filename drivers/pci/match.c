@@ -1,5 +1,6 @@
 
 #include <drivers/pci/pci.h>
+#include <drivers/pci/cfg.h>
 #include <kanawha/stddef.h>
 
 #ifdef CONFIG_SYSFS_PCI
@@ -168,8 +169,31 @@ register_pci_func(struct pci_func *func)
 }
 
 static int
+dump_pci_segment_memory(struct pci_segment *segment)
+{
+    int id = segment->segment_id;
+    printk("--- PCI Segment %d MMIO Map\n", id);
+    pci_segment_dump_mmio_mem_flags(segment, do_printk);
+    printk("--- PCI Segment %d PIO Map\n", id);
+    pci_segment_dump_pio_mem_flags(segment, do_printk);
+    printk("---\n");
+    return 0;
+}
+
+static int
+dump_all_pci_segment_memory(void)
+{
+    return pci_for_each_segment(dump_pci_segment_memory);
+}
+declare_init(late, dump_all_pci_segment_memory);
+
+static int
 register_all_pci_funcs(void)
 {
+    struct pci_segment *segment = pci_segment_create_or_get(0);
+
+
+
     return pci_for_each_func(register_pci_func);
 }
 declare_init(device, register_all_pci_funcs);

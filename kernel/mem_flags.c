@@ -6,6 +6,57 @@
 #include <kanawha/page_alloc.h>
 #include <kanawha/string.h>
 #include <kanawha/vmem.h>
+#include <kanawha/kmalloc.h>
+
+#define MEM_FLAGS_FLAG_STATIC_BUFFER (1UL<<0)
+
+int
+mem_flags_init(
+        struct mem_flags *mem_flags,
+        unsigned long initial_flags,
+        size_t static_buflen,
+        struct mem_flags_entry *static_buffer)
+{
+    int res;
+
+    spinlock_init(&mem_flags->lock);
+    mem_flags->max_entries = static_buflen;
+    mem_flags->num_entries = 0;
+    mem_flags->flags = 0;
+
+    if(static_buffer != NULL) {
+        mem_flags->entries = static_buffer;
+        mem_flags->flags |= MEM_FLAGS_FLAG_STATIC_BUFFER;
+    } else {
+        mem_flags->entries = kmalloc(sizeof(struct mem_flags_entry) * mem_flags->max_entries, KM_KERNEL);
+
+        if(mem_flags->entries == NULL) {
+            return -ENOMEM;
+        }
+    }
+
+    res = mem_flags_clear_all(mem_flags, initial_flags);
+    if(res)
+    {
+        return res;
+    }
+
+    return 0;
+}
+
+int
+mem_flags_deinit(
+        struct mem_flags *mem_flags)
+{
+    if(!(mem_flags->flags & MEM_FLAGS_FLAG_STATIC_BUFFER))
+    {
+        kfree(mem_flags->entries);
+        mem_flags->entries = NULL;
+        mem_flags->flags &= ~MEM_FLAGS_FLAG_STATIC_BUFFER;
+    }
+
+    return 0;
+}
 
 static int
 __mem_flags_get_overlapping(struct mem_flags *map,
@@ -524,14 +575,14 @@ get_phys_mem_flags(void)
 static int
 phys_mem_flags_static_init(void)
 {
-    __phys_mem_flags.max_entries = MAX_PHYS_MEM_FLAGS_ENTRIES;
-    __phys_mem_flags.entries =
-        (struct mem_flags_entry *)__phys_mem_flags_buffer;
-    spinlock_init(&__phys_mem_flags.lock);
+    int res;
 
-    int res = mem_flags_clear_all(&__phys_mem_flags, PHYS_MEM_FLAGS_AVAIL);
-    if(res)
-    {
+    res = mem_flags_init(
+            &__phys_mem_flags,
+            PHYS_MEM_FLAGS_AVAIL,
+            MAX_PHYS_MEM_FLAGS_ENTRIES,
+            __phys_mem_flags_buffer);
+    if(res) {
         return res;
     }
 
@@ -672,20 +723,19 @@ get_virt_mem_flags(void)
 static int
 virt_mem_flags_static_init(void)
 {
-    __virt_mem_flags.max_entries = MAX_VIRT_MEM_FLAGS_ENTRIES;
-    __virt_mem_flags.entries =
-        (struct mem_flags_entry *)__virt_mem_flags_buffer;
-    spinlock_init(&__virt_mem_flags.lock);
+    int res;
 
-    printk("Marking all of virtual memory available\n");
-    int res =
-        mem_flags_clear_all(&__virt_mem_flags,
-                            VIRT_MEM_FLAGS_NONCANON | VIRT_MEM_FLAGS_AVAIL);
-    if(res)
-    {
+    res = mem_flags_init(
+            &__virt_mem_flags,
+            VIRT_MEM_FLAGS_NONCANON
+           |VIRT_MEM_FLAGS_AVAIL,
+            MAX_VIRT_MEM_FLAGS_ENTRIES,
+            __virt_mem_flags_buffer);
+    if(res) {
         return res;
     }
 
+    printk("Marking all of virtual memory available\n");
     return 0;
 }
 

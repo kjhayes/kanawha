@@ -136,6 +136,12 @@ pci_setup_bars(struct pci_func *func)
         {
             bar->phys_addr = (void __phys *)(uintptr_t)(original & ~0x3ULL);
             bar->pio.base = (uintptr_t)(bar->phys_addr);
+
+            pci_segment_set_pio_flags(
+                    func->segment,
+                    bar->pio.base,
+                    bar->size,
+                    PCI_PIO_MEM_MAPPED);
         }
         else
         {
@@ -214,6 +220,11 @@ pci_setup_bars(struct pci_func *func)
             }
 #endif
             if(bar->phys_addr != 0) {
+                pci_segment_set_mmio_flags(
+                        func->segment,
+                        (uintptr_t)bar->phys_addr,
+                        bar->size,
+                        PCI_PIO_MEM_MAPPED);
                 bar->mmio.base = mmio_map((void __phys *)bar->phys_addr, size);
                 if(bar->mmio.base == NULL)
                 {
