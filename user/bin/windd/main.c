@@ -778,7 +778,7 @@ main(int argc, const char **argv)
 {
     int res;
 
-    if(argc < 4) {
+    if(argc < 3) {
         usage(stderr);
         return -1;
     }

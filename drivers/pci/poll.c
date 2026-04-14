@@ -41,6 +41,7 @@ polling_pci_mailbox_handle_pending(void *_mb)
             continue;
         }
 
+        printk("polling_pci_mailbox: HIT!\n");
         res = handle_irq(desc, NULL);
         if(res == IRQ_UNHANDLED) {
             wprintk("polling_pci_mailbox: unhandled IRQ!\n");

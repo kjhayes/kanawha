@@ -429,11 +429,12 @@ pci_device_for_each_func(
 static void
 mmio_mem_flags_printer(printk_f *printer, unsigned long flags)
 {
-    (*printer)("%s%s%s%s",
+    (*printer)("%s%s%s%s%s",
             flags & PCI_MMIO_MEM_MAPPED ? "[MAPPED]" : "",
             flags & PCI_MMIO_MEM_32_BIT ? "[32]" : "",
             flags & PCI_MMIO_MEM_SNOOPED ? "[SNOOPED]" : "",
-            flags & PCI_MMIO_MEM_PREFETCH ? "[PREFETCH]" : ""
+            flags & PCI_MMIO_MEM_PREFETCH ? "[PREFETCH]" : "",
+            flags & PCI_MMIO_MEM_CONFIG ? "[CONFIG]" : ""
             );
 }
 int

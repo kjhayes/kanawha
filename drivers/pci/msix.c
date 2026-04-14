@@ -80,6 +80,7 @@ pci_msix_bir_write_addr(struct pci_func *func,
     return 0;
 }
 
+__maybe_unused
 static inline uint64_t
 pci_msix_bir_read_addr(struct pci_func *func,
                        struct pci_msix_info *info,
@@ -102,6 +103,7 @@ pci_msix_bir_write_data(struct pci_func *func,
     return pci_msix_bir_writel(func, info, (hwirq * 0x10) + 0x8, data);
 }
 
+__maybe_unused
 static inline uint32_t
 pci_msix_bir_read_data(struct pci_func *func,
                        struct pci_msix_info *info,
@@ -165,8 +167,13 @@ pci_func_init_msix_info(struct pci_func *func)
     if(func->bars[bir].type != PCI_BAR_MMIO)
     {
         eprintk("pci_func_init_msix_info: Invalid BIR (0x%x) bar_type != "
-                "MMIO\n",
-                bir);
+                "MMIO (type=%s)\n",
+                bir,
+                func->bars[bir].type == PCI_BAR_NONE ? "NONE" :
+                func->bars[bir].type == PCI_BAR_UNINIT ? "UNINIT" :
+                func->bars[bir].type == PCI_BAR_MMIO ? "MMIO" :
+                func->bars[bir].type == PCI_BAR_PIO ? "PIO" : "UNKNOWN"
+                );
         return -EINVAL;
     }
     info->bir = &func->bars[bir];

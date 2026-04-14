@@ -199,6 +199,7 @@ int pci_device_for_each_func(struct pci_device *device,
 #define PCI_MMIO_MEM_32_BIT  (1UL<<1)
 #define PCI_MMIO_MEM_SNOOPED (1UL<<2)
 #define PCI_MMIO_MEM_PREFETCH (1UL<<3)
+#define PCI_MMIO_MEM_CONFIG   (1UL<<4)
 int
 pci_segment_dump_mmio_mem_flags(
         struct pci_segment *segment,

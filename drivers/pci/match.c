@@ -190,11 +190,23 @@ declare_init(late, dump_all_pci_segment_memory);
 static int
 register_all_pci_funcs(void)
 {
-    struct pci_segment *segment = pci_segment_create_or_get(0);
+    int res;
 
+    // Trying to keep this function hidden...
+    // I should rework this... -KJH
+    extern int pci_func_init(struct pci_func *func);
 
+    res = pci_for_each_func(pci_func_init);
+    if(res) {
+        return res;
+    }
 
-    return pci_for_each_func(register_pci_func);
+    res = pci_for_each_func(register_pci_func);
+    if(res) {
+        return res;
+    }
+
+    return 0;
 }
 declare_init(device, register_all_pci_funcs);
 

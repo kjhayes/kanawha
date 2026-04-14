@@ -2,8 +2,10 @@
 #define __KANAWHA__PIO_H__
 
 #ifndef CONFIG_PORT_IO
-#error Included File "kanawha/pio.h" without having CONFIG_PORT_IO set!
-#endif
+
+typedef unsigned int pio_t;
+
+#else
 
 #include <kanawha/types.h>
 
@@ -64,4 +66,5 @@ piodelay(void)
     arch_piodelay();
 }
 
+#endif
 #endif

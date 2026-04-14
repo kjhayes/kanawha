@@ -3,10 +3,7 @@
 
 #include <kanawha/mmio.h>
 #include <kanawha/types.h>
-
-#ifdef CONFIG_PORT_IO
 #include <kanawha/pio.h>
-#endif
 
 struct pci_bar
 {
@@ -32,9 +29,7 @@ struct pci_bar
 
         struct
         {
-#ifdef CONFIG_PORT_IO
             pio_t base;
-#endif
         } pio;
     };
 };

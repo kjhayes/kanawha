@@ -68,7 +68,7 @@ pci_func_start_irqs(struct pci_func *func)
     }
     else
     {
-        dprintk("pci_func_start_irqs: MSI-X Failed (err=%s)\n", errnostr(res));
+        wprintk("pci_func_start_irqs: MSI-X Failed (err=%s)\n", errnostr(res));
     }
 
     res = pci_func_start_msi(func);
@@ -78,12 +78,12 @@ pci_func_start_irqs(struct pci_func *func)
     }
     else
     {
-        dprintk("pci_func_start_irqs: MSI Failed (err=%s)\n", errnostr(res));
+        wprintk("pci_func_start_irqs: MSI Failed (err=%s)\n", errnostr(res));
     }
 
     // TODO INT-X
 
-    dprintk("pci_func_start_irqs: No suitable IRQ method could be started!\n");
+    printk("pci_func_start_irqs: No suitable IRQ method could be started!\n");
     return -EINVAL;
 }
 
