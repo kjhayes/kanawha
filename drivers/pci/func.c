@@ -42,6 +42,10 @@ pci_setup_bars(struct pci_func *func)
     for(int i = 0; i < 6; i++)
     {
         struct pci_bar *bar = &func->bars[i];
+        if(bar->type != PCI_BAR_UNINIT) {
+            continue;
+        }
+
         int bar_index = i;
         int upper_bar_index = i + 1;
 
@@ -267,6 +271,10 @@ pci_probe_func(struct pci_device *device, uint8_t index)
 
         ptree_insert(&device->function_tree, &func->device_node, index);
         func->device = device;
+
+        for(size_t i = 0; i < 6; i++) {
+            func->bars[i].type = PCI_BAR_UNINIT;
+        }
     }
 
     pci_bus_readw(bus,

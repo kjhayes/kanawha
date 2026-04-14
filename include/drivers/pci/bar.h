@@ -15,11 +15,10 @@ struct pci_bar
 
     enum
     {
-        PCI_BAR_NONE = 0,
+        PCI_BAR_UNINIT = 0,
+        PCI_BAR_NONE,
         PCI_BAR_MMIO,
-#ifdef CONFIG_PORT_IO
         PCI_BAR_PIO,
-#endif
     } type;
 
     union

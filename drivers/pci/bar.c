@@ -41,6 +41,9 @@ pci_bar_readb(struct pci_bar *bar, size_t offset)
     case PCI_BAR_NONE:
         panic("pci_bar_readb on PCI_BAR_NONE!");
         return 0;
+    case PCI_BAR_UNINIT:
+        panic("pci_bar_readb on PCI_BAR_UNINIT!");
+        return 0;
     }
     panic("pci_bar_readb on invalid PCI BAR!");
     return 0;
@@ -65,6 +68,9 @@ pci_bar_readw(struct pci_bar *bar, size_t offset)
 #endif
     case PCI_BAR_NONE:
         panic("pci_bar_readw on PCI_BAR_NONE!");
+        return 0;
+    case PCI_BAR_UNINIT:
+        panic("pci_bar_readw on PCI_BAR_UNINIT!");
         return 0;
     }
     panic("pci_bar_readw on invalid PCI BAR!");
@@ -91,6 +97,9 @@ pci_bar_readl(struct pci_bar *bar, size_t offset)
     case PCI_BAR_NONE:
         panic("pci_bar_readl on PCI_BAR_NONE!");
         return 0;
+    case PCI_BAR_UNINIT:
+        panic("pci_bar_readl on PCI_BAR_UNINIT!");
+        return 0;
     }
     panic("pci_bar_readw on invalid PCI BAR!");
     return 0;
@@ -116,6 +125,9 @@ pci_bar_readq(struct pci_bar *bar, size_t offset)
 #endif
     case PCI_BAR_NONE:
         panic("pci_bar_readq on PCI_BAR_NONE!");
+        return 0;
+    case PCI_BAR_UNINIT:
+        panic("pci_bar_readq on PCI_BAR_UNINIT!");
         return 0;
     }
     panic("pci_bar_readq on invalid PCI BAR!");
@@ -145,6 +157,9 @@ pci_bar_writeb(struct pci_bar *bar, size_t offset, uint8_t val)
     case PCI_BAR_NONE:
         panic("pci_bar_writeb on PCI_BAR_NONE!");
         break;
+    case PCI_BAR_UNINIT:
+        panic("pci_bar_writeb on PCI_BAR_UNINIT!");
+        break;
     }
 }
 void
@@ -169,6 +184,9 @@ pci_bar_writew(struct pci_bar *bar, size_t offset, uint16_t val)
 #endif
     case PCI_BAR_NONE:
         panic("pci_bar_writew on PCI_BAR_NONE!");
+        break;
+    case PCI_BAR_UNINIT:
+        panic("pci_bar_writew on PCI_BAR_UNINIT!");
         break;
     }
 }
@@ -196,6 +214,9 @@ pci_bar_writel(struct pci_bar *bar, size_t offset, uint32_t val)
     case PCI_BAR_NONE:
         panic("pci_bar_writel on PCI_BAR_NONE!");
         break;
+    case PCI_BAR_UNINIT:
+        panic("pci_bar_writel on PCI_BAR_UNINIT!");
+        break;
     }
 }
 void
@@ -220,6 +241,9 @@ pci_bar_writeq(struct pci_bar *bar, size_t offset, uint64_t val)
 #endif
     case PCI_BAR_NONE:
         panic("pci_bar_writeq on PCI_BAR_NONE!");
+        break;
+    case PCI_BAR_UNINIT:
+        panic("pci_bar_writeq on PCI_BAR_UNINIT!");
         break;
     }
 }
