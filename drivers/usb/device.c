@@ -5,6 +5,128 @@
 #include <kanawha/kmalloc.h>
 #include <kanawha/string.h>
 
+static int
+usb_host_init_device_configurations(
+        struct usb_device *device)
+{
+    int res;
+
+    // We assume that the number of configurations
+    // is valid, and that the array has been allocated for
+    // us
+    DEBUG_ASSERT(device->num_configs);
+    DEBUG_ASSERT(KERNEL_ADDR(device->configs));
+
+    for(size_t ci = 0; ci < device->num_configs; ci++)
+    {
+        struct usb_configuration *config = &device->configs[ci];
+
+        struct usb_descriptor_configuration c_desc;
+        res = usb_device_read_descriptor(
+                device,
+                1,
+                USB_DESCRIPTOR_TYPE_CONFIGURATION,
+                ci,
+                &c_desc,
+                sizeof(c_desc));
+        if(res) {
+            wprintk("USB Device: Failed to read configuration %d!\n",
+                    (int)ci);
+            continue;
+        }
+
+        if(c_desc.bDescriptorType != USB_DESCRIPTOR_TYPE_CONFIGURATION) {
+            wprintk("USB Device: Configuration %d descriptor has invalid type!\n",
+                    (int)ci);
+            continue;
+        }
+
+        size_t full_desc_len = letoh16(c_desc.wTotalLength);
+        void *buffer = kzmalloc(full_desc_len, KM_KERNEL);
+        if(buffer == NULL) {
+            continue;
+        }
+
+        res = usb_device_read_descriptor(
+                device,
+                1,
+                USB_DESCRIPTOR_TYPE_CONFIGURATION,
+                ci,
+                buffer,
+                full_desc_len);
+        if(res) {
+            kfree(buffer);
+            wprintk("USB Device: Configuration %d Failed to Read Full Descriptor! (err=%s)\n",
+                    (int)ci, errnostr(res));
+            config->num_interfaces = 0;
+            config->interfaces = NULL;
+            continue;
+        }
+
+        config->value = c_desc.bConfigurationValue;
+        config->num_interfaces = c_desc.bNumInterfaces;
+
+        printk("\tConfiguration %d: #Interfaces=%d\n",
+                (int)ci,
+                (int)config->num_interfaces);
+
+        config->interfaces = kzmalloc(
+                sizeof(struct usb_interface) *
+                config->num_interfaces,
+                KM_KERNEL);
+        if((config->interfaces == NULL) && (config->num_interfaces > 0)) {
+            config->num_interfaces = 0;
+                wprintk("Failed to allocate buffer for USB device configuration interface info!\n");
+            continue;
+        }
+
+        void *iter = buffer + sizeof(struct usb_descriptor_configuration);
+        for(size_t ii = 0; ii < config->num_interfaces; ii++)
+        {
+            struct usb_interface *interface = &config->interfaces[ii];
+
+            struct usb_descriptor_interface *i_desc = iter;
+            iter += i_desc->bLength;
+
+            interface->num_interface_endpoints = i_desc->bNumEndpoints;
+
+            printk("\t\tInterface %d: #Endpoints=%d\n",
+                    (int)ii,
+                    (int)interface->num_interface_endpoints);
+
+            interface->interface_endpoints = kzmalloc(
+                    sizeof(struct usb_interface_endpoint) *
+                    interface->num_interface_endpoints,
+                    KM_KERNEL);
+            if((interface->interface_endpoints == NULL) && (interface->num_interface_endpoints > 0)) {
+                interface->num_interface_endpoints = 0;
+                wprintk("Failed to allocate buffer for USB device interface endpoint info!\n");
+                continue;
+            }
+
+            for(size_t ei = 0; ei < interface->num_interface_endpoints; ei++) {
+                struct usb_interface_endpoint *endpoint = &interface->interface_endpoints[ei];
+                struct usb_descriptor_endpoint *e_desc = iter;
+                iter += e_desc->bLength;
+
+                endpoint->endpoint_number = (e_desc->bEndpointAddress & 0xF);
+                endpoint->dir_in = (e_desc->bEndpointAddress >> 7) & 0b1;
+                endpoint->max_packet_size = letoh16(e_desc->wMaxPacketSize);
+
+                printk("\t\t\tEndpoint %d: EP#=%d dir=%s\n",
+                        (int)ei,
+                        (int)endpoint->endpoint_number,
+                        endpoint->dir_in ? "IN" : "OUT");
+            }
+        }
+
+
+        kfree(buffer);
+    }
+
+    return 0;
+}
+
 int
 usb_host_init_device(struct usb_device *device, struct usb_device_ops *ops)
 {
@@ -40,29 +162,16 @@ usb_host_init_device(struct usb_device *device, struct usb_device_ops *ops)
           (int)desc.bNumConfigurations
           );
 
-    for(int conf_i = 0; conf_i < desc.bNumConfigurations; conf_i++) {
-        struct usb_descriptor_configuration c_desc;
-        res = usb_device_read_descriptor(
-                device,
-                1,
-                USB_DESCRIPTOR_TYPE_CONFIGURATION,
-                conf_i,
-                &c_desc,
-                sizeof(c_desc));
+    device->num_configs = desc.bNumConfigurations;
+    if(device->num_configs > 0) {
+        device->configs = kzmalloc(sizeof(struct usb_configuration) * device->num_configs, KM_KERNEL);
+        if(device->configs == NULL) {
+            return -ENOMEM;
+        }
+        res = usb_host_init_device_configurations(device);
         if(res) {
-            wprintk("USB Device: Failed to read configuration %d!\n", conf_i);
-            continue;
+            return res;
         }
-
-        if(c_desc.bDescriptorType != USB_DESCRIPTOR_TYPE_CONFIGURATION) {
-            wprintk("USB Device: Configuration %d descriptor has invalid type!\n",
-                    conf_i);
-            continue;
-        }
-
-        printk("\tConfiguration %d: #Interfaces=%d\n",
-                conf_i,
-                (int)c_desc.bNumInterfaces);
     }
 
     return 0;

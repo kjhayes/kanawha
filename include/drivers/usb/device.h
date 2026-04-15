@@ -4,6 +4,12 @@
 #include <drivers/usb/transfer.h>
 #include <kanawha/ops.h>
 
+struct usb_id {
+    uint8_t class;
+    uint8_t subclass;
+    uint8_t protocol;
+};
+
 struct usb_device;
 
 #define USB_DEV_CREATE_NORMAL_TRANSFER_SIG(RET, ARG, ...)                      \
@@ -52,6 +58,9 @@ struct usb_device_ops
 struct usb_device
 {
     struct usb_device_ops *ops;
+
+    size_t num_configs;
+    struct usb_configuration *configs;
 
     ilist_node_t match_node;
 };
@@ -107,5 +116,25 @@ usb_device_control_transfer(struct usb_device *device,
                             uint16_t wLength,
                             void __phys *buffer,
                             size_t bufsize);
+
+struct usb_configuration
+{
+    uint8_t value;
+
+    size_t num_interfaces;
+    struct usb_interface *interfaces;
+};
+
+struct usb_interface
+{
+    size_t num_interface_endpoints;
+    struct usb_interface_endpoint *interface_endpoints;
+};
+
+struct usb_interface_endpoint {
+    uint8_t endpoint_number;
+    unsigned dir_in : 1;
+    uint16_t max_packet_size;
+};
 
 #endif
