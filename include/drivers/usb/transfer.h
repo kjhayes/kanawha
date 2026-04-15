@@ -8,8 +8,8 @@ struct usb_transfer;
 
 typedef enum
 {
-    USB_TRANSFER_NORMAL,
     USB_TRANSFER_CONTROL,
+    USB_TRANSFER_BULK,
     USB_TRANSFER_ISOCH,
 } usb_transfer_t;
 

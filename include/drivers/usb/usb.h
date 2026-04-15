@@ -5,7 +5,7 @@
 #include <drivers/usb/id.h>
 
 struct usb_device;
-struct usb_driver;
+struct usb_device_driver;
 
 #define USB_DRIVER_PROBE_DEVICE_SIG(RET,ARG,...)\
     RET(int)\
@@ -13,7 +13,8 @@ struct usb_driver;
 
 #define USB_DRIVER_CONFIGURE_DEVICE_SIG(RET,ARG,...)\
     RET(int)\
-    ARG(struct usb_device *, device)
+    ARG(struct usb_device *, device)\
+    ARG(size_t *, config_choice)
 
 #define USB_DRIVER_INIT_DEVICE_SIG(RET,ARG,...)\
     RET(int)\
@@ -24,18 +25,20 @@ struct usb_driver;
     ARG(struct usb_device *, device)
 
 #define USB_DRIVER_OP_LIST(OP,...)\
-OP(probe, USB_DRIVER_PROBE_DEVICE_SIG, ##__VA_ARGS__)\
-OP(configure, USB_DRIVER_CONFIGURE_DEVICE_SIG, ##__VA_ARGS__)\
+OP(probe_device, USB_DRIVER_PROBE_DEVICE_SIG, ##__VA_ARGS__)\
+OP(configure_device, USB_DRIVER_CONFIGURE_DEVICE_SIG, ##__VA_ARGS__)\
 OP(init_device, USB_DRIVER_INIT_DEVICE_SIG, ##__VA_ARGS__)\
 OP(deinit_device, USB_DRIVER_DEINIT_DEVICE_SIG, ##__VA_ARGS__)\
 
-struct usb_driver_ops {
-    DECLARE_OP_LIST_PTRS(USB_DRIVER_OP_LIST, struct usb_driver *)
+struct usb_device_driver_ops {
+    DECLARE_OP_LIST_PTRS(USB_DRIVER_OP_LIST, struct usb_device_driver *)
 };
 
-struct usb_driver
+struct usb_device_driver
 {
-    struct usb_driver_ops *ops;
+    struct usb_device_driver_ops *ops;
+
+    ilist_t matched_devices;
 
     ilist_node_t match_node;
 };
@@ -44,9 +47,10 @@ DEFINE_OP_LIST_WRAPPERS(
         USB_DRIVER_OP_LIST,
         static inline,
         /* No Prefix */,
-        usb_driver,
+        usb_device_driver,
         OPS_STRUCT_PTR_ACCESSOR,
         SELF_ACCESSOR)
+
 
 int
 register_usb_device(struct usb_device *device);
@@ -54,8 +58,8 @@ int
 unregister_usb_device(struct usb_device *device);
 
 int
-register_usb_driver(struct usb_driver *driver);
+register_usb_device_driver(struct usb_device_driver *driver);
 int
-unregister_usb_driver(struct usb_driver *driver);
+unregister_usb_device_driver(struct usb_device_driver *driver);
 
 #endif

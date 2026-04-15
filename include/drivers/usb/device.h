@@ -8,7 +8,7 @@
 
 struct usb_device;
 
-#define USB_DEV_CREATE_NORMAL_TRANSFER_SIG(RET, ARG, ...)                      \
+#define USB_DEV_CREATE_BULK_TRANSFER_SIG(RET, ARG, ...)                      \
     RET(struct usb_transfer *)                                                 \
     ARG(int, dci)                                                              \
     ARG(void __phys *, buffer)                                                 \
@@ -34,11 +34,11 @@ struct usb_device;
     ARG(struct usb_transfer *, xfer)
 
 #define USB_DEV_OP_LIST(OP, ...)                                               \
-    OP(create_normal_transfer,                                                 \
-       USB_DEV_CREATE_NORMAL_TRANSFER_SIG,                                     \
-       ##__VA_ARGS__)                                                          \
     OP(create_control_transfer,                                            \
        USB_DEV_CREATE_CONTROL_TRANSFER_SIG,                                \
+       ##__VA_ARGS__)                                                          \
+    OP(create_bulk_transfer,                                                 \
+       USB_DEV_CREATE_BULK_TRANSFER_SIG,                                     \
        ##__VA_ARGS__)                                                          \
     OP(create_isoch_transfer,                                                  \
        USB_DEV_CREATE_ISOCH_TRANSFER_SIG,                                      \
@@ -60,6 +60,9 @@ struct usb_device
 
     struct usb_id usb_id;
 
+    unsigned configured : 1;
+
+    struct usb_device_driver *driver;
     ilist_node_t match_node;
 };
 
@@ -70,7 +73,7 @@ DEFINE_OP_LIST_WRAPPERS(USB_DEV_OP_LIST,
                         OPS_STRUCT_PTR_ACCESSOR,
                         SELF_ACCESSOR)
 
-#undef USB_DEV_CREATE_NORMAL_TRANSFER_SIG
+#undef USB_DEV_CREATE_BULK_TRANSFER_SIG
 #undef USB_DEV_CREATE_CONTROL_TRANSFER_SIG
 #undef USB_DEV_CREATE_ISOCH_TRANSFER_SIG
 #undef USB_DEV_DESTROY_TRANSFER_SIG

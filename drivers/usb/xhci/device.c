@@ -374,7 +374,7 @@ usb_xhci_address_root_hub_device(struct usb_xhci_device *dev,
 }
 
 static struct usb_transfer *
-usb_xhci_device_create_normal_transfer(struct usb_device *usb_dev,
+usb_xhci_device_create_bulk_transfer(struct usb_device *usb_dev,
                                        int dci,
                                        void __phys *buffer,
                                        size_t buflen)
@@ -388,7 +388,7 @@ usb_xhci_device_create_normal_transfer(struct usb_device *usb_dev,
     }
 
     struct usb_xhci_transfer *xfer;
-    xfer = usb_xhci_endpoint_create_normal_transfer(endp, buffer, buflen);
+    xfer = usb_xhci_endpoint_create_bulk_transfer(endp, buffer, buflen);
     if(xfer == NULL)
     {
         return NULL;
@@ -467,8 +467,8 @@ usb_xhci_device_destroy_transfer(struct usb_device *usb_dev,
 }
 
 static struct usb_device_ops usb_xhci_device_ops = {
-    .create_normal_transfer = usb_xhci_device_create_normal_transfer,
     .create_control_transfer = usb_xhci_device_create_control_transfer,
+    .create_bulk_transfer = usb_xhci_device_create_bulk_transfer,
     .create_isoch_transfer = usb_xhci_device_create_isoch_transfer,
     .destroy_transfer = usb_xhci_device_destroy_transfer,
 };

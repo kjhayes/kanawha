@@ -96,33 +96,6 @@ usb_xhci_endpoint_notify_transfer_event(struct usb_xhci_endpoint *endp,
 }
 
 static int
-usb_xhci_normal_transfer_launch(struct usb_transfer *gen_xfer)
-{
-    struct usb_xhci_transfer *xfer =
-        container_of(gen_xfer, struct usb_xhci_transfer, xfer);
-    irq_lock_acquire(&xfer->endpoint->lock);
-
-    if(xfer->xfer.status != USB_TRANSFER_STATUS_IDLE)
-    {
-        irq_lock_release(&xfer->endpoint->lock);
-        return -EALREADY;
-    }
-
-    // TODO
-
-    // ilist_push_tail(&xfer->endpoint->transfer_queue,
-    // &xfer->endpoint_queue_node);
-    // usb_transfer_set_status(&xfer->xfer, USB_TRANSFER_STATUS_LAUNCHED);
-
-    irq_lock_release(&xfer->endpoint->lock);
-    return -EUNIMPL;
-}
-
-static struct usb_transfer_ops usb_xhci_normal_transfer_ops = {
-    .launch = usb_xhci_normal_transfer_launch,
-};
-
-static int
 usb_xhci_control_transfer_launch(struct usb_transfer *gen_xfer)
 {
     int res;
@@ -288,6 +261,34 @@ usb_xhci_control_transfer_launch(struct usb_transfer *gen_xfer)
     return 0;
 }
 
+static int
+usb_xhci_bulk_transfer_launch(struct usb_transfer *gen_xfer)
+{
+    struct usb_xhci_transfer *xfer =
+        container_of(gen_xfer, struct usb_xhci_transfer, xfer);
+    irq_lock_acquire(&xfer->endpoint->lock);
+
+    if(xfer->xfer.status != USB_TRANSFER_STATUS_IDLE)
+    {
+        irq_lock_release(&xfer->endpoint->lock);
+        return -EALREADY;
+    }
+
+    // TODO
+
+    // ilist_push_tail(&xfer->endpoint->transfer_queue,
+    // &xfer->endpoint_queue_node);
+    // usb_transfer_set_status(&xfer->xfer, USB_TRANSFER_STATUS_LAUNCHED);
+
+    irq_lock_release(&xfer->endpoint->lock);
+    return -EUNIMPL;
+}
+
+static struct usb_transfer_ops usb_xhci_bulk_transfer_ops = {
+    .launch = usb_xhci_bulk_transfer_launch,
+};
+
+
 static struct usb_transfer_ops usb_xhci_control_transfer_ops = {
     .launch = usb_xhci_control_transfer_launch,
 };
@@ -333,11 +334,11 @@ usb_xhci_alloc_transfer(struct usb_xhci_endpoint *endp, usb_transfer_t type)
     struct usb_transfer_ops *ops;
     switch(type)
     {
-    case USB_TRANSFER_NORMAL:
-        ops = &usb_xhci_normal_transfer_ops;
-        break;
     case USB_TRANSFER_CONTROL:
         ops = &usb_xhci_control_transfer_ops;
+        break;
+    case USB_TRANSFER_BULK:
+        ops = &usb_xhci_bulk_transfer_ops;
         break;
     case USB_TRANSFER_ISOCH:
         ops = &usb_xhci_isoch_transfer_ops;
@@ -361,20 +362,6 @@ usb_xhci_free_transfer(struct usb_xhci_transfer *xfer)
 }
 
 struct usb_xhci_transfer *
-usb_xhci_endpoint_create_normal_transfer(struct usb_xhci_endpoint *endp,
-                                         void __phys *buffer,
-                                         size_t buflen)
-{
-    struct usb_xhci_transfer *xfer =
-        usb_xhci_alloc_transfer(endp, USB_TRANSFER_NORMAL);
-
-    xfer->normal.buffer = buffer;
-    xfer->normal.buflen = buflen;
-
-    return xfer;
-}
-
-struct usb_xhci_transfer *
 usb_xhci_endpoint_create_control_transfer(struct usb_xhci_endpoint *endp,
                                               uint8_t bmRequestType,
                                               uint8_t bRequest,
@@ -394,6 +381,20 @@ usb_xhci_endpoint_create_control_transfer(struct usb_xhci_endpoint *endp,
     xfer->control.wLength = wLength;
     xfer->control.buffer = buffer;
     xfer->control.buflen = buflen;
+
+    return xfer;
+}
+
+struct usb_xhci_transfer *
+usb_xhci_endpoint_create_bulk_transfer(struct usb_xhci_endpoint *endp,
+                                         void __phys *buffer,
+                                         size_t buflen)
+{
+    struct usb_xhci_transfer *xfer =
+        usb_xhci_alloc_transfer(endp, USB_TRANSFER_BULK);
+
+    xfer->bulk.buffer = buffer;
+    xfer->bulk.buflen = buflen;
 
     return xfer;
 }

@@ -1,0 +1,6 @@
+
+config USB_KEYBOARD
+    bool "USB Keyboard Driver"
+    depends on USB
+    default y
+

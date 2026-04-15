@@ -14,7 +14,7 @@ usb_host_init_device_configurations(
     // We assume that the number of configurations
     // is valid, and that the array has been allocated for
     // us
-    DEBUG_ASSERT(device->num_configs);
+    DEBUG_ASSERT(device->num_configs > 0);
     DEBUG_ASSERT(KERNEL_ADDR(device->configs));
 
     for(size_t ci = 0; ci < device->num_configs; ci++)
@@ -142,6 +142,9 @@ usb_host_init_device(struct usb_device *device, struct usb_device_ops *ops)
     int res;
 
     device->ops = ops;
+    device->configured = 0;
+    device->num_configs = 0;
+    device->configs = NULL;
 
     struct usb_descriptor_device desc;
 

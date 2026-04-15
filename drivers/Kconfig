@@ -23,6 +23,10 @@ menu "Terminal Devices"
 source "drivers/term/Kconfig"
 endmenu
 
+menu "Input Devices"
+source "drivers/input/Kconfig"
+endmenu
+
 menu "Framebuffer Devices"
 source "drivers/fb/Kconfig"
 endmenu

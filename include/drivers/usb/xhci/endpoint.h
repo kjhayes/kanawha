@@ -50,11 +50,6 @@ struct usb_xhci_transfer
     {
         struct
         {
-            void __phys *buffer;
-            size_t buflen;
-        } normal;
-        struct
-        {
             uint8_t bmRequestType;
             uint8_t bRequest;
             uint16_t wValue;
@@ -65,14 +60,14 @@ struct usb_xhci_transfer
         } control;
         struct
         {
+            void __phys *buffer;
+            size_t buflen;
+        } bulk;
+        struct
+        {
         } isoch;
     };
 };
-
-struct usb_xhci_transfer *
-usb_xhci_endpoint_create_normal_transfer(struct usb_xhci_endpoint *endp,
-                                         void __phys *buffer,
-                                         size_t buflen);
 
 struct usb_xhci_transfer *
 usb_xhci_endpoint_create_control_transfer(struct usb_xhci_endpoint *endp,
@@ -83,6 +78,11 @@ usb_xhci_endpoint_create_control_transfer(struct usb_xhci_endpoint *endp,
                                               uint16_t wLength,
                                               void __phys *buffer,
                                               size_t buflen);
+
+struct usb_xhci_transfer *
+usb_xhci_endpoint_create_bulk_transfer(struct usb_xhci_endpoint *endp,
+                                         void __phys *buffer,
+                                         size_t buflen);
 
 struct usb_xhci_transfer *
 usb_xhci_endpoint_create_isoch_transfer(struct usb_xhci_endpoint *endp);

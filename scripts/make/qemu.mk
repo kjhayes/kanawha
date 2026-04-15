@@ -43,7 +43,8 @@ QEMU_FLAGS += -device pci-testdev
 QEMU_FLAGS += \
               -device nec-usb-xhci,id=xhci                      \
               -drive if=none,id=stick0,format=raw,file=./usb0.img \
-              -device usb-storage,bus=xhci.0,drive=stick0,id=stick0
+              -device usb-storage,bus=xhci.0,drive=stick0,id=stick0 \
+              -device usb-kbd,bus=xhci.0
 
 #              -drive if=none,id=stick1,format=raw,file=./usb1.img \
 #              -device usb-storage,bus=xhci.0,drive=stick1,id=stick1 \
