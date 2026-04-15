@@ -4,6 +4,7 @@ obj-$(CONFIG_USB) += \
 	transfer.o \
 	descriptor.o \
 	match.o \
+	id.o \
 
 obj-$(CONFIG_USB_XHCI) += \
 	xhci/ \

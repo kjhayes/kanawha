@@ -1,5 +1,6 @@
 
 #include <drivers/usb/usb.h>
+#include <drivers/usb/device.h>
 #include <kanawha/list.h>
 #include <kanawha/lock.h>
 

@@ -89,9 +89,18 @@ usb_host_init_device_configurations(
             iter += i_desc->bLength;
 
             interface->num_interface_endpoints = i_desc->bNumEndpoints;
+            interface->usb_id.class = i_desc->bInterfaceClass;
+            interface->usb_id.subclass = i_desc->bInterfaceSubClass;
+            interface->usb_id.protocol = i_desc->bInterfaceProtocol;
 
-            printk("\t\tInterface %d: #Endpoints=%d\n",
+            printk("\t\tInterface %d: id=%d.%d.%d %s %s %s #Endpoints=%d\n",
                     (int)ii,
+                    (int)interface->usb_id.class,
+                    (int)interface->usb_id.subclass,
+                    (int)interface->usb_id.protocol,
+                    usb_id_class_name(&interface->usb_id),
+                    usb_id_subclass_name(&interface->usb_id),
+                    usb_id_protocol_name(&interface->usb_id),
                     (int)interface->num_interface_endpoints);
 
             interface->interface_endpoints = kzmalloc(
@@ -154,15 +163,22 @@ usb_host_init_device(struct usb_device *device, struct usb_device_ops *ops)
         return -EINVAL;
     }
 
+    device->usb_id.class = desc.bDeviceClass;
+    device->usb_id.subclass = desc.bDeviceSubClass;
+    device->usb_id.protocol = desc.bDeviceProtocol;
+    device->num_configs = desc.bNumConfigurations;
 
-    printk("USB Device: Class=%d, Subclass=%d, Protocol=%d, #Configurations=%d\n",
-          (int)desc.bDeviceClass,
-          (int)desc.bDeviceSubClass,
-          (int)desc.bDeviceProtocol,
-          (int)desc.bNumConfigurations
+    printk("USB Device: id=%d.%d.%d %s %s %s #Configurations=%d\n",
+          (int)device->usb_id.class,
+          (int)device->usb_id.subclass,
+          (int)device->usb_id.protocol,
+          usb_id_class_name(&device->usb_id),
+          usb_id_subclass_name(&device->usb_id),
+          usb_id_protocol_name(&device->usb_id),
+          (int)device->num_configs
           );
 
-    device->num_configs = desc.bNumConfigurations;
+
     if(device->num_configs > 0) {
         device->configs = kzmalloc(sizeof(struct usb_configuration) * device->num_configs, KM_KERNEL);
         if(device->configs == NULL) {

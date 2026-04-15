@@ -2,13 +2,9 @@
 #define __KANAWHA__USB_DEVICE_H__
 
 #include <drivers/usb/transfer.h>
+#include <drivers/usb/usb.h>
+#include <drivers/usb/id.h>
 #include <kanawha/ops.h>
-
-struct usb_id {
-    uint8_t class;
-    uint8_t subclass;
-    uint8_t protocol;
-};
 
 struct usb_device;
 
@@ -61,6 +57,8 @@ struct usb_device
 
     size_t num_configs;
     struct usb_configuration *configs;
+
+    struct usb_id usb_id;
 
     ilist_node_t match_node;
 };
@@ -127,6 +125,8 @@ struct usb_configuration
 
 struct usb_interface
 {
+    struct usb_id usb_id;
+
     size_t num_interface_endpoints;
     struct usb_interface_endpoint *interface_endpoints;
 };

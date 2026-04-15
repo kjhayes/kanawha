@@ -2,8 +2,9 @@
 #define __KANAWHA__USB_USB_H__
 
 #include <kanawha/ops.h>
-#include <drivers/usb/device.h>
+#include <drivers/usb/id.h>
 
+struct usb_device;
 struct usb_driver;
 
 #define USB_DRIVER_PROBE_DEVICE_SIG(RET,ARG,...)\
