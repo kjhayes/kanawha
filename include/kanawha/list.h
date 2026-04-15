@@ -220,4 +220,13 @@ ilist_insert_before(ilist_t *list, ilist_node_t *to_insert, ilist_node_t *ref)
     return;
 }
 
+static inline ilist_node_t *
+ilist_peek_head(ilist_t *list)
+{
+    if(ilist_empty(list)) {
+        return NULL;
+    }
+    return list->next;
+}
+
 #endif

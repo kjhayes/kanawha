@@ -31,6 +31,7 @@ usb_xhci_deinit_trb_ring(struct usb_xhci_trb_ring *ring);
 int
 usb_xhci_trb_ring_get_avail_trbs(struct usb_xhci_trb_ring *ring,
                                  struct usb_xhci_trb **trbbuf,
+                                 struct usb_xhci_trb __phys **sentinel,
                                  size_t buflen);
 
 int

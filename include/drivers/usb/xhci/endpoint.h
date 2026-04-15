@@ -44,7 +44,7 @@ struct usb_xhci_transfer
 
     struct usb_xhci_endpoint *endpoint;
     ilist_node_t endpoint_queue_node;
-    struct usb_xhci_trb *final_trb;
+    struct usb_xhci_trb __phys *final_trb;
 
     union
     {
@@ -60,18 +60,9 @@ struct usb_xhci_transfer
             uint16_t wValue;
             uint16_t wIndex;
             uint16_t wLength;
-            int trt;
-        } setup_stage;
-        struct
-        {
             void __phys *buffer;
             size_t buflen;
-            int dir;
-        } data_stage;
-        struct
-        {
-            int dir;
-        } status_stage;
+        } control;
         struct
         {
         } isoch;
@@ -84,23 +75,14 @@ usb_xhci_endpoint_create_normal_transfer(struct usb_xhci_endpoint *endp,
                                          size_t buflen);
 
 struct usb_xhci_transfer *
-usb_xhci_endpoint_create_setup_stage_transfer(struct usb_xhci_endpoint *endp,
+usb_xhci_endpoint_create_control_transfer(struct usb_xhci_endpoint *endp,
                                               uint8_t bmRequestType,
                                               uint8_t bRequest,
                                               uint16_t wValue,
                                               uint16_t wIndex,
                                               uint16_t wLength,
-                                              int trt);
-
-struct usb_xhci_transfer *
-usb_xhci_endpoint_create_data_stage_transfer(struct usb_xhci_endpoint *endp,
-                                             void __phys *buffer,
-                                             size_t buflen,
-                                             int dir);
-
-struct usb_xhci_transfer *
-usb_xhci_endpoint_create_status_stage_transfer(struct usb_xhci_endpoint *endp,
-                                               int dir);
+                                              void __phys *buffer,
+                                              size_t buflen);
 
 struct usb_xhci_transfer *
 usb_xhci_endpoint_create_isoch_transfer(struct usb_xhci_endpoint *endp);

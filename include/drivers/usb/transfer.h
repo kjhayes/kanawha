@@ -9,9 +9,7 @@ struct usb_transfer;
 typedef enum
 {
     USB_TRANSFER_NORMAL,
-    USB_TRANSFER_SETUP_STAGE,
-    USB_TRANSFER_DATA_STAGE,
-    USB_TRANSFER_STATUS_STAGE,
+    USB_TRANSFER_CONTROL,
     USB_TRANSFER_ISOCH,
 } usb_transfer_t;
 

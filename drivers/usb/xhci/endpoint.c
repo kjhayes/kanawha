@@ -47,6 +47,9 @@ usb_xhci_endpoint_ring_doorbell(struct usb_xhci_endpoint *endp)
     uint16_t task = 0;
     uint8_t target = endp->dci;
 
+    dprintk("endpoint_ring_doorbell: dci=0x%lx\n",
+            (ul_t)target);
+
     usb_xhci_write_doorbell(endp->device->xhci,
                             endp->device->slot_index,
                             target,
@@ -61,12 +64,27 @@ usb_xhci_endpoint_notify_transfer_event(struct usb_xhci_endpoint *endp,
     endp->ring.dequeue_phys = dequeued;
 
     irq_lock_acquire(&endp->lock);
-    ilist_node_t *node = ilist_pop_head(&endp->transfer_queue);
+    ilist_node_t *node = ilist_peek_head(&endp->transfer_queue);
+    if(node == NULL) {
+        eprintk("usb_xhci_endpoint_notify_transfer_event: No transfer is in progress!\n");
+        irq_lock_release(&endp->lock);
+        return -ENXIO;
+    }
 
     struct usb_xhci_transfer *xfer =
         container_of(node, struct usb_xhci_transfer, endpoint_queue_node);
 
-    xfer->xfer.status = USB_TRANSFER_STATUS_COMPLETE;
+    if(xfer->final_trb != dequeued) {
+        // This is not the final TRB of the transfer
+        wprintk("usb_xhci_transfer: partial notification of transfer... (final=%p, dequeued=%p)",
+                xfer->final_trb, dequeued);
+        irq_lock_release(&endp->lock);
+        return 0;
+    }
+
+    ilist_pop_head(&endp->transfer_queue);
+
+    usb_transfer_set_status(&xfer->xfer, USB_TRANSFER_STATUS_COMPLETE);
     if(xfer->xfer.callback != NULL)
     {
         xfer->xfer.callback(&xfer->xfer);
@@ -94,7 +112,7 @@ usb_xhci_normal_transfer_launch(struct usb_transfer *gen_xfer)
 
     // ilist_push_tail(&xfer->endpoint->transfer_queue,
     // &xfer->endpoint_queue_node);
-    usb_transfer_set_status(&xfer->xfer, USB_TRANSFER_STATUS_LAUNCHED);
+    // usb_transfer_set_status(&xfer->xfer, USB_TRANSFER_STATUS_LAUNCHED);
 
     irq_lock_release(&xfer->endpoint->lock);
     return -EUNIMPL;
@@ -105,12 +123,17 @@ static struct usb_transfer_ops usb_xhci_normal_transfer_ops = {
 };
 
 static int
-usb_xhci_setup_stage_transfer_launch(struct usb_transfer *gen_xfer)
+usb_xhci_control_transfer_launch(struct usb_transfer *gen_xfer)
 {
     int res;
 
     struct usb_xhci_transfer *xfer =
         container_of(gen_xfer, struct usb_xhci_transfer, xfer);
+
+    // HACK: We don't support large buffers yet
+    if((xfer->control.buflen & 0x1FFFF) != xfer->control.buflen) {
+        return -ENOMEM;
+    }
 
     irq_lock_acquire(&xfer->endpoint->lock);
 
@@ -120,45 +143,136 @@ usb_xhci_setup_stage_transfer_launch(struct usb_transfer *gen_xfer)
         return -EALREADY;
     }
 
-    struct usb_xhci_trb *trb;
-    res = usb_xhci_trb_ring_get_avail_trbs(&xfer->endpoint->ring, &trb, 1);
+    size_t num_data_trbs = (xfer->control.buflen  > 0);
+    size_t num_event_trbs = 0;
+    size_t num_trbs = 2 + num_data_trbs + num_event_trbs;
+
+    struct usb_xhci_trb *trbs[num_trbs];
+    res = usb_xhci_trb_ring_get_avail_trbs(
+            &xfer->endpoint->ring,
+            trbs,
+            &xfer->final_trb,
+            num_trbs);
     if(res)
     {
         irq_lock_release(&xfer->endpoint->lock);
         return res;
     }
 
-    xfer->final_trb = trb;
+    uint32_t interruptor = 0; // Target Zero No Matter What For Now
 
-    uint64_t param;
-    uint32_t status;
-    uint32_t control;
+    int dir_in = !!(xfer->control.bmRequestType & USB_DEV_CONTROL_REQUEST_TYPE_DIR_DEVICE_TO_HOST);
 
-    param = (((uint64_t)xfer->setup_stage.bmRequestType) << 0) |
-            (((uint64_t)xfer->setup_stage.bRequest) << 8) |
-            (((uint64_t)xfer->setup_stage.wValue) << 16) |
-            (((uint64_t)xfer->setup_stage.wIndex) << 32) |
-            (((uint64_t)xfer->setup_stage.wLength) << 48);
+    { // Setup Stage
+        struct usb_xhci_trb *trb = trbs[0];
 
-    uint16_t interruptor = 0; // Target Zero No Matter What For Now
-    status = 0x8 << ((uint32_t)interruptor << 22);
+        uint64_t param;
+        uint32_t status;
+        uint32_t control;
 
-    control = (1ULL << 5) | // IOC
-              (1ULL << 6) | // IDT
-              (USB_XHCI_TRB_TYPE_SETUP_STAGE << 10) |
-              (xfer->setup_stage.trt << 16);
+        uint32_t trt = 0;
+        if(xfer->control.buflen == 0) {
+            trt = 0;
+        }
+        else if(dir_in) {
+            trt = 3;
+        } else {
+            trt = 2;
+        }
 
-    trb->param = htole64(param);
-    trb->status = htole32(status);
-    // Write Control Without Changing the Enqueue Pointer Bit
-    trb->control =
-        (htole32(control & ~0b1) & ~0b1) | (trb->control & htole32(0b1));
+        param = (((uint64_t)xfer->control.bmRequestType) << 0) |
+                (((uint64_t)xfer->control.bRequest) << 8) |
+                (((uint64_t)xfer->control.wValue) << 16) |
+                (((uint64_t)xfer->control.wIndex) << 32) |
+                (((uint64_t)xfer->control.wLength) << 48);
+
+        status = 0x8 | ((uint32_t)interruptor << 22);
+
+        control = 0
+                  |(1ULL << 6) // IDT
+                  |((uint32_t)USB_XHCI_TRB_TYPE_SETUP_STAGE << 10)
+                  |(trt << 16)
+                  ;
+
+        control |= (letoh32(trb->control) & 0b1); // Keep the same cycle bit
+
+        trb->param = htole64(param);
+        trb->status = htole32(status);
+        trb->control = htole32(control);
+    }
+    { // Data Stage
+        if(num_data_trbs > 0)
+        {
+            struct usb_xhci_trb *trb = trbs[1];
+
+            uint64_t param = 0;
+            uint32_t status = 0;
+            uint32_t control = 0;
+
+            param |= (uintptr_t)xfer->control.buffer;
+
+            size_t td_size = 0; // TODO change this if we ever
+                                //      support more than one buffer
+
+            status |= (xfer->control.buflen & 0x1FFFF)
+                | ((uint32_t)(td_size & 0x1F) << 17)
+                | ((uint32_t)interruptor << 22);
+
+            control |= 0
+                |((uint32_t)(num_data_trbs > 1) << 4) // Set the chain bit if we have multiple TRB(s)
+                |(((uint32_t)USB_XHCI_TRB_TYPE_DATA_STAGE) << 10) // TRB Type
+                |((uint32_t)dir_in << 16)
+                ;
+
+            control |= (letoh32(trb->control) & 0b1); // Keep the same cycle bit
+
+            trb->param = htole64(param);
+            trb->status = htole32(status);
+            trb->control = htole32(control);
+
+            ASSERT(num_data_trbs == 1);
+            for(size_t i = 1; i < num_data_trbs; i++) {
+                // Handle additional "normal TRB's" for
+                // fragmented data... (Not Implemented)
+                struct usb_xhci_trb *additional_trb = trbs[i + 1];
+            }
+        }
+    }
+    { // Status Stage
+        struct usb_xhci_trb *trb = trbs[1 + num_data_trbs];
+        uint64_t param = 0;
+        uint32_t status = 0;
+        uint32_t control = 0;
+
+        int status_is_input;
+        if(xfer->control.buflen == 0) {
+            status_is_input = 1;
+        } else if(dir_in) {
+            status_is_input = 0;
+        } else {
+            status_is_input = 1;
+        }
+
+        status |= ((uint32_t)interruptor << 22);
+        control |= 0
+            |(1ULL << 5) // IOC
+            |((uint32_t)USB_XHCI_TRB_TYPE_STATUS_STAGE << 10)
+            |((uint32_t)status_is_input << 16)
+            ;
+
+        control |= (letoh32(trb->control) & 0b1); // Keep the same cycle bit
+
+        trb->param = htole64(param);
+        trb->status = htole32(status);
+        trb->control = htole32(control);
+    }
 
     ilist_push_tail(&xfer->endpoint->transfer_queue,
                     &xfer->endpoint_queue_node);
+
     usb_transfer_set_status(&xfer->xfer, USB_TRANSFER_STATUS_LAUNCHED);
 
-    res = usb_xhci_trb_ring_advance_enqueued(&xfer->endpoint->ring, 1);
+    res = usb_xhci_trb_ring_advance_enqueued(&xfer->endpoint->ring, num_trbs);
     if(res)
     {
         usb_transfer_set_status(&xfer->xfer, res);
@@ -174,62 +288,8 @@ usb_xhci_setup_stage_transfer_launch(struct usb_transfer *gen_xfer)
     return 0;
 }
 
-static struct usb_transfer_ops usb_xhci_setup_stage_transfer_ops = {
-    .launch = usb_xhci_setup_stage_transfer_launch,
-};
-
-static int
-usb_xhci_data_stage_transfer_launch(struct usb_transfer *gen_xfer)
-{
-    struct usb_xhci_transfer *xfer =
-        container_of(gen_xfer, struct usb_xhci_transfer, xfer);
-    irq_lock_acquire(&xfer->endpoint->lock);
-
-    if(xfer->xfer.status != USB_TRANSFER_STATUS_IDLE)
-    {
-        irq_lock_release(&xfer->endpoint->lock);
-        return -EALREADY;
-    }
-
-    // TODO
-
-    // ilist_push_tail(&xfer->endpoint->transfer_queue,
-    // &xfer->endpoint_queue_node);
-    usb_transfer_set_status(&xfer->xfer, USB_TRANSFER_STATUS_LAUNCHED);
-
-    irq_lock_release(&xfer->endpoint->lock);
-    return -EUNIMPL;
-}
-
-static struct usb_transfer_ops usb_xhci_data_stage_transfer_ops = {
-    .launch = usb_xhci_data_stage_transfer_launch,
-};
-
-static int
-usb_xhci_status_stage_transfer_launch(struct usb_transfer *gen_xfer)
-{
-    struct usb_xhci_transfer *xfer =
-        container_of(gen_xfer, struct usb_xhci_transfer, xfer);
-    irq_lock_acquire(&xfer->endpoint->lock);
-
-    if(xfer->xfer.status != USB_TRANSFER_STATUS_IDLE)
-    {
-        irq_lock_release(&xfer->endpoint->lock);
-        return -EALREADY;
-    }
-
-    // TODO
-
-    // ilist_push_tail(&xfer->endpoint->transfer_queue,
-    // &xfer->endpoint_queue_node);
-    usb_transfer_set_status(&xfer->xfer, USB_TRANSFER_STATUS_LAUNCHED);
-
-    irq_lock_release(&xfer->endpoint->lock);
-    return -EUNIMPL;
-}
-
-static struct usb_transfer_ops usb_xhci_status_stage_transfer_ops = {
-    .launch = usb_xhci_status_stage_transfer_launch,
+static struct usb_transfer_ops usb_xhci_control_transfer_ops = {
+    .launch = usb_xhci_control_transfer_launch,
 };
 
 static int
@@ -249,7 +309,7 @@ usb_xhci_isoch_transfer_launch(struct usb_transfer *gen_xfer)
 
     // ilist_push_tail(&xfer->endpoint->transfer_queue,
     // &xfer->endpoint_queue_node);
-    usb_transfer_set_status(&xfer->xfer, USB_TRANSFER_STATUS_LAUNCHED);
+    // usb_transfer_set_status(&xfer->xfer, USB_TRANSFER_STATUS_LAUNCHED);
 
     irq_lock_release(&xfer->endpoint->lock);
     return -EUNIMPL;
@@ -276,14 +336,8 @@ usb_xhci_alloc_transfer(struct usb_xhci_endpoint *endp, usb_transfer_t type)
     case USB_TRANSFER_NORMAL:
         ops = &usb_xhci_normal_transfer_ops;
         break;
-    case USB_TRANSFER_SETUP_STAGE:
-        ops = &usb_xhci_setup_stage_transfer_ops;
-        break;
-    case USB_TRANSFER_DATA_STAGE:
-        ops = &usb_xhci_data_stage_transfer_ops;
-        break;
-    case USB_TRANSFER_STATUS_STAGE:
-        ops = &usb_xhci_status_stage_transfer_ops;
+    case USB_TRANSFER_CONTROL:
+        ops = &usb_xhci_control_transfer_ops;
         break;
     case USB_TRANSFER_ISOCH:
         ops = &usb_xhci_isoch_transfer_ops;
@@ -321,51 +375,25 @@ usb_xhci_endpoint_create_normal_transfer(struct usb_xhci_endpoint *endp,
 }
 
 struct usb_xhci_transfer *
-usb_xhci_endpoint_create_setup_stage_transfer(struct usb_xhci_endpoint *endp,
+usb_xhci_endpoint_create_control_transfer(struct usb_xhci_endpoint *endp,
                                               uint8_t bmRequestType,
                                               uint8_t bRequest,
                                               uint16_t wValue,
                                               uint16_t wIndex,
                                               uint16_t wLength,
-                                              int trt)
+                                              void __phys *buffer,
+                                              size_t buflen)
 {
     struct usb_xhci_transfer *xfer =
-        usb_xhci_alloc_transfer(endp, USB_TRANSFER_SETUP_STAGE);
+        usb_xhci_alloc_transfer(endp, USB_TRANSFER_CONTROL);
 
-    xfer->setup_stage.bmRequestType = bmRequestType;
-    xfer->setup_stage.bRequest = bRequest;
-    xfer->setup_stage.wValue = wValue;
-    xfer->setup_stage.wIndex = wIndex;
-    xfer->setup_stage.wLength = wLength;
-    xfer->setup_stage.trt = trt;
-
-    return xfer;
-}
-
-struct usb_xhci_transfer *
-usb_xhci_endpoint_create_data_stage_transfer(struct usb_xhci_endpoint *endp,
-                                             void __phys *buffer,
-                                             size_t buflen,
-                                             int dir)
-{
-    struct usb_xhci_transfer *xfer =
-        usb_xhci_alloc_transfer(endp, USB_TRANSFER_DATA_STAGE);
-
-    xfer->data_stage.buffer = buffer;
-    xfer->data_stage.buflen = buflen;
-    xfer->data_stage.dir = dir;
-
-    return xfer;
-}
-
-struct usb_xhci_transfer *
-usb_xhci_endpoint_create_status_stage_transfer(struct usb_xhci_endpoint *endp,
-                                               int dir)
-{
-    struct usb_xhci_transfer *xfer =
-        usb_xhci_alloc_transfer(endp, USB_TRANSFER_STATUS_STAGE);
-
-    xfer->status_stage.dir = dir;
+    xfer->control.bmRequestType = bmRequestType;
+    xfer->control.bRequest = bRequest;
+    xfer->control.wValue = wValue;
+    xfer->control.wIndex = wIndex;
+    xfer->control.wLength = wLength;
+    xfer->control.buffer = buffer;
+    xfer->control.buflen = buflen;
 
     return xfer;
 }

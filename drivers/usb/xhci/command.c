@@ -128,8 +128,9 @@ usb_xhci_launch_command(struct usb_xhci *xhci,
     cmd->ring = ring;
 
     struct usb_xhci_trb *next_trb = NULL;
+    struct usb_xhci_trb __phys *sentinel;
 
-    res = usb_xhci_trb_ring_get_avail_trbs(&ring->ring, &next_trb, 1);
+    res = usb_xhci_trb_ring_get_avail_trbs(&ring->ring, &next_trb, &sentinel, 1);
     if(res)
     {
         irq_lock_release(&ring->lock);
@@ -192,7 +193,7 @@ usb_xhci_run_command(struct usb_xhci *xhci,
     DEBUG_ASSERT(KERNEL_ADDR(control));
     uint32_t control_value = *control;
 
-    printk("usb_xhci_run_command: launched command\n");
+    dprintk("usb_xhci_run_command: launched command\n");
     res = usb_xhci_launch_command(xhci,
                                   &cmd,
                                   param_value,
@@ -203,7 +204,7 @@ usb_xhci_run_command(struct usb_xhci *xhci,
         return res;
     }
 
-    printk("usb_xhci_run_command: awaiting command\n");
+    dprintk("usb_xhci_run_command: awaiting command\n");
     res = usb_xhci_await_command(&cmd);
     if(res)
     {
@@ -214,7 +215,7 @@ usb_xhci_run_command(struct usb_xhci *xhci,
     *status = cmd.completion_status;
     *control = cmd.completion_control;
 
-    printk("usb_xhci_run_command: completed command\n");
+    dprintk("usb_xhci_run_command: completed command\n");
     return 0;
 }
 

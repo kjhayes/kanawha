@@ -15,7 +15,7 @@
 #include "log.h"
 #include "root.h"
 
-#define TERM_PATH "/dev/term/serial"
+#define TERM_PATH "/dev/term/COM1"
 
 #define WINDD_FB_PATH_STR "/dev/fb/virtio-gpu-0"
 #define WINDD_FB_MODE_STR "0"

@@ -163,11 +163,12 @@ usb_xhci_dispatch_transfer_event(struct usb_xhci *xhci,
 
     irq_lock_acquire(&xhci->devices_lock);
 
-    struct usb_xhci_device *dev = xhci->devices[slot_id];
+    struct usb_xhci_device *dev = xhci->devices[slot_id - 1];
     if(dev == NULL)
     {
         irq_lock_release(&xhci->devices_lock);
-        wprintk("USB XHCI Received Transfer Event for Missing Device!\n");
+        wprintk("USB XHCI received transfer event for missing device (slotid=%ld)!\n",
+                (sl_t)slot_id);
         return -ENXIO;
     }
 

@@ -5,7 +5,7 @@
 #include <unistd.h>
 
 #define NUM_CHILDREN 1000 // Number of child processes to create
-#define STALL 1000000000
+#define STALL 10000000
 
 #define CHILD(...)
 #define PARENT(...) printf(__VA_ARGS__)

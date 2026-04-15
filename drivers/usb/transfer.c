@@ -40,6 +40,9 @@ usb_transfer_await(struct usb_transfer *xfer)
         {
             return xfer->status;
         }
+        if(xfer->status == USB_TRANSFER_STATUS_IDLE) {
+            return -EINVAL;
+        }
         res = wait_on(&xfer->status_waitqueue);
         if(res == -EINTR)
         {

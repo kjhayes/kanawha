@@ -7,7 +7,7 @@ QEMU_PREFIX :=
 QEMU_DEBUG_LOG ?= qemu.log
 QEMU_FLAGS += -D $(QEMU_DEBUG_LOG) -d guest_errors
 
-QEMU_FLAGS += -trace "virtio_*"
+QEMU_FLAGS += -trace "usb_*"
 
 #QEMU_FLAGS += -device virtio-gpu-pci
 
@@ -18,7 +18,7 @@ QEMU_FLAGS += -trace "virtio_*"
 #               -device ahci,id=ahci \
 #               -device ide-hd,drive=ahcidisk,bus=ahci.0
 
-QEMU_FLAGS += -display gtk
+# QEMU_FLAGS += -display gtk
 
 QEMU_FLAGS += -device virtio-rng
 
@@ -40,22 +40,24 @@ QEMU_FLAGS += -device pci-testdev
 			  -object filter-dump,id=f1,netdev=net0,file=netdump.dat
 #QEMU_FLAGS += -device virtio-net-pci,netdev=net0,mq=on,vectors=1
 
-# QEMU_FLAGS += \
-#               -device nec-usb-xhci,id=xhci                      \
-#               -drive if=none,id=stick0,format=raw,file=./usb0.img \
-#               -device usb-storage,bus=xhci.0,drive=stick0,id=stick0 \
-#               -drive if=none,id=stick1,format=raw,file=./usb1.img \
-#               -device usb-storage,bus=xhci.0,drive=stick1,id=stick1 \
+QEMU_FLAGS += \
+              -device nec-usb-xhci,id=xhci                      \
+              -drive if=none,id=stick0,format=raw,file=./usb0.img \
+              -device usb-storage,bus=xhci.0,drive=stick0,id=stick0
+
+#              -drive if=none,id=stick1,format=raw,file=./usb1.img \
+#              -device usb-storage,bus=xhci.0,drive=stick1,id=stick1 \
 
 QEMU_FLAGS += \
 		-drive file=nvme.img,if=none,id=nvm,format=raw \
  		-device nvme,serial=deadbeef,drive=nvm
 
-QEMU_FLAGS += -device virtio-gpu-pci
+# QEMU_FLAGS += -device virtio-gpu-pci
 
 #QEMU_FLAGS += -device e1000e
 
 ifdef CONFIG_X64
+# QEMU_PREFIX :=~/qemu/qemu/build/
 QEMU := $(QEMU_PREFIX)qemu-system-x86_64
 ISO := $(OUTPUT_DIR)/kanawha.iso
 QEMU_DEPS += $(ISO)
