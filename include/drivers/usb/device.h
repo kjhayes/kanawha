@@ -132,6 +132,10 @@ struct usb_interface
 
     size_t num_interface_endpoints;
     struct usb_interface_endpoint *interface_endpoints;
+
+    ilist_node_t match_node;
+
+    struct usb_interface_driver *driver;
 };
 
 struct usb_interface_endpoint {
