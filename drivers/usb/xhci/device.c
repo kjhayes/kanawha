@@ -375,10 +375,12 @@ usb_xhci_address_root_hub_device(struct usb_xhci_device *dev,
 
 static struct usb_transfer *
 usb_xhci_device_create_bulk_transfer(struct usb_device *usb_dev,
-                                       int dci,
+                                       usb_endpoint_id_t endpoint,
                                        void __phys *buffer,
                                        size_t buflen)
 {
+    uint8_t dci = usb_xhci_endpoint_id_to_dci(endpoint);
+
     struct usb_xhci_device *dev =
         container_of(usb_dev, struct usb_xhci_device, usb_device);
     struct usb_xhci_endpoint *endp = dev->endpoints[dci];
@@ -399,7 +401,7 @@ usb_xhci_device_create_bulk_transfer(struct usb_device *usb_dev,
 
 static struct usb_transfer *
 usb_xhci_device_create_control_transfer(struct usb_device *usb_dev,
-                                            int dci,
+                                            usb_endpoint_id_t endpoint,
                                             uint8_t bmRequestType,
                                             uint8_t bRequest,
                                             uint16_t wValue,
@@ -409,6 +411,8 @@ usb_xhci_device_create_control_transfer(struct usb_device *usb_dev,
                                             size_t buflen
                                             )
 {
+    uint8_t dci = usb_xhci_endpoint_id_to_dci(endpoint);
+
     struct usb_xhci_device *dev =
         container_of(usb_dev, struct usb_xhci_device, usb_device);
     struct usb_xhci_endpoint *endp = dev->endpoints[dci];
@@ -435,8 +439,11 @@ usb_xhci_device_create_control_transfer(struct usb_device *usb_dev,
 }
 
 static struct usb_transfer *
-usb_xhci_device_create_isoch_transfer(struct usb_device *usb_dev, int dci)
+usb_xhci_device_create_isoch_transfer(struct usb_device *usb_dev,
+                                      usb_endpoint_id_t endpoint)
 {
+    uint8_t dci = usb_xhci_endpoint_id_to_dci(endpoint);
+
     struct usb_xhci_device *dev =
         container_of(usb_dev, struct usb_xhci_device, usb_device);
     struct usb_xhci_endpoint *endp = dev->endpoints[dci];

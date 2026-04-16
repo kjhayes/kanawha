@@ -20,7 +20,7 @@
 
 int
 usb_device_read_descriptor(struct usb_device *device,
-                           int dci,
+                           usb_endpoint_id_t endpoint,
                            uint8_t type,
                            uint8_t index,
                            void *buffer,

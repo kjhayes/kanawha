@@ -21,10 +21,12 @@ usb_host_init_device_configurations(
     {
         struct usb_configuration *config = &device->configs[ci];
 
+        config->device = device;
+
         struct usb_descriptor_configuration c_desc;
         res = usb_device_read_descriptor(
                 device,
-                1,
+                USB_ENDPOINT_ID_DEFAULT_CONTROL,
                 USB_DESCRIPTOR_TYPE_CONFIGURATION,
                 ci,
                 &c_desc,
@@ -49,7 +51,7 @@ usb_host_init_device_configurations(
 
         res = usb_device_read_descriptor(
                 device,
-                1,
+                USB_ENDPOINT_ID_DEFAULT_CONTROL,
                 USB_DESCRIPTOR_TYPE_CONFIGURATION,
                 ci,
                 buffer,
@@ -85,6 +87,8 @@ usb_host_init_device_configurations(
         {
             struct usb_interface *interface = &config->interfaces[ii];
 
+            interface->config = config;
+
             struct usb_descriptor_interface *i_desc = iter;
             iter += i_desc->bLength;
 
@@ -118,14 +122,17 @@ usb_host_init_device_configurations(
                 struct usb_descriptor_endpoint *e_desc = iter;
                 iter += e_desc->bLength;
 
-                endpoint->endpoint_number = (e_desc->bEndpointAddress & 0xF);
-                endpoint->dir_in = (e_desc->bEndpointAddress >> 7) & 0b1;
+                uint8_t endpoint_num = (e_desc->bEndpointAddress & 0xF);
+                uint8_t endpoint_dir = (e_desc->bEndpointAddress >> 7) & 1;
+
+                
+
                 endpoint->max_packet_size = letoh16(e_desc->wMaxPacketSize);
 
                 printk("\t\t\tEndpoint %d: EP#=%d dir=%s\n",
                         (int)ei,
-                        (int)endpoint->endpoint_number,
-                        endpoint->dir_in ? "IN" : "OUT");
+                        (int)endpoint->endpoint.endpoint_number,
+                        endpoint->endpoint.direction ? "IN" : "OUT");
             }
         }
 
@@ -150,7 +157,7 @@ usb_host_init_device(struct usb_device *device, struct usb_device_ops *ops)
 
     printk("Getting USB Device Descriptor...\n");
     res = usb_device_read_descriptor(device,
-                                    1,
+                                    USB_ENDPOINT_ID_DEFAULT_CONTROL,
                                     USB_DESCRIPTOR_TYPE_DEVICE,
                                     0,
                                     &desc,
@@ -204,7 +211,7 @@ usb_host_deinit_device(struct usb_device *device)
 
 int
 usb_device_control_transfer(struct usb_device *device,
-                            int dci,
+                            usb_endpoint_id_t endpoint,
                             uint8_t bmRequestType,
                             uint8_t bRequest,
                             uint16_t wValue,
@@ -217,7 +224,7 @@ usb_device_control_transfer(struct usb_device *device,
     struct usb_transfer *xfer;
     xfer = usb_device_create_control_transfer(
             device,
-            dci,
+            endpoint,
             bmRequestType,
             bRequest,
             wValue,

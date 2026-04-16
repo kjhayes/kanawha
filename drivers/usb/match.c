@@ -32,7 +32,33 @@ try_match_device(
         return res;
     }
 
-    // Actually configure the device TODO
+    if(chosen_config > device->num_configs) {
+        eprintk("USB device driver requested non-existant configuration %d! (num_configs=%d)\n",
+                (int)chosen_config,
+                (int)device->num_configs);
+        return -EINVAL;
+    }
+
+    uint16_t config_value = device->configs[chosen_config].value;
+
+    res = usb_device_control_transfer(
+            device,
+            USB_ENDPOINT_ID_DEFAULT_CONTROL,
+            USB_DEV_CONTROL_REQUEST_TYPE_DIR_HOST_TO_DEVICE
+           |USB_DEV_CONTROL_REQUEST_TYPE_TARGET_DEVICE
+           |USB_DEV_CONTROL_REQUEST_TYPE_STANDARD,
+            USB_DEV_CONTROL_REQUEST_SET_CONFIGURATION,
+            config_value,
+            0,
+            0,
+            NULL,
+            0);
+    if(res) {
+        wprintk("Failed to configure USB device! (err=%s)\n",
+                errnostr(res));
+        return res;
+    }
+
 
     res = usb_device_driver_init_device(driver, device);
     if(res) {

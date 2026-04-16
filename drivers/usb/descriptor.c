@@ -4,7 +4,7 @@
 
 int
 usb_device_read_descriptor(struct usb_device *device,
-                           int dci,
+                           usb_endpoint_id_t endpoint,
                            uint8_t type,
                            uint8_t index,
                            void *buffer,
@@ -27,7 +27,7 @@ usb_device_read_descriptor(struct usb_device *device,
 
     res = usb_device_control_transfer(
         device,
-        dci,
+        endpoint,
         USB_DEV_CONTROL_REQUEST_TYPE_TARGET_DEVICE |
         USB_DEV_CONTROL_REQUEST_TYPE_DIR_DEVICE_TO_HOST |
         USB_DEV_CONTROL_REQUEST_TYPE_STANDARD,

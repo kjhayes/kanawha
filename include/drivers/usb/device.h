@@ -8,15 +8,20 @@
 
 struct usb_device;
 
+typedef struct {
+    unsigned endpoint_number : 4;
+    unsigned direction : 1;
+} usb_endpoint_id_t;
+
 #define USB_DEV_CREATE_BULK_TRANSFER_SIG(RET, ARG, ...)                      \
     RET(struct usb_transfer *)                                                 \
-    ARG(int, dci)                                                              \
+    ARG(usb_endpoint_id_t, endpoint_id)                                                              \
     ARG(void __phys *, buffer)                                                 \
     ARG(size_t, buflen)
 
 #define USB_DEV_CREATE_CONTROL_TRANSFER_SIG(RET, ARG, ...)                 \
     RET(struct usb_transfer *)                                                 \
-    ARG(int, dci)                                                              \
+    ARG(usb_endpoint_id_t, endpoint)                                                              \
     ARG(uint8_t, bmRequestType)                                                \
     ARG(uint8_t, bRequest)                                                     \
     ARG(uint16_t, wValue)                                                      \
@@ -27,7 +32,7 @@ struct usb_device;
 
 #define USB_DEV_CREATE_ISOCH_TRANSFER_SIG(RET, ARG, ...)                       \
     RET(struct usb_transfer *)                                                 \
-    ARG(int, dci)
+    ARG(usb_endpoint_id_t, endpoint_id)
 
 #define USB_DEV_DESTROY_TRANSFER_SIG(RET, ARG, ...)                            \
     RET(int)                                                                   \
@@ -107,9 +112,11 @@ usb_host_deinit_device(struct usb_device *device);
 #define USB_DEV_CONTROL_REQUEST_SET_INTERFACE (0x11)
 #define USB_DEV_CONTROL_REQUEST_SYNC_FRAME (0x12)
 
+#define USB_ENDPOINT_ID_DEFAULT_CONTROL ((usb_endpoint_id_t){.endpoint_number=0,.direction=0})
+
 int
 usb_device_control_transfer(struct usb_device *device,
-                            int dci,
+                            usb_endpoint_id_t endpoint,
                             uint8_t bmRequestType,
                             uint8_t bRequest,
                             uint16_t wValue,
@@ -120,6 +127,8 @@ usb_device_control_transfer(struct usb_device *device,
 
 struct usb_configuration
 {
+    struct usb_device *device;
+
     uint8_t value;
 
     size_t num_interfaces;
@@ -128,6 +137,8 @@ struct usb_configuration
 
 struct usb_interface
 {
+    struct usb_configuration *config;
+
     struct usb_id usb_id;
 
     size_t num_interface_endpoints;
@@ -139,8 +150,7 @@ struct usb_interface
 };
 
 struct usb_interface_endpoint {
-    uint8_t endpoint_number;
-    unsigned dir_in : 1;
+    usb_endpoint_id_t endpoint;
     uint16_t max_packet_size;
 };
 

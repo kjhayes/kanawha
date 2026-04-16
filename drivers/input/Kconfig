@@ -1,6 +1,6 @@
 
-config USB_KEYBOARD
-    bool "USB Keyboard Driver"
+config USB_HID
+    bool "USB Human Interface Driver"
     depends on USB
     default y
 

@@ -1,3 +1,3 @@
 
-obj-$(CONFIG_USB_KEYBOARD) += kbd.o
+obj-$(CONFIG_USB_HID) += hid.o
 
