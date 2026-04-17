@@ -232,7 +232,7 @@ pci_func_msix_num_irqs(struct pci_func *func)
 }
 
 int
-pci_func_start_msix(struct pci_func *func)
+pci_func_start_msix(struct pci_func *func, size_t requested_num_irqs)
 {
     int res;
 

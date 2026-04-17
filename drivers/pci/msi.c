@@ -76,7 +76,7 @@ pci_func_deinit_msi_info(struct pci_func *func)
 }
 
 int
-pci_func_start_msi(struct pci_func *func)
+pci_func_start_msi(struct pci_func *func, size_t requested_num_irqs)
 {
     int res;
 

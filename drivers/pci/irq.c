@@ -53,7 +53,7 @@ pci_func_deinit_irqs(struct pci_func *func)
 }
 
 int
-pci_func_start_irqs(struct pci_func *func)
+pci_func_start_irqs(struct pci_func *func, size_t req_num)
 {
     if(func->irq_mode != PCI_IRQ_MODE_NONE)
     {
@@ -61,7 +61,7 @@ pci_func_start_irqs(struct pci_func *func)
     }
 
     int res;
-    res = pci_func_start_msix(func);
+    res = pci_func_start_msix(func, req_num);
     if(res == 0)
     {
         return 0;
@@ -71,7 +71,7 @@ pci_func_start_irqs(struct pci_func *func)
         wprintk("pci_func_start_irqs: MSI-X Failed (err=%s)\n", errnostr(res));
     }
 
-    res = pci_func_start_msi(func);
+    res = pci_func_start_msi(func, req_num);
     if(res == 0)
     {
         return 0;

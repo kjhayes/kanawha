@@ -57,7 +57,7 @@ qemu_edu_init_device(struct pci_driver *driver, struct pci_func *func)
 
     pci_func_raw_enable_pio(func);
 
-    res = pci_func_start_irqs(func);
+    res = pci_func_start_irqs(func, 0);
     if(res)
     {
         eprintk("Failed to start IRQ's on QEMU EDU device! (err=%s)\n",

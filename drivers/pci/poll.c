@@ -287,7 +287,7 @@ static struct polling_pci_mailbox *__mb = NULL;
 static inline int
 init_polling_pci_mailbox(void)
 {
-    __mb = create_polling_pci_mailbox(256);
+    __mb = create_polling_pci_mailbox(0x1000);
     if(__mb == NULL) {
         eprintk("Failed to register polling PCI mailbox!\n");
         return -ENOMEM;

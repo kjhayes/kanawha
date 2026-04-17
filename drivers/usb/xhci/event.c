@@ -490,7 +490,7 @@ usb_xhci_init_interruptors(struct usb_xhci *dev)
 
     size_t max_intr = usb_xhci_read(dev, MaxIntrs);
 
-    res = pci_func_start_irqs(dev->func);
+    res = pci_func_start_irqs(dev->func, 0);
     if(res)
     {
         wprintk("USB XHCI Device failed to start IRQ(s)!\n");

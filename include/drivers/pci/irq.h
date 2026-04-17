@@ -12,7 +12,7 @@ pci_func_deinit_irqs(struct pci_func *func);
 // Makes sure that func->irq_domain is populated,
 // but does not specify which method (INT-X, MSI, or MSI-X) is actually used.
 int
-pci_func_start_irqs(struct pci_func *func);
+pci_func_start_irqs(struct pci_func *func, size_t req_num_irqs);
 
 size_t
 pci_func_num_irqs(struct pci_func *func);
