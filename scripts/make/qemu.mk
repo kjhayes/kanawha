@@ -7,7 +7,7 @@ QEMU_PREFIX :=
 QEMU_DEBUG_LOG ?= qemu.log
 QEMU_FLAGS += -D $(QEMU_DEBUG_LOG) -d guest_errors
 
-QEMU_FLAGS += -trace "virtio_scsi_*"
+QEMU_FLAGS += -trace "nvme*"
 
 QEMU_FLAGS += -device virtio-gpu-pci
 
