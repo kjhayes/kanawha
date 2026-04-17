@@ -16,6 +16,7 @@ obj-y += \
 	pci/ \
 	virtio/ \
 	usb/ \
+	scsi/ \
 
 obj-y += linux/
 

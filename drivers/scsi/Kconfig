@@ -1,0 +1,12 @@
+config SCSI
+    tristate "SCSI Support"
+    default y
+    help
+      Base SCSI Protocol Support
+
+config VIRTIO_SCSI
+    tristate "Virtio SCSI"
+    default y
+    help
+      Virtio SCSI Driver
+

@@ -47,6 +47,10 @@ menu "USB Options"
 source "drivers/usb/Kconfig"
 endmenu
 
+menu "SCSI Options"
+source "drivers/scsi/Kconfig"
+endmenu
+
 source "drivers/ps2/Kconfig"
 source "drivers/qemu/Kconfig"
 source "drivers/virtio/Kconfig"

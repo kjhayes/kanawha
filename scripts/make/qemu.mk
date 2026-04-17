@@ -7,7 +7,7 @@ QEMU_PREFIX :=
 QEMU_DEBUG_LOG ?= qemu.log
 QEMU_FLAGS += -D $(QEMU_DEBUG_LOG) -d guest_errors
 
-QEMU_FLAGS += -trace "usb_*"
+QEMU_FLAGS += -trace "virtio_scsi_*"
 
 QEMU_FLAGS += -device virtio-gpu-pci
 
@@ -21,6 +21,11 @@ QEMU_FLAGS += -device virtio-gpu-pci
 # QEMU_FLAGS += -display gtk
 
 QEMU_FLAGS += -device virtio-rng
+
+QEMU_FLAGS += \
+  -drive file=scsi.img,format=raw,if=none,id=hdscsi \
+  -device virtio-scsi-pci,id=scsi0 \
+  -device scsi-hd,bus=scsi0.0,drive=hdscsi
 
 # QEMU_FLAGS += -audio driver=pa,model=virtio
 # QEMU_FLAGS += -audiodev pa,id=speaker -machine pcspk-audiodev=speaker
