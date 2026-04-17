@@ -32,6 +32,7 @@ struct usb_transfer
     struct usb_device *device;
     usb_transfer_t type;
 
+    irq_lock_t status_lock;
     int status;
     struct waitqueue status_waitqueue;
 

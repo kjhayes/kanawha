@@ -92,6 +92,7 @@ usb_host_init_device_configurations(
             struct usb_descriptor_interface *i_desc = iter;
             iter += i_desc->bLength;
 
+            interface->index = ii;
             interface->num_interface_endpoints = i_desc->bNumEndpoints;
             interface->usb_id.class = i_desc->bInterfaceClass;
             interface->usb_id.subclass = i_desc->bInterfaceSubClass;

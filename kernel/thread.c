@@ -1033,7 +1033,7 @@ static struct periodic_event *sample_thread_running_event = NULL;
 static void
 sample_thread_running_percentage(void *state)
 {
-    int total_running = 0;
+    __maybe_unused int total_running = 0;
 
     thread_tree_lock_acquire();
     struct ptree_node *pnode = ptree_get_first(&thread_tree);
@@ -1048,12 +1048,12 @@ sample_thread_running_percentage(void *state)
         pnode = ptree_get_next(pnode);
     }
     thread_tree_lock_release();
-    if(total_running < total_num_cpus()) {
-        wprintk("Weird: total running = %ld, num cpus = %ld?\n",
-                (sl_t)total_running,
-                (sl_t)total_num_cpus());
-        dump_threads(do_printk);
-    }
+//    if(total_running < total_num_cpus()) {
+//        printk("Weird: total running = %ld, num cpus = %ld?\n",
+//                (sl_t)total_running,
+//                (sl_t)total_num_cpus());
+//        dump_threads(do_printk);
+//    }
 }
 static int
 init_sample_thread_running_percentage(void)

@@ -14,6 +14,7 @@
 #include <kanawha/string.h>
 #include <kanawha/sysfs/sysfs.h>
 #include <kanawha/thread.h>
+#include <kanawha/sleep.h>
 #include <kanawha/types.h>
 #include <kanawha/uapi/spawn.h>
 #include <kanawha/usermode.h>
@@ -308,6 +309,8 @@ init_process_kernel_entry(void *in)
     disable_irqs();
 
     dprintk("init_process_kernel_entry(%p)\n", NULL);
+
+    thread_sleep(msec_to_duration(500), 0);
 
     enter_usermode(NULL);
 

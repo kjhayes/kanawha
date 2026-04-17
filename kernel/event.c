@@ -7,6 +7,7 @@
 #include <kanawha/lock.h>
 #include <kanawha/stddef.h>
 #include <kanawha/string.h>
+#include <kanawha/tasklet.h>
 #include <kanawha/dev/timer.h>
 #include <kanawha/types.h>
 

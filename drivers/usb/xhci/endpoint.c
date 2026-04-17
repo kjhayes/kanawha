@@ -79,6 +79,7 @@ usb_xhci_endpoint_notify_transfer_event(struct usb_xhci_endpoint *endp,
         wprintk("usb_xhci_transfer: partial notification of transfer... (final=%p, dequeued=%p)",
                 xfer->final_trb, dequeued);
         irq_lock_release(&endp->lock);
+        usb_xhci_endpoint_ring_doorbell(endp);
         return 0;
     }
 

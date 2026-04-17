@@ -8,9 +8,10 @@
 #include <kanawha/stddef.h>
 #include <kanawha/tasklet.h>
 #include <kanawha/thread.h>
+#include <kanawha/event.h>
 #include <kanawha/waitqueue.h>
 
-static DECLARE_RLOCK(tasklet_lock);
+DEFINE_LOCAL_THREAD_LOCK(tasklet_list_lock);
 static DECLARE_ILIST(tasklet_list);
 
 static struct waitqueue tasklet_waitqueue;
@@ -61,9 +62,9 @@ tasklet_create(tasklet_f *func, void *state)
 
     irq_lock_init(&tasklet->lock);
 
-    rlock_write_lock(&tasklet_lock);
+    tasklet_list_lock_acquire();
     ilist_push_tail(&tasklet_list, &tasklet->list_node);
-    rlock_write_unlock(&tasklet_lock);
+    tasklet_list_lock_release();
 
     return tasklet;
 }
@@ -95,26 +96,27 @@ tasklet_name(struct tasklet *task, const char *name)
 int
 tasklet_destroy(struct tasklet *tasklet)
 {
-    irq_lock_acquire(&tasklet->lock);
+    tasklet_list_lock_acquire();
     if(tasklet->killed)
     {
-        irq_lock_release(&tasklet->lock);
+        tasklet_list_lock_release();
         return -EALREADY;
     }
     else
     {
         tasklet->killed = 1;
-        mbarrier();
-        irq_lock_release(&tasklet->lock);
     }
 
     while(tasklet->running)
     {
+        tasklet_list_lock_release();
+        clk_delay(nsec_to_duration(1000));
+        tasklet_list_lock_acquire();
     }
 
-    rlock_write_lock(&tasklet_lock);
     ilist_remove(&tasklet_list, &tasklet->list_node);
-    rlock_write_unlock(&tasklet_lock);
+
+    tasklet_list_lock_release();
 
     if(tasklet->owned_name) {
         kfree((void*)tasklet->name);
@@ -138,79 +140,38 @@ tasklet_trigger(struct tasklet *tasklet)
     return 0;
 }
 
-int
-tasklet_run(struct tasklet *tasklet)
-{
-    irq_lock_acquire(&tasklet->lock);
-    if(tasklet->killed)
-    {
-        irq_lock_release(&tasklet->lock);
-        return -EINVAL;
-    }
-
-    if(tasklet->running)
-    {
-        irq_lock_release(&tasklet->lock);
-        return -EBUSY;
-    }
-
-    tasklet->running = 1;
-    irq_lock_release(&tasklet->lock);
-
-    (*tasklet->func)(tasklet->state);
-    mbarrier();
-    tasklet->pending = 0;
-    tasklet->running = 0;
-
-    return 0;
-}
-
-static int
-tasklet_handle_pending(struct tasklet *tasklet)
-{
-    irq_lock_acquire(&tasklet->lock);
-    if(tasklet->killed || tasklet->running)
-    {
-        irq_lock_release(&tasklet->lock);
-        return 0;
-    }
-
-    if(tasklet->pending)
-    {
-        tasklet->running = 1;
-        irq_lock_release(&tasklet->lock);
-        tasklet->pending = 0;
-        mbarrier();
-        dprintk("handling tasklet \"%s\"\n", tasklet->name);
-        (*tasklet->func)(tasklet->state);
-        mbarrier();
-        tasklet->running = 0;
-        return 1;
-    } else {
-        irq_lock_release(&tasklet->lock);
-        return 0;
-    }
-}
-
 static int
 tasklet_handle_all_pending(void)
 {
     int num_handled = 0;
     int res;
-    rlock_read_lock(&tasklet_lock);
-    ilist_node_t *list_node;
-    ilist_for_each(list_node, &tasklet_list)
-    {
-        struct tasklet *tasklet =
-            container_of(list_node, struct tasklet, list_node);
-        res = tasklet_handle_pending(tasklet);
-        if(res < 0) {
-            rlock_read_unlock(&tasklet_lock);
-            return res;
+    tasklet_list_lock_acquire();
+    size_t num_tasklets = ilist_count(&tasklet_list);
+    tasklet_list_lock_release();
+
+    for(size_t i = 0; i < num_tasklets; i++) {
+        tasklet_list_lock_acquire();
+        ilist_node_t *node = ilist_pop_head(&tasklet_list);
+        if(node == NULL) {
+            tasklet_list_lock_release();
+            break;
         }
-        num_handled += res;
+        struct tasklet *task = container_of(node, struct tasklet, list_node);
+        if(task->pending && !task->running && !task->killed) {
+            task->running = 1;
+            mbarrier();
+            tasklet_list_lock_release();
+            (*task->func)(task->state);
+            num_handled++;
+            tasklet_list_lock_acquire();
+            mbarrier();
+            task->running = 0;
+            task->pending = 0;
+        }
+        ilist_push_tail(&tasklet_list, &task->list_node);
+        tasklet_list_lock_release();
     }
-    rlock_read_unlock(&tasklet_lock);
+
     return num_handled;
 }
 
@@ -329,3 +290,58 @@ init_tasklet_thread(void)
     return 0;
 }
 declare_init_desc(sched, init_tasklet_thread, "Starting Tasklet Thread");
+
+struct periodic_tasklet
+{
+    struct tasklet *task;
+    struct periodic_event *evt;
+};
+
+static void
+periodic_tasklet_kick_callback(
+        void *_ptask)
+{
+    dprintk("periodic_tasklet_kick_callback\n");
+    struct periodic_tasklet *ptask = _ptask;
+    tasklet_trigger(ptask->task);
+}
+
+struct periodic_tasklet *
+tasklet_create_periodic(
+        duration_t period,
+        void *state,
+        tasklet_f *func)
+{
+    struct periodic_tasklet *ptask;
+    ptask = kzmalloc(sizeof(*ptask), KM_KERNEL);
+    if(ptask == NULL) {
+        return NULL;
+    }
+    ptask->task = tasklet_create(func, state);
+    if(ptask->task == NULL) {
+        kfree(ptask);
+        return NULL;
+    }
+    dprintk("creating periodic tasklet event!\n");
+    ptask->evt = create_periodic_event(
+            period,
+            (void*)ptask,
+            periodic_tasklet_kick_callback);
+    if(ptask->evt == NULL) {
+        tasklet_destroy(ptask->task);
+        kfree(ptask);
+        return NULL;
+    }
+    return ptask;
+}
+
+int
+tasklet_destroy_periodic(
+        struct periodic_tasklet *ptask)
+{
+    destroy_periodic_event(ptask->evt);
+    tasklet_destroy(ptask->task);
+    kfree(ptask);
+    return 0;
+}
+

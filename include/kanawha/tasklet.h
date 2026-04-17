@@ -1,6 +1,8 @@
 #ifndef __KANAWHA__TASKLET_H__
 #define __KANAWHA__TASKLET_H__
 
+#include <kanawha/time.h>
+
 struct tasklet;
 
 typedef void(tasklet_f)(void *);
@@ -23,8 +25,21 @@ tasklet_name(struct tasklet *task, const char *name);
 int
 tasklet_trigger(struct tasklet *tasklet);
 
-// Run this tasklet immediately in the current thread
+/*
+ * Like periodic_event(s) but run
+ * in a thread context like tasklets
+ */
+
+struct periodic_tasklet;
+
+struct periodic_tasklet *
+tasklet_create_periodic(
+        duration_t period,
+        void *state,
+        tasklet_f *func);
+
 int
-tasklet_run(struct tasklet *tasklet);
+tasklet_destroy_periodic(
+        struct periodic_tasklet *task);
 
 #endif

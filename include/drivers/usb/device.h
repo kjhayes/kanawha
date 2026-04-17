@@ -69,6 +69,8 @@ struct usb_device
 
     struct usb_device_driver *driver;
     ilist_node_t match_node;
+
+    void *driver_priv_state;
 };
 
 DEFINE_OP_LIST_WRAPPERS(USB_DEV_OP_LIST,
@@ -137,6 +139,8 @@ struct usb_configuration
 
 struct usb_interface
 {
+    uint16_t index;
+
     struct usb_configuration *config;
 
     struct usb_id usb_id;
@@ -147,6 +151,7 @@ struct usb_interface
     ilist_node_t match_node;
 
     struct usb_interface_driver *driver;
+    void *driver_priv_state;
 };
 
 struct usb_interface_endpoint {
