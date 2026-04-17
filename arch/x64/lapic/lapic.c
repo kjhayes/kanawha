@@ -488,11 +488,13 @@ bsp_register_cpu_lapic(struct x64_cpu *cpu)
     }
 
 #ifdef CONFIG_PCI
+#ifndef CONFIG_X64_IGNORE_APIC_MSI
     res = register_cpu_lapic_pci_mailbox(apic);
     if(res)
     {
         return res;
     }
+#endif
 #endif
 
     return 0;

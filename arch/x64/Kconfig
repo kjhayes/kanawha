@@ -93,5 +93,10 @@ config X64_ENABLE_CALL_GATE_SYSCALL
   default n
   depends on WIP
 
+config X64_IGNORE_APIC_MSI
+  bool "Disable Use of  LAPIC for PCI MSI/MSI-X"
+  default n
+  depends on PCI
+
 endmenu
 

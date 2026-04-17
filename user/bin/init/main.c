@@ -17,8 +17,8 @@
 
 #define TERM_PATH "/dev/term/COM1"
 
-#define WINDD_FB_PATH_STR "/dev/fb/virtio-gpu-0"
-#define WINDD_FB_MODE_STR "0"
+#define WINDD_FB_PATH_STR "/dev/fb/vga"
+#define WINDD_FB_MODE_STR "2"
 
 int
 setstdin(const char *path)
@@ -54,7 +54,8 @@ static struct daemon randd = {
 
 static const char *windd_args[] = {"windd",
     WINDD_FB_PATH_STR, WINDD_FB_MODE_STR,
-    "/dev/input/usb-hid-0",
+    "/dev/input/ps2-kbd-0",
+    "/dev/input/ps2-mouse-0",
 };
 static struct daemon_socket windd_sockets[] = {{
     .env = "WINDD_SOCKET",

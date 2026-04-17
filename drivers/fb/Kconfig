@@ -2,6 +2,7 @@
 config VIRTIO_GPU_FB
     tristate "Virtio GPU Framebuffer Driver"
     default y
+    depends on VIRTIO
     help
       Include a driver for the virtio-gpu device which presents a framebuffer interface.
 

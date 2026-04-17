@@ -22,7 +22,7 @@ config PCI_ALLOC_UNINITIALIZED_MMIO_BARS
 
 config POLLING_PCI_MAILBOX
     bool "Allow Polling for PCI MSI/MSI-X Interrupts"
-    depends on PCI && WIP
+    depends on PCI
     default n
     help
       Provide a polling implementation for the PCI mailbox
