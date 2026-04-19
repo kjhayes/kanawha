@@ -41,7 +41,7 @@ polling_pci_mailbox_handle_pending(void *_mb)
             continue;
         }
 
-        printk("polling_pci_mailbox: HIT!\n");
+        // printk("polling_pci_mailbox: HIT! (irq=%ld) (hwirq=%ld)\n", (sl_t)irq, (sl_t)hwirq);
         res = handle_irq(desc, NULL);
         if(res == IRQ_UNHANDLED) {
             wprintk("polling_pci_mailbox: unhandled IRQ!\n");
@@ -137,7 +137,6 @@ polling_msi_get_desc_32(
 
     poll_box_t __phys *p_boxes = dma_phys_addr(mb->boxes); 
     size_t byte_offset = ((void __phys *)(uintptr_t)addr) - ((void __phys *)p_boxes);
-
     hwirq_t hwirq = byte_offset / sizeof(poll_box_t);
     hwirq += index;
     if(hwirq >= mb->num_irqs) {
@@ -197,10 +196,15 @@ polling_msix_get_desc(
     size_t byte_offset = ((void __phys *)addr) - ((void __phys *)p_boxes);
 
     hwirq_t hwirq = byte_offset / sizeof(poll_box_t);
-    hwirq += index;
     if(hwirq >= mb->num_irqs) {
         return NULL;
     }
+
+    printk("polling_msix_get_desc: addr=%p, data=0x%x, index=0x%lx, hwirq=0x%lx\n",
+            (uintptr_t)addr,
+            (u_t)data,
+            (ul_t)index,
+            (ul_t)hwirq);
 
     irq_t irq = irq_domain_revmap(mb->domain, hwirq);
     if(irq == NULL_IRQ) {
@@ -287,7 +291,7 @@ static struct polling_pci_mailbox *__mb = NULL;
 static inline int
 init_polling_pci_mailbox(void)
 {
-    __mb = create_polling_pci_mailbox(0x1000);
+    __mb = create_polling_pci_mailbox(256);
     if(__mb == NULL) {
         eprintk("Failed to register polling PCI mailbox!\n");
         return -ENOMEM;

@@ -70,7 +70,7 @@ blk_dev_read_using_pread(struct blk_dev *dev,
 
     for(size_t i = 0; i < num_sectors; i++)
     {
-        res = blk_dev_pwrite(dev, phys_buffer, base_sector + i, 1);
+        res = blk_dev_pread(dev, phys_buffer, base_sector + i, 1);
         if(res)
         {
             page_free(sector_order, phys_buffer);

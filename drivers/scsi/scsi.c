@@ -1,32 +1,26 @@
 
 #include <drivers/scsi/scsi.h>
+#include <drivers/scsi/cdb.h>
 #include <kanawha/ptree.h>
 #include <kanawha/lock.h>
 #include <kanawha/endian.h>
 #include <kanawha/dma.h>
 #include <kanawha/string.h>
+#include <kanawha/kmalloc.h>
 
 DEFINE_LOCAL_IRQ_LOCK(scsi_adaptor_tree_lock);
 static DECLARE_PTREE(scsi_adaptor_tree);
 
-struct scsi_cdb_12 {
-    uint8_t opcode;
-    uint8_t service_action : 5;
-    uint8_t misc0 : 3;
-    union {
-      struct {
-        be32_t lba;
-        union {
-            be32_t xfer_length;
-            be32_t param_length;
-            be32_t allocation_length;
-        } __packed;
-      } __packed;
-      uint8_t param[8];
-    } __packed;
-    uint8_t misc1;
-    uint8_t control;
-} __packed;
+static inline int
+scsi_command_error_to_errno(
+        struct scsi_command *cmd)
+{
+    if(cmd->error == 0) {
+        return 0;
+    }
+
+    return -EINVAL;
+}
 
 static int
 scsi_adaptor_get_luns(
@@ -127,6 +121,9 @@ scsi_adaptor_get_luns(
 int register_scsi_adaptor(struct scsi_adaptor *adaptor)
 {
     int res;
+
+    ptree_init(&adaptor->device_tree);
+
     scsi_adaptor_tree_lock_acquire();
     res = ptree_insert_any(&scsi_adaptor_tree, &adaptor->ptree_node);
     scsi_adaptor_tree_lock_release();
@@ -154,19 +151,196 @@ int register_scsi_adaptor(struct scsi_adaptor *adaptor)
         uint64_t lun = luns_buffer[i];
         printk("LUN[%d] 0x%lx\n",
                 i, lun);
+
+        struct scsi_dev *dev = kmalloc(sizeof(struct scsi_dev), KM_KERNEL);
+
+        res = ptree_insert_any(&adaptor->device_tree, &dev->adaptor_node);
+        if(res) {
+            kfree(dev);
+            continue;
+        }
+
+        struct scsi_target target = {
+            .target = 0, // TODO stop assuming all devices use target 0
+            .lun = lun,
+        };
+
+        res = scsi_dev_init(adaptor, dev, target);
+        if(res) {
+            ptree_remove(&adaptor->device_tree, dev->adaptor_node.key);
+            kfree(dev);
+            continue;
+        }
     }
 
     return 0;
 }
 int unregister_scsi_adaptor(struct scsi_adaptor *adaptor)
 {
+    int res;
+
     scsi_adaptor_tree_lock_acquire();
     __maybe_unused struct ptree_node *removed;
     removed = ptree_remove(&scsi_adaptor_tree, adaptor->ptree_node.key);
     scsi_adaptor_tree_lock_release();
 
+    {
+        while(1) {
+            struct ptree_node *node = ptree_get_first(&adaptor->device_tree);
+            if(node == NULL) {
+                break;
+            }
+            ptree_remove(&adaptor->device_tree, node->key);
+            struct scsi_dev *dev = container_of(node, struct scsi_dev, adaptor_node);
+
+            res = scsi_dev_deinit(dev);
+            if(res) {
+                panic("Failed to destroy SCSI device during unregister_scsi_adaptor");
+            }
+
+            kfree(dev);
+        }
+    }
+
     DEBUG_ASSERT(removed == &adaptor->ptree_node);
 
+    return 0;
+}
+
+// Helper Functions
+
+int
+scsi_adaptor_run_virtual_command(
+        struct scsi_adaptor *adaptor,
+        struct scsi_target target,
+        void *cdb,
+        size_t cdb_len,
+        void *from_dev_buffer,
+        size_t from_dev_buffer_len,
+        void *to_dev_buffer,
+        size_t to_dev_buffer_len)
+{
+    int res;
+
+    void __phys *in_phys = 0;
+    void __phys *out_phys = 0;
+
+    dma_addr_t in_dma;
+    dma_addr_t out_dma;
+
+    if(from_dev_buffer_len > 0) {
+        res = dma_alloc(
+                from_dev_buffer_len,
+                5, // 32-byte aligned
+                DMA_PHYS_64,
+                &in_dma);
+        if(res) {
+            return res;
+        }
+        in_phys = dma_phys_addr(in_dma);
+#ifdef CONFIG_DEBUGGING
+        void *from_dev = dma_virt_addr(in_dma);
+        memset(from_dev, 0, from_dev_buffer_len);
+#endif
+    }
+    if(to_dev_buffer_len > 0) {
+        res = dma_alloc(
+                to_dev_buffer_len,
+                5, // 32-byte aligned
+                DMA_PHYS_64,
+                &out_dma);
+        if(res) {
+            if(from_dev_buffer_len > 0) {
+                dma_free(in_dma, from_dev_buffer_len);
+            }
+            return res;
+        }
+        out_phys = dma_phys_addr(out_dma);
+        void *to_dev = dma_virt_addr(out_dma);
+        memcpy(to_dev, to_dev_buffer, to_dev_buffer_len);
+    }
+
+    res = scsi_adaptor_run_physical_command(
+            adaptor,
+            target,
+            cdb,
+            cdb_len,
+            in_phys,
+            from_dev_buffer_len,
+            out_phys,
+            to_dev_buffer_len);
+
+    if(from_dev_buffer_len > 0) {
+        void *from_dev = dma_virt_addr(in_dma);
+        memcpy(from_dev_buffer, from_dev, from_dev_buffer_len);
+        dma_free(in_dma, from_dev_buffer_len);
+    }
+    if(to_dev_buffer_len > 0) {
+        dma_free(out_dma, to_dev_buffer_len);
+    }
+
+    return res;
+}
+
+int
+scsi_adaptor_run_physical_command(
+        struct scsi_adaptor *adaptor,
+        struct scsi_target target,
+        void *cdb,
+        size_t cdb_len,
+        void __phys *from_dev_buffer,
+        size_t from_dev_buffer_len,
+        void __phys *to_dev_buffer,
+        size_t to_dev_buffer_len)
+{
+    int res;
+
+    struct scsi_command *cmd;
+    cmd = scsi_adaptor_create_command(
+            adaptor,
+            target,
+            0);
+
+    res = scsi_adaptor_write_cdb(adaptor, cmd, cdb, cdb_len);
+    if(res) {
+        scsi_adaptor_destroy_command(adaptor, cmd);
+        return res;
+    }
+
+    if(from_dev_buffer_len > 0) {
+        res = scsi_adaptor_point_in_data(adaptor, cmd, from_dev_buffer, from_dev_buffer_len);
+        if(res) {
+            scsi_adaptor_destroy_command(adaptor, cmd);
+            return res;
+        }
+    }
+    if(to_dev_buffer_len > 0) {
+        res = scsi_adaptor_point_out_data(adaptor, cmd, to_dev_buffer, to_dev_buffer_len);
+        if(res) {
+            scsi_adaptor_destroy_command(adaptor, cmd);
+            return res;
+        }
+    }
+
+    res = scsi_adaptor_launch_command(adaptor, cmd);
+    if(res) {
+        scsi_adaptor_destroy_command(adaptor, cmd);
+        return res;
+    }
+
+    res = scsi_adaptor_await_command(adaptor, cmd);
+    if(res) {
+        scsi_adaptor_destroy_command(adaptor, cmd);
+        return res;
+    }
+
+    if(cmd->error) {
+        res = scsi_command_error_to_errno(cmd);
+        scsi_adaptor_destroy_command(adaptor, cmd);
+        return res;
+    }
+
+    scsi_adaptor_destroy_command(adaptor, cmd);
     return 0;
 }
 

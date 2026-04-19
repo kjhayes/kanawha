@@ -343,6 +343,7 @@ nvme_queue_init(struct nvme_dev *nvme,
             break;
         }
 
+        printk("NVME: Installing Queue IRQ %ld\n", (sl_t)irq);
         queue->irq_action = irq_install_handler(
                 desc,
                 queue,

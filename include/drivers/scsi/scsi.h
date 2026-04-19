@@ -3,6 +3,7 @@
 
 #include <kanawha/ops.h>
 #include <kanawha/ptree.h>
+#include <kanawha/dev/blk.h>
 
 struct scsi_command {
     enum {
@@ -16,6 +17,7 @@ struct scsi_command {
         SCSI_ERROR_UNKNOWN,
     } error;
 };
+
 struct scsi_adaptor;
 
 struct scsi_target {
@@ -77,6 +79,13 @@ struct scsi_adaptor
     struct scsi_adaptor_ops *ops;
 
     struct ptree_node ptree_node;
+
+    // Hints provided by the adaptor driver
+    // about how many devices to scan for
+    uint64_t max_target;
+    uint64_t max_lun;
+
+    struct ptree device_tree;
 };
 
 DEFINE_OP_LIST_WRAPPERS(
@@ -89,5 +98,48 @@ DEFINE_OP_LIST_WRAPPERS(
 
 int register_scsi_adaptor(struct scsi_adaptor *);
 int unregister_scsi_adaptor(struct scsi_adaptor *);
+
+int
+scsi_adaptor_run_virtual_command(
+        struct scsi_adaptor *adaptor,
+        struct scsi_target target,
+        void *cdb,
+        size_t cdb_len,
+        void *from_dev_buffer,
+        size_t from_dev_buffer_len,
+        void *to_dev_buffer,
+        size_t to_dev_buffer_len);
+
+int
+scsi_adaptor_run_physical_command(
+        struct scsi_adaptor *adaptor,
+        struct scsi_target target,
+        void *cdb,
+        size_t cdb_len,
+        void __phys *from_dev_buffer,
+        size_t from_dev_buffer_len,
+        void __phys *to_dev_buffer,
+        size_t to_dev_buffer_len);
+
+// A SCSI Device and Associated Target/LUN
+struct scsi_dev
+{
+    struct scsi_adaptor *adaptor;
+    struct scsi_target target;
+
+    size_t lba_count;
+    order_t lba_order;
+
+    struct blk_dev blk_dev;
+
+    char *name;
+
+    struct ptree_node adaptor_node;
+};
+
+int scsi_dev_init(struct scsi_adaptor *adaptor,
+                  struct scsi_dev *dev,
+                  struct scsi_target target);
+int scsi_dev_deinit(struct scsi_dev *dev);
 
 #endif
