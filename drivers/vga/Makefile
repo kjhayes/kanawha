@@ -9,4 +9,5 @@ obj-$(CONFIG_VGA_RAMFILE) += ramfile.o
 obj-$(CONFIG_VGA_FB_DEV) += \
 	fb.o \
 	modes/ \
+	font.o \
 

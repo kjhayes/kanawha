@@ -34,11 +34,20 @@
 // Returns the total number of bytes which are owned by this page allocator
 #define PAGE_ALLOCATOR_AMOUNT_TOTAL_SIG(RET, ARG, ...) RET(size_t)
 
+#define PAGE_ALLOCATOR_DEBUG_DUMP_SIG(RET,ARG,...)\
+    RET(int)\
+    ARG(printk_f *, printer)
+
+#define PAGE_ALLOCATOR_VERIFY_SIG(RET,ARG,...)\
+    RET(int)
+
 #define PAGE_ALLOCATOR_OP_LIST(OP, ...)                                        \
     OP(alloc, PAGE_ALLOCATOR_ALLOC_SIG, ##__VA_ARGS__)                         \
     OP(free, PAGE_ALLOCATOR_FREE_SIG, ##__VA_ARGS__)                           \
     OP(amount_free, PAGE_ALLOCATOR_AMOUNT_FREE_SIG, ##__VA_ARGS__)\
-    OP(amount_total, PAGE_ALLOCATOR_AMOUNT_TOTAL_SIG, ##__VA_ARGS__)
+    OP(amount_total, PAGE_ALLOCATOR_AMOUNT_TOTAL_SIG, ##__VA_ARGS__) \
+    OP(debug_dump, PAGE_ALLOCATOR_DEBUG_DUMP_SIG, ##__VA_ARGS__) \
+    OP(verify, PAGE_ALLOCATOR_VERIFY_SIG, ##__VA_ARGS__)
 
 struct page_allocator_ops
 {
@@ -78,6 +87,12 @@ size_t
 page_alloc_amount_free(void);
 size_t
 page_alloc_amount_matching(unsigned long flags);
+
+void
+page_alloc_debug_dump(printk_f *printer);
+
+void
+page_alloc_verify(void);
 
 // Same as page_alloc but return which allocator provided the page
 // (or NULL if the allocation failed)

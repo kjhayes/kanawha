@@ -336,3 +336,30 @@ page_alloc_amount_matching(unsigned long flags)
 
     return amount;
 }
+
+void
+page_alloc_debug_dump(printk_f *printer)
+{
+    ilist_node_t *node;
+    ilist_for_each(node, &page_allocator_list) {
+        struct page_allocator *alloc;
+        alloc = container_of(node, struct page_allocator, list_node);
+        irq_lock_acquire(&alloc->lock);
+        page_allocator_debug_dump(alloc, printer);
+        irq_lock_release(&alloc->lock);
+    }
+}
+
+void
+page_alloc_verify(void)
+{
+    ilist_node_t *node;
+    ilist_for_each(node, &page_allocator_list) {
+        struct page_allocator *alloc;
+        alloc = container_of(node, struct page_allocator, list_node);
+        irq_lock_acquire(&alloc->lock);
+        page_allocator_verify(alloc);
+        irq_lock_release(&alloc->lock);
+    }
+}
+
