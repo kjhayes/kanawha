@@ -42,6 +42,7 @@ obj-y += \
 	strace.o \
 	udrv.o \
 	perf.o \
+	lock.o \
 
 obj-y += stack.o
 

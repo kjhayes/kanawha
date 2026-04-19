@@ -2,6 +2,7 @@
 #include <drivers/scsi/scsi.h>
 #include <drivers/scsi/cdb.h>
 #include <kanawha/ptree.h>
+#include <kanawha/stree.h>
 #include <kanawha/lock.h>
 #include <kanawha/endian.h>
 #include <kanawha/dma.h>
@@ -9,7 +10,7 @@
 #include <kanawha/kmalloc.h>
 
 DEFINE_LOCAL_IRQ_LOCK(scsi_adaptor_tree_lock);
-static DECLARE_PTREE(scsi_adaptor_tree);
+static DECLARE_STREE(scsi_adaptor_tree);
 
 static inline int
 scsi_command_error_to_errno(
@@ -118,14 +119,17 @@ scsi_adaptor_get_luns(
     return 0;
 }
 
-int register_scsi_adaptor(struct scsi_adaptor *adaptor)
+int register_scsi_adaptor(struct scsi_adaptor *adaptor, const char *name)
 {
     int res;
+
+    adaptor->name = name;
 
     ptree_init(&adaptor->device_tree);
 
     scsi_adaptor_tree_lock_acquire();
-    res = ptree_insert_any(&scsi_adaptor_tree, &adaptor->ptree_node);
+    adaptor->stree_node.key = adaptor->name;
+    res = stree_insert(&scsi_adaptor_tree, &adaptor->stree_node);
     scsi_adaptor_tree_lock_release();
     if(res) {
         return res;
@@ -180,8 +184,9 @@ int unregister_scsi_adaptor(struct scsi_adaptor *adaptor)
     int res;
 
     scsi_adaptor_tree_lock_acquire();
-    __maybe_unused struct ptree_node *removed;
-    removed = ptree_remove(&scsi_adaptor_tree, adaptor->ptree_node.key);
+    __maybe_unused struct stree_node *removed;
+    removed = stree_remove(&scsi_adaptor_tree, adaptor->name);
+    DEBUG_ASSERT(removed == &adaptor->stree_node);
     scsi_adaptor_tree_lock_release();
 
     {
@@ -201,8 +206,6 @@ int unregister_scsi_adaptor(struct scsi_adaptor *adaptor)
             kfree(dev);
         }
     }
-
-    DEBUG_ASSERT(removed == &adaptor->ptree_node);
 
     return 0;
 }

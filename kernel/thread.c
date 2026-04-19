@@ -153,6 +153,7 @@ idle_loop(void)
 
         arch_halt();
 
+        soft_resched();
         thread_yield();
 
         // if(current_cpu_id() == 0 && clk_mono_valid()) {

@@ -27,6 +27,8 @@
 #define VIRTIO_SCSI_S_HEAD 2
 #define VIRTIO_SCSI_S_ACA 3
 
+#define VIRTIO_SCSI_NAMEBUFLEN (32)
+
 struct virtio_scsi
 {
     struct scsi_adaptor scsi_adaptor;
@@ -38,6 +40,8 @@ struct virtio_scsi
 
     uint32_t cdb_size;
     uint32_t sense_size;
+
+    char namebuf[VIRTIO_SCSI_NAMEBUFLEN];
 
     // There may be multiple request queues
     // but we will use exactly one to maintain
@@ -435,8 +439,19 @@ virtio_scsi_init_device(struct virtio_driver *driver,
         return res;
     }
 
+    {
+        static unsigned long id = 0;
+        snprintk(
+                scsi->namebuf,
+                VIRTIO_SCSI_NAMEBUFLEN,
+                "virtio-scsi-%ld",
+                id);
+        id++;
+        scsi->namebuf[VIRTIO_SCSI_NAMEBUFLEN-1] = '\0'; 
+    }
+
     scsi->scsi_adaptor.ops = &virtio_scsi_adaptor_ops;
-    res = register_scsi_adaptor(&scsi->scsi_adaptor);
+    res = register_scsi_adaptor(&scsi->scsi_adaptor, scsi->namebuf);
     if(res)
     {
         virtio_queue_disable(scsi->control_queue);

@@ -9,7 +9,7 @@ QEMU_FLAGS += -D $(QEMU_DEBUG_LOG) -d guest_errors
 
 QEMU_FLAGS += -trace "scsi*"
 
-QEMU_FLAGS += -device virtio-gpu-pci
+# QEMU_FLAGS += -device virtio-gpu-pci
 
 # QEMU_FLAGS += -drive file=$(ROOT_DIR)/root.ext2,if=none,id=virtio-disk-root,format=raw \
 # 			  -device virtio-blk-pci,drive=virtio-disk-root,id=root-disk
@@ -45,11 +45,11 @@ QEMU_FLAGS += -device pci-testdev
 			  -object filter-dump,id=f1,netdev=net0,file=netdump.dat
 #QEMU_FLAGS += -device virtio-net-pci,netdev=net0,mq=on,vectors=1
 
-# QEMU_FLAGS += \
-#               -device nec-usb-xhci,id=xhci                      \
-#               -drive if=none,id=stick0,format=raw,file=./usb0.img \
-#               -device usb-storage,bus=xhci.0,drive=stick0,id=stick0 \
-#               -device usb-kbd,bus=xhci.0
+QEMU_FLAGS += \
+              -device nec-usb-xhci,id=xhci                      \
+              -drive if=none,id=stick0,format=raw,file=./usb0.img \
+              -device usb-storage,bus=xhci.0,drive=stick0,id=stick0 \
+              #-device usb-kbd,bus=xhci.0
 
 #              -drive if=none,id=stick1,format=raw,file=./usb1.img \
 #              -device usb-storage,bus=xhci.0,drive=stick1,id=stick1 \

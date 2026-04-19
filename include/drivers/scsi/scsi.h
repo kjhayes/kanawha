@@ -78,12 +78,14 @@ struct scsi_adaptor
 {
     struct scsi_adaptor_ops *ops;
 
-    struct ptree_node ptree_node;
+    struct stree_node stree_node;
 
     // Hints provided by the adaptor driver
     // about how many devices to scan for
     uint64_t max_target;
     uint64_t max_lun;
+
+    const char *name;
 
     struct ptree device_tree;
 };
@@ -96,7 +98,8 @@ DEFINE_OP_LIST_WRAPPERS(
         OPS_STRUCT_PTR_ACCESSOR,
         SELF_ACCESSOR)
 
-int register_scsi_adaptor(struct scsi_adaptor *);
+// Maintains a reference to "name" until unregister_scsi_adaptor is called
+int register_scsi_adaptor(struct scsi_adaptor *, const char *name);
 int unregister_scsi_adaptor(struct scsi_adaptor *);
 
 int

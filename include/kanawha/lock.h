@@ -40,13 +40,16 @@ thread_lock_try_acquire(thread_lock_t *lock)
     return prev;
 }
 
+void
+thread_lock_failed_acquisition(thread_lock_t *lock);
+
 // Blocks until the lock can be acquired
 static inline void
 thread_lock_acquire(thread_lock_t *lock)
 {
     while(atomic_bool_test_and_set(&lock->locked))
     {
-        pause();
+        thread_lock_failed_acquisition(lock);
     }
 }
 

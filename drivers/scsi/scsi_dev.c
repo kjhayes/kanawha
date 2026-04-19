@@ -456,8 +456,8 @@ scsi_dev_init(
         snprintk(
                 namebuf,
                 64,
-                "scsi-%lu-%lu-%lu",
-                (ul_t)adaptor->ptree_node.key,
+                "%s-%lu-%lu-%lu",
+                (ul_t)adaptor->name,
                 (ul_t)target.target,
                 (ul_t)target.lun
                 );
