@@ -4,6 +4,7 @@
 #include <kanawha/attribute.h>
 #include <kanawha/errno.h>
 #include <kanawha/event.h>
+#include <kanawha/tasklet.h>
 #include <kanawha/init.h>
 #include <kanawha/irq.h>
 #include <kanawha/kmalloc.h>
@@ -297,6 +298,7 @@ thread_init(struct thread_state *state,
     state->waitqueue = NULL;
     state->scheduled = NULL;
     state->irq_depth = 0;
+    state->kmalloc_allocated = 0;
     thread_set_status(state, THREAD_STATUS_PREPARING);
 
     time_t now = current_timestamp();
@@ -384,6 +386,7 @@ thread_deinit(struct thread_state *state)
     int res;
 
     thread_tree_lock_acquire();
+    thread_id_t id = state->id;
     struct ptree_node *rem = ptree_remove(&thread_tree, state->tree_node.key);
     DEBUG_ASSERT(rem == &state->tree_node);
     thread_tree_lock_release();
@@ -391,13 +394,33 @@ thread_deinit(struct thread_state *state)
     res = arch_deinit_thread_state(state);
     if(res)
     {
+        wprintk("thread_deinit: arch_deinit_thread_state returned %s!\n",
+                errnostr(res));
         return res;
     }
+    printk("Starting vmem_map_destroy %ld\n", (sl_t)state->id);
+    time_t start = current_timestamp();
     res = vmem_map_destroy(state->mem_map);
+    time_t end = current_timestamp();
+    duration_t duration = duration_between(start, end);
+    printk("Finished vmem_map_destroy %ld (took %lu s = %lu ms = %lu ns)\n", (sl_t)state->id,
+            (ul_t)duration_to_sec(duration),
+            (ul_t)duration_to_msec(duration),
+            (ul_t)duration_to_nsec(duration)
+            );
     if(res)
     {
+        wprintk("thread_deinit: vmem_map_destroy returned %s!\n",
+                errnostr(res));
         return res;
     }
+
+    if(state->kmalloc_allocated > 0) {
+        wprintk("Thread %ld still had 0x%lx bytes of KM_THREAD allocated memory after destruction!\n",
+                (sl_t)id,
+                (ul_t)state->kmalloc_allocated);
+    }
+
     return 0;
 }
 
@@ -930,7 +953,7 @@ global_vmem_region_slab_alloc_static_init(void)
 declare_init(static, global_vmem_region_slab_alloc_static_init);
 
 static struct thread_global_vmem_region *
-alloc_thread_global_vmem_region(void)
+alloc_thread_global_vmem_region_struct(void)
 {
     struct thread_global_vmem_region *region =
         slab_alloc(global_vmem_region_slab_allocator);
@@ -940,12 +963,12 @@ alloc_thread_global_vmem_region(void)
     return region;
 }
 
-// static void
-// free_thread_global_vmem_region(struct thread_global_vmem_region *region) {
-//     dprintk("free_thread_global_vmem_region() -> %p (list_node=%p)\n",
-//     &region, &region->list_node);
-//     slab_free(global_vmem_region_slab_allocator, region);
-// }
+static void
+free_thread_global_vmem_region_struct(struct thread_global_vmem_region *region) {
+    dprintk("free_thread_global_vmem_region() -> %p (list_node=%p)\n",
+    &region, &region->list_node);
+    slab_free(global_vmem_region_slab_allocator, region);
+}
 
 static void
 thread_force_mapping_visitor(struct ptree_node *node, void *state)
@@ -979,7 +1002,7 @@ thread_force_mapping(struct vmem_region *region, void *virtual_addr)
     thread_tree_lock_acquire();
 
     struct thread_global_vmem_region *global_region =
-        alloc_thread_global_vmem_region();
+        alloc_thread_global_vmem_region_struct();
     if(region == NULL)
     {
         thread_tree_lock_release();
@@ -1002,7 +1025,34 @@ thread_force_mapping(struct vmem_region *region, void *virtual_addr)
 int
 thread_relax_mapping(void *virtual_addr)
 {
-    return -EUNIMPL;
+    int res;
+
+    thread_tree_lock_acquire();
+
+    struct thread_global_vmem_region *global_region = NULL;
+    ilist_node_t *iter;
+    ilist_for_each(iter, &global_vmem_regions) {
+        struct thread_global_vmem_region *cur;
+        cur = container_of(iter, struct thread_global_vmem_region, list_node);
+        if(cur->virtual_addr == virtual_addr) {
+            global_region = cur;
+            break;
+        }
+    }
+
+    if(global_region == NULL) {
+        thread_tree_lock_release();
+        return -ENXIO;
+    }
+
+    struct vmem_region *vmem_region = global_region->region;
+
+    ilist_remove(&global_vmem_regions, &global_region->list_node);
+    free_thread_global_vmem_region_struct(global_region);
+
+    thread_tree_lock_release();
+
+    return 0;
 }
 
 const char *
@@ -1030,7 +1080,7 @@ tick_thread_running_percent(
     return running;
 }
 
-static struct periodic_event *sample_thread_running_event = NULL;
+static struct periodic_tasklet *sample_thread_running_event = NULL;
 static void
 sample_thread_running_percentage(void *state)
 {
@@ -1059,7 +1109,7 @@ sample_thread_running_percentage(void *state)
 static int
 init_sample_thread_running_percentage(void)
 {
-    sample_thread_running_event = create_periodic_event(
+    sample_thread_running_event = tasklet_create_periodic(
         msec_to_duration(SAMPLE_THREAD_RUNNING_PERIOD_MS),
         NULL,
         sample_thread_running_percentage);

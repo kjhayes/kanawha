@@ -112,6 +112,8 @@ struct thread_state
     time_t creation_timestamp;
     time_t last_scheduled_timestamp;
 
+    size_t kmalloc_allocated;
+
     unsigned long running_tracker;
 };
 

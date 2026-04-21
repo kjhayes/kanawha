@@ -281,6 +281,8 @@ vmem_region_destroy(struct vmem_region *region)
     res = arch_vmem_region_deinit(region);
     if(res)
     {
+        eprintk("arch_vmem_region_deinit failed! (err=%s)\n",
+                errnostr(res));
         return res;
     }
 
@@ -655,7 +657,6 @@ vmem_force_mapping(struct vmem_region *region, void *virtual_address)
     int res;
 
     res = vmem_map_map_region(default_map, region, virtual_address);
-
     if(res)
     {
         eprintk("vmem_force_mapping: Failed to map into the default map! "
@@ -678,7 +679,24 @@ vmem_force_mapping(struct vmem_region *region, void *virtual_address)
 int
 vmem_relax_mapping(void *virtual_address)
 {
-    return -EUNIMPL;
+    int res;
+
+    struct vmem_region_ref *ref = vmem_map_get_region(default_map, virtual_address);
+    if(ref == NULL) {
+        return -EINVAL;
+    }
+
+    res = vmem_map_unmap_region(default_map, ref);
+    if(res) {
+        return res;
+    }
+
+    res = thread_relax_mapping(virtual_address);
+    if(res) {
+        return res;
+    }
+
+    return 0;
 }
 
 static int

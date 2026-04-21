@@ -6,6 +6,7 @@
 #include <kanawha/lock.h>
 #include <kanawha/stddef.h>
 #include <kanawha/types.h>
+#include <kanawha/thread.h>
 
 #ifdef CONFIG_DEBUG_KMALLOC_BITMAP
 #include <kanawha/bitmap.h>
@@ -29,6 +30,7 @@ static DECLARE_ILIST(callsite_allocation_list);
 struct kmalloc_hdr
 {
     size_t total_size;
+    unsigned long flags;
 
 #ifdef CONFIG_KMALLOC_TRACK_CALLSITES
     void *return_addr;
@@ -105,6 +107,7 @@ kmalloc(size_t size, unsigned long flags)
 
     struct kmallocation *allocation = (struct kmallocation *)alloc;
     allocation->hdr.total_size = req_size;
+    allocation->hdr.flags = flags;
 
 #ifdef CONFIG_KMALLOC_TRACK_CALLSITES
     allocation->hdr.return_addr = __builtin_return_address(0);
@@ -129,6 +132,15 @@ kmalloc(size_t size, unsigned long flags)
                         &allocation->hdr.return_addr_node);
     }
 #endif
+
+    if(flags & KM_THREAD) {
+        struct thread_state *thread = current_thread();
+        if(thread == NULL) {
+            wprintk("allocating KM_THREAD allocation without a current thread!\n");
+        } else {
+            thread->kmalloc_allocated += req_size;
+        }
+    }
 
     kmalloc_lock_release();
 
@@ -156,6 +168,15 @@ kfree(void *addr)
 #endif
 
     size_t size = allocation->hdr.total_size;
+
+    if(allocation->hdr.flags & KM_THREAD) {
+        struct thread_state *thread = current_thread();
+        if(thread == NULL) {
+            wprintk("freeing KM_THREAD allocation without a current thread!\n");
+        } else {
+            thread->kmalloc_allocated -= allocation->hdr.total_size;
+        }
+    }
 
     int res = kfree_specific(allocation, size);
     if(res)

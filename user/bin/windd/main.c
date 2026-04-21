@@ -778,6 +778,13 @@ main(int argc, const char **argv)
 {
     int res;
 
+    printf("windd: argc=%d\n", argc);
+    for(int i = 0; i < argc; i++) {
+        printf("windd: argv[%d] = \"%s\"\n",
+                i,
+                argv[i]);
+    }
+
     if(argc < 3) {
         usage(stderr);
         return -1;

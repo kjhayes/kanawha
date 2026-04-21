@@ -45,5 +45,8 @@ start_daemon(struct daemon *daemon)
     INFO("forked daemon: %s\n", daemon->command);
     daemon->pid = fork_pid;
     daemon->status = DAEMON_RUNNING;
+
+    sleep(1);
+
     return 0;
 }

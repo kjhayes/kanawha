@@ -148,6 +148,8 @@ thread_stack_deinit(struct thread_stack *stack)
     res = vmem_relax_mapping((void *)stack->virt_base);
     if(res)
     {
+        wprintk("thread_stack_deinit: vmem_relax_mapping returned (%s)!\n",
+                errnostr(res));
         return res;
     }
     res = mem_flags_set_flags(get_virt_mem_flags(),
@@ -156,16 +158,22 @@ thread_stack_deinit(struct thread_stack *stack)
                               VIRT_MEM_FLAGS_AVAIL);
     if(res)
     {
+        wprintk("thread_stack_deinit: mem_flags_set_flags returned (%s)!\n",
+                errnostr(res));
         return res;
     }
     res = vmem_region_destroy(stack->region);
     if(res)
     {
+        wprintk("thread_stack_deinit: vmem_region_destroy returned (%s)!\n",
+                errnostr(res));
         return res;
     }
     res = page_free(stack->order, stack->page);
     if(res)
     {
+        wprintk("thread_stack_deinit: page_free returned (%s)!\n",
+                errnostr(res));
         return res;
     }
 

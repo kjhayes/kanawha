@@ -127,6 +127,7 @@ typedef struct irq_lock
 {
     atomic_bool_t locked;
     int irq_flags;
+
 } irq_lock_t;
 
 static inline int

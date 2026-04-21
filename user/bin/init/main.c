@@ -55,6 +55,7 @@ static struct daemon randd = {
 static const char *windd_args[] = {"windd",
     WINDD_FB_PATH_STR, WINDD_FB_MODE_STR,
     "/dev/input/ps2-kbd-0",
+    NULL,
 };
 static struct daemon_socket windd_sockets[] = {{
     .env = "WINDD_SOCKET",
