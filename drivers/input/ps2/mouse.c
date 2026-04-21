@@ -144,6 +144,7 @@ ps2_mouse_attach(struct ps2_driver *driver, struct ps2_port *port)
     }
 
     mouse->registered = 1;
+    port->driver_priv_state = mouse;
 
     return 0;
 }
@@ -151,7 +152,26 @@ ps2_mouse_attach(struct ps2_driver *driver, struct ps2_port *port)
 static int
 ps2_mouse_deattach(struct ps2_driver *driver, struct ps2_port *port)
 {
-    return -EUNIMPL;
+    int res;
+
+    struct ps2_mouse *mouse = port->driver_priv_state;
+    DEBUG_ASSERT(KERNEL_ADDR(mouse));
+
+    res = ps2_port_disable_scanning(port);
+    if(res) {
+        wprintk("PS/2 Mouse: Failed to disable port scanning on deattach! (err=%s)\n",
+                errnostr(res));
+    }
+
+    res = unregister_input_dev(&mouse->input_dev);
+    if(res) {
+        panic("PS/2 Mouse: Failed to unregister input_dev on deattach! (err=%s)\n",
+                errnostr(res));
+    }
+
+    kfree(mouse);
+
+    return 0;
 }
 
 static struct ps2_driver_ops ps2_mouse_driver_ops = {

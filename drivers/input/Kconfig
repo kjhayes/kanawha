@@ -4,3 +4,13 @@ config USB_HID
     depends on USB
     default y
 
+config PS2_KBD
+    tristate "PS/2 Keyboard Driver"
+    depends on PS2
+    default y
+
+config PS2_MOUSE
+    tristate "PS/2 Mouse Driver"
+    depends on PS2
+    default y
+

@@ -41,6 +41,7 @@ struct ps2_port
     ilist_node_t driver_node;
 
     struct ps2_driver *driver;
+    void *driver_priv_state;
 };
 
 DEFINE_OP_LIST_WRAPPERS(PS2_PORT_OP_LIST,

@@ -1,6 +1,8 @@
 
-obj-y += \
+obj-$(CONFIG_PS2_KBD) += \
 	kbd.o \
-	mouse.o \
 	scanset/
+
+obj-$(CONFIG_PS2_MOUSE) += \
+	mouse.o
 

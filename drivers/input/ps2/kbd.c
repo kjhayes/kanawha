@@ -107,6 +107,7 @@ ps2_kbd_attach(struct ps2_driver *driver, struct ps2_port *port)
     }
 
     kbd->registered = 1;
+    port->driver_priv_state = kbd;
 
     return 0;
 }
@@ -114,7 +115,25 @@ ps2_kbd_attach(struct ps2_driver *driver, struct ps2_port *port)
 static int
 ps2_kbd_deattach(struct ps2_driver *driver, struct ps2_port *port)
 {
-    return -EUNIMPL;
+    int res;
+
+    struct ps2_kbd *kbd = port->driver_priv_state;
+    DEBUG_ASSERT(KERNEL_ADDR(kbd));
+
+    res = ps2_port_disable_scanning(port);
+    if(res) {
+        wprintk("PS/2 Keyboard: Failed to disable port scanning on deattach!\n");
+    }
+
+    res = unregister_input_dev(&kbd->input_dev);
+    if(res) {
+        panic("PS/2 Keyboard: Failed to unregister input device on deattach! (err=%s)\n",
+                errnostr(res));
+    }
+
+    kfree(kbd);
+
+    return 0;
 }
 
 static struct ps2_driver_ops ps2_kbd_driver_ops = {
