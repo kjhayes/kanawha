@@ -1,6 +1,6 @@
 
 #include <drivers/vga/vga.h>
-#include <drivers/vga/font.h>
+#include <drivers/fb/vga/font.h>
 #include <kanawha/gfx/convert.h>
 #include <kanawha/gfx/font.h>
 #include <kanawha/gfx/layout.h>

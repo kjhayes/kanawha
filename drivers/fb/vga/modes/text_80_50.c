@@ -1,7 +1,7 @@
 
-#include <drivers/vga/fb.h>
+#include <drivers/fb/vga/vga.h>
+#include <drivers/fb/vga/font.h>
 #include <drivers/vga/vga.h>
-#include <drivers/vga/font.h>
 #include <kanawha/dev/fb.h>
 #include <kanawha/endian.h>
 #include <kanawha/gfx/convert.h>
@@ -16,17 +16,17 @@
 struct vga_fb;
 
 static int
-vga_fb_flush_mode_text_80_25(struct vga_fb *fb)
+vga_fb_flush_mode_text_80_50(struct vga_fb *fb)
 {
     vga_write_field(fb->vga_dev, MemoryPlaneWriteEnable, 0b0011);
     vga_screen_disable(fb->vga_dev);
-    memcpy_pp((void __phys *)0xA0000, fb->buffer, 80 * 25 * 2);
+    memcpy_pp((void __phys *)0xA0000, fb->buffer, 80 * 50 * 2);
     vga_screen_enable(fb->vga_dev);
     return 0;
 }
 
 static int
-vga_fb_setup_mode_text_80_25(struct vga_fb *fb)
+vga_fb_setup_mode_text_80_50(struct vga_fb *fb)
 {
     int res;
     struct vga_dev *vga = fb->vga_dev;
@@ -77,6 +77,9 @@ vga_fb_setup_mode_text_80_25(struct vga_fb *fb)
     vga_write_register(vga, BitMask, 0xFF);        // Added
     vga_write_register(vga, DACMask, 0xFF);        // Added
 
+    // Changes from 80x25
+    vga_write_field(vga, MaximumScanLine, 7); // 8x8
+
     vga_write_field(fb->vga_dev, MemoryMapSelect, 1);
 
     // Load a font
@@ -86,7 +89,7 @@ vga_fb_setup_mode_text_80_25(struct vga_fb *fb)
     }
 
     // Clear every attribute to be black background, white foreground
-    for(size_t i = 0; i < 80 * 25; i++)
+    for(size_t i = 0; i < 80 * 50; i++)
     {
         uint8_t default_attr = 0x0F;
         memcpy_vp((fb->buffer + (i * 2) + 1), &default_attr, 1);
@@ -108,7 +111,7 @@ vga_fb_setup_mode_text_80_25(struct vga_fb *fb)
 
     vga_screen_enable(vga);
 
-    res = vga_fb_flush_mode_text_80_25(fb);
+    res = vga_fb_flush_mode_text_80_50(fb);
     if(res)
     {
         wprintk("Failed to flush VGA framebuffer after mode-setting "
@@ -120,7 +123,7 @@ vga_fb_setup_mode_text_80_25(struct vga_fb *fb)
 }
 
 static struct fb_mode_info mode_info = {
-    .buffer_size = 80 * 25 * 2,
+    .buffer_size = 80 * 50 * 2,
     .layer_count = 2,
     .layer_infos =
         {
@@ -130,7 +133,7 @@ static struct fb_mode_info mode_info = {
                         .format = GFX_FORMAT_VGA_CHAR,
                         .order = GFX_ORDER_ROW_MAJOR,
                         .width = 80,
-                        .height = 25,
+                        .height = 50,
                         .offset = 0,
                         .stride = 2,
                     },
@@ -141,7 +144,7 @@ static struct fb_mode_info mode_info = {
                         .format = GFX_FORMAT_VGA_ATTR,
                         .order = GFX_ORDER_ROW_MAJOR,
                         .width = 80,
-                        .height = 25,
+                        .height = 50,
                         .offset = 1,
                         .stride = 2,
                     },
@@ -149,8 +152,8 @@ static struct fb_mode_info mode_info = {
         },
 };
 
-struct vga_fb_mode vga_fb_mode_text_80_25 = {
-    .flush = vga_fb_flush_mode_text_80_25,
-    .setup = vga_fb_setup_mode_text_80_25,
+struct vga_fb_mode vga_fb_mode_text_80_50 = {
+    .flush = vga_fb_flush_mode_text_80_50,
+    .setup = vga_fb_setup_mode_text_80_50,
     .mode_info = &mode_info,
 };

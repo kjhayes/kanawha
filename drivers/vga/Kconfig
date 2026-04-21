@@ -1,20 +1,5 @@
 
-config VGA_FB_DEV
-    bool "VGA Framebuffer Device"
-    default y
-    depends on X64
-
-config VGA_RAMFILE
-    bool "VGA Framebuffer Ramfile"
-    default y
-    depends on X64 && DEBUGGING && !X64_BOOT_VGA && !VGA_FB_DEV
-    help
-      Place a ramfile on top of the x64 platform vga framebuffer
-
-config DEBUG_VGA_SERIAL
-    bool "Debug VGA Pseudo-Terminal"
-    default n
-    depends on X64 && DEBUGGING && !X64_BOOT_VGA && !VGA_FB_DEV
-    help
-      Place a simple pseudo terminal on the platform VGA serial device
+config VGA
+    bool "VGA Support"
+    depends on PORT_IO
 

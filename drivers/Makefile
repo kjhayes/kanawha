@@ -20,7 +20,7 @@ obj-y += \
 
 obj-y += linux/
 
-obj-$(CONFIG_PORT_IO) += vga/
+obj-$(CONFIG_VGA) += vga/
 
 obj-$(CONFIG_PS2) += ps2/
 

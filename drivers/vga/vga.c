@@ -40,7 +40,8 @@ vga_dev_init(struct vga_dev *dev)
 static int
 vga_dev_deinit(struct vga_dev *dev)
 {
-    return -EUNIMPL;
+    vga_screen_disable(dev);
+    return 0;
 }
 
 DEFINE_REGISTRY(vga_dev, registry_node, vga_dev_init, vga_dev_deinit);

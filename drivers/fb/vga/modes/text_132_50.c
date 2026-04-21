@@ -1,7 +1,7 @@
 
-#include <drivers/vga/fb.h>
+#include <drivers/fb/vga/vga.h>
+#include <drivers/fb/vga/font.h>
 #include <drivers/vga/vga.h>
-#include <drivers/vga/font.h>
 #include <kanawha/dev/fb.h>
 #include <kanawha/endian.h>
 #include <kanawha/gfx/convert.h>
@@ -15,18 +15,21 @@
 
 struct vga_fb;
 
+#define WIDTH 132
+#define HEIGHT 50
+
 static int
-vga_fb_flush_mode_text_80_50(struct vga_fb *fb)
+vga_fb_flush_mode_text_132_50(struct vga_fb *fb)
 {
     vga_write_field(fb->vga_dev, MemoryPlaneWriteEnable, 0b0011);
     vga_screen_disable(fb->vga_dev);
-    memcpy_pp((void __phys *)0xA0000, fb->buffer, 80 * 50 * 2);
+    memcpy_pp((void __phys *)0xA0000, fb->buffer, WIDTH * HEIGHT * 2);
     vga_screen_enable(fb->vga_dev);
     return 0;
 }
 
 static int
-vga_fb_setup_mode_text_80_50(struct vga_fb *fb)
+vga_fb_setup_mode_text_132_50(struct vga_fb *fb)
 {
     int res;
     struct vga_dev *vga = fb->vga_dev;
@@ -80,6 +83,20 @@ vga_fb_setup_mode_text_80_50(struct vga_fb *fb)
     // Changes from 80x25
     vga_write_field(vga, MaximumScanLine, 7); // 8x8
 
+    // Changes from 80x50
+    vga_write_field(vga, HorizontalTotal, WIDTH - 5);
+    vga_write_field(vga, EndHorizontalDisplay, WIDTH - 1);
+    vga_write_field(vga, StartHorizontalBlanking, WIDTH); // Do not blank
+    vga_write_field(vga,
+                    EndHorizontalBlanking,
+                    (WIDTH & 0b111111) + 0);             // Do not blank
+    vga_write_field(vga, StartHorizontalRetrace, WIDTH); // Do not retrace
+    vga_write_field(vga,
+                    EndHorizontalRetrace,
+                    (WIDTH & 0b11111) + 0); // Do not retrace
+    vga_write_field(vga, DisplayEnableSkew, 0);
+    vga_write_field(vga, Offset, WIDTH / 2);
+
     vga_write_field(fb->vga_dev, MemoryMapSelect, 1);
 
     // Load a font
@@ -89,7 +106,7 @@ vga_fb_setup_mode_text_80_50(struct vga_fb *fb)
     }
 
     // Clear every attribute to be black background, white foreground
-    for(size_t i = 0; i < 80 * 50; i++)
+    for(size_t i = 0; i < WIDTH * HEIGHT; i++)
     {
         uint8_t default_attr = 0x0F;
         memcpy_vp((fb->buffer + (i * 2) + 1), &default_attr, 1);
@@ -111,7 +128,7 @@ vga_fb_setup_mode_text_80_50(struct vga_fb *fb)
 
     vga_screen_enable(vga);
 
-    res = vga_fb_flush_mode_text_80_50(fb);
+    res = vga_fb_flush_mode_text_132_50(fb);
     if(res)
     {
         wprintk("Failed to flush VGA framebuffer after mode-setting "
@@ -123,7 +140,7 @@ vga_fb_setup_mode_text_80_50(struct vga_fb *fb)
 }
 
 static struct fb_mode_info mode_info = {
-    .buffer_size = 80 * 50 * 2,
+    .buffer_size = WIDTH * HEIGHT * 2,
     .layer_count = 2,
     .layer_infos =
         {
@@ -132,8 +149,8 @@ static struct fb_mode_info mode_info = {
                     {
                         .format = GFX_FORMAT_VGA_CHAR,
                         .order = GFX_ORDER_ROW_MAJOR,
-                        .width = 80,
-                        .height = 50,
+                        .width = WIDTH,
+                        .height = HEIGHT,
                         .offset = 0,
                         .stride = 2,
                     },
@@ -143,8 +160,8 @@ static struct fb_mode_info mode_info = {
                     {
                         .format = GFX_FORMAT_VGA_ATTR,
                         .order = GFX_ORDER_ROW_MAJOR,
-                        .width = 80,
-                        .height = 50,
+                        .width = WIDTH,
+                        .height = HEIGHT,
                         .offset = 1,
                         .stride = 2,
                     },
@@ -152,8 +169,8 @@ static struct fb_mode_info mode_info = {
         },
 };
 
-struct vga_fb_mode vga_fb_mode_text_80_50 = {
-    .flush = vga_fb_flush_mode_text_80_50,
-    .setup = vga_fb_setup_mode_text_80_50,
+struct vga_fb_mode vga_fb_mode_text_132_50 = {
+    .flush = vga_fb_flush_mode_text_132_50,
+    .setup = vga_fb_setup_mode_text_132_50,
     .mode_info = &mode_info,
 };

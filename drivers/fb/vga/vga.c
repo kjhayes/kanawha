@@ -1,6 +1,6 @@
 
-#include <drivers/vga/fb.h>
 #include <drivers/vga/vga.h>
+#include <drivers/fb/vga/vga.h>
 #include <kanawha/dev/fb.h>
 #include <kanawha/endian.h>
 #include <kanawha/init.h>
@@ -317,47 +317,3 @@ vga_fb_install_vga_dev_owner(void)
 }
 declare_init(device, vga_fb_install_vga_dev_owner);
 
-// static int
-// register_legacy_vga_fb_dev(void)
-//{
-//     int res;
-//
-//     struct vga_fb *fb = kzmalloc(sizeof(struct vga_fb), KM_KERNEL);
-//     if(fb == NULL) {
-//         return -ENOMEM;
-//     }
-//
-//     unsigned long dac_order = VGA_DAC_ORDER_DEFAULT;
-//
-//     res = vga_dev_init(&fb->vga_dev, dac_order);
-//     if(res) {
-//         kfree(fb);
-//         return res;
-//     }
-//
-//     thread_lock_init(&fb->mode_lock);
-//     fb->buffer_exists = 0;
-//     fb->current_mode = 0;
-//     res = vga_fb_set_mode(&fb->fb_dev, 0);
-//     if(res) {
-//         kfree(fb);
-//         return res;
-//     }
-//
-//     fb->fb_dev.driver = &vga_fb_driver;
-//
-//     res = register_fb_dev(
-//             &fb->fb_dev,
-//             "vga");
-//     if(res) {
-//         printk("register_fb_dev returned %s\n",
-//                 errnostr(res));
-//         kfree(fb);
-//         return res;
-//     }
-//
-//     return 0;
-// }
-
-// declare_init_desc(device, register_vga_fb_dev, "Registering VGA Framebuffer
-// Device");

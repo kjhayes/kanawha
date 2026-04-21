@@ -6,3 +6,8 @@ config VIRTIO_GPU_FB
     help
       Include a driver for the virtio-gpu device which presents a framebuffer interface.
 
+config VGA_FB_DEV
+    bool "VGA Framebuffer Device"
+    default y
+    depends on VGA
+

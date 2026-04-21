@@ -54,11 +54,7 @@ endmenu
 source "drivers/ps2/Kconfig"
 source "drivers/qemu/Kconfig"
 source "drivers/virtio/Kconfig"
-
-menu "VGA Options"
-depends on PORT_IO
 source "drivers/vga/Kconfig"
-endmenu
 
 menu "Linux Compatibility"
 source "drivers/linux/Kconfig"
