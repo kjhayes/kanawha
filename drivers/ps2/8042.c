@@ -57,7 +57,6 @@ ps2_8042_wait_input_buf(struct ps2_8042 *ps2)
 static int
 ps2_8042_wait_output_buf(struct ps2_8042 *ps2)
 {
-    // TODO: Add a timeout
     for(uint32_t i = 0; i < PS2_WAIT_COUNT; i++)
     {
         uint8_t status = inb(ps2->status_port);

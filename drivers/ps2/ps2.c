@@ -318,7 +318,7 @@ ps2_register_port(struct ps2_port *port)
 {
     int res;
 
-    port->has_driver = 0;
+    port->driver = NULL;
     port->callback = NULL;
 
     res = ps2_reset(port);
@@ -358,18 +358,18 @@ ps2_register_port(struct ps2_port *port)
             res = ps2_driver_attach(driver, port);
             if(res)
             {
-                port->has_driver = 0;
+                port->driver = NULL;
                 continue;
             }
 
-            port->has_driver = 1;
+            port->driver = driver;
             ilist_push_tail(&driver->ports, &port->driver_node);
             ilist_push_tail(&ps2_driven_port_list, &port->global_node);
             break;
         }
     }
 
-    if(!port->has_driver)
+    if(port->driver == NULL)
     {
         ilist_push_tail(&ps2_open_port_list, &port->global_node);
     }
@@ -384,11 +384,12 @@ ps2_unregister_port(struct ps2_port *port)
 {
     spin_lock(&ps2_global_lock);
 
-    if(port->has_driver)
+    if(port->driver)
     {
-        // TODO notify the driver that the port is going away
+        ps2_driver_deattach(port->driver, port);
+        ilist_remove(&port->driver->ports, &port->driver_node);
+        port->driver = NULL;
         ilist_remove(&ps2_driven_port_list, &port->global_node);
-        port->has_driver = 0;
     }
     else
     {
@@ -396,7 +397,7 @@ ps2_unregister_port(struct ps2_port *port)
     }
 
     spin_unlock(&ps2_global_lock);
-    return -EUNIMPL;
+    return 0;
 }
 
 int
@@ -436,7 +437,7 @@ ps2_register_driver(struct ps2_driver *driver)
             {
                 continue;
             }
-
+            port->driver = driver;
             ilist_push_tail(&driver->ports, &port->driver_node);
         }
     }
@@ -445,7 +446,6 @@ ps2_register_driver(struct ps2_driver *driver)
     {
         struct ps2_port *port =
             container_of(port_node, struct ps2_port, driver_node);
-        port->has_driver = 1;
         ilist_remove(&ps2_open_port_list, &port->global_node);
         ilist_push_tail(&ps2_driven_port_list, &port->global_node);
     }
@@ -466,7 +466,9 @@ ps2_unregister_driver(struct ps2_driver *driver)
         struct ps2_port *port =
             container_of(port_node, struct ps2_port, driver_node);
 
-        port->has_driver = 0;
+        DEBUG_ASSERT(port->driver == driver);
+
+        port->driver = NULL;
         port->callback = NULL;
         ilist_remove(&ps2_driven_port_list, &port->global_node);
         ilist_push_tail(&ps2_open_port_list, &port->global_node);

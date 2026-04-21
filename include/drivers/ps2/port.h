@@ -5,6 +5,7 @@
 #include <kanawha/ops.h>
 #include <kanawha/spinlock.h>
 #include <kanawha/time.h>
+#include <drivers/ps2/driver.h>
 
 struct ps2_port;
 struct ps2_port_ops;
@@ -39,7 +40,7 @@ struct ps2_port
     ilist_node_t global_node;
     ilist_node_t driver_node;
 
-    unsigned has_driver : 1;
+    struct ps2_driver *driver;
 };
 
 DEFINE_OP_LIST_WRAPPERS(PS2_PORT_OP_LIST,
