@@ -53,7 +53,7 @@ do_panic(void)
     }
     do_panic_printk("\n");
 
-    dump_threads(do_panic_printk);
+    // dump_threads(do_panic_printk);
 
     while(1)
     {

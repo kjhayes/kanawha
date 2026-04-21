@@ -5,7 +5,8 @@
 
 struct usb_xhci;
 
-#define USB_XHCI_EXT_CAPABILITY_ID_USB_LEGACY_SUPPORT (1)
+#define USB_XHCI_EXT_CAPABILITY_ID_USB_LEGACY_SUPPORT  (1)
+#define USB_XHCI_EXT_CAPABILITY_ID_SUPPORTED_PROTOCOLS (2)
 
 void
 usb_xhci_for_each_capability_of_type(struct usb_xhci *xhci,

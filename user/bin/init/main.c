@@ -77,6 +77,20 @@ static struct daemon sh = {
     .num_sockets = 0,
 };
 
+static const char *klog_args[] = {
+    "fbterm",
+    "-t", "/sys/initrd/arm8.psf",
+    "-d", "/dev/term/COM1",
+    "/sys/initrd/klog",
+    NULL};
+static struct daemon klog = {
+    .command = "/sys/initrd/fbterm",
+    .args = klog_args,
+    .restart_on_exit = 0,
+    .status = DAEMON_UNINIT,
+    .num_sockets = 0,
+};
+
 static const char *sysplot_args[] = {"sysplot", NULL};
 static struct daemon sysplot = {
     .command = "/sys/initrd/sysplot",
@@ -90,6 +104,7 @@ static struct daemon *daemons[] = {
     &windd,
     &sh,
     &sysplot,
+    &klog,
     NULL,
 };
 

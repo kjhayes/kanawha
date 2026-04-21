@@ -11,6 +11,8 @@
 #include <kanawha/endian.h>
 #include <kanawha/init.h>
 #include <kanawha/types.h>
+#include <kanawha/page_alloc.h>
+#include <kanawha/dma.h>
 
 static void
 usb_xhci_legacy_support_capability_mark_os_ownership(struct usb_xhci *xhci,
@@ -182,6 +184,145 @@ usb_xhci_resume(struct usb_xhci *dev)
 }
 
 static int
+usb_xhci_init_scratchpads(struct usb_xhci *dev)
+{
+    int res;
+
+    printk("USB XHCI: requested %d scratchpads\n", dev->num_scratchpads);
+    if(dev->num_scratchpads == 0)
+    {
+        dev->scratchpad_pages = NULL;
+        return 0;
+    }
+
+    dev->scratchpad_pages =
+        kzmalloc(sizeof(void __phys *) * dev->num_scratchpads, KM_KERNEL);
+    if(dev->scratchpad_pages == NULL)
+    {
+        return -ENOMEM;
+    }
+
+    res = dma_alloc(sizeof(uint64_t) * dev->num_scratchpads,
+                    6,
+                    DMA_PHYS_64,
+                    &dev->scratchpad_array);
+    if(res)
+    {
+        kfree(dev->scratchpad_pages);
+        dev->scratchpad_pages = NULL;
+        return res;
+    }
+
+    void __phys **dma_virt = dma_virt_addr(dev->scratchpad_array);
+
+    size_t num_allocated = 0;
+    for(size_t i = 0; i < dev->num_scratchpads; i++)
+    {
+        void __phys *page;
+        res = page_alloc(dev->page_order, &page, PAGE_ALLOC_64BIT);
+        if(res)
+        {
+            break;
+        }
+        dev->scratchpad_pages[i] = page;
+        dma_virt[i] = page;
+        num_allocated++;
+    }
+    if(num_allocated != dev->num_scratchpads)
+    {
+        for(size_t i = 0; i < num_allocated; i++)
+        {
+            page_free(dev->page_order, dev->scratchpad_pages[i]);
+        }
+        kfree(dev->scratchpad_pages);
+        dev->scratchpad_pages = NULL;
+        dma_free(dev->scratchpad_array,
+                 sizeof(uint64_t) * dev->num_scratchpads);
+        return res;
+    }
+    return 0;
+}
+
+static int
+usb_xhci_deinit_scratchpads(struct usb_xhci *dev)
+{
+    for(size_t i = 0; i < dev->num_scratchpads; i++)
+    {
+        page_free(dev->page_order, dev->scratchpad_pages[i]);
+    }
+    kfree(dev->scratchpad_pages);
+    dma_free(dev->scratchpad_array, sizeof(uint64_t) * dev->num_scratchpads);
+    return 0;
+}
+
+static int
+usb_xhci_init_device_contextes(struct usb_xhci *dev)
+{
+    int res;
+
+    irq_lock_init(&dev->devices_lock);
+
+    struct usb_xhci_device **devices =
+        kzmalloc(sizeof(struct usb_xhci_device *) * dev->num_device_ctx,
+                 KM_KERNEL);
+    if(devices == NULL)
+    {
+        return -ENOMEM;
+    }
+
+    res = dma_alloc(8 * (dev->num_device_ctx + 1),
+                    dev->page_order > 6 ? dev->page_order : 6,
+                    dev->is_64bit ? DMA_PHYS_64 : DMA_PHYS_32,
+                    &dev->dcbaa_dma);
+    if(res)
+    {
+        kfree(devices);
+        return res;
+    }
+
+    dev->dcbaa = dma_virt_addr(dev->dcbaa_dma);
+    memset(dev->dcbaa, 0, 8 * (dev->num_device_ctx + 1));
+
+    if(dev->num_scratchpads > 0)
+    {
+        // Set up the pointer to the
+        // scratchpad buffers
+        DEBUG_ASSERT(KERNEL_ADDR(dev->scratchpad_pages));
+        void __phys *scratchpad_array = dma_phys_addr(dev->scratchpad_array);
+        dev->dcbaa->scratchpad_array_ptr = scratchpad_array;
+    }
+
+    dev->devices = devices;
+
+    usb_xhci_write(dev, DCBAAP, (uint64_t)dma_phys_addr(dev->dcbaa_dma));
+
+    usb_xhci_write(dev, MaxSlotsEn, dev->num_device_ctx);
+
+    return 0;
+}
+
+static int
+usb_xhci_deinit_device_contextes(struct usb_xhci *dev)
+{
+    for(size_t i = 0; i < dev->num_device_ctx; i++)
+    {
+        if(dev->devices[i] != NULL)
+        {
+            return -EBUSY;
+        }
+    }
+
+    struct usb_xhci_device **devices = dev->devices;
+    dev->devices = NULL;
+    kfree(devices);
+
+    dev->dcbaa = NULL;
+    dma_free(dev->dcbaa_dma, 8 * (dev->num_device_ctx + 1));
+
+    return 0;
+}
+
+static int
 usb_xhci_probe(struct pci_driver *driver, struct pci_func *func)
 {
     dprintk("usb_xhci_probe!\n");
@@ -275,9 +416,21 @@ usb_xhci_init_device(struct pci_driver *driver, struct pci_func *func)
         return res;
     }
 
+    res = usb_xhci_init_ports(dev);
+    if(res)
+    {
+        usb_xhci_deinit_command_ring(dev);
+        usb_xhci_deinit_device_contextes(dev);
+        usb_xhci_deinit_scratchpads(dev);
+        kfree(dev);
+        eprintk("Failed to init USB XHCI ports! (res=%s)\n", errnostr(res));
+        return res;
+    }
+
     res = usb_xhci_init_interruptors(dev);
     if(res)
     {
+        usb_xhci_deinit_ports(dev);
         usb_xhci_deinit_command_ring(dev);
         usb_xhci_deinit_device_contextes(dev);
         usb_xhci_deinit_scratchpads(dev);
@@ -290,6 +443,7 @@ usb_xhci_init_device(struct pci_driver *driver, struct pci_func *func)
     res = usb_xhci_resume(dev);
     if(res)
     {
+        usb_xhci_deinit_ports(dev);
         usb_xhci_deinit_interruptors(dev);
         usb_xhci_deinit_command_ring(dev);
         usb_xhci_deinit_device_contextes(dev);
@@ -302,24 +456,13 @@ usb_xhci_init_device(struct pci_driver *driver, struct pci_func *func)
     res = usb_xhci_start_command_ring(dev);
     if(res)
     {
+        usb_xhci_deinit_ports(dev);
         usb_xhci_deinit_interruptors(dev);
         usb_xhci_deinit_command_ring(dev);
         usb_xhci_deinit_device_contextes(dev);
         usb_xhci_deinit_scratchpads(dev);
         kfree(dev);
         eprintk("USB XHCI failed to start command ring!\n");
-        return res;
-    }
-
-    res = usb_xhci_init_ports(dev);
-    if(res)
-    {
-        usb_xhci_deinit_interruptors(dev);
-        usb_xhci_deinit_command_ring(dev);
-        usb_xhci_deinit_device_contextes(dev);
-        usb_xhci_deinit_scratchpads(dev);
-        kfree(dev);
-        eprintk("Failed to init USB XHCI ports! (res=%s)\n", errnostr(res));
         return res;
     }
 

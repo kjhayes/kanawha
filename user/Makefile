@@ -45,4 +45,5 @@ bins += \
 	wintest \
 	sysplot \
 	ps \
+	klog \
 

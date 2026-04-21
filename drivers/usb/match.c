@@ -139,13 +139,9 @@ register_usb_interface(struct usb_interface *interface)
 
     interface_match_lock_acquire();
 
-    printk("register_usb_interface (num_driver=%ld)\n",
-            (sl_t)ilist_count(&interface_drivers_list));
-
     ilist_node_t *driver_iter;
     ilist_for_each(driver_iter, &interface_drivers_list)
     {
-        printk("matching\n");
         struct usb_interface_driver *driver =
             container_of(driver_iter, struct usb_interface_driver, match_node);
         res = try_match_interface(driver, interface);
@@ -252,7 +248,6 @@ usb_unknown_device_probe(
         struct usb_device_driver *driver,
         struct usb_device *device)
 {
-    printk("usb_unknown_device_probe!\n");
     if(device->usb_id.class == 0) {
         return 0;
     }

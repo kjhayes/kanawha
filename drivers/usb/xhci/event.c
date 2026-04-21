@@ -141,6 +141,10 @@ usb_xhci_dispatch_port_status_change(struct usb_xhci *dev,
         return -EINVAL;
     }
 
+    if(dev->ports == NULL) {
+        wprintk("XHCI: received status change notification before ports have been initialized!\n");
+        return -EINVAL;
+    }
     struct usb_xhci_port *port = &dev->ports[port_id];
 
     return usb_xhci_port_notify_status_change(port);

@@ -7,8 +7,9 @@
 
 struct usb_xhci;
 struct usb_xhci_input_ctx;
+struct usb_xhci_device_ctx;
 
-struct __packed usb_xhci_slot_ctx
+struct usb_xhci_slot_ctx
 {
     uint32_t route_string : 20;
     uint32_t speed : 4;
@@ -31,10 +32,10 @@ struct __packed usb_xhci_slot_ctx
     uint32_t __rsvd_4;
     uint32_t __rsvd_5;
     uint32_t __rsvd_6;
-};
+} __packed;
 ASSERT_TYPE_SIZE(struct usb_xhci_slot_ctx, 0x20);
 
-struct __packed usb_xhci_endpoint_ctx
+struct usb_xhci_endpoint_ctx
 {
     uint32_t endpoint_state : 3;
     uint32_t __rsvd_0 : 5;
@@ -58,25 +59,57 @@ struct __packed usb_xhci_endpoint_ctx
     uint32_t __rsvd_4;
     uint32_t __rsvd_5;
     uint32_t __rsvd_6;
-};
+} __packed;
 ASSERT_TYPE_SIZE(struct usb_xhci_endpoint_ctx, 0x20);
+
+/*
+ * Input Context
+ */
 
 struct usb_xhci_input_ctx *
 usb_xhci_create_input_ctx(struct usb_xhci *xhci);
-
 int
 usb_xhci_destroy_input_ctx(struct usb_xhci_input_ctx *ctx);
 
-void *
-usb_xhci_input_ctx_add_ctx(struct usb_xhci_input_ctx *ctx, size_t ctx_index);
+int
+usb_xhci_input_ctx_reset_add_drop(
+        struct usb_xhci_input_ctx *ctx);
 
 int
-usb_xhci_input_ctx_drop_ctx(struct usb_xhci_input_ctx *ctx, size_t ctx_index);
+usb_xhci_input_ctx_mark_add_ctx(
+        struct usb_xhci_input_ctx *ctx,
+        int dci);
+int
+usb_xhci_input_ctx_mark_drop_ctx(
+        struct usb_xhci_input_ctx *ctx,
+        int dci);
 
 size_t
 usb_xhci_input_ctx_entry_size(struct usb_xhci_input_ctx *ctx);
 
 void __phys *
 usb_xhci_input_ctx_phys_addr(struct usb_xhci_input_ctx *ctx);
+
+struct usb_xhci_slot_ctx *
+usb_xhci_input_ctx_slot_ctx(
+        struct usb_xhci_input_ctx *ctx);
+
+struct usb_xhci_endpoint_ctx *
+usb_xhci_input_ctx_endpoint_ctx(
+        struct usb_xhci_input_ctx *ctx,
+        int dci);
+
+/*
+ * Device (Output) Context
+ */
+
+struct usb_xhci_device_ctx *
+usb_xhci_create_device_ctx(struct usb_xhci *xhci);
+int
+usb_xhci_destroy_device_ctx(struct usb_xhci_device_ctx *ctx);
+
+void __phys *
+usb_xhci_device_ctx_phys_addr(
+        struct usb_xhci_device_ctx *ctx);
 
 #endif

@@ -19,12 +19,16 @@ usb_xhci_for_each_capability_of_type(struct usb_xhci *xhci,
         return;
     }
 
+    // xECP in is DWORD(s)
+    offset *= 4;
+
     while(1)
     {
         le32_t le_value = pci_bar_readl(&xhci->func->bars[0], offset);
 
         uint32_t value = letoh32(le_value);
         uint8_t cur_type = value & 0xFF;
+        printk("XHCI: EXT CAP TYPE(%d)\n", (int)cur_type);
         if(cur_type == type)
         {
             (*callback)(xhci, offset, priv_state);
@@ -36,6 +40,6 @@ usb_xhci_for_each_capability_of_type(struct usb_xhci *xhci,
             break;
         }
 
-        offset += rel_offset;
+        offset += (rel_offset * 4); // Offsets are in DWORD(s)
     }
 }

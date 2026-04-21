@@ -6,16 +6,6 @@
 #include <drivers/usb/xhci/endpoint.h>
 #include <drivers/usb/xhci/xhci.h>
 
-int
-usb_xhci_init_scratchpads(struct usb_xhci *dev);
-int
-usb_xhci_deinit_scratchpads(struct usb_xhci *dev);
-
-int
-usb_xhci_init_device_contextes(struct usb_xhci *dev);
-int
-usb_xhci_deinit_device_contextes(struct usb_xhci *dev);
-
 struct usb_xhci_device
 {
     struct usb_xhci *xhci;
@@ -23,8 +13,8 @@ struct usb_xhci_device
 
     size_t slot_index; // Indexed from 1
 
-    size_t ctx_size;
-    dma_addr_t slot_dma_buffer;
+    struct usb_xhci_input_ctx *input_ctx;
+    struct usb_xhci_device_ctx *device_ctx;
 
     irq_lock_t endpoint_lock;
     struct usb_xhci_endpoint *endpoints[31];
@@ -37,19 +27,13 @@ struct usb_xhci_device
 
 struct usb_xhci;
 
-struct __packed usb_xhci_output_ctx
-{
-    struct usb_xhci_slot_ctx slot_ctx;
-    struct usb_xhci_endpoint_ctx ep_ctxs[31];
-};
-ASSERT_TYPE_SIZE(struct usb_xhci_output_ctx, 0x400);
-
 struct __packed usb_xhci_dcbaa
 {
     void __phys *scratchpad_array_ptr;
     void __phys *output_ctx_base_address[];
 };
 ASSERT_FIELD_OFFSET(struct usb_xhci_dcbaa, output_ctx_base_address, 8);
+ASSERT_FIELD_OFFSET(struct usb_xhci_dcbaa, output_ctx_base_address[2], 24);
 
 struct usb_xhci_device *
 usb_xhci_create_device(struct usb_xhci *xhci);
