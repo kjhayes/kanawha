@@ -202,8 +202,6 @@ virtio_gpu_fb_unload_buffer(struct fb_dev *dev, void __phys *base_out)
 {
     int res;
 
-    printk("virtio_gpu_fb_unload_buffer\n");
-
     struct virtio_gpu *gpu = container_of(dev, struct virtio_gpu, fb_dev);
 
     res = virtio_gpu_destroy_resource_2d(gpu->current_res);
@@ -215,7 +213,7 @@ virtio_gpu_fb_unload_buffer(struct fb_dev *dev, void __phys *base_out)
 
     dma_free(gpu->current_buffer, gpu->current_buffer_size);
 
-    return -EUNIMPL;
+    return 0;
 }
 
 static int
@@ -382,6 +380,7 @@ virtio_gpu_init_device(struct virtio_driver *driver,
         return res;
     }
 
+    device->driver_priv = gpu;
     dprintk("virtio_gpu Initialized\n");
 
     return 0;
@@ -391,7 +390,22 @@ static int
 virtio_gpu_deinit_device(struct virtio_driver *driver,
                          struct virtio_device *device)
 {
-    return -EUNIMPL;
+    int res;
+
+    struct virtio_gpu *gpu = device->driver_priv;
+
+    res = unregister_fb_dev(&gpu->fb_dev);
+    if(res) {
+        return res;
+    }
+
+    virtio_queue_disable(gpu->control_queue);
+    virtio_queue_disable(gpu->cursor_queue);
+
+    kfree(gpu->name);
+    kfree(gpu);
+
+    return 0;
 }
 
 static struct virtio_driver_ops virtio_gpu_driver_ops = {
