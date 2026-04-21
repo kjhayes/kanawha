@@ -1,7 +1,7 @@
 #ifndef __KANAWHA__SLAB_H__
 #define __KANAWHA__SLAB_H__
 
-#include <kanawha/list.h>
+#include <kanawha/ptree.h>
 
 /*
  * Kanawha Kernel "Slab" allocator framework
@@ -25,7 +25,7 @@
 
 struct slab_allocator
 {
-    struct ilist_head block_list;
+    struct ptree block_tree;
     void *inline_block_base;
     size_t inline_block_size;
     size_t obj_size;
@@ -36,7 +36,7 @@ struct slab_allocator
 
 struct slab_alloc_block
 {
-    ilist_node_t list_node;
+    struct ptree_node pnode;
     unsigned long flags;
     void *block_base;
     size_t block_size;

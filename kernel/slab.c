@@ -18,7 +18,7 @@ init_slab_allocator(struct slab_allocator *alloc,
                     size_t obj_size,
                     order_t obj_align)
 {
-    ilist_init(&alloc->block_list);
+    ptree_init(&alloc->block_tree);
     alloc->obj_size = obj_size;
     alloc->obj_align = obj_align;
 }
@@ -108,7 +108,7 @@ slab_allocator_add_block(struct slab_allocator *alloc,
 
     memset(block->bitmap, 0, bitmap_size);
 
-    ilist_push_head(&alloc->block_list, &block->list_node);
+    ptree_insert(&alloc->block_tree, &block->pnode, (uintptr_t)block);
 
     return 0;
 }
@@ -194,14 +194,16 @@ slab_alloc(struct slab_allocator *alloc)
 {
     int res;
 
-    ilist_node_t *node;
+    struct ptree_node *node;
 
 recurse:
     DEBUG_ASSERT(KERNEL_ADDR(alloc));
-    ilist_for_each(node, &alloc->block_list)
+    for(struct ptree_node *node = ptree_get_first(&alloc->block_tree);
+        node != NULL;
+        node = ptree_get_next(node))
     {
         struct slab_alloc_block *block =
-            container_of(node, struct slab_alloc_block, list_node);
+            container_of(node, struct slab_alloc_block, pnode);
         DEBUG_ASSERT(KERNEL_ADDR(block));
         if(block->num_free == 0)
         {
@@ -251,51 +253,60 @@ recurse:
 void
 slab_free(struct slab_allocator *alloc, void *obj)
 {
-    ilist_node_t *node;
-    ilist_for_each(node, &alloc->block_list)
-    {
-        struct slab_alloc_block *block =
-            container_of(node, struct slab_alloc_block, list_node);
-        if(block->num_free == block->num_slots)
-        {
-            continue;
-        }
-        void *objs_begin = block->objects;
-        void *objs_end = block->objects + (block->num_slots * alloc->obj_size);
-        if(obj < objs_begin || obj >= objs_end)
-        {
-            continue;
-        }
 
-        // Our object is in this region
-        size_t index = (obj - objs_begin) / alloc->obj_size;
-        bitmap_clear(block->bitmap, index);
-        block->num_free++;
+    struct ptree_node *node = ptree_get_max_less(&alloc->block_tree, (uintptr_t)obj);
 
-        if((block->flags & SLAB_ALLOC_BLOCK_STATIC) == 0)
-        {
-            // This block was dynamically allocated
-            if(block->num_free == block->num_slots)
-            {
-                // This block is empty, so free it
-                ilist_remove(&alloc->block_list, &block->list_node);
-                page_free(SLAB_ALLOC_BLOCK_PAGE_ORDER, __pa(block));
-            }
-        }
-
+    if(node == NULL) {
+        wprintk("slab_free: passed an invalid pointer!\n");
         return;
     }
+
+    struct slab_alloc_block *block =
+        container_of(node, struct slab_alloc_block, pnode);
+    if(block->num_free == block->num_slots)
+    {
+        wprintk("slab_free: passed a pointer in a completely free block!\n");
+        return;
+    }
+    void *objs_begin = block->objects;
+    void *objs_end = block->objects + (block->num_slots * alloc->obj_size);
+    if(obj < objs_begin || obj >= objs_end)
+    {
+        wprintk("slab_free: passed an invalid pointer!\n");
+        return;
+    }
+
+    // Our object is in this region
+    size_t index = (obj - objs_begin) / alloc->obj_size;
+    bitmap_clear(block->bitmap, index);
+    block->num_free++;
+
+    if((block->flags & SLAB_ALLOC_BLOCK_STATIC) == 0)
+    {
+        // This block was dynamically allocated
+        if(block->num_free == block->num_slots)
+        {
+            // This block is empty, so free it
+            struct ptree_node *rem = ptree_remove(&alloc->block_tree, block->pnode.key);
+            DEBUG_ASSERT(rem == node);
+            page_free(SLAB_ALLOC_BLOCK_PAGE_ORDER, __pa(block));
+        }
+    }
+
+    return;
 }
 
 size_t
 slab_objs_free(struct slab_allocator *alloc)
 {
     size_t num_free = 0;
-    ilist_node_t *node;
-    ilist_for_each(node, &alloc->block_list)
+
+    for(struct ptree_node *node = ptree_get_first(&alloc->block_tree);
+        node != NULL;
+        node = ptree_get_next(node))
     {
         struct slab_alloc_block *block =
-            container_of(node, struct slab_alloc_block, list_node);
+            container_of(node, struct slab_alloc_block, pnode);
         num_free += block->num_free;
     }
     return num_free;
@@ -305,11 +316,12 @@ size_t
 slab_objs_alloc(struct slab_allocator *alloc)
 {
     size_t num_alloc = 0;
-    ilist_node_t *node;
-    ilist_for_each(node, &alloc->block_list)
+    for(struct ptree_node *node = ptree_get_first(&alloc->block_tree);
+        node != NULL;
+        node = ptree_get_next(node))
     {
         struct slab_alloc_block *block =
-            container_of(node, struct slab_alloc_block, list_node);
+            container_of(node, struct slab_alloc_block, pnode);
         num_alloc += (block->num_slots - block->num_free);
     }
     return num_alloc;
@@ -319,11 +331,12 @@ size_t
 slab_objs_total(struct slab_allocator *alloc)
 {
     size_t num_slots = 0;
-    ilist_node_t *node;
-    ilist_for_each(node, &alloc->block_list)
+    for(struct ptree_node *node = ptree_get_first(&alloc->block_tree);
+        node != NULL;
+        node = ptree_get_next(node))
     {
         struct slab_alloc_block *block =
-            container_of(node, struct slab_alloc_block, list_node);
+            container_of(node, struct slab_alloc_block, pnode);
         num_slots += block->num_slots;
     }
     return num_slots;
