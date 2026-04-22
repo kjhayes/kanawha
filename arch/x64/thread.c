@@ -111,38 +111,6 @@ int
 arch_dump_thread(printk_f *printer, struct thread_state *state)
 {
     struct arch_thread_state *arch_state = &state->arch_state;
-    struct thread_stack *stack = &arch_state->stack;
-    void *kernel_stack_base = (void *)stack->stack_top + (1ULL << stack->order);
-    size_t allocated =
-        (uintptr_t)kernel_stack_base - (uintptr_t)stack->stack_pointer;
-    (*printer)("Kernel Stack Size      : 0x%llx\n",
-               (unsigned long long)(1ULL << stack->order));
-    (*printer)("Kernel Stack Allocated : 0x%llx\n",
-               (unsigned long long)allocated);
-    (*printer)("Kernel Stack Base      : 0x%llx\n",
-               (unsigned long long)kernel_stack_base);
-    (*printer)("Kernel Stack Pointer   : 0x%llx\n",
-               (unsigned long long)stack->stack_pointer);
-    (*printer)("Kernel Stack Top       : 0x%llx\n",
-               (unsigned long long)stack->stack_top);
-    (*printer)("--- Kernel Stack ---\n");
-
-    size_t num_64 = allocated / sizeof(uint64_t);
-    size_t extra_bytes = allocated % sizeof(uint64_t);
-    for(ssize_t i = num_64 - 1; i >= 0; i--)
-    {
-        (*printer)("[uint64_t] %p : 0x%llx\n",
-                   &((uint64_t *)(stack->stack_pointer + extra_bytes))[i],
-                   ((uint64_t *)(stack->stack_pointer + extra_bytes))[i]);
-    }
-    for(ssize_t i = extra_bytes - 1; i >= 0; i++)
-    {
-        (*printer)("[uint8_t] %p : 0x%x\n",
-                   &((uint8_t *)stack->stack_pointer)[i],
-                   ((uint8_t *)stack->stack_pointer)[i]);
-    }
-
-    (*printer)("-------------------\n");
     return 0;
 }
 

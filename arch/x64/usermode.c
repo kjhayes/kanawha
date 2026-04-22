@@ -24,7 +24,7 @@ arch_enter_usermode(void __user *starting_address, void *arg)
     // disable_irqs();
 
     state->arch_state.stack.stack_pointer =
-        (uintptr_t)(void *)state->arch_state.stack.stack_base;
+        (uintptr_t)(void*)thread_stack_get_base(&state->arch_state.stack);
 
     __x64_enter_usermode(starting_address, arg);
 }

@@ -8,6 +8,9 @@ struct thread_stack
 {
     uintptr_t stack_pointer; // Offset 0 DO NOT MOVE
 
+    order_t order;
+
+#ifdef CONFIG_DEBUG_PRIVATE_THREAD_STACKS
     uintptr_t stack_base; // highest address
     uintptr_t stack_top;  // lowest address
 
@@ -15,8 +18,11 @@ struct thread_stack
     uintptr_t virt_base;
     order_t virt_order;
 
-    order_t order;
     void __phys *page;
+#else
+    void *data;
+    size_t size;
+#endif
 };
 
 int
@@ -24,6 +30,9 @@ thread_stack_init(struct thread_stack *thread, order_t order);
 
 int
 thread_stack_deinit(struct thread_stack *thread);
+
+void*
+thread_stack_get_base(struct thread_stack *thread);
 
 #define thread_stack_alloca(_STACK_STATE_PTR, _AMT)                            \
     ({                                                                         \

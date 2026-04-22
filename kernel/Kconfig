@@ -158,6 +158,15 @@ config DEBUG_INIT_STAGES
     help
       Debug the init Stages Framework
 
+config DEBUG_PRIVATE_THREAD_STACKS
+    bool "Use Private Thread Stacks"
+    depends on DEBUGGING
+    default n
+    help
+      This really slows down thread creation/destruction when
+      there are a large number of threads, however it also
+      allows detecting most stack overflows really easily.
+
 config DEBUG_DUMP_THREADS_PERIODICALLY
     bool "Dump Thread Info Periodically"
     depends on DEBUGGING

@@ -398,16 +398,7 @@ thread_deinit(struct thread_state *state)
                 errnostr(res));
         return res;
     }
-    printk("Starting vmem_map_destroy %ld\n", (sl_t)state->id);
-    time_t start = current_timestamp();
     res = vmem_map_destroy(state->mem_map);
-    time_t end = current_timestamp();
-    duration_t duration = duration_between(start, end);
-    printk("Finished vmem_map_destroy %ld (took %lu s = %lu ms = %lu ns)\n", (sl_t)state->id,
-            (ul_t)duration_to_sec(duration),
-            (ul_t)duration_to_msec(duration),
-            (ul_t)duration_to_nsec(duration)
-            );
     if(res)
     {
         wprintk("thread_deinit: vmem_map_destroy returned %s!\n",

@@ -8,6 +8,8 @@
 #include <kanawha/thread.h>
 #include <kanawha/vmem.h>
 
+#ifdef CONFIG_DEBUG_PRIVATE_THREAD_STACKS
+
 #define THREAD_STACK_VIRT_SIZE_ORDER 21
 #define THREAD_STACK_VIRT_ALIGN_ORDER 21
 
@@ -179,3 +181,40 @@ thread_stack_deinit(struct thread_stack *stack)
 
     return 0;
 }
+
+void*
+thread_stack_get_base(struct thread_stack *thread)
+{
+    return (void*)thread->stack_base;
+}
+
+#else
+
+int
+thread_stack_init(struct thread_stack *stack, order_t order)
+{
+    // Allocate the stack on the heap
+    size_t size = 1ULL<<order;
+    stack->data = kmalloc(size, KM_KERNEL);
+    if(stack->data == NULL) {
+        return -ENOMEM;
+    }
+    stack->order = order;
+    stack->stack_pointer = (uintptr_t)(stack->data + size);
+    return 0;
+}
+
+int
+thread_stack_deinit(struct thread_stack *stack)
+{
+    kfree(stack->data);
+    return 0;
+}
+
+void*
+thread_stack_get_base(struct thread_stack *thread)
+{
+    return thread->data + (1ULL<<thread->order);
+}
+
+#endif

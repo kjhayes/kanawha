@@ -99,7 +99,7 @@ x64_route_syscall(struct x64_syscall_state *state)
     // We want to reset the kernel stack in-case we were preempted
     // when interrupts were enabled
     process->thread.arch_state.stack.stack_pointer =
-        process->thread.arch_state.stack.stack_base;
+        (uintptr_t)thread_stack_get_base(&process->thread.arch_state.stack);
 
     return;
 }

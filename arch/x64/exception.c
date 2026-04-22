@@ -310,7 +310,7 @@ exit:
         // We need to reset the thread stack pointer
         // because we are returning to usermode
         cur_thread->arch_state.stack.stack_pointer =
-            cur_thread->arch_state.stack.stack_base;
+            (uintptr_t)thread_stack_get_base(&cur_thread->arch_state.stack);
         struct process *process = current_process();
         if(process != NULL)
         {
