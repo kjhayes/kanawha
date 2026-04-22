@@ -412,7 +412,7 @@ pci_func_start_msix(struct pci_func *func, size_t requested_num_irqs)
             break;
         }
 
-        printk("Installing Link from IRQ 0x%lx (hwirq=0x%lx) to IRQ 0x%lx "
+        dprintk("Installing Link from IRQ 0x%lx (hwirq=0x%lx) to IRQ 0x%lx "
                "(hwirq=0x%lx)\n",
                (ul_t)link_from->irq,
                (ul_t)link_from->hwirq,
