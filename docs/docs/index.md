@@ -8,7 +8,7 @@ This is a simple hobby kernel I (Kevin) am writing in my free time.
 - [Buildsystem Overview](./buildsystem/overview.md)
 - [Driver Interfaces](./interfaces/index.md)
 - [Subsystems](./subsystems/index.md)
-- [System Calls](./syscalls/index.md)
+- [Userspace Docs](./user/index.md)
 - [Architecture Specific Docs](./arch/index.md)
 
 Kanawha is not *efficient*. There are many many levels of indirection do not have a fantastic reason

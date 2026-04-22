@@ -9,7 +9,7 @@ nav:
     - buildsystem/index.md
     - interfaces/index.md
     - subsystems/index.md
-    - syscalls/index.md
+    - user/index.md
     - arch/index.md
   - Contributors: contributors.md
 
