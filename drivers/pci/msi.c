@@ -12,6 +12,8 @@
 
 static struct irq_driver msi_irq_driver;
 
+#define MSI_DEV_NAMEBUFLEN (32)
+
 struct msi_irq_dev
 {
     struct pci_func *func;
@@ -20,6 +22,8 @@ struct msi_irq_dev
     struct irq_action **link_actions;
 
     struct irq_dev irq_dev;
+
+    char namebuf[MSI_DEV_NAMEBUFLEN];
 };
 
 static inline uint16_t
@@ -104,11 +108,26 @@ pci_func_start_msi(struct pci_func *func, size_t requested_num_irqs)
 
     msi_dev->func = func;
 
+    {
+        snprintk(msi_dev->namebuf, MSI_DEV_NAMEBUFLEN, "msi-%d.%d.%d.%d",
+                (int)func->segment->segment_id,
+                (int)func->device->bus->bus_index,
+                (int)func->device->index,
+                (int)func->index);
+        msi_dev->namebuf[MSI_DEV_NAMEBUFLEN-1] = '\0';
+    }
+
+    msi_dev->irq_dev.driver = &msi_irq_driver;
+    res = register_irq_dev(&msi_dev->irq_dev, msi_dev->namebuf);
+    if(res) {
+        kfree(msi_dev);
+        return res;
+    }
+
     uint16_t msg_ctrl = pci_msi_read_msg_ctrl(func, info);
     msg_ctrl &= ~(1ULL << 0); // Disable MSI before we start configuring
     pci_msi_write_msg_ctrl(func, info, msg_ctrl);
 
-    msi_dev->irq_dev.driver = &msi_irq_driver;
     msi_dev->num_irqs = pci_func_msi_max_num_irqs(func);
     if(msi_dev->num_irqs == 0)
     {
@@ -126,6 +145,8 @@ pci_func_start_msi(struct pci_func *func, size_t requested_num_irqs)
         kzmalloc(sizeof(struct irq_action *) * msi_dev->num_irqs, KM_KERNEL);
     if(msi_dev->link_actions == NULL)
     {
+        unregister_irq_dev(&msi_dev->irq_dev);
+        func->irq_dev = NULL;
         kfree(msi_dev);
         return -ENOMEM;
     }
@@ -143,6 +164,8 @@ pci_func_start_msi(struct pci_func *func, size_t requested_num_irqs)
             pci_mailbox_find_msi64(msi_dev->num_irqs, &addr, &msg_data, descs);
         if(res)
         {
+            unregister_irq_dev(&msi_dev->irq_dev);
+            func->irq_dev = NULL;
             kfree(msi_dev->link_actions);
             kfree(msi_dev);
             return res;
@@ -161,6 +184,8 @@ pci_func_start_msi(struct pci_func *func, size_t requested_num_irqs)
             pci_mailbox_find_msi32(msi_dev->num_irqs, &addr, &msg_data, descs);
         if(res)
         {
+            unregister_irq_dev(&msi_dev->irq_dev);
+            func->irq_dev = NULL;
             kfree(msi_dev->link_actions);
             kfree(msi_dev);
             return res;
@@ -173,6 +198,8 @@ pci_func_start_msi(struct pci_func *func, size_t requested_num_irqs)
     struct irq_domain *domain = alloc_irq_domain_linear(0, msi_dev->num_irqs);
     if(domain == NULL)
     {
+        unregister_irq_dev(&msi_dev->irq_dev);
+        func->irq_dev = NULL;
         kfree(msi_dev->link_actions);
         kfree(msi_dev);
         return -ENOMEM;
@@ -181,6 +208,8 @@ pci_func_start_msi(struct pci_func *func, size_t requested_num_irqs)
     res = irq_domain_set_all_irq_dev(domain, &msi_dev->irq_dev);
     if(res)
     {
+        unregister_irq_dev(&msi_dev->irq_dev);
+        func->irq_dev = NULL;
         free_irq_domain_linear(domain);
         kfree(msi_dev->link_actions);
         kfree(msi_dev);
@@ -217,6 +246,8 @@ pci_func_start_msi(struct pci_func *func, size_t requested_num_irqs)
 
         if(failed_link)
         {
+            unregister_irq_dev(&msi_dev->irq_dev);
+            func->irq_dev = NULL;
             for(size_t i = 0; i < msi_dev->num_irqs; i++)
             {
                 if(msi_dev->link_actions[i] != NULL)
@@ -271,6 +302,9 @@ pci_func_stop_msi(struct pci_func *func)
     }
 
     free_irq_domain_linear(func->irq_domain);
+
+    unregister_irq_dev(&msi_dev->irq_dev);
+
     kfree(msi_dev->link_actions);
     kfree(msi_dev);
 

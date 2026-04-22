@@ -10,6 +10,8 @@
 
 static struct irq_driver msix_irq_driver;
 
+#define MSIX_DEV_NAMEBUFLEN (32)
+
 struct msix_irq_dev
 {
     struct pci_func *func;
@@ -18,6 +20,8 @@ struct msix_irq_dev
     struct irq_action **link_actions;
 
     struct irq_dev irq_dev;
+
+    char namebuf[MSIX_DEV_NAMEBUFLEN];
 };
 
 static inline uint16_t
@@ -265,9 +269,27 @@ pci_func_start_msix(struct pci_func *func, size_t requested_num_irqs)
 
     msix_dev->func = func;
     msix_dev->irq_dev.driver = &msix_irq_driver;
+
+    {
+        snprintk(msix_dev->namebuf, MSIX_DEV_NAMEBUFLEN, "msix-%d.%d.%d.%d",
+                (int)func->segment->segment_id,
+                (int)func->device->bus->bus_index,
+                (int)func->device->index,
+                (int)func->index);
+        msix_dev->namebuf[MSIX_DEV_NAMEBUFLEN-1] = '\0';
+    }
+
+    res = register_irq_dev(&msix_dev->irq_dev, msix_dev->namebuf);
+    if(res) {
+        kfree(msix_dev);
+        return res;
+    }
+
     msix_dev->num_irqs = pci_func_msix_num_irqs(func);
     if(msix_dev->num_irqs == 0)
     {
+        unregister_irq_dev(func->irq_dev);
+        func->irq_dev = NULL;
         kfree(msix_dev);
         return -EINVAL;
     }
@@ -278,6 +300,8 @@ pci_func_start_msix(struct pci_func *func, size_t requested_num_irqs)
         kzmalloc(sizeof(uint64_t) * msix_dev->num_irqs, KM_KERNEL);
     if(addrs == NULL)
     {
+        unregister_irq_dev(func->irq_dev);
+        func->irq_dev = NULL;
         kfree(msix_dev);
         return -ENOMEM;
     }
@@ -286,6 +310,8 @@ pci_func_start_msix(struct pci_func *func, size_t requested_num_irqs)
         kzmalloc(sizeof(uint32_t) * msix_dev->num_irqs, KM_KERNEL);
     if(datas == NULL)
     {
+        unregister_irq_dev(func->irq_dev);
+        func->irq_dev = NULL;
         kfree(msix_dev);
         kfree(addrs);
         return -ENOMEM;
@@ -295,6 +321,8 @@ pci_func_start_msix(struct pci_func *func, size_t requested_num_irqs)
         kzmalloc(sizeof(struct irq_desc *) * msix_dev->num_irqs, KM_KERNEL);
     if(descs == NULL)
     {
+        unregister_irq_dev(func->irq_dev);
+        func->irq_dev = NULL;
         kfree(msix_dev);
         kfree(addrs);
         kfree(datas);
@@ -304,6 +332,8 @@ pci_func_start_msix(struct pci_func *func, size_t requested_num_irqs)
     res = pci_mailbox_find_msix(msix_dev->num_irqs, addrs, datas, descs);
     if(res)
     {
+        unregister_irq_dev(func->irq_dev);
+        func->irq_dev = NULL;
         kfree(msix_dev);
         kfree(addrs);
         kfree(datas);
@@ -335,6 +365,8 @@ pci_func_start_msix(struct pci_func *func, size_t requested_num_irqs)
         kzmalloc(sizeof(struct irq_action *) * msix_dev->num_irqs, KM_KERNEL);
     if(msix_dev->link_actions == NULL)
     {
+        unregister_irq_dev(func->irq_dev);
+        func->irq_dev = NULL;
         kfree(msix_dev);
         kfree(descs);
         return -ENOMEM;
@@ -343,6 +375,8 @@ pci_func_start_msix(struct pci_func *func, size_t requested_num_irqs)
     struct irq_domain *domain = alloc_irq_domain_linear(0, msix_dev->num_irqs);
     if(domain == NULL)
     {
+        unregister_irq_dev(func->irq_dev);
+        func->irq_dev = NULL;
         kfree(msix_dev->link_actions);
         kfree(msix_dev);
         kfree(descs);
@@ -352,6 +386,8 @@ pci_func_start_msix(struct pci_func *func, size_t requested_num_irqs)
     res = irq_domain_set_all_irq_dev(domain, &msix_dev->irq_dev);
     if(res)
     {
+        unregister_irq_dev(func->irq_dev);
+        func->irq_dev = NULL;
         free_irq_domain_linear(domain);
         kfree(msix_dev->link_actions);
         kfree(msix_dev);
@@ -393,6 +429,8 @@ pci_func_start_msix(struct pci_func *func, size_t requested_num_irqs)
 
     if(failed_link)
     {
+        unregister_irq_dev(func->irq_dev);
+        func->irq_dev = NULL;
         for(size_t i = 0; i < msix_dev->num_irqs; i++)
         {
             if(msix_dev->link_actions[i] != NULL)
@@ -431,7 +469,30 @@ pci_func_start_msix(struct pci_func *func, size_t requested_num_irqs)
 int
 pci_func_stop_msix(struct pci_func *func)
 {
-    return -EUNIMPL;
+    int res;
+
+    struct msix_irq_dev *msix_dev =
+        container_of(func->irq_dev, struct msix_irq_dev, irq_dev);
+    for(size_t i = 0; i < msix_dev->num_irqs; i++)
+    {
+        if(msix_dev->link_actions[i] != NULL)
+        {
+            irq_uninstall_action(msix_dev->link_actions[i]);
+            msix_dev->link_actions[i] = NULL;
+        }
+    }
+    free_irq_domain_linear(func->irq_domain);
+
+    res = unregister_irq_dev(func->irq_dev);
+    if(res) {
+        return res;
+    }
+    func->irq_dev = NULL;
+
+    kfree(msix_dev->link_actions);
+    kfree(msix_dev);
+
+    return 0;
 }
 
 static int
