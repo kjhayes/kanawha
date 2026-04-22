@@ -178,7 +178,7 @@ kfree(void *addr)
         }
     }
 
-    int res = kfree_specific(allocation, size);
+    int res = kfree_specific(allocation, KMALLOC_ALIGN_ORDER, size);
     if(res)
     {
         dprintk("kfree call to kfree_specific failed! (err=%s)\n",

@@ -16,7 +16,7 @@
 void *
 kmalloc_specific(order_t align_order, size_t *size);
 int
-kfree_specific(void *addr, size_t size);
+kfree_specific(void *addr, order_t align_order, size_t size);
 
 // Wrappers on the k*_specific functions that assume a maximum alignment
 // for the architecture and track the size internally

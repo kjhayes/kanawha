@@ -399,6 +399,7 @@ ptree_get_max_less(struct ptree *tree, uintptr_t key)
             }
             if(current->right)
             {
+                DEBUG_ASSERT(current != current->right);
                 current = current->right;
             }
             else

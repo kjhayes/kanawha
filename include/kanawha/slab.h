@@ -58,6 +58,11 @@ create_static_slab_allocator(void *buffer,
 struct slab_allocator *
 create_dynamic_slab_allocator(size_t obj_size, order_t obj_align);
 
+int
+destroy_dynamic_slab_allocator(
+        struct slab_allocator *alloc);
+
+
 void *
 slab_alloc(struct slab_allocator *alloc);
 void

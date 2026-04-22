@@ -6,6 +6,39 @@
 _Static_assert(CONFIG_HEAP_GROWTH_ORDER <= CONFIG_HEAP_ALIGN_ORDER,
                "CONFIG_HEAP_GROWTH_ORDER > CONFIG_HEAP_ALIGN_ORDER!");
 
+const size_t kheap_slab_sizes[KHEAP_NUM_SLABS] = {
+#define KHEAP_SLAB_XLIST_DECL(__NUM,__ALIGN,...)\
+    [KHEAP_SLAB_INDEX_ ## __NUM ## _ ## __ALIGN] = __NUM,
+    KHEAP_SLAB_XLIST(KHEAP_SLAB_XLIST_DECL)
+#undef KHEAP_SLAB_XLIST_DECL
+};
+
+const order_t kheap_slab_alignments[KHEAP_NUM_SLABS] = {
+#define KHEAP_SLAB_XLIST_DECL(__NUM,__ALIGN,...)\
+    [KHEAP_SLAB_INDEX_ ## __NUM ## _ ## __ALIGN] = __ALIGN,
+    KHEAP_SLAB_XLIST(KHEAP_SLAB_XLIST_DECL)
+#undef KHEAP_SLAB_XLIST_DECL
+};
+
+static inline int
+kheap_slab_alloc_index(
+        size_t *size,
+        order_t align)
+{
+    int index = -1;
+    if(0) {}
+#define KHEAP_SLAB_XLIST_DECL(__NUM,__ALIGN,...)\
+    else if((*size <= (__NUM)) && (align == (__ALIGN))) {\
+        *size = (__NUM); \
+        index = (KHEAP_SLAB_INDEX_ ## __NUM ## _ ## __ALIGN);\
+    } 
+    KHEAP_SLAB_XLIST(KHEAP_SLAB_XLIST_DECL)
+#undef KHEAP_SLAB_XLIST_DECL
+    dprintk("kheap_slab_alloc_index: size=0x%lx, align=%d -> %d\n",
+            (ul_t)size, (int)align, index);
+    return index;
+}
+
 struct kheap_free_region
 {
     ilist_node_t list_node;
@@ -75,7 +108,7 @@ kheap_grow(struct kheap *heap)
 
     heap->mapped += page_size;
 
-    res = kheap_free_specific(heap, (void *)page_virt, page_size);
+    res = kheap_free_specific(heap, (void *)page_virt, CONFIG_HEAP_GROWTH_ORDER, page_size);
     if(res)
     {
         eprintk("kheap_grow: kheap_free_specific returned %s\n", errnostr(res));
@@ -174,6 +207,16 @@ void *
 kheap_alloc_specific(struct kheap *heap, order_t align_order, size_t *size)
 {
     ilist_node_t *node;
+
+    int slab_index = kheap_slab_alloc_index(size, align_order);
+    if(slab_index >= 0) {
+        DEBUG_ASSERT(slab_index < KHEAP_NUM_SLABS);
+        struct kheap_slab *slab = &heap->slabs[slab_index];
+        void *obj = slab_alloc(slab->alloc);
+        dprintk("kheap: slab allocating %p\n",
+                obj);
+        return obj;
+    }
 
     struct kheap_free_region *best = NULL;
     size_t best_wasted = (size_t)-1;
@@ -325,17 +368,32 @@ kheap_alloc_specific(struct kheap *heap, order_t align_order, size_t *size)
     memset((void *)best_alloc_base, 0x55, *size);
 #endif
 
-    dprintk("kheap_alloc_specific -> [%p-%p)\n",
+    dprintk("kheap_alloc_specific non-slab [%p-%p) (align=%d,size=0x%lx)\n",
             best_alloc_base,
-            best_alloc_base + *size);
+            best_alloc_base + *size,
+            (int)align_order,
+            (ul_t)*size);
 
     return (void *)best_alloc_base;
 }
 
 int
-kheap_free_specific(struct kheap *heap, void *addr, size_t size)
+kheap_free_specific(struct kheap *heap, void *addr, order_t align_order, size_t size)
 {
     dprintk("kheap_free_specific <- [%p - %p)\n", addr, addr + size);
+
+    size_t slab_size = size;
+    int slab_index = kheap_slab_alloc_index(&slab_size, align_order);
+    if(slab_index >= 0) {
+        DEBUG_ASSERT(slab_index < KHEAP_NUM_SLABS);
+        struct kheap_slab *slab = &heap->slabs[slab_index];
+        dprintk("kheap: slab freeing %p (align=%d, size=0x%lx)\n",
+                (uintptr_t)addr,
+                (int)align_order,
+                (ul_t)slab_size);
+        slab_free(slab->alloc, addr);
+        return 0;
+    }
 
     if(size < sizeof(struct kheap_free_region))
     {
@@ -411,11 +469,28 @@ kheap_init(struct kheap *heap, void *base, size_t size)
 
     ilist_init(&heap->free_list);
 
+    for(size_t i = 0; i < KHEAP_NUM_SLABS; i++) {
+        heap->slabs[i].alloc =
+            create_dynamic_slab_allocator(
+                kheap_slab_sizes[i],
+                kheap_slab_alignments[i]);
+        if(heap->slabs[i].alloc == NULL) {
+            for(size_t j = 0; j < i; j++) {
+                destroy_dynamic_slab_allocator(
+                        heap->slabs[j].alloc);
+            }
+            return -ENOMEM;
+        }
+    }
+
     heap->region = vmem_region_create_paged(heap->heap_size,
                                             kheap_page_fault,
                                             (void *)heap);
     if(heap->region == NULL)
     {
+        for(size_t i = 0; i < KHEAP_NUM_SLABS; i++) {
+            destroy_dynamic_slab_allocator(heap->slabs[i].alloc);
+        }
         return -ENOMEM;
     }
 
@@ -425,12 +500,20 @@ kheap_init(struct kheap *heap, void *base, size_t size)
                               VIRT_MEM_FLAGS_HEAP);
     if(res)
     {
+        vmem_region_destroy(heap->region);
+        for(size_t i = 0; i < KHEAP_NUM_SLABS; i++) {
+            destroy_dynamic_slab_allocator(heap->slabs[i].alloc);
+        }
         return res;
     }
 
     res = vmem_force_mapping(heap->region, heap->vbase);
     if(res)
     {
+        vmem_region_destroy(heap->region);
+        for(size_t i = 0; i < KHEAP_NUM_SLABS; i++) {
+            destroy_dynamic_slab_allocator(heap->slabs[i].alloc);
+        }
         return res;
     }
 

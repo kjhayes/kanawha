@@ -19,6 +19,7 @@ init_slab_allocator(struct slab_allocator *alloc,
                     order_t obj_align)
 {
     ptree_init(&alloc->block_tree);
+    ptree_init(&alloc->full_block_tree);
     alloc->obj_size = obj_size;
     alloc->obj_align = obj_align;
 }
@@ -189,6 +190,13 @@ create_dynamic_slab_allocator(size_t obj_size, order_t obj_align)
     return alloc;
 }
 
+int
+destroy_dynamic_slab_allocator(
+        struct slab_allocator *alloc)
+{
+    return -EUNIMPL;
+}
+
 void *
 slab_alloc(struct slab_allocator *alloc)
 {
@@ -286,7 +294,8 @@ slab_free(struct slab_allocator *alloc, void *obj)
         struct ptree_node *node = ptree_get_max_less(&alloc->full_block_tree, (uintptr_t)obj);
 
         if(node == NULL) {
-            wprintk("slab_free: passed an invalid pointer!\n");
+            wprintk("slab_free: passed an invalid pointer! (%p)\n",
+                    obj);
             return;
         }
 
@@ -297,7 +306,8 @@ slab_free(struct slab_allocator *alloc, void *obj)
         void *objs_end = cur_block->objects + (cur_block->num_slots * alloc->obj_size);
         if(obj < objs_begin || obj >= objs_end)
         {
-            wprintk("slab_free: passed an invalid pointer!\n");
+            wprintk("slab_free: passed an invalid pointer! (%p)\n",
+                    obj);
             return;
         }
 

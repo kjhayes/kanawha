@@ -9,6 +9,26 @@
 #include <kanawha/stddef.h>
 #include <kanawha/string.h>
 #include <kanawha/vmem.h>
+#include <kanawha/slab.h>
+
+#define KHEAP_SLAB_XLIST(X,...)\
+X(12,2)\
+X(16,4)\
+X(24,3)\
+X(32,4)\
+X(48,4)\
+X(64,4)
+
+enum {
+    __KHEAP_SLAB_INDEX_BASE = -1,
+
+#define KHEAP_SLAB_XLIST_DECL_ENUM(__NUM,__ALIGN,...)\
+    KHEAP_SLAB_INDEX_ ## __NUM ## _ ## __ALIGN,
+    KHEAP_SLAB_XLIST(KHEAP_SLAB_XLIST_DECL_ENUM)
+#undef KHEAP_SLAB_XLIST_DECL_ENUM
+
+    KHEAP_NUM_SLABS
+};
 
 struct kheap
 {
@@ -19,6 +39,10 @@ struct kheap
 
     size_t num_free_regions;
     ilist_t free_list;
+
+    struct kheap_slab {
+        struct slab_allocator *alloc;
+    } slabs[KHEAP_NUM_SLABS];
 };
 
 int
@@ -30,7 +54,7 @@ kheap_amount_free(struct kheap *heap);
 void *
 kheap_alloc_specific(struct kheap *heap, order_t align_order, size_t *size);
 int
-kheap_free_specific(struct kheap *heap, void *addr, size_t size);
+kheap_free_specific(struct kheap *heap, void *addr, order_t align_order, size_t size);
 
 // Returns 0 if no problems are detected with the heap
 int

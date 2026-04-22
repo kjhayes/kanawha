@@ -58,7 +58,7 @@ kmalloc_specific(order_t align_order, size_t *size)
 }
 
 int
-kfree_specific(void *addr, size_t size)
+kfree_specific(void *addr, order_t align_order, size_t size)
 {
-    return kheap_free_specific(&kmalloc_heap, addr, size);
+    return kheap_free_specific(&kmalloc_heap, addr, align_order, size);
 }
