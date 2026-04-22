@@ -441,7 +441,9 @@ int windd_window_reload_buffer(
     //        (unsigned long)win->buffer_size,
     //        win->buffer);
 
-    kanawha_sys_munmap(win->buffer);
+    if(win->buffer_size > 0) {
+        kanawha_sys_munmap(win->buffer);
+    }
     win->buffer = NULL;
     win->buffer_size = 0;
 
