@@ -14,7 +14,7 @@
 extern struct kheap kmalloc_heap;
 #endif
 
-DEFINE_LOCAL_IRQ_LOCK(kmalloc_lock);
+// DEFINE_LOCAL_IRQ_LOCK(kmalloc_lock);
 
 #ifdef CONFIG_DEBUG_KMALLOC_BITMAP
 // One bit per byte in the kmalloc heap (Insanely wasteful)
@@ -69,12 +69,12 @@ kmalloc(size_t size, unsigned long flags)
 
     size_t req_size = sizeof(struct kmallocation) + size;
 
-    kmalloc_lock_acquire();
+    // kmalloc_lock_acquire();
 
     void *alloc = kmalloc_specific(KMALLOC_ALIGN_ORDER, &req_size);
     if(alloc == NULL)
     {
-        kmalloc_lock_release();
+        // kmalloc_lock_release();
         dprintk("kmalloc call to kmalloc_specific(%d, size=0x%lx) "
                 "returned NULL\n",
                 KMALLOC_ALIGN_ORDER,
@@ -142,7 +142,7 @@ kmalloc(size_t size, unsigned long flags)
         }
     }
 
-    kmalloc_lock_release();
+    // kmalloc_lock_release();
 
     void *ret = allocation->data;
     dprintk("kmalloc(0x%llx) -> [%p-%p)\n", size, ret, ret + size);
@@ -158,7 +158,7 @@ kfree(void *addr)
         return;
     }
 
-    kmalloc_lock_acquire();
+    // kmalloc_lock_acquire();
 
     struct kmallocation *allocation =
         container_of(addr, struct kmallocation, data);
@@ -203,7 +203,7 @@ kfree(void *addr)
     }
 #endif
 
-    kmalloc_lock_release();
+    // kmalloc_lock_release();
 
     dprintk("kfree(%p)\n", addr);
 }
@@ -215,7 +215,7 @@ EXPORT_SYMBOL(kfree);
 static int
 kmalloc_dump_callsite_info(void)
 {
-    kmalloc_lock_acquire();
+    // kmalloc_lock_acquire();
 
     size_t total = 0;
 
@@ -258,7 +258,7 @@ kmalloc_dump_callsite_info(void)
 
     printk("Kernel Heap Total Allocated: (0x%lx bytes)\n", (ul_t)total);
 
-    kmalloc_lock_release();
+    // kmalloc_lock_release();
     return 0;
 }
 declare_init(launch, kmalloc_dump_callsite_info);

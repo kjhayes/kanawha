@@ -39,15 +39,16 @@ enum {
 
 struct kheap
 {
+    irq_lock_t lock;
     size_t heap_size;
     void *vbase;
     size_t mapped;
     struct vmem_region *region;
-
     size_t num_free_regions;
     ilist_t free_list;
 
     struct kheap_slab {
+        irq_lock_t lock;
         struct slab_allocator *alloc;
     } slabs[KHEAP_NUM_SLABS];
 };

@@ -45,6 +45,13 @@ struct kheap_free_region
     size_t size;
 };
 
+static int
+kheap_free_specific_lockless(
+        struct kheap *heap,
+        void *addr,
+        order_t align_order,
+        size_t size);
+
 static void
 kheap_dump(struct kheap *heap, printk_f *printer)
 {
@@ -108,7 +115,11 @@ kheap_grow(struct kheap *heap)
 
     heap->mapped += page_size;
 
-    res = kheap_free_specific(heap, (void *)page_virt, CONFIG_HEAP_GROWTH_ORDER, page_size);
+    res = kheap_free_specific_lockless(
+            heap,
+            (void *)page_virt,
+            CONFIG_HEAP_GROWTH_ORDER,
+            page_size);
     if(res)
     {
         eprintk("kheap_grow: kheap_free_specific returned %s\n", errnostr(res));
@@ -193,6 +204,7 @@ kheap_amount_free(struct kheap *heap)
 {
     size_t size = 0;
 
+    irq_lock_acquire(&heap->lock);
     ilist_node_t *node;
     ilist_for_each(node, &heap->free_list)
     {
@@ -200,11 +212,16 @@ kheap_amount_free(struct kheap *heap)
             container_of(node, struct kheap_free_region, list_node);
         size += region->size;
     }
+    irq_lock_release(&heap->lock);
+
     return size;
 }
 
-void *
-kheap_alloc_specific(struct kheap *heap, order_t align_order, size_t *size)
+static void *
+kheap_alloc_specific_lockless(
+        struct kheap *heap,
+        order_t align_order,
+        size_t *size)
 {
     ilist_node_t *node;
 
@@ -212,7 +229,9 @@ kheap_alloc_specific(struct kheap *heap, order_t align_order, size_t *size)
     if(slab_index >= 0) {
         DEBUG_ASSERT(slab_index < KHEAP_NUM_SLABS);
         struct kheap_slab *slab = &heap->slabs[slab_index];
+        irq_lock_acquire(&slab->lock);
         void *obj = slab_alloc(slab->alloc);
+        irq_lock_release(&slab->lock);
         dprintk("kheap: slab allocating %p\n",
                 obj);
         return obj;
@@ -377,8 +396,28 @@ kheap_alloc_specific(struct kheap *heap, order_t align_order, size_t *size)
     return (void *)best_alloc_base;
 }
 
-int
-kheap_free_specific(struct kheap *heap, void *addr, order_t align_order, size_t size)
+void *
+kheap_alloc_specific(
+        struct kheap *heap,
+        order_t align_order,
+        size_t *size)
+{
+    void *ret;
+    irq_lock_acquire(&heap->lock);
+    ret = kheap_alloc_specific_lockless(
+            heap,
+            align_order,
+            size);
+    irq_lock_release(&heap->lock);
+    return ret;
+}
+
+static int
+kheap_free_specific_lockless(
+        struct kheap *heap,
+        void *addr,
+        order_t align_order,
+        size_t size)
 {
     dprintk("kheap_free_specific <- [%p - %p)\n", addr, addr + size);
 
@@ -391,7 +430,9 @@ kheap_free_specific(struct kheap *heap, void *addr, order_t align_order, size_t 
                 (uintptr_t)addr,
                 (int)align_order,
                 (ul_t)slab_size);
+        irq_lock_acquire(&slab->lock);
         slab_free(slab->alloc, addr);
+        irq_lock_release(&slab->lock);
         return 0;
     }
 
@@ -435,6 +476,24 @@ kheap_free_specific(struct kheap *heap, void *addr, order_t align_order, size_t 
     return 0;
 }
 
+int
+kheap_free_specific(
+        struct kheap *heap,
+        void *addr,
+        order_t align_order,
+        size_t size)
+{
+    int res;
+    irq_lock_acquire(&heap->lock);
+    res = kheap_free_specific_lockless(
+            heap,
+            addr,
+            align_order,
+            size);
+    irq_lock_release(&heap->lock);
+    return res;
+}
+
 static int
 kheap_page_fault(struct excp_state *state,
                  struct vmem_region_ref *region,
@@ -466,10 +525,12 @@ kheap_init(struct kheap *heap, void *base, size_t size)
     heap->heap_size = size;
     heap->mapped = 0;
     heap->num_free_regions = 0;
+    irq_lock_init(&heap->lock);
 
     ilist_init(&heap->free_list);
 
     for(size_t i = 0; i < KHEAP_NUM_SLABS; i++) {
+        irq_lock_init(&heap->slabs[i].lock);
         heap->slabs[i].alloc =
             create_dynamic_slab_allocator(
                 kheap_slab_sizes[i],
@@ -523,6 +584,8 @@ kheap_init(struct kheap *heap, void *base, size_t size)
 int
 kheap_validate(struct kheap *heap)
 {
+    irq_lock_acquire(&heap->lock);
     DEBUG_KERNEL_ILIST_CHECK(&heap->free_list);
+    irq_lock_release(&heap->lock);
     return 0;
 }
