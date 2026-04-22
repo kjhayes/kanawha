@@ -15,8 +15,12 @@ QEMU_FLAGS += -trace "usb*" -trace "xhci*"
 # 			  -device virtio-blk-pci,drive=virtio-disk-root,id=root-disk
 
 # QEMU_FLAGS += -drive id=ahcidisk,file=ahci.img,if=none \
-#               -device ahci,id=ahci \
-#               -device ide-hd,drive=ahcidisk,bus=ahci.0
+#              -device ahci,id=ahci \
+#              -device ide-hd,drive=ahcidisk,bus=ahci.0
+
+QEMU_FLAGS += \
+			  -drive id=disk,file=ide.img,format=raw,if=none \
+			  -device piix3-ide,id=ide -device ide-hd,drive=disk,bus=ide.0
 
 # QEMU_FLAGS += -display gtk
 
@@ -103,12 +107,14 @@ ifdef QEMU
 qemu: $(QEMU_DEPS)
 	$(QEMU) $(QEMU_FLAGS) \
 		-no-reboot \
-		-no-shutdown
+		-no-shutdown \
+		| tee output.txt
 qemu-gdb: $(QEMU_DEPS)
 	$(QEMU) $(QEMU_FLAGS) -gdb tcp::1234 \
 		-S \
 		-no-reboot \
-		-no-shutdown
+		-no-shutdown \
+		| tee output.txt
 
 ifdef CONFIG_DEVICETREE
 qemu-dtb: ${OUTPUT_DIR}/qemu.dtb
