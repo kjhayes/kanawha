@@ -80,15 +80,20 @@ ahci_init_device(struct pci_driver *driver, struct pci_func *func)
     }
 
     ahci->func = func;
+    func->driver_priv_state = ahci;
 
     return 0;
 }
 
 static int
-ahci_deinit_device(struct pci_driver *driver, struct pci_func *dev)
+ahci_deinit_device(struct pci_driver *driver, struct pci_func *func)
 {
     printk("AHCI: deinit\n");
-    return -EUNIMPL;
+
+    struct ahci *ahci = func->driver_priv_state;
+    kfree(ahci);
+
+    return 0;
 }
 
 static struct pci_id ahci_pci_ids[] = {
