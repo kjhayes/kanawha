@@ -1,9 +1,9 @@
 
+#include <kanawha/clk.h>
 #include <kanawha/errno.h>
 #include <kanawha/event.h>
 #include <kanawha/init.h>
 #include <kanawha/time.h>
-#include <kanawha/clk.h>
 
 static duration_t system_timestamp = 0;
 static struct periodic_event *tick_event = NULL;

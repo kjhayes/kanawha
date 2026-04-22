@@ -1,8 +1,8 @@
 
-#include <kanawha/vmem.h>
+#include <arch/x64/mmu.h>
 #include <kanawha/init.h>
 #include <kanawha/mem_flags.h>
-#include <arch/x64/mmu.h>
+#include <kanawha/vmem.h>
 
 static struct vmem_region *identity_map_region = NULL;
 
@@ -87,4 +87,3 @@ x64_virt_flags_static_init(void)
 declare_init_desc(mem_flags,
                   x64_virt_flags_static_init,
                   "Setting x64 Virtual Memory Types");
-

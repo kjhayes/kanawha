@@ -36,7 +36,8 @@ pci_segment_create_or_get(uint16_t segment_id)
     pci_segment_tree_lock_acquire();
     struct ptree_node *node;
     node = ptree_get(&pci_segment_tree, segment_id);
-    if(node != NULL) {
+    if(node != NULL)
+    {
         segment = container_of(node, struct pci_segment, global_node);
     }
 
@@ -57,28 +58,23 @@ pci_segment_create_or_get(uint16_t segment_id)
 
         segment->segment_id = segment_id;
 
-        res = mem_flags_init(&segment->mmio_flags,
-                       0,
-                       0x1000,
-                       NULL);
-        if(res) {
+        res = mem_flags_init(&segment->mmio_flags, 0, 0x1000, NULL);
+        if(res)
+        {
             pci_segment_tree_lock_release();
             kfree(segment);
             return NULL;
         }
-        
-        // Mark low 32-bit BAR(s)
-        mem_flags_set_flags(
-                &segment->mmio_flags,
-                0x0,
-                0xFFFFFFFF,
-                PCI_MMIO_MEM_32_BIT);
 
-        res = mem_flags_init(&segment->pio_flags,
-                       0,
-                       0x1000,
-                       NULL);
-        if(res) {
+        // Mark low 32-bit BAR(s)
+        mem_flags_set_flags(&segment->mmio_flags,
+                            0x0,
+                            0xFFFFFFFF,
+                            PCI_MMIO_MEM_32_BIT);
+
+        res = mem_flags_init(&segment->pio_flags, 0, 0x1000, NULL);
+        if(res)
+        {
             pci_segment_tree_lock_release();
             mem_flags_deinit(&segment->mmio_flags);
             kfree(segment);
@@ -323,16 +319,19 @@ pci_segment_writel(struct pci_segment *segment,
     return -EINVAL;
 }
 
-int pci_for_each_segment(int(*callback)(struct pci_segment *segment))
+int
+pci_for_each_segment(int (*callback)(struct pci_segment *segment))
 {
     int res;
     pci_segment_tree_lock_acquire();
     struct ptree_node *pnode = ptree_get_first(&pci_segment_tree);
-    while(pnode) {
+    while(pnode)
+    {
         struct pci_segment *segment =
             container_of(pnode, struct pci_segment, global_node);
         res = (*callback)(segment);
-        if(res) {
+        if(res)
+        {
             pci_segment_tree_lock_release();
             return res;
         }
@@ -340,22 +339,21 @@ int pci_for_each_segment(int(*callback)(struct pci_segment *segment))
     }
     pci_segment_tree_lock_release();
     return 0;
-
 }
 
 int
-pci_for_each_func(int(*callback)(struct pci_func *func))
+pci_for_each_func(int (*callback)(struct pci_func *func))
 {
     int res;
     pci_segment_tree_lock_acquire();
     struct ptree_node *pnode = ptree_get_first(&pci_segment_tree);
-    while(pnode) {
+    while(pnode)
+    {
         struct pci_segment *segment =
             container_of(pnode, struct pci_segment, global_node);
-        res = pci_segment_for_each_func(
-                segment,
-                callback);
-        if(res) {
+        res = pci_segment_for_each_func(segment, callback);
+        if(res)
+        {
             pci_segment_tree_lock_release();
             return res;
         }
@@ -366,19 +364,17 @@ pci_for_each_func(int(*callback)(struct pci_func *func))
 }
 
 int
-pci_segment_for_each_func(
-        struct pci_segment *segment,
-        int(*callback)(struct pci_func *func))
+pci_segment_for_each_func(struct pci_segment *segment,
+                          int (*callback)(struct pci_func *func))
 {
     int res;
     struct ptree_node *pnode = ptree_get_first(&segment->bus_tree);
-    while(pnode) {
-        struct pci_bus *bus =
-            container_of(pnode, struct pci_bus, segment_node);
-        res = pci_bus_for_each_func(
-                bus,
-                callback);
-        if(res) {
+    while(pnode)
+    {
+        struct pci_bus *bus = container_of(pnode, struct pci_bus, segment_node);
+        res = pci_bus_for_each_func(bus, callback);
+        if(res)
+        {
             return res;
         }
         pnode = ptree_get_next(pnode);
@@ -387,19 +383,18 @@ pci_segment_for_each_func(
 }
 
 int
-pci_bus_for_each_func(
-        struct pci_bus *bus,
-        int(*callback)(struct pci_func *func))
+pci_bus_for_each_func(struct pci_bus *bus,
+                      int (*callback)(struct pci_func *func))
 {
     int res;
     struct ptree_node *pnode = ptree_get_first(&bus->device_tree);
-    while(pnode) {
+    while(pnode)
+    {
         struct pci_device *device =
             container_of(pnode, struct pci_device, bus_node);
-        res = pci_device_for_each_func(
-                device,
-                callback);
-        if(res) {
+        res = pci_device_for_each_func(device, callback);
+        if(res)
+        {
             return res;
         }
         pnode = ptree_get_next(pnode);
@@ -408,17 +403,18 @@ pci_bus_for_each_func(
 }
 
 int
-pci_device_for_each_func(
-        struct pci_device *device,
-        int(*callback)(struct pci_func *func))
+pci_device_for_each_func(struct pci_device *device,
+                         int (*callback)(struct pci_func *func))
 {
     int res;
     struct ptree_node *pnode = ptree_get_first(&device->function_tree);
-    while(pnode) {
+    while(pnode)
+    {
         struct pci_func *func =
             container_of(pnode, struct pci_func, device_node);
         res = (*callback)(func);
-        if(res) {
+        if(res)
+        {
             return res;
         }
         pnode = ptree_get_next(pnode);
@@ -430,22 +426,16 @@ static void
 mmio_mem_flags_printer(printk_f *printer, unsigned long flags)
 {
     (*printer)("%s%s%s%s%s",
-            flags & PCI_MMIO_MEM_MAPPED ? "[MAPPED]" : "",
-            flags & PCI_MMIO_MEM_32_BIT ? "[32]" : "",
-            flags & PCI_MMIO_MEM_SNOOPED ? "[SNOOPED]" : "",
-            flags & PCI_MMIO_MEM_PREFETCH ? "[PREFETCH]" : "",
-            flags & PCI_MMIO_MEM_CONFIG ? "[CONFIG]" : ""
-            );
+               flags &PCI_MMIO_MEM_MAPPED ? "[MAPPED]" : "",
+               flags &PCI_MMIO_MEM_32_BIT ? "[32]" : "",
+               flags &PCI_MMIO_MEM_SNOOPED ? "[SNOOPED]" : "",
+               flags &PCI_MMIO_MEM_PREFETCH ? "[PREFETCH]" : "",
+               flags &PCI_MMIO_MEM_CONFIG ? "[CONFIG]" : "");
 }
 int
-pci_segment_dump_mmio_mem_flags(
-        struct pci_segment *segment,
-        printk_f *printer)
+pci_segment_dump_mmio_mem_flags(struct pci_segment *segment, printk_f *printer)
 {
-    mem_flags_print(
-            &segment->mmio_flags,
-            printer,
-            mmio_mem_flags_printer);
+    mem_flags_print(&segment->mmio_flags, printer, mmio_mem_flags_printer);
     return 0;
 }
 
@@ -453,20 +443,13 @@ static void
 pio_mem_flags_printer(printk_f *printer, unsigned long flags)
 {
     (*printer)("%s%s",
-            flags & PCI_PIO_MEM_MAPPED ? "[MAPPED]" : "",
-            flags & PCI_PIO_MEM_SNOOPED ? "[SNOOPED]" : ""
-            );
+               flags &PCI_PIO_MEM_MAPPED ? "[MAPPED]" : "",
+               flags &PCI_PIO_MEM_SNOOPED ? "[SNOOPED]" : "");
 }
 int
-pci_segment_dump_pio_mem_flags(
-        struct pci_segment *segment,
-        printk_f *printer)
+pci_segment_dump_pio_mem_flags(struct pci_segment *segment, printk_f *printer)
 {
-    mem_flags_print(
-            &segment->pio_flags,
-            printer,
-            pio_mem_flags_printer);
+    mem_flags_print(&segment->pio_flags, printer, pio_mem_flags_printer);
 
     return 0;
 }
-

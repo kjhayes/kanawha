@@ -1,20 +1,21 @@
 
-#include <windd/windd.h>
 #include <errno.h>
+#include <kanawha/gfx.h>
 #include <kanawha/sys-wrappers.h>
+#include <kfb/kfb.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/wait.h>
-#include <unistd.h>
-#include <threads.h>
 #include <string.h>
 #include <sys/mman.h>
-#include <kfb/kfb.h>
-#include <kanawha/gfx.h>
+#include <sys/wait.h>
+#include <threads.h>
+#include <unistd.h>
+#include <windd/windd.h>
 
 #define EVENT_QUEUE_LENGTH (64)
 
-struct window_ctx {
+struct window_ctx
+{
     struct window *window;
     struct window_ctx *next;
 
@@ -28,20 +29,21 @@ struct window_ctx {
 };
 
 static int
-window_ctx_lock_evt_queue(
-        struct window_ctx *ctx)
+window_ctx_lock_evt_queue(struct window_ctx *ctx)
 {
-    while(__atomic_fetch_or(&ctx->evt_queue_lock, 1, __ATOMIC_SEQ_CST)) {}
+    while(__atomic_fetch_or(&ctx->evt_queue_lock, 1, __ATOMIC_SEQ_CST))
+    {
+    }
 }
 
 static int
-window_ctx_unlock_evt_queue(
-        struct window_ctx *ctx)
+window_ctx_unlock_evt_queue(struct window_ctx *ctx)
 {
     __atomic_fetch_and(&ctx->evt_queue_lock, 0, __ATOMIC_SEQ_CST);
 }
 
-struct input_ctx {
+struct input_ctx
+{
     int lock;
     unsigned shift_pressed : 1;
     unsigned ctrl_pressed : 1;
@@ -57,7 +59,8 @@ static unsigned long window_lock = 0;
 static int window_count;
 static struct window_ctx *window_list = NULL;
 static inline int
-window_lock_acquire(void) {
+window_lock_acquire(void)
+{
     while(__atomic_fetch_or(&window_lock, 1, __ATOMIC_SEQ_CST))
     {
         thrd_yield();
@@ -80,7 +83,8 @@ window_lock_acquire(void) {
     // }
 }
 static inline int
-window_lock_release(void) {
+window_lock_release(void)
+{
 
     // if(window_count > 0) {
     //     printf("windd: window_list on release lock: {");
@@ -102,21 +106,24 @@ window_lock_release(void) {
 }
 
 static inline int
-__window_list_insert_lockless(
-        struct window_ctx *ctx,
-        int focus)
+__window_list_insert_lockless(struct window_ctx *ctx, int focus)
 {
     ctx->next = NULL;
-    if(window_list == NULL) {
+    if(window_list == NULL)
+    {
         window_list = ctx;
     }
-    else if(focus) {
+    else if(focus)
+    {
         struct window_ctx *last = window_list;
-        while(last->next) {
+        while(last->next)
+        {
             last = last->next;
         }
         last->next = ctx;
-    } else {
+    }
+    else
+    {
         ctx->next = window_list;
         window_list = ctx;
     }
@@ -135,23 +142,28 @@ window_list_insert(struct window_ctx *ctx, int focus)
 }
 
 static inline int
-__window_list_remove_lockless(
-        struct window_ctx *ctx)
+__window_list_remove_lockless(struct window_ctx *ctx)
 {
-    if(window_list == ctx) {
+    if(window_list == ctx)
+    {
         window_list = ctx->next;
         ctx->next = NULL;
-    } else {
+    }
+    else
+    {
         struct window_ctx *pred = window_list;
         struct window_ctx *iter = pred->next;
-        while(iter) {
-            if(iter == ctx) {
+        while(iter)
+        {
+            if(iter == ctx)
+            {
                 break;
             }
             pred = iter;
             iter = iter->next;
         }
-        if(iter == NULL || pred == NULL || pred->next != iter) {
+        if(iter == NULL || pred == NULL || pred->next != iter)
+        {
             return -EINVAL;
         }
         pred->next = ctx->next;
@@ -183,7 +195,8 @@ attach_window_ctx(struct window *win)
     ctx->evt_queue_head = 0;
     ctx->evt_queue_tail = 0;
     ctx->evt_queue = malloc(sizeof(struct input_event) * ctx->evt_queue_len);
-    if(ctx->evt_queue == NULL) {
+    if(ctx->evt_queue == NULL)
+    {
         free(ctx);
         return NULL;
     }
@@ -199,7 +212,8 @@ destroy_window_ctx(struct window_ctx *ctx)
     // Remove this window from the list
     int res;
     res = window_list_remove(ctx);
-    if(res) {
+    if(res)
+    {
         fprintf(stderr, "windd: tried to destroy an invalid window_ctx!\n");
         return res;
     }
@@ -211,7 +225,8 @@ destroy_window_ctx(struct window_ctx *ctx)
     return 0;
 }
 
-struct render_ctx {
+struct render_ctx
+{
     int req_mode;
     struct kfb_framebuffer *fb;
     struct fb_mode_info *minfo;
@@ -222,30 +237,35 @@ static struct render_ctx render = {
 };
 
 static inline unsigned long
-compute_topbar_height(void) {
+compute_topbar_height(void)
+{
     unsigned long height = render.minfo->layer_infos[0].layout.height / 30;
-    if(height < 1) {
+    if(height < 1)
+    {
         height = 1;
     }
     return height;
 }
 
 static int
-render_init(const char *path, int mode) 
+render_init(const char *path, int mode)
 {
 
     printf("windd: using framebuffer \"%s\"\n", path);
     render.fb = kfb_open_framebuffer(path);
-    if(render.fb == NULL) {
+    if(render.fb == NULL)
+    {
         fprintf(stderr, "windd: failed to open framebuffer \"%s\"\n", path);
         return -1;
     }
 
     render.req_mode = mode;
-    if(mode >= 0) {
+    if(mode >= 0)
+    {
         kfb_set_current_mode(render.fb, mode);
     }
-    render.minfo = kfb_load_mode_info(render.fb, kfb_get_current_mode(render.fb));
+    render.minfo =
+        kfb_load_mode_info(render.fb, kfb_get_current_mode(render.fb));
     return 0;
 }
 
@@ -269,23 +289,26 @@ render_square(uint32_t color,
         .format = GFX_FORMAT_RGBA32,
     };
 
-    if(!render.fb->have_buffer_data) {
+    if(!render.fb->have_buffer_data)
+    {
         return -EINVAL;
     }
 
-    for(size_t li = 0; li < render.minfo->layer_count; li++) {
+    for(size_t li = 0; li < render.minfo->layer_count; li++)
+    {
         struct fb_layer_info *linfo = &render.minfo->layer_infos[li];
-        res = kfb_blit(
-                render.fb->buffer_data,
-                width,
-                height,
-                offset_x,
-                offset_y,
-                &linfo->layout,
-                &_color,
-                1, 1,
-                0, 0,
-                &sqr_layout);
+        res = kfb_blit(render.fb->buffer_data,
+                       width,
+                       height,
+                       offset_x,
+                       offset_y,
+                       &linfo->layout,
+                       &_color,
+                       1,
+                       1,
+                       0,
+                       0,
+                       &sqr_layout);
     }
 
     return res;
@@ -296,7 +319,7 @@ render_fill_all(uint32_t color)
 {
     int res;
     struct fb_layer_info *linfo = &render.minfo->layer_infos[0];
-    res = render_square(color,linfo->layout.width,linfo->layout.height,0,0);
+    res = render_square(color, linfo->layout.width, linfo->layout.height, 0, 0);
     return res;
 }
 
@@ -315,32 +338,40 @@ render_main(void *_n)
     (void)_n;
 
     int running = 1;
-    while(running) {
+    while(running)
+    {
 
         int cur_mode = kfb_get_current_mode(render.fb);
         int req_mode = render.req_mode;
-        if(cur_mode != req_mode) {
-            struct fb_mode_info *n_minfo = kfb_load_mode_info(render.fb, req_mode);
-            if(n_minfo == NULL) {
+        if(cur_mode != req_mode)
+        {
+            struct fb_mode_info *n_minfo =
+                kfb_load_mode_info(render.fb, req_mode);
+            if(n_minfo == NULL)
+            {
                 render.req_mode = cur_mode;
-            } else {
+            }
+            else
+            {
                 struct fb_mode_info *o_minfo = render.minfo;
                 render.minfo = n_minfo;
                 kfb_unload_mode_info(render.fb, o_minfo);
                 res = kfb_set_current_mode(render.fb, req_mode);
-                if(res) {
+                if(res)
+                {
                     printf("failed to set framebuffer mode to %d!\n", req_mode);
                     render.req_mode = cur_mode;
                     req_mode = cur_mode;
                 }
-
             }
         }
-        
+
         // Draw the background
-        union {
+        union
+        {
             uint32_t raw;
-            struct {
+            struct
+            {
                 uint8_t r;
                 uint8_t g;
                 uint8_t b;
@@ -355,13 +386,16 @@ render_main(void *_n)
         render_fill_all(bg_color.raw);
 
         unsigned long topbar_height = compute_topbar_height();
-        if(topbar_height <= 0) {
+        if(topbar_height <= 0)
+        {
             topbar_height = 1;
         }
 
-        union {
+        union
+        {
             uint32_t raw;
-            struct {
+            struct
+            {
                 uint8_t r;
                 uint8_t g;
                 uint8_t b;
@@ -374,9 +408,11 @@ render_main(void *_n)
             .a = 0xFF,
         };
 
-        union {
+        union
+        {
             uint32_t raw;
-            struct {
+            struct
+            {
                 uint8_t r;
                 uint8_t g;
                 uint8_t b;
@@ -392,73 +428,85 @@ render_main(void *_n)
         // Draw all windows
         window_lock_acquire();
         struct window_ctx *wc = window_list;
-        while(wc) {
+        while(wc)
+        {
             struct window *win = wc->window;
-            if(win->position_valid && win->layout_valid) {
-                if(render.fb->have_buffer_data && render.minfo != NULL) {
+            if(win->position_valid && win->layout_valid)
+            {
+                if(render.fb->have_buffer_data && render.minfo != NULL)
+                {
                     windd_window_reload_buffer(win);
                     windd_window_lock_buffer(win);
-                    if(win->buffer_size > 0) {
-                        for(size_t li = 0; li < render.minfo->layer_count; li++) {
-                            struct fb_layer_info *linfo = &render.minfo->layer_infos[li];
-                            kfb_blit(
-                                render.fb->buffer_data,
-                                win->layout.width,
-                                win->layout.height,
-                                win->position.x,
-                                win->position.y,
-                                &linfo->layout,
-                                win->buffer,
-                                win->layout.width,
-                                win->layout.height,
-                                0, 0,
-                                &win->layout);
-                            render_square(
-                                    topbar_color.raw,
-                                    win->layout.width,
-                                    topbar_height,
-                                    win->position.x,
-                                    win->position.y - topbar_height);
-                            render_square(
-                                    close_color.raw,
-                                    topbar_height < win->layout.width ? topbar_height : win->layout.width,
-                                    topbar_height,
-                                    win->position.x,
-                                    win->position.y - topbar_height);
+                    if(win->buffer_size > 0)
+                    {
+                        for(size_t li = 0; li < render.minfo->layer_count; li++)
+                        {
+                            struct fb_layer_info *linfo =
+                                &render.minfo->layer_infos[li];
+                            kfb_blit(render.fb->buffer_data,
+                                     win->layout.width,
+                                     win->layout.height,
+                                     win->position.x,
+                                     win->position.y,
+                                     &linfo->layout,
+                                     win->buffer,
+                                     win->layout.width,
+                                     win->layout.height,
+                                     0,
+                                     0,
+                                     &win->layout);
+                            render_square(topbar_color.raw,
+                                          win->layout.width,
+                                          topbar_height,
+                                          win->position.x,
+                                          win->position.y - topbar_height);
+                            render_square(close_color.raw,
+                                          topbar_height < win->layout.width
+                                              ? topbar_height
+                                              : win->layout.width,
+                                          topbar_height,
+                                          win->position.x,
+                                          win->position.y - topbar_height);
                         }
                     }
-                    //printf("rendering window at %d,%d of size %d,%d, first_byte=0x%x\n",
-                    //        (int)win->position.x,
-                    //        (int)win->position.y,
-                    //        (int)win->layout.width,
-                    //        (int)win->layout.height,
-                    //        (unsigned int)*(uint8_t*)win->buffer
-                    //      );
-                    //render_square(0xFFFF00FF,
-                    //              win->layout.width,
-                    //              win->layout.height,
-                    //              win->position.x,
-                    //              win->position.y);
+                    // printf("rendering window at %d,%d of size %d,%d,
+                    // first_byte=0x%x\n",
+                    //         (int)win->position.x,
+                    //         (int)win->position.y,
+                    //         (int)win->layout.width,
+                    //         (int)win->layout.height,
+                    //         (unsigned int)*(uint8_t*)win->buffer
+                    //       );
+                    // render_square(0xFFFF00FF,
+                    //               win->layout.width,
+                    //               win->layout.height,
+                    //               win->position.x,
+                    //               win->position.y);
                     windd_window_unlock_buffer(win);
                 }
-            } 
+            }
             wc = wc->next;
         }
 
         window_lock_release();
 
         // Draw the mouse
-        unsigned long mouse_width = render.minfo->layer_infos[0].layout.width / 50;
-        unsigned long mouse_height = render.minfo->layer_infos[0].layout.height / 50;
-        if(mouse_width < 1) {
+        unsigned long mouse_width =
+            render.minfo->layer_infos[0].layout.width / 50;
+        unsigned long mouse_height =
+            render.minfo->layer_infos[0].layout.height / 50;
+        if(mouse_width < 1)
+        {
             mouse_width = 1;
         }
-        if(mouse_height < 1) {
+        if(mouse_height < 1)
+        {
             mouse_height = 1;
         }
 
         uint32_t mouse_color = 0xFFFFFFFF;
-        if(input.dragging_window) {
+        if(input.dragging_window)
+        {
             mouse_color = 0xFF2288DD;
         }
         render_square(mouse_color,
@@ -490,28 +538,33 @@ input_init(void)
 }
 
 static int
-input_lock_acquire(void) {
-    while(__atomic_fetch_or(&input.lock, 1, __ATOMIC_SEQ_CST)) {}
+input_lock_acquire(void)
+{
+    while(__atomic_fetch_or(&input.lock, 1, __ATOMIC_SEQ_CST))
+    {
+    }
 }
 
 static int
-input_lock_release(void) {
+input_lock_release(void)
+{
     __atomic_fetch_and(&input.lock, 0, __ATOMIC_SEQ_CST);
 }
 
 static int
-handle_input_event(
-        struct input_event *evt)
+handle_input_event(struct input_event *evt)
 {
     int res;
 
     input_lock_acquire();
     window_lock_acquire();
     struct window_ctx *active_window = window_list;
-    while(active_window && active_window->next) {
+    while(active_window && active_window->next)
+    {
         active_window = active_window->next;
     }
-    if(active_window == NULL) {
+    if(active_window == NULL)
+    {
         // fprintf(stderr, "windd: no active windows, losing input event!\n");
         input_lock_release();
         window_lock_release();
@@ -520,40 +573,50 @@ handle_input_event(
 
     int eat_input = 0;
 
-    if(evt->type == INPUT_EVT_KEY) {
-        if(evt->key == INPUT_KEY_LSHIFT) {
-            switch(evt->motion) {
-                case INPUT_MOTION_PRESSED:
-                case INPUT_MOTION_HELD:
-                    input.shift_pressed = 1;
-                    break;
-                case INPUT_MOTION_RELEASED:
-                    input.shift_pressed = 0;
-                    break;
+    if(evt->type == INPUT_EVT_KEY)
+    {
+        if(evt->key == INPUT_KEY_LSHIFT)
+        {
+            switch(evt->motion)
+            {
+            case INPUT_MOTION_PRESSED:
+            case INPUT_MOTION_HELD:
+                input.shift_pressed = 1;
+                break;
+            case INPUT_MOTION_RELEASED:
+                input.shift_pressed = 0;
+                break;
             }
         }
-        else if(evt->key == INPUT_KEY_LCTRL) {
-            switch(evt->motion) {
-                case INPUT_MOTION_PRESSED:
-                case INPUT_MOTION_HELD:
-                    input.ctrl_pressed = 1;
-                    break;
-                case INPUT_MOTION_RELEASED:
-                    input.ctrl_pressed = 0;
-                    break;
+        else if(evt->key == INPUT_KEY_LCTRL)
+        {
+            switch(evt->motion)
+            {
+            case INPUT_MOTION_PRESSED:
+            case INPUT_MOTION_HELD:
+                input.ctrl_pressed = 1;
+                break;
+            case INPUT_MOTION_RELEASED:
+                input.ctrl_pressed = 0;
+                break;
             }
         }
-        else if(evt->key == INPUT_KEY_TAB && input.shift_pressed) {
-            if(evt->motion == INPUT_MOTION_PRESSED) {
+        else if(evt->key == INPUT_KEY_TAB && input.shift_pressed)
+        {
+            if(evt->motion == INPUT_MOTION_PRESSED)
+            {
                 struct window_ctx *first = window_list;
-                if(first != NULL) {
+                if(first != NULL)
+                {
                     struct window_ctx *last = first;
                     struct window_ctx *second_to_last = NULL;
-                    while(last->next) {
+                    while(last->next)
+                    {
                         second_to_last = last;
                         last = last->next;
                     }
-                    if(first != last) {
+                    if(first != last)
+                    {
                         second_to_last->next = NULL;
                         last->next = first;
                         window_list = last;
@@ -562,76 +625,94 @@ handle_input_event(
             }
             eat_input = 1;
         }
-        else if(evt->key == INPUT_KEY_0 && input.ctrl_pressed) {
-            if(evt->motion == INPUT_MOTION_PRESSED) {
+        else if(evt->key == INPUT_KEY_0 && input.ctrl_pressed)
+        {
+            if(evt->motion == INPUT_MOTION_PRESSED)
+            {
                 render.req_mode++;
             }
             eat_input = 1;
         }
-        else if(evt->key == INPUT_KEY_9 && input.ctrl_pressed) {
-            if(evt->motion == INPUT_MOTION_PRESSED) {
-                if(render.req_mode > 0) {
+        else if(evt->key == INPUT_KEY_9 && input.ctrl_pressed)
+        {
+            if(evt->motion == INPUT_MOTION_PRESSED)
+            {
+                if(render.req_mode > 0)
+                {
                     render.req_mode--;
                 }
             }
             eat_input = 1;
         }
     }
-    if(evt->type == INPUT_EVT_MOUSE) {
+    if(evt->type == INPUT_EVT_MOUSE)
+    {
         long width = render.minfo->layer_infos[0].layout.width;
         long height = render.minfo->layer_infos[0].layout.height;
 
-        float res_factor = (float)height/100;
+        float res_factor = (float)height / 100;
 
-        long mouse_delta_x = evt->mouse_delta_x * (input.mouse_x_sens * res_factor);
-        long mouse_delta_y = evt->mouse_delta_y * (input.mouse_y_sens * res_factor);
+        long mouse_delta_x =
+            evt->mouse_delta_x * (input.mouse_x_sens * res_factor);
+        long mouse_delta_y =
+            evt->mouse_delta_y * (input.mouse_y_sens * res_factor);
 
         long orig_mouse_x = input.mouse_x;
         long orig_mouse_y = input.mouse_y;
 
         input.mouse_x += mouse_delta_x;
-        if(input.mouse_x < 0) {
+        if(input.mouse_x < 0)
+        {
             input.mouse_x = 0;
         }
-        if(input.mouse_x >= width) {
-            input.mouse_x = width-1;
+        if(input.mouse_x >= width)
+        {
+            input.mouse_x = width - 1;
         }
 
         input.mouse_y += mouse_delta_y;
-        if(input.mouse_y < 0) {
+        if(input.mouse_y < 0)
+        {
             input.mouse_y = 0;
         }
-        if(input.mouse_y >= height) {
+        if(input.mouse_y >= height)
+        {
             input.mouse_y = height - 1;
         }
 
         long true_mouse_x_delta = input.mouse_x - orig_mouse_x;
         long true_mouse_y_delta = input.mouse_y - orig_mouse_y;
 
-        if(input.dragging_window) {
-            if(active_window != NULL) {
-                if(active_window->window->position_valid) {
-                    long new_x = active_window->window->position.x + true_mouse_x_delta;
-                    long new_y = active_window->window->position.y + true_mouse_y_delta;
+        if(input.dragging_window)
+        {
+            if(active_window != NULL)
+            {
+                if(active_window->window->position_valid)
+                {
+                    long new_x =
+                        active_window->window->position.x + true_mouse_x_delta;
+                    long new_y =
+                        active_window->window->position.y + true_mouse_y_delta;
                     struct window_position pos = {
                         .x = new_x,
                         .y = new_y,
                     };
-                    windd_window_server_set_position(active_window->window, &pos);
+                    windd_window_server_set_position(active_window->window,
+                                                     &pos);
                 }
             }
         }
 
-        //printf("mouse_delta(%ld,%ld) mouse(%ld,%ld)\n",
-        //        (long)mouse_delta_x,
-        //        (long)mouse_delta_y,
-        //        (long)input.mouse_x,
-        //        (long)input.mouse_y
-        //        );
+        // printf("mouse_delta(%ld,%ld) mouse(%ld,%ld)\n",
+        //         (long)mouse_delta_x,
+        //         (long)mouse_delta_y,
+        //         (long)input.mouse_x,
+        //         (long)input.mouse_y
+        //         );
     }
 
     if(evt->type == INPUT_EVT_KEY &&
-      (evt->key == INPUT_KEY_MOUSE_LEFT || evt->key == INPUT_KEY_MOUSE_RIGHT))
+       (evt->key == INPUT_KEY_MOUSE_LEFT || evt->key == INPUT_KEY_MOUSE_RIGHT))
     {
         int over_topbar = 0;
         int over_close_button;
@@ -640,94 +721,126 @@ handle_input_event(
         {
             struct window_ctx *iter_pred = NULL;
             struct window_ctx *iter = window_list;
-            for(struct window_ctx *iter = window_list; iter != NULL; iter_pred = iter, iter = iter->next) {
+            for(struct window_ctx *iter = window_list; iter != NULL;
+                iter_pred = iter, iter = iter->next)
+            {
                 // Check if the mouse in in this window's region
-                if(!(iter->window->position_valid && iter->window->layout_valid)) {
+                if(!(iter->window->position_valid &&
+                     iter->window->layout_valid))
+                {
                     continue;
                 }
 
                 unsigned long left = iter->window->position.x;
                 unsigned long right = left + iter->window->layout.width;
 
-                if(input.mouse_x < left || input.mouse_x >= right) {
+                if(input.mouse_x < left || input.mouse_x >= right)
+                {
                     // Does not intersect in the X-axis
                     continue;
                 }
 
                 unsigned long topbar_height = compute_topbar_height();
                 unsigned long top = iter->window->position.y - topbar_height;
-                unsigned long bottom = iter->window->position.y + iter->window->layout.height;
-                if(input.mouse_y < top || input.mouse_y >= bottom) {
+                unsigned long bottom =
+                    iter->window->position.y + iter->window->layout.height;
+                if(input.mouse_y < top || input.mouse_y >= bottom)
+                {
                     // Does not intersect in the Y-axis
                     continue;
                 }
 
                 mouse_pred = iter_pred;
                 mouse_window = iter;
-                if(input.mouse_y < iter->window->position.y) {
+                if(input.mouse_y < iter->window->position.y)
+                {
                     // We are hovering over the topbar
                     over_topbar = 1;
-                    if(input.mouse_x < left + topbar_height) {
+                    if(input.mouse_x < left + topbar_height)
+                    {
                         // We are hovering over the close botton
                         over_close_button = 1;
-                    } else {
+                    }
+                    else
+                    {
                         over_close_button = 0;
                     }
-                } else {
+                }
+                else
+                {
                     over_topbar = 0;
                     over_close_button = 0;
                 }
             }
         }
 
-        if(mouse_window) {
-            //printf("windd: mouse event on window! (close=%d,topbar=%d)\n",
-            //        (int)(over_close_button),
-            //        (int)(over_topbar && !over_close_button)
-            //        );
-            if(over_close_button && evt->key == INPUT_KEY_MOUSE_LEFT && evt->motion == INPUT_MOTION_PRESSED) {
+        if(mouse_window)
+        {
+            // printf("windd: mouse event on window! (close=%d,topbar=%d)\n",
+            //         (int)(over_close_button),
+            //         (int)(over_topbar && !over_close_button)
+            //         );
+            if(over_close_button && evt->key == INPUT_KEY_MOUSE_LEFT &&
+               evt->motion == INPUT_MOTION_PRESSED)
+            {
                 printf("marking window as closed!\n");
                 mouse_window->closed = 1;
                 eat_input = 1;
             }
-            else if(over_topbar && evt->key == INPUT_KEY_MOUSE_LEFT && evt->motion == INPUT_MOTION_PRESSED) {
+            else if(over_topbar && evt->key == INPUT_KEY_MOUSE_LEFT &&
+                    evt->motion == INPUT_MOTION_PRESSED)
+            {
                 input.dragging_window = !input.dragging_window;
             }
-            else if(mouse_window->next) {
+            else if(mouse_window->next)
+            {
                 // We want to focus the mouse window
                 // Remove it from the list
-                if(window_list == mouse_window) {
+                if(window_list == mouse_window)
+                {
                     window_list = mouse_window->next;
-                } else {
+                }
+                else
+                {
                     mouse_pred->next = mouse_window->next;
                 }
                 mouse_window->next = NULL;
 
                 // Add it to the end of the list
                 struct window_ctx *iter = window_list;
-                while(iter && iter->next) {
+                while(iter && iter->next)
+                {
                     iter = iter->next;
                 }
-                if(iter != NULL) {
+                if(iter != NULL)
+                {
                     iter->next = mouse_window;
-                } else {
+                }
+                else
+                {
                     window_list = mouse_window;
                 }
 
                 eat_input = 1;
             }
-        } 
+        }
     }
 
-    if(!eat_input) {
+    if(!eat_input)
+    {
         window_ctx_lock_evt_queue(active_window);
         // Enqueue the event
-        if(((active_window->evt_queue_head+1)%active_window->evt_queue_len) == active_window->evt_queue_tail) {
+        if(((active_window->evt_queue_head + 1) %
+            active_window->evt_queue_len) == active_window->evt_queue_tail)
+        {
             // The queue is full, drop the last event
-            active_window->evt_queue_tail = (active_window->evt_queue_tail+1)%active_window->evt_queue_len;
+            active_window->evt_queue_tail =
+                (active_window->evt_queue_tail + 1) %
+                active_window->evt_queue_len;
         }
         active_window->evt_queue[active_window->evt_queue_head] = *evt;
-        active_window->evt_queue_head = (active_window->evt_queue_head+1) % active_window->evt_queue_len;
+        active_window->evt_queue_head =
+            (active_window->evt_queue_head + 1) % active_window->evt_queue_len;
         window_ctx_unlock_evt_queue(active_window);
     }
 
@@ -737,28 +850,35 @@ handle_input_event(
 }
 
 static int
-input_main(void *_path) {
+input_main(void *_path)
+{
     int res;
 
     const char *path = _path;
     int file;
-    res = kanawha_sys_open(path, FILE_PERM_READ, FILE_MODE_CLOSE_ON_EXEC, &file);
-    if(res) {
+    res =
+        kanawha_sys_open(path, FILE_PERM_READ, FILE_MODE_CLOSE_ON_EXEC, &file);
+    if(res)
+    {
         fprintf(stderr, "windd: failed to open input file: %s\n", path);
         return -1;
     }
 
     int running = 1;
-    while(running) {
+    while(running)
+    {
         struct input_event evt;
         ssize_t amt_read = read(file, &evt, sizeof(evt));
-        if(amt_read == 0) {
+        if(amt_read == 0)
+        {
             running = 0;
             break;
         }
-        if(amt_read == sizeof(evt)) {
+        if(amt_read == sizeof(evt))
+        {
             res = handle_input_event(&evt);
-            if(res) {
+            if(res)
+            {
                 running = 0;
                 break;
             }
@@ -766,10 +886,12 @@ input_main(void *_path) {
     }
 }
 
-static int window_main(void *window);
+static int
+window_main(void *window);
 
 static void
-usage(FILE *out) {
+usage(FILE *out)
+{
     fprintf(out, "windd [FRAMEBUFFER] [FB-MODE] [INPUT-DEV(S) ...]\n");
 }
 
@@ -779,13 +901,13 @@ main(int argc, const char **argv)
     int res;
 
     printf("windd: argc=%d\n", argc);
-    for(int i = 0; i < argc; i++) {
-        printf("windd: argv[%d] = \"%s\"\n",
-                i,
-                argv[i]);
+    for(int i = 0; i < argc; i++)
+    {
+        printf("windd: argv[%d] = \"%s\"\n", i, argv[i]);
     }
 
-    if(argc < 3) {
+    if(argc < 3)
+    {
         usage(stderr);
         return -1;
     }
@@ -795,44 +917,50 @@ main(int argc, const char **argv)
     mode = strtol(mode_str, NULL, 0);
 
     res = render_init(argv[1], mode);
-    if(res) {
+    if(res)
+    {
         fprintf(stderr, "windd: failed to setup render context!\n");
         return res;
     }
 
     res = input_init();
-    if(res) {
+    if(res)
+    {
         fprintf(stderr, "windd: failed to setup input context!\n");
     }
 
     res = windd_server_init();
-    if(res) {
+    if(res)
+    {
         fprintf(stderr, "windd: failed to initialize server!\n");
         return res;
     }
 
     // Launch all of the input threads...
-    for(int i = 3; i < argc; i++) {
+    for(int i = 3; i < argc; i++)
+    {
         thrd_t input_thread;
-        res = thrd_create(&input_thread, input_main, (void*)argv[i]);
-        if(res) {
+        res = thrd_create(&input_thread, input_main, (void *)argv[i]);
+        if(res)
+        {
             fprintf(stderr, "windd: failed to launch the input thread!\n");
             windd_server_deinit();
             return res;
         }
         printf("windd: launched input thread for \"%s\" PID(%ld)\n",
-                argv[i], (long)input_thread.pid);
+               argv[i],
+               (long)input_thread.pid);
     }
 
     thrd_t render_thread;
     res = thrd_create(&render_thread, render_main, NULL);
-    if(res) {
+    if(res)
+    {
         fprintf(stderr, "windd: failed to launch the render thread!\n");
         windd_server_deinit();
         return res;
     }
-    printf("windd: launched render thread PID(%ld)\n",
-          (long)render_thread.pid);
+    printf("windd: launched render thread PID(%ld)\n", (long)render_thread.pid);
 
     int running = 1;
     while(running)
@@ -843,20 +971,23 @@ main(int argc, const char **argv)
             fprintf(stderr, "windd: Failed to wait for children!\n");
         }
 
-//        printf("windd: waiting for connection...\n");
+        //        printf("windd: waiting for connection...\n");
         struct window *win = windd_server_await_connection();
-        if(win == NULL) {
+        if(win == NULL)
+        {
             continue;
         }
 
         thrd_t child;
         res = thrd_create(&child, window_main, win);
-        if(res) {
-            fprintf(stderr, "windd: Failed to create child thread for window!\n");
+        if(res)
+        {
+            fprintf(stderr,
+                    "windd: Failed to create child thread for window!\n");
             windd_server_close_connection(win);
             continue;
         }
-//        printf("windd: finished creating window thread...\n");
+        //        printf("windd: finished creating window thread...\n");
     }
 
     windd_server_deinit();
@@ -865,7 +996,8 @@ main(int argc, const char **argv)
 }
 
 static int
-window_input_main(void *_ctx) {
+window_input_main(void *_ctx)
+{
     int res;
     struct window_ctx *ctx = _ctx;
 
@@ -873,27 +1005,34 @@ window_input_main(void *_ctx) {
     // for the window... This is busy polling at the moment
     // If the window stops reading input the close button may not work
     // as well...
-    while(!ctx->closed) {
+    while(!ctx->closed)
+    {
         int received_evt = 0;
         struct input_event evt;
 
-        while(!received_evt) {
+        while(!received_evt)
+        {
             window_ctx_lock_evt_queue(ctx);
-            if(ctx->evt_queue_tail != ctx->evt_queue_head) {
+            if(ctx->evt_queue_tail != ctx->evt_queue_head)
+            {
                 evt = ctx->evt_queue[ctx->evt_queue_tail];
-                ctx->evt_queue_tail = (ctx->evt_queue_tail + 1) % ctx->evt_queue_len;
+                ctx->evt_queue_tail =
+                    (ctx->evt_queue_tail + 1) % ctx->evt_queue_len;
                 received_evt = 1;
             }
             window_ctx_unlock_evt_queue(ctx);
 
-            if(!received_evt) {
+            if(!received_evt)
+            {
                 usleep(10000); // Sleep for a 10 milliseconds
             }
         }
 
         res = windd_window_send_input(ctx->window, &evt);
-        if(res) {
-            fprintf(stderr, "windd: failed to send input event to active window!\n");
+        if(res)
+        {
+            fprintf(stderr,
+                    "windd: failed to send input event to active window!\n");
         }
     }
 
@@ -907,22 +1046,23 @@ window_poll_main(void *_ctx)
 
     struct gfx_layout *backing = &render.minfo->layer_infos[0].layout;
 
-    if(backing->width < 1 || backing->height < 1) {
+    if(backing->width < 1 || backing->height < 1)
+    {
         return -EINVAL;
     }
 
     struct gfx_layout layout = {
         .order = backing->order,
-        .width = (3*backing->width)/4,
-        .height = (3*backing->height)/4,
+        .width = (3 * backing->width) / 4,
+        .height = (3 * backing->height) / 4,
         .format = backing->format,
         .stride = backing->stride,
         .offset = 0,
     };
-    windd_window_server_set_layout(ctx->window, &layout); 
+    windd_window_server_set_layout(ctx->window, &layout);
     struct window_position position = {
-        .x = (rand() % ((backing->width)/4)),
-        .y = (rand() % ((backing->height)/4)) + compute_topbar_height(),
+        .x = (rand() % ((backing->width) / 4)),
+        .y = (rand() % ((backing->height) / 4)) + compute_topbar_height(),
     };
     windd_window_server_set_position(ctx->window, &position);
 
@@ -931,7 +1071,8 @@ window_poll_main(void *_ctx)
         printf("windd: poll...\n");
         windd_window_poll(ctx->window);
         printf("windd: poll DONE\n");
-        if(windd_window_disconnected(ctx->window)) {
+        if(windd_window_disconnected(ctx->window))
+        {
             return 0;
         }
     }
@@ -945,12 +1086,14 @@ window_main(void *_win)
     int res;
     struct window_ctx *ctx;
     printf("windd: opened window thread (win=%p) PID(%d)\n",
-            _win, (int)getpid());
+           _win,
+           (int)getpid());
 
     {
         struct window *win = _win;
         ctx = attach_window_ctx(win);
-        if(ctx == NULL) {
+        if(ctx == NULL)
+        {
             windd_server_close_connection(win);
             return -EINVAL;
         }
@@ -958,7 +1101,8 @@ window_main(void *_win)
 
     thrd_t input_thrd;
     res = thrd_create(&input_thrd, window_input_main, ctx);
-    if(res) {
+    if(res)
+    {
         fprintf(stderr, "windd: failed to create window input thread!\n");
         destroy_window_ctx(ctx);
         return res;
@@ -966,7 +1110,8 @@ window_main(void *_win)
 
     thrd_t poll_thrd;
     res = thrd_create(&poll_thrd, window_poll_main, ctx);
-    if(res) {
+    if(res)
+    {
         fprintf(stderr, "windd: failed to create window input thread!\n");
         kill(input_thrd.pid, SIGQUIT);
         waitpid(input_thrd.pid, NULL, 0);
@@ -974,7 +1119,8 @@ window_main(void *_win)
         return res;
     }
 
-    while(waitpid(-1, NULL, WNOHANG) == 0 && !ctx->closed) {
+    while(waitpid(-1, NULL, WNOHANG) == 0 && !ctx->closed)
+    {
         // BUSY WAITING... Sad...
         sleep(1); // This doesn't need to be fast (sleep for a whole second)
     }
@@ -991,4 +1137,3 @@ window_main(void *_win)
     destroy_window_ctx(ctx);
     return 0;
 }
-

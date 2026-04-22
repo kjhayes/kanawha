@@ -122,38 +122,38 @@ main(int argc, const char **argv)
 {
     int res;
 
-    //const char *randd_env = getenv("RANDD_SOCKET");
-    //int randd_socket = strtoul(randd_env, NULL, 10);
-    //int randd_conn;
+    // const char *randd_env = getenv("RANDD_SOCKET");
+    // int randd_socket = strtoul(randd_env, NULL, 10);
+    // int randd_conn;
 
-    //res = kanawha_sys_connect(randd_socket, &randd_conn, 0);
-    //if(res)
+    // res = kanawha_sys_connect(randd_socket, &randd_conn, 0);
+    // if(res)
     //{
-    //    fprintf(stderr, "Failed to connect to randd socket! res=%d\n", res);
-    //    perror("accept");
-    //    return -1;
-    //}
+    //     fprintf(stderr, "Failed to connect to randd socket! res=%d\n", res);
+    //     perror("accept");
+    //     return -1;
+    // }
 
-    //while(1)
+    // while(1)
     //{
-    //    char buf[5];
-    //    buf[4] = 0;
-    //    ssize_t amt = read(randd_conn, buf, 4);
-    //    if(amt == 4)
-    //    {
-    //        puts(buf);
-    //    }
-    //    else if(amt < 0)
-    //    {
-    //        fprintf(stderr, "Failed to read from randd!\n");
-    //        return -1;
-    //    }
-    //    else
-    //    {
-    //        fprintf(stderr, "randd EOF?\n");
-    //        return -1;
-    //    }
-    //}
+    //     char buf[5];
+    //     buf[4] = 0;
+    //     ssize_t amt = read(randd_conn, buf, 4);
+    //     if(amt == 4)
+    //     {
+    //         puts(buf);
+    //     }
+    //     else if(amt < 0)
+    //     {
+    //         fprintf(stderr, "Failed to read from randd!\n");
+    //         return -1;
+    //     }
+    //     else
+    //     {
+    //         fprintf(stderr, "randd EOF?\n");
+    //         return -1;
+    //     }
+    // }
 
     ////    fd_t socket;
     ////    kanawha_sys_socket(0, FILE_MODE_NON_BLOCK, &socket);

@@ -7,16 +7,16 @@
 #include <kanawha/types.h>
 
 static inline uint8_t
-usb_xhci_endpoint_id_to_dci(
-        usb_endpoint_id_t endpoint)
+usb_xhci_endpoint_id_to_dci(usb_endpoint_id_t endpoint)
 {
-    if(endpoint.endpoint_number == 0) {
+    if(endpoint.endpoint_number == 0)
+    {
         // Default Control Endpoint is Bidirectional
         // (Ignore endpoint.direction) and at DCI 1
         return (uint8_t)1;
     }
-    return ((uint8_t)(endpoint.endpoint_number)<<1)
-          | (uint8_t)!!endpoint.direction;
+    return ((uint8_t)(endpoint.endpoint_number) << 1) |
+           (uint8_t)!!endpoint.direction;
 }
 
 struct usb_xhci_endpoint
@@ -84,18 +84,18 @@ struct usb_xhci_transfer
 
 struct usb_xhci_transfer *
 usb_xhci_endpoint_create_control_transfer(struct usb_xhci_endpoint *endp,
-                                              uint8_t bmRequestType,
-                                              uint8_t bRequest,
-                                              uint16_t wValue,
-                                              uint16_t wIndex,
-                                              uint16_t wLength,
-                                              void __phys *buffer,
-                                              size_t buflen);
+                                          uint8_t bmRequestType,
+                                          uint8_t bRequest,
+                                          uint16_t wValue,
+                                          uint16_t wIndex,
+                                          uint16_t wLength,
+                                          void __phys *buffer,
+                                          size_t buflen);
 
 struct usb_xhci_transfer *
 usb_xhci_endpoint_create_bulk_transfer(struct usb_xhci_endpoint *endp,
-                                         void __phys *buffer,
-                                         size_t buflen);
+                                       void __phys *buffer,
+                                       size_t buflen);
 
 struct usb_xhci_transfer *
 usb_xhci_endpoint_create_isoch_transfer(struct usb_xhci_endpoint *endp);

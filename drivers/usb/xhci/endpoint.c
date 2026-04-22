@@ -47,8 +47,7 @@ usb_xhci_endpoint_ring_doorbell(struct usb_xhci_endpoint *endp)
     uint16_t task = 0;
     uint8_t target = endp->dci;
 
-    dprintk("endpoint_ring_doorbell: dci=0x%lx\n",
-            (ul_t)target);
+    dprintk("endpoint_ring_doorbell: dci=0x%lx\n", (ul_t)target);
 
     usb_xhci_write_doorbell(endp->device->xhci,
                             endp->device->slot_index,
@@ -65,8 +64,10 @@ usb_xhci_endpoint_notify_transfer_event(struct usb_xhci_endpoint *endp,
 
     irq_lock_acquire(&endp->lock);
     ilist_node_t *node = ilist_peek_head(&endp->transfer_queue);
-    if(node == NULL) {
-        eprintk("usb_xhci_endpoint_notify_transfer_event: No transfer is in progress!\n");
+    if(node == NULL)
+    {
+        eprintk("usb_xhci_endpoint_notify_transfer_event: No transfer is in "
+                "progress!\n");
         irq_lock_release(&endp->lock);
         return -ENXIO;
     }
@@ -74,10 +75,13 @@ usb_xhci_endpoint_notify_transfer_event(struct usb_xhci_endpoint *endp,
     struct usb_xhci_transfer *xfer =
         container_of(node, struct usb_xhci_transfer, endpoint_queue_node);
 
-    if(xfer->final_trb != dequeued) {
+    if(xfer->final_trb != dequeued)
+    {
         // This is not the final TRB of the transfer
-        wprintk("usb_xhci_transfer: partial notification of transfer... (final=%p, dequeued=%p)",
-                xfer->final_trb, dequeued);
+        wprintk("usb_xhci_transfer: partial notification of transfer... "
+                "(final=%p, dequeued=%p)",
+                xfer->final_trb,
+                dequeued);
         irq_lock_release(&endp->lock);
         usb_xhci_endpoint_ring_doorbell(endp);
         return 0;
@@ -105,7 +109,8 @@ usb_xhci_control_transfer_launch(struct usb_transfer *gen_xfer)
         container_of(gen_xfer, struct usb_xhci_transfer, xfer);
 
     // HACK: We don't support large buffers yet
-    if((xfer->control.buflen & 0x1FFFF) != xfer->control.buflen) {
+    if((xfer->control.buflen & 0x1FFFF) != xfer->control.buflen)
+    {
         return -ENOMEM;
     }
 
@@ -117,16 +122,15 @@ usb_xhci_control_transfer_launch(struct usb_transfer *gen_xfer)
         return -EALREADY;
     }
 
-    size_t num_data_trbs = (xfer->control.buflen  > 0);
+    size_t num_data_trbs = (xfer->control.buflen > 0);
     size_t num_event_trbs = 0;
     size_t num_trbs = 2 + num_data_trbs + num_event_trbs;
 
     struct usb_xhci_trb *trbs[num_trbs];
-    res = usb_xhci_trb_ring_get_avail_trbs(
-            &xfer->endpoint->ring,
-            trbs,
-            &xfer->final_trb,
-            num_trbs);
+    res = usb_xhci_trb_ring_get_avail_trbs(&xfer->endpoint->ring,
+                                           trbs,
+                                           &xfer->final_trb,
+                                           num_trbs);
     if(res)
     {
         irq_lock_release(&xfer->endpoint->lock);
@@ -135,7 +139,8 @@ usb_xhci_control_transfer_launch(struct usb_transfer *gen_xfer)
 
     uint32_t interruptor = 0; // Target Zero No Matter What For Now
 
-    int dir_in = !!(xfer->control.bmRequestType & USB_DEV_CONTROL_REQUEST_TYPE_DIR_DEVICE_TO_HOST);
+    int dir_in = !!(xfer->control.bmRequestType &
+                    USB_DEV_CONTROL_REQUEST_TYPE_DIR_DEVICE_TO_HOST);
 
     { // Setup Stage
         struct usb_xhci_trb *trb = trbs[0];
@@ -145,12 +150,16 @@ usb_xhci_control_transfer_launch(struct usb_transfer *gen_xfer)
         uint32_t control;
 
         uint32_t trt = 0;
-        if(xfer->control.buflen == 0) {
+        if(xfer->control.buflen == 0)
+        {
             trt = 0;
         }
-        else if(dir_in) {
+        else if(dir_in)
+        {
             trt = 3;
-        } else {
+        }
+        else
+        {
             trt = 2;
         }
 
@@ -162,11 +171,9 @@ usb_xhci_control_transfer_launch(struct usb_transfer *gen_xfer)
 
         status = 0x8 | ((uint32_t)interruptor << 22);
 
-        control = 0
-                  |(1ULL << 6) // IDT
-                  |((uint32_t)USB_XHCI_TRB_TYPE_SETUP_STAGE << 10)
-                  |(trt << 16)
-                  ;
+        control = 0 | (1ULL << 6) // IDT
+                  | ((uint32_t)USB_XHCI_TRB_TYPE_SETUP_STAGE << 10) |
+                  (trt << 16);
 
         control |= (letoh32(trb->control) & 0b1); // Keep the same cycle bit
 
@@ -188,15 +195,16 @@ usb_xhci_control_transfer_launch(struct usb_transfer *gen_xfer)
             size_t td_size = 0; // TODO change this if we ever
                                 //      support more than one buffer
 
-            status |= (xfer->control.buflen & 0x1FFFF)
-                | ((uint32_t)(td_size & 0x1F) << 17)
-                | ((uint32_t)interruptor << 22);
+            status |= (xfer->control.buflen & 0x1FFFF) |
+                      ((uint32_t)(td_size & 0x1F) << 17) |
+                      ((uint32_t)interruptor << 22);
 
-            control |= 0
-                |((uint32_t)(num_data_trbs > 1) << 4) // Set the chain bit if we have multiple TRB(s)
-                |(((uint32_t)USB_XHCI_TRB_TYPE_DATA_STAGE) << 10) // TRB Type
-                |((uint32_t)dir_in << 16)
-                ;
+            control |=
+                0 |
+                ((uint32_t)(num_data_trbs > 1)
+                 << 4) // Set the chain bit if we have multiple TRB(s)
+                | (((uint32_t)USB_XHCI_TRB_TYPE_DATA_STAGE) << 10) // TRB Type
+                | ((uint32_t)dir_in << 16);
 
             control |= (letoh32(trb->control) & 0b1); // Keep the same cycle bit
 
@@ -205,7 +213,8 @@ usb_xhci_control_transfer_launch(struct usb_transfer *gen_xfer)
             trb->control = htole32(control);
 
             ASSERT(num_data_trbs == 1);
-            for(size_t i = 1; i < num_data_trbs; i++) {
+            for(size_t i = 1; i < num_data_trbs; i++)
+            {
                 // Handle additional "normal TRB's" for
                 // fragmented data... (Not Implemented)
                 struct usb_xhci_trb *additional_trb = trbs[i + 1];
@@ -219,20 +228,23 @@ usb_xhci_control_transfer_launch(struct usb_transfer *gen_xfer)
         uint32_t control = 0;
 
         int status_is_input;
-        if(xfer->control.buflen == 0) {
+        if(xfer->control.buflen == 0)
+        {
             status_is_input = 1;
-        } else if(dir_in) {
+        }
+        else if(dir_in)
+        {
             status_is_input = 0;
-        } else {
+        }
+        else
+        {
             status_is_input = 1;
         }
 
         status |= ((uint32_t)interruptor << 22);
-        control |= 0
-            |(1ULL << 5) // IOC
-            |((uint32_t)USB_XHCI_TRB_TYPE_STATUS_STAGE << 10)
-            |((uint32_t)status_is_input << 16)
-            ;
+        control |= 0 | (1ULL << 5) // IOC
+                   | ((uint32_t)USB_XHCI_TRB_TYPE_STATUS_STAGE << 10) |
+                   ((uint32_t)status_is_input << 16);
 
         control |= (letoh32(trb->control) & 0b1); // Keep the same cycle bit
 
@@ -288,7 +300,6 @@ usb_xhci_bulk_transfer_launch(struct usb_transfer *gen_xfer)
 static struct usb_transfer_ops usb_xhci_bulk_transfer_ops = {
     .launch = usb_xhci_bulk_transfer_launch,
 };
-
 
 static struct usb_transfer_ops usb_xhci_control_transfer_ops = {
     .launch = usb_xhci_control_transfer_launch,
@@ -364,13 +375,13 @@ usb_xhci_free_transfer(struct usb_xhci_transfer *xfer)
 
 struct usb_xhci_transfer *
 usb_xhci_endpoint_create_control_transfer(struct usb_xhci_endpoint *endp,
-                                              uint8_t bmRequestType,
-                                              uint8_t bRequest,
-                                              uint16_t wValue,
-                                              uint16_t wIndex,
-                                              uint16_t wLength,
-                                              void __phys *buffer,
-                                              size_t buflen)
+                                          uint8_t bmRequestType,
+                                          uint8_t bRequest,
+                                          uint16_t wValue,
+                                          uint16_t wIndex,
+                                          uint16_t wLength,
+                                          void __phys *buffer,
+                                          size_t buflen)
 {
     struct usb_xhci_transfer *xfer =
         usb_xhci_alloc_transfer(endp, USB_TRANSFER_CONTROL);
@@ -388,8 +399,8 @@ usb_xhci_endpoint_create_control_transfer(struct usb_xhci_endpoint *endp,
 
 struct usb_xhci_transfer *
 usb_xhci_endpoint_create_bulk_transfer(struct usb_xhci_endpoint *endp,
-                                         void __phys *buffer,
-                                         size_t buflen)
+                                       void __phys *buffer,
+                                       size_t buflen)
 {
     struct usb_xhci_transfer *xfer =
         usb_xhci_alloc_transfer(endp, USB_TRANSFER_BULK);

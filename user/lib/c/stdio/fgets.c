@@ -27,7 +27,8 @@ fgets_unlocked(char *restrict s, int n, FILE *restrict stream)
     {
         *s = '\0';
     }
-    if(num_read == 0) {
+    if(num_read == 0)
+    {
         return NULL;
     }
     return stashed_s;

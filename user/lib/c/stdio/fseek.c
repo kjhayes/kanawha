@@ -15,7 +15,6 @@ fseek(FILE *stream, long int offset, int whence)
     // Drop all buffered data
     __elk_libc_internal__file_purge(stream);
 
-
     res = kanawha_sys_seek(stream->__fd, offset, whence);
     if(res < 0)
     {

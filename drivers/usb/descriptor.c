@@ -1,6 +1,6 @@
 
-#include <kanawha/dma.h>
 #include <drivers/usb/descriptor.h>
+#include <kanawha/dma.h>
 
 int
 usb_device_read_descriptor(struct usb_device *device,
@@ -29,8 +29,8 @@ usb_device_read_descriptor(struct usb_device *device,
         device,
         endpoint,
         USB_DEV_CONTROL_REQUEST_TYPE_TARGET_DEVICE |
-        USB_DEV_CONTROL_REQUEST_TYPE_DIR_DEVICE_TO_HOST |
-        USB_DEV_CONTROL_REQUEST_TYPE_STANDARD,
+            USB_DEV_CONTROL_REQUEST_TYPE_DIR_DEVICE_TO_HOST |
+            USB_DEV_CONTROL_REQUEST_TYPE_STANDARD,
         USB_DEV_CONTROL_REQUEST_GET_DESCRIPTOR,
         wValue,
         wIndex,

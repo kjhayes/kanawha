@@ -3,8 +3,8 @@
 
 #include <drivers/pci/bar.h>
 #include <drivers/pci/cfg.h>
-#include <drivers/pci/pci.h>
 #include <drivers/pci/irq.h>
+#include <drivers/pci/pci.h>
 #include <kanawha/attribute.h>
 #include <kanawha/dev/blk.h>
 #include <kanawha/dma.h>
@@ -225,9 +225,7 @@ nvme_writel(struct nvme_dev *dev, unsigned int offset, uint64_t value)
 #define NVME_REG_DOORBELL_BASE (0x1000)
 
 static int
-nvme_queue_handle_irq(
-        struct excp_state *excp,
-        struct irq_action *action);
+nvme_queue_handle_irq(struct excp_state *excp, struct irq_action *action);
 
 static int
 nvme_queue_init(struct nvme_dev *nvme,
@@ -289,7 +287,8 @@ nvme_queue_init(struct nvme_dev *nvme,
     }
 
     res = waitqueue_init(&queue->waitqueue);
-    if(res) {
+    if(res)
+    {
         dma_free(queue->submission_dma,
                  queue->submission_len * sizeof(struct nvme_sq_entry));
         dma_free(queue->completion_dma,
@@ -318,44 +317,54 @@ nvme_queue_init(struct nvme_dev *nvme,
            0,
            sizeof(queue->outstanding_commands[0]) * queue->outstanding_len);
 
-    do {
-        if(poll) {
+    do
+    {
+        if(poll)
+        {
             wprintk("NVME: Unconditionally setting queue to poll...\n");
             queue->polling = 1;
             break;
         }
-        if(nvme->polling) {
+        if(nvme->polling)
+        {
             queue->polling = 1;
             break;
         }
         queue->interrupt_vector = hwirq;
         irq_t irq = pci_func_get_irq(nvme->func, queue->interrupt_vector);
-        if(irq == NULL_IRQ) {
-            wprintk("NVME: Failed to get hwirq %d for queue: switching to polling...\n", (int)hwirq);
+        if(irq == NULL_IRQ)
+        {
+            wprintk("NVME: Failed to get hwirq %d for queue: switching to "
+                    "polling...\n",
+                    (int)hwirq);
             queue->polling = 1;
             break;
         }
 
         struct irq_desc *desc = irq_to_desc(irq);
-        if(desc == NULL) {
-            wprintk("NVME: Failed to get IRQ %d descriptor for queue: switching to polling...\n", (int)irq);
+        if(desc == NULL)
+        {
+            wprintk("NVME: Failed to get IRQ %d descriptor for queue: "
+                    "switching to polling...\n",
+                    (int)irq);
             queue->polling = 1;
             break;
         }
 
         printk("NVME: Installing Queue IRQ %ld\n", (sl_t)irq);
-        queue->irq_action = irq_install_handler(
-                desc,
-                queue,
-                nvme_queue_handle_irq);
-        if(queue->irq_action == NULL) {
-            wprintk("NVME: Failed to install handler on IRQ %d for queue: switching to polling...\n", (int)irq);
+        queue->irq_action =
+            irq_install_handler(desc, queue, nvme_queue_handle_irq);
+        if(queue->irq_action == NULL)
+        {
+            wprintk("NVME: Failed to install handler on IRQ %d for queue: "
+                    "switching to polling...\n",
+                    (int)irq);
             queue->polling = 1;
             break;
         }
 
         unmask_irq(irq);
-        nvme_writel(nvme, NVME_REG_INTMC, 1UL<<hwirq);
+        nvme_writel(nvme, NVME_REG_INTMC, 1UL << hwirq);
         queue->polling = 0;
     } while(0);
 
@@ -401,15 +410,10 @@ nvme_queue_release_lock(struct nvme_queue *queue)
 }
 
 static inline int
-nvme_queue_wait_on_release_lock(
-        struct nvme_queue *queue,
-        int *irq_flags)
+nvme_queue_wait_on_release_lock(struct nvme_queue *queue, int *irq_flags)
 {
     int res;
-    res = wait_on_irq_lock_release(
-            &queue->waitqueue,
-            &queue->lock,
-            irq_flags);
+    res = wait_on_irq_lock_release(&queue->waitqueue, &queue->lock, irq_flags);
     return res;
 }
 
@@ -569,17 +573,21 @@ nvme_await_command(struct nvme_command *cmd)
     {
 
         // thread_sleep(msec_to_duration(1), 0);
-        if(cmd->queue->polling || (current_thread()->flags & THREAD_FLAG_IDLE)) {
+        if(cmd->queue->polling || (current_thread()->flags & THREAD_FLAG_IDLE))
+        {
             nvme_queue_release_lock(cmd->queue);
             nvme_queue_notify_completion(cmd->queue);
             clk_delay(nsec_to_duration(100));
             DEBUG_ASSERT(KERNEL_ADDR(cmd->queue));
             nvme_queue_acquire_lock(cmd->queue);
-        } else {
+        }
+        else
+        {
             int irq_flags;
             res = nvme_queue_wait_on_release_lock(cmd->queue, &irq_flags);
             enable_restore_irqs(irq_flags);
-            if(res) {
+            if(res)
+            {
                 return res;
             }
             DEBUG_ASSERT(KERNEL_ADDR(cmd->queue));
@@ -892,7 +900,8 @@ nvme_dev_init_admin_queues(struct nvme_dev *nvme,
                           submission_len,
                           completion_len,
                           outstanding_len,
-                          0, 0);
+                          0,
+                          0);
     if(res)
     {
         wprintk("NVME: Failed to allocate admin queues! (err=%s)\n",
@@ -970,7 +979,8 @@ nvme_dev_init_io_queues(struct nvme_dev *nvme,
                           submission_len,
                           completion_len,
                           outstanding_len,
-                          hwirq, 0);
+                          hwirq,
+                          0);
     if(res)
     {
         wprintk("NVME: Failed to allocate I/O queues! (err=%s)\n",
@@ -990,10 +1000,12 @@ nvme_dev_init_io_queues(struct nvme_dev *nvme,
         uint32_t flags = 0x0;
         flags |= 0b1; // Physically Contiguous (PRP is direct)
         submission.dword[11] = htole32(flags);
-      
-        if(!nvme->io_queue.polling) {
+
+        if(!nvme->io_queue.polling)
+        {
             printk("NVME: Setting I/O Queue to Use Interrupts\n");
-            submission.dword[11] |= htole32(((uint32_t)hwirq) << 16); // Interrupt vector
+            submission.dword[11] |=
+                htole32(((uint32_t)hwirq) << 16);      // Interrupt vector
             submission.dword[11] |= htole32(1UL << 1); // IEN
         }
 
@@ -1079,14 +1091,13 @@ nvme_dev_deinit_io_queues(struct nvme_dev *nvme)
 }
 
 static int
-nvme_queue_handle_irq(
-        struct excp_state *excp,
-        struct irq_action *action)
+nvme_queue_handle_irq(struct excp_state *excp, struct irq_action *action)
 {
     int res;
     struct nvme_queue *queue = action->handler_data.priv_data;
     res = nvme_queue_notify_completion(queue);
-    if(res) {
+    if(res)
+    {
         wprintk("Failed to notify NVME queue of completion! (err=%s)\n",
                 errnostr(res));
     }
@@ -1589,12 +1600,18 @@ nvme_pci_init_device(struct pci_driver *driver, struct pci_func *func)
     pci_func_raw_enable_bus_master(nvme->func);
     pci_func_raw_enable_mmio(nvme->func);
     res = pci_func_start_irqs(nvme->func, 2);
-    if(res) {
+    if(res)
+    {
         nvme->polling = 1;
-    } else {
-        if(pci_func_num_irqs(nvme->func) >= 2) {
+    }
+    else
+    {
+        if(pci_func_num_irqs(nvme->func) >= 2)
+        {
             nvme->polling = 0;
-        } else {
+        }
+        else
+        {
             pci_func_stop_irqs(nvme->func);
             nvme->polling = 1;
         }
@@ -1788,7 +1805,8 @@ nvme_pci_deinit_device(struct pci_driver *driver, struct pci_func *func)
 
     pci_func_raw_disable_bus_master(nvme->func);
     pci_func_raw_disable_mmio(nvme->func);
-    if(nvme->polling == 0) {
+    if(nvme->polling == 0)
+    {
         pci_func_stop_irqs(nvme->func);
     }
 

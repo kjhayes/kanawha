@@ -42,7 +42,8 @@ term_dev_udrv_create(struct udrv_mount *mnt, const char *name)
     dev->buflen = UDRV_TERM_DEV_BUFLEN;
     dev->datalen = 0;
     dev->buffer = kmalloc(sizeof(char) * dev->buflen, KM_KERNEL);
-    if(dev->buffer == NULL) {
+    if(dev->buffer == NULL)
+    {
         kfree(dev->name);
         kfree(dev);
         return NULL;
@@ -161,14 +162,16 @@ udrv_term_dev_putc(struct term_dev *term_dev, char c)
 
     // printk("udrv_term_putc\n");
 
-    if(dev->datalen >= dev->buflen) {
+    if(dev->datalen >= dev->buflen)
+    {
         udrv_term_dev_flush(term_dev);
     }
 
     dev->buffer[dev->datalen] = c;
     dev->datalen++;
 
-    if(dev->datalen >= dev->buflen) {
+    if(dev->datalen >= dev->buflen)
+    {
         udrv_term_dev_flush(term_dev);
     }
 

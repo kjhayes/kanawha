@@ -1,7 +1,7 @@
 
 #include <kanawha/sleep.h>
-#include <sys/types.h>
 #include <kanawha/sys-wrappers.h>
+#include <sys/types.h>
 
 int
 usleep(useconds_t useconds)

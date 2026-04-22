@@ -1,21 +1,26 @@
 
 #include "input.h"
+#include <errno.h>
+#include <poll.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <poll.h>
-#include <errno.h>
 
-struct input_ctx {
-    enum {
+struct input_ctx
+{
+    enum
+    {
         INPUT_CTX_TYPE_FILE,
         INPUT_CTX_TYPE_WINDD,
     } type;
 
-    union {
-        struct {
+    union
+    {
+        struct
+        {
             FILE *file;
         } file;
-        struct {
+        struct
+        {
             struct window *win;
             unsigned shift_pressed : 1;
             unsigned ctrl_pressed : 1;
@@ -27,7 +32,8 @@ struct input_ctx *
 create_file_input_ctx(FILE *file)
 {
     struct input_ctx *ctx = malloc(sizeof(*ctx));
-    if(ctx == NULL) {
+    if(ctx == NULL)
+    {
         return NULL;
     }
     ctx->type = INPUT_CTX_TYPE_FILE;
@@ -39,7 +45,8 @@ struct input_ctx *
 create_windd_input_ctx(struct window *win)
 {
     struct input_ctx *ctx = malloc(sizeof(*ctx));
-    if(ctx == NULL) {
+    if(ctx == NULL)
+    {
         return NULL;
     }
     ctx->type = INPUT_CTX_TYPE_WINDD;
@@ -50,24 +57,23 @@ create_windd_input_ctx(struct window *win)
 }
 
 int
-destroy_input_ctx(
-        struct input_ctx *ctx)
+destroy_input_ctx(struct input_ctx *ctx)
 {
-    switch(ctx->type) {
-        case INPUT_CTX_TYPE_FILE:
-            break;
-        default:
-            return -EINVAL;
+    switch(ctx->type)
+    {
+    case INPUT_CTX_TYPE_FILE:
+        break;
+    default:
+        return -EINVAL;
     }
     free(ctx);
     return 0;
 }
 
 static int
-handle_windd_input_event(
-        struct input_ctx *ctx,
-        struct input_event *evt,
-        char *c_out)
+handle_windd_input_event(struct input_ctx *ctx,
+                         struct input_event *evt,
+                         char *c_out)
 {
     if(evt->type != INPUT_EVT_KEY)
     {
@@ -382,62 +388,71 @@ handle_windd_input_event(
 }
 
 char
-input_getc(
-        struct input_ctx *ctx)
-{ 
-    switch(ctx->type) {
-        case INPUT_CTX_TYPE_FILE:
-            return fgetc(ctx->file.file);
-        case INPUT_CTX_TYPE_WINDD:
-            {
-                int res;
-                struct input_event evt;
+input_getc(struct input_ctx *ctx)
+{
+    switch(ctx->type)
+    {
+    case INPUT_CTX_TYPE_FILE:
+        return fgetc(ctx->file.file);
+    case INPUT_CTX_TYPE_WINDD:
+    {
+        int res;
+        struct input_event evt;
 
-                while(!windd_window_disconnected(ctx->windd.win)) {
-                    res = windd_window_recv_input(ctx->windd.win, &evt);
-                    if(res == 0) {
-                        char c;
-                        res = handle_windd_input_event(ctx, &evt, &c);
-                        if(res == 0) {
-                            return c;
-                        } else {
-                            // continue looping...
-                            // This was probably a control
-                            // key press or mouse motion
-                        }
-                    } else {
-                        if(res == -ENXIO) {
-                            windd_window_poll(ctx->windd.win);
-                        } else {
-                            return res;
-                        }
-                    }
+        while(!windd_window_disconnected(ctx->windd.win))
+        {
+            res = windd_window_recv_input(ctx->windd.win, &evt);
+            if(res == 0)
+            {
+                char c;
+                res = handle_windd_input_event(ctx, &evt, &c);
+                if(res == 0)
+                {
+                    return c;
+                }
+                else
+                {
+                    // continue looping...
+                    // This was probably a control
+                    // key press or mouse motion
                 }
             }
-        default:
-            return 0;
+            else
+            {
+                if(res == -ENXIO)
+                {
+                    windd_window_poll(ctx->windd.win);
+                }
+                else
+                {
+                    return res;
+                }
+            }
+        }
+    }
+    default:
+        return 0;
     }
 }
 
 int
-input_poll(
-        struct input_ctx *ctx)
+input_poll(struct input_ctx *ctx)
 {
     int res;
-    switch(ctx->type) {
-        case INPUT_CTX_TYPE_FILE:
-            {
-                struct pollfd pollfd[1];
-                pollfd[0].fd = fileno(ctx->file.file);
-                pollfd[0].events = POLLIN | POLLPRI;
-                res = poll(pollfd, 1, 0);
-                return (res > 0 && (pollfd[0].revents & (POLLIN | POLLPRI)));
-            }
-            break;
-        case INPUT_CTX_TYPE_WINDD:
-            return 0; // TODO add some polling mechanism to windd
-        default:
-            return 0;
+    switch(ctx->type)
+    {
+    case INPUT_CTX_TYPE_FILE:
+    {
+        struct pollfd pollfd[1];
+        pollfd[0].fd = fileno(ctx->file.file);
+        pollfd[0].events = POLLIN | POLLPRI;
+        res = poll(pollfd, 1, 0);
+        return (res > 0 && (pollfd[0].revents & (POLLIN | POLLPRI)));
+    }
+    break;
+    case INPUT_CTX_TYPE_WINDD:
+        return 0; // TODO add some polling mechanism to windd
+    default:
+        return 0;
     }
 }
-

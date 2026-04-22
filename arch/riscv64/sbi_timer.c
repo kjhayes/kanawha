@@ -1,12 +1,12 @@
 
 #include <kanawha/cpu.h>
+#include <kanawha/dev/timer.h>
 #include <kanawha/init.h>
 #include <kanawha/irq.h>
 #include <kanawha/irq_domain.h>
 #include <kanawha/kmalloc.h>
 #include <kanawha/stddef.h>
 #include <kanawha/string.h>
-#include <kanawha/dev/timer.h>
 #include <kanawha/xcall.h>
 
 #include <arch/riscv64/cpu.h>
@@ -280,7 +280,7 @@ sbi_timer_setup_cpu(cpu_id_t id)
     timer->timer_dev.alarm_count = 1;
 
     snprintk(timer->name, NAMEBUFLEN, "sbi-timer-%ld", (sl_t)id);
-    timer->name[NAMEBUFLEN-1] = '\0';
+    timer->name[NAMEBUFLEN - 1] = '\0';
 
     struct irq_desc *desc = riscv64_hlic_irq_desc(HLIC_TIMER_HWIRQ, id);
     if(desc == NULL)

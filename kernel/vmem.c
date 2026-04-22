@@ -6,6 +6,7 @@
 #include <kanawha/irq.h>
 #include <kanawha/lock.h>
 #include <kanawha/percpu.h>
+#include <kanawha/perf.h>
 #include <kanawha/printk.h>
 #include <kanawha/proc/mmap.h>
 #include <kanawha/proc/process.h>
@@ -16,7 +17,6 @@
 #include <kanawha/thread.h>
 #include <kanawha/types.h>
 #include <kanawha/vmem.h>
-#include <kanawha/perf.h>
 
 #define VMEM_MAP_SLAB_BUFFER_SIZE 0x1000
 static uint8_t vmem_map_slab_buffer[VMEM_MAP_SLAB_BUFFER_SIZE];
@@ -281,8 +281,7 @@ vmem_region_destroy(struct vmem_region *region)
     res = arch_vmem_region_deinit(region);
     if(res)
     {
-        eprintk("arch_vmem_region_deinit failed! (err=%s)\n",
-                errnostr(res));
+        eprintk("arch_vmem_region_deinit failed! (err=%s)\n", errnostr(res));
         return res;
     }
 
@@ -681,18 +680,22 @@ vmem_relax_mapping(void *virtual_address)
 {
     int res;
 
-    struct vmem_region_ref *ref = vmem_map_get_region(default_map, virtual_address);
-    if(ref == NULL) {
+    struct vmem_region_ref *ref =
+        vmem_map_get_region(default_map, virtual_address);
+    if(ref == NULL)
+    {
         return -EINVAL;
     }
 
     res = vmem_map_unmap_region(default_map, ref);
-    if(res) {
+    if(res)
+    {
         return res;
     }
 
     res = thread_relax_mapping(virtual_address);
-    if(res) {
+    if(res)
+    {
         return res;
     }
 
@@ -717,53 +720,54 @@ vmem_map_unhandled_user_page_fault(struct excp_state *state,
 
     // We need to terminate the process
 
-//#ifdef CONFIG_DEBUG_TRACK_PROCESS_EXEC
-//    eprintk("Terminating PID(%ld) [EXEC(%s)] for Invalid Memory Access "
-//            "(user_ip=%p) (addr=%p)!\n"
-//            "\tattempted_access_flags={%s%s%s%s%s}\n",
-//            (sl_t)process->id,
-//            process->tracked_exec == NULL ? "???" : process->tracked_exec,
-//            process->user_ip,
-//            faulting_address,
-//            access_flags & PF_FLAG_READ ? "[READ]" : "",
-//            access_flags & PF_FLAG_WRITE ? "[WRITE]" : "",
-//            access_flags & PF_FLAG_EXEC ? "[EXEC]" : "",
-//            access_flags & PF_FLAG_USERMODE ? "[USERMODE]" : "",
-//            access_flags & PF_FLAG_NOT_PRESENT ? "" : "[PRESENT]");
-//    uint8_t inst_bytes[16];
-//    void __user *line_start =
-//        (void __user *)((uintptr_t)process->user_ip & ~0xF);
-//    size_t line_offset = (size_t)((uintptr_t)process->user_ip & 0xF);
-//    res = process_read_usermem(process, inst_bytes, line_start, 16);
-//    if(res)
-//    {
-//        eprintk("Failed to read instruction bytes: %s!\n", errnostr(res));
-//    }
-//    else
-//    {
-//        eprintk("Instruction Bytes: \n");
-//        for(size_t i = 0; i < 16; i++)
-//        {
-//            uint8_t b = inst_bytes[i];
-//            eprintk("%s 0x%x\n", i == line_offset ? ">" : " ", b);
-//        }
-//    }
-//    arch_excp_dump_state(state, do_printk);
-//    mmap_dump(do_printk, process->mmap);
-//#else
-//    eprintk("Terminating PID(%ld) for Invalid Memory Access (user_ip=%p)!\n",
-//            (sl_t)process->id,
-//            process->user_ip);
-//#endif
-//    printk("Sending MEMFAULT to process %ld for unhandled page fault!\n",
-//           (sl_t)process->id);
-//    arch_excp_dump_state(state, do_printk);
+    // #ifdef CONFIG_DEBUG_TRACK_PROCESS_EXEC
+    //     eprintk("Terminating PID(%ld) [EXEC(%s)] for Invalid Memory Access "
+    //             "(user_ip=%p) (addr=%p)!\n"
+    //             "\tattempted_access_flags={%s%s%s%s%s}\n",
+    //             (sl_t)process->id,
+    //             process->tracked_exec == NULL ? "???" :
+    //             process->tracked_exec, process->user_ip, faulting_address,
+    //             access_flags & PF_FLAG_READ ? "[READ]" : "",
+    //             access_flags & PF_FLAG_WRITE ? "[WRITE]" : "",
+    //             access_flags & PF_FLAG_EXEC ? "[EXEC]" : "",
+    //             access_flags & PF_FLAG_USERMODE ? "[USERMODE]" : "",
+    //             access_flags & PF_FLAG_NOT_PRESENT ? "" : "[PRESENT]");
+    //     uint8_t inst_bytes[16];
+    //     void __user *line_start =
+    //         (void __user *)((uintptr_t)process->user_ip & ~0xF);
+    //     size_t line_offset = (size_t)((uintptr_t)process->user_ip & 0xF);
+    //     res = process_read_usermem(process, inst_bytes, line_start, 16);
+    //     if(res)
+    //     {
+    //         eprintk("Failed to read instruction bytes: %s!\n",
+    //         errnostr(res));
+    //     }
+    //     else
+    //     {
+    //         eprintk("Instruction Bytes: \n");
+    //         for(size_t i = 0; i < 16; i++)
+    //         {
+    //             uint8_t b = inst_bytes[i];
+    //             eprintk("%s 0x%x\n", i == line_offset ? ">" : " ", b);
+    //         }
+    //     }
+    //     arch_excp_dump_state(state, do_printk);
+    //     mmap_dump(do_printk, process->mmap);
+    // #else
+    //     eprintk("Terminating PID(%ld) for Invalid Memory Access
+    //     (user_ip=%p)!\n",
+    //             (sl_t)process->id,
+    //             process->user_ip);
+    // #endif
+    //     printk("Sending MEMFAULT to process %ld for unhandled page fault!\n",
+    //            (sl_t)process->id);
+    //     arch_excp_dump_state(state, do_printk);
 
     res = signal_deliver(process, SIGNAL_ID_MEMFAULT, 0);
     if(res)
     {
-        //eprintk("Failed to deliver signal to process (err=%s)!\n",
-        //        errnostr(res));
+        // eprintk("Failed to deliver signal to process (err=%s)!\n",
+        //         errnostr(res));
         res = process_terminate(-EFAULT);
         if(res)
         {

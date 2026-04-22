@@ -1,10 +1,10 @@
 
+#include "pciids.h"
 #include <errno.h>
 #include <kanawha/file.h>
 #include <kanawha/sys-wrappers.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include "pciids.h"
 
 struct pci_config_space
 {
@@ -46,30 +46,35 @@ dump_pci_file(fd_t file)
     }
 
     struct pciid *id;
-    id = lookup_pciid(
-            hdr.vendor_id,
-            hdr.device_id,
-            hdr.class,
-            hdr.subsystem_vendor,
-            hdr.subsystem_device);
-    if(id == NULL) {
+    id = lookup_pciid(hdr.vendor_id,
+                      hdr.device_id,
+                      hdr.class,
+                      hdr.subsystem_vendor,
+                      hdr.subsystem_device);
+    if(id == NULL)
+    {
         printf("failed to lookup pciid!\n");
     }
 
     printf("[%x:%x]\n", hdr.vendor_id, hdr.device_id);
-    if(id && id->vendor_valid) {
+    if(id && id->vendor_valid)
+    {
         printf("\tvendor=\"%s\"\n", id->vendor);
     }
-    if(id && id->device_valid) {
+    if(id && id->device_valid)
+    {
         printf("\tdevice=\"%s\"\n", id->device);
     }
-    if(id && id->subsystem_valid) {
+    if(id && id->subsystem_valid)
+    {
         printf("\tsubsystem=\"%s\"\n", id->subsystem);
     }
-    if(id && id->class_valid) {
+    if(id && id->class_valid)
+    {
         printf("\tclass=\"%s\"\n", id->class);
     }
-    if(id && id->subclass_valid) {
+    if(id && id->subclass_valid)
+    {
         printf("\tsubclass=\"%s\"\n", id->class);
     }
     // printf("\tcommand=0x%x\n", hdr.command);

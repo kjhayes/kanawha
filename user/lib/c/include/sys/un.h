@@ -3,9 +3,10 @@
 
 #include <sys/socket.h>
 
-struct sockaddr_un {
-    sa_family_t  sun_family;  // Address family. 
-    char         sun_path[64];  // Socket pathname. 
+struct sockaddr_un
+{
+    sa_family_t sun_family; // Address family.
+    char sun_path[64];      // Socket pathname.
 };
 
 #endif

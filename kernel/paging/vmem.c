@@ -1,11 +1,11 @@
 
-#include <kanawha/paging/paging.h>
 #include <kanawha/assert.h>
 #include <kanawha/excp.h>
 #include <kanawha/init.h>
 #include <kanawha/irq_domain.h>
 #include <kanawha/mem_flags.h>
 #include <kanawha/page_alloc.h>
+#include <kanawha/paging/paging.h>
 #include <kanawha/printk.h>
 #include <kanawha/stddef.h>
 #include <kanawha/string.h>
@@ -17,42 +17,34 @@
 #define PAGING_PT_ENTRY_BUFLEN (8)
 
 static inline struct vmem_map_paging_state *
-vmem_map_get_paging_state(
-        struct vmem_map *map)
+vmem_map_get_paging_state(struct vmem_map *map)
 {
     return arch_get_vmem_map_paging_state(map);
 }
 static inline struct vmem_region_paging_state *
-vmem_region_get_paging_state(
-        struct vmem_region *region)
+vmem_region_get_paging_state(struct vmem_region *region)
 {
     return arch_get_vmem_region_paging_state(region);
 }
 
 static int
-create_pt_leaf_entry(
-        const struct paging_mode *mode,
-        void *entry,
-        int pt_level,
-        void __phys *base,
-        unsigned long flags)
+create_pt_leaf_entry(const struct paging_mode *mode,
+                     void *entry,
+                     int pt_level,
+                     void __phys *base,
+                     unsigned long flags)
 {
     int res;
 
-    res = paging_entry_clear(
-            mode,
-            pt_level,
-            entry);
-    if(res) {
+    res = paging_entry_clear(mode, pt_level, entry);
+    if(res)
+    {
         return res;
     }
 
-    res = paging_entry_write_addr(
-            mode,
-            pt_level,
-            entry,
-            base);
-    if(res) {
+    res = paging_entry_write_addr(mode, pt_level, entry, base);
+    if(res)
+    {
         return res;
     }
 
@@ -60,28 +52,30 @@ create_pt_leaf_entry(
     paging_flags |= PAGING_ENTRY_PRESENT;
     paging_flags |= PAGING_ENTRY_IS_LEAF;
     paging_flags |= PAGING_ENTRY_KERNEL_ACCESS;
-    if(flags & VMEM_REGION_READ) {
+    if(flags & VMEM_REGION_READ)
+    {
         paging_flags |= PAGING_ENTRY_READABLE;
     }
-    if(flags & VMEM_REGION_WRITE) {
+    if(flags & VMEM_REGION_WRITE)
+    {
         paging_flags |= PAGING_ENTRY_WRITEABLE;
     }
-    if(flags & VMEM_REGION_EXEC) {
+    if(flags & VMEM_REGION_EXEC)
+    {
         paging_flags |= PAGING_ENTRY_EXECUTABLE;
     }
-    if(flags & VMEM_REGION_USER) {
+    if(flags & VMEM_REGION_USER)
+    {
         paging_flags |= PAGING_ENTRY_USER_ACCESS;
     }
-    if(flags & VMEM_REGION_NOCACHE) {
+    if(flags & VMEM_REGION_NOCACHE)
+    {
         paging_flags |= PAGING_ENTRY_CACHE_DISABLE;
     }
 
-    res = paging_entry_set_flags(
-            mode,
-            pt_level,
-            entry,
-            paging_flags);
-    if(res) {
+    res = paging_entry_set_flags(mode, pt_level, entry, paging_flags);
+    if(res)
+    {
         return res;
     }
 
@@ -89,77 +83,36 @@ create_pt_leaf_entry(
 }
 
 static int
-create_permissive_pt_table_entry(
-        const struct paging_mode *mode,
-        void *entry,
-        int pt_level,
-        void __phys *next_table)
+create_permissive_pt_table_entry(const struct paging_mode *mode,
+                                 void *entry,
+                                 int pt_level,
+                                 void __phys *next_table)
 {
     int res;
 
     DEBUG_ASSERT(ptr_orderof(next_table) >= 12);
 
-    res = paging_entry_clear(
-            mode,
-            pt_level,
-            entry);
-    if(res) {
+    res = paging_entry_clear(mode, pt_level, entry);
+    if(res)
+    {
         return res;
     }
 
-    res = paging_entry_write_addr(
-            mode,
-            pt_level,
-            entry,
-            next_table);
-    if(res) {
-        return res;
-    }
-
-    res = paging_entry_set_flags(
-            mode,
-            pt_level,
-            entry,
-             PAGING_ENTRY_PRESENT
-            |PAGING_ENTRY_IS_TABLE
-            |PAGING_ENTRY_READABLE
-            |PAGING_ENTRY_WRITEABLE
-            |PAGING_ENTRY_EXECUTABLE
-            |PAGING_ENTRY_USER_ACCESS
-            |PAGING_ENTRY_KERNEL_ACCESS
-            );
-    if(res) {
-        return res;
-    }
-
-    return 0;
-}
-
-static int
-create_shared_pt_table_entry(
-        const struct paging_mode *mode,
-        void *entry,
-        int pt_level,
-        void __phys *next_table)
-{
-    int res;
-
-    res = create_permissive_pt_table_entry(
-            mode,
-            entry,
-            pt_level,
-            next_table);
+    res = paging_entry_write_addr(mode, pt_level, entry, next_table);
     if(res)
     {
         return res;
     }
 
     res = paging_entry_set_flags(
-            mode,
-            pt_level,
-            entry,
-            PAGING_ENTRY_SHARED);
-    if(res) {
+        mode,
+        pt_level,
+        entry,
+        PAGING_ENTRY_PRESENT | PAGING_ENTRY_IS_TABLE | PAGING_ENTRY_READABLE |
+            PAGING_ENTRY_WRITEABLE | PAGING_ENTRY_EXECUTABLE |
+            PAGING_ENTRY_USER_ACCESS | PAGING_ENTRY_KERNEL_ACCESS);
+    if(res)
+    {
         return res;
     }
 
@@ -167,29 +120,46 @@ create_shared_pt_table_entry(
 }
 
 static int
-create_pt_table_entry(
-        const struct paging_mode *mode,
-        void *entry,
-        int pt_level,
-        void __phys *next_table,
-        unsigned long flags)
+create_shared_pt_table_entry(const struct paging_mode *mode,
+                             void *entry,
+                             int pt_level,
+                             void __phys *next_table)
 {
     int res;
 
-    res = paging_entry_clear(
-            mode,
-            pt_level,
-            entry);
-    if(res) {
+    res = create_permissive_pt_table_entry(mode, entry, pt_level, next_table);
+    if(res)
+    {
         return res;
     }
 
-    res = paging_entry_write_addr(
-            mode,
-            pt_level,
-            entry,
-            next_table);
-    if(res) {
+    res = paging_entry_set_flags(mode, pt_level, entry, PAGING_ENTRY_SHARED);
+    if(res)
+    {
+        return res;
+    }
+
+    return 0;
+}
+
+static int
+create_pt_table_entry(const struct paging_mode *mode,
+                      void *entry,
+                      int pt_level,
+                      void __phys *next_table,
+                      unsigned long flags)
+{
+    int res;
+
+    res = paging_entry_clear(mode, pt_level, entry);
+    if(res)
+    {
+        return res;
+    }
+
+    res = paging_entry_write_addr(mode, pt_level, entry, next_table);
+    if(res)
+    {
         return res;
     }
 
@@ -197,25 +167,26 @@ create_pt_table_entry(
     paging_flags |= PAGING_ENTRY_PRESENT;
     paging_flags |= PAGING_ENTRY_IS_TABLE;
     paging_flags |= PAGING_ENTRY_KERNEL_ACCESS;
-    if(flags & VMEM_REGION_READ) {
+    if(flags & VMEM_REGION_READ)
+    {
         paging_flags |= PAGING_ENTRY_READABLE;
     }
-    if(flags & VMEM_REGION_WRITE) {
+    if(flags & VMEM_REGION_WRITE)
+    {
         paging_flags |= PAGING_ENTRY_WRITEABLE;
     }
-    if(flags & VMEM_REGION_EXEC) {
+    if(flags & VMEM_REGION_EXEC)
+    {
         paging_flags |= PAGING_ENTRY_EXECUTABLE;
     }
-    if(flags & VMEM_REGION_USER) {
+    if(flags & VMEM_REGION_USER)
+    {
         paging_flags |= PAGING_ENTRY_USER_ACCESS;
     }
 
-    res = paging_entry_set_flags(
-            mode,
-            pt_level,
-            entry,
-            paging_flags);
-    if(res) {
+    res = paging_entry_set_flags(mode, pt_level, entry, paging_flags);
+    if(res)
+    {
         return res;
     }
 
@@ -223,10 +194,9 @@ create_pt_table_entry(
 }
 
 static int
-create_empty_pt_table(
-        const struct paging_mode *mode,
-        void __phys **table_ptr,
-        int table_level)
+create_empty_pt_table(const struct paging_mode *mode,
+                      void __phys **table_ptr,
+                      int table_level)
 {
     int res;
 
@@ -244,11 +214,10 @@ create_empty_pt_table(
 }
 
 static int
-create_paged_pt_table(
-        const struct paging_mode *mode,
-        void __phys **table_ptr,
-        int table_level,
-        size_t size)
+create_paged_pt_table(const struct paging_mode *mode,
+                      void __phys **table_ptr,
+                      int table_level,
+                      size_t size)
 {
     int res;
 
@@ -267,26 +236,23 @@ create_paged_pt_table(
 
     // Map in the region as if we started at the virtual base of this table
     size_t num_whole_entries = size / entry_region_size;
-    DEBUG_ASSERT(num_whole_entries <= paging_level_num_entries(mode, table_level));
+    DEBUG_ASSERT(num_whole_entries <=
+                 paging_level_num_entries(mode, table_level));
 
     for(size_t i = 0; i < num_whole_entries; i++)
     {
         // Map the middle entries
         void __phys *subtable;
-        res = create_empty_pt_table(
-                mode,
-                &subtable,
-                table_level - 1);
+        res = create_empty_pt_table(mode, &subtable, table_level - 1);
         if(res)
         {
             return res;
         }
-        res =
-            create_permissive_pt_table_entry(
-                    mode,
-                    ((void*)__va(*table_ptr)) + (i * entry_size),
-                    table_level,
-                    subtable);
+        res = create_permissive_pt_table_entry(mode,
+                                               ((void *)__va(*table_ptr)) +
+                                                   (i * entry_size),
+                                               table_level,
+                                               subtable);
         if(res)
         {
             return res;
@@ -297,21 +263,19 @@ create_paged_pt_table(
     if(final_entry_size > 0)
     {
         void __phys *subtable;
-        res =
-            create_paged_pt_table(
-                    mode,
-                    &subtable,
-                    table_level - 1,
-                    final_entry_size);
+        res = create_paged_pt_table(mode,
+                                    &subtable,
+                                    table_level - 1,
+                                    final_entry_size);
         if(res)
         {
             return res;
         }
         res = create_permissive_pt_table_entry(
-                mode,
-                ((void *)__va(*table_ptr)) + (num_whole_entries * entry_size),
-                table_level,
-                subtable);
+            mode,
+            ((void *)__va(*table_ptr)) + (num_whole_entries * entry_size),
+            table_level,
+            subtable);
         if(res)
         {
             return res;
@@ -348,19 +312,20 @@ create_direct_pt_table(const struct paging_mode *mode,
 
     // Map in the region as if we started at the virtual base of this table
     size_t num_whole_entries = size / entry_region_size;
-    DEBUG_ASSERT(num_whole_entries <= paging_level_num_entries(mode, table_level));
+    DEBUG_ASSERT(num_whole_entries <=
+                 paging_level_num_entries(mode, table_level));
 
     for(size_t i = 0; i < num_whole_entries; i++)
     {
         // Map the middle entries
         if(entry_can_be_leaf)
         {
-            res = create_pt_leaf_entry(
-                    mode,
-                    ((void*)__va(*table_ptr)) + (i * entry_size),
-                    table_level,
-                    base + (entry_region_size * i),
-                    flags);
+            res = create_pt_leaf_entry(mode,
+                                       ((void *)__va(*table_ptr)) +
+                                           (i * entry_size),
+                                       table_level,
+                                       base + (entry_region_size * i),
+                                       flags);
             if(res)
             {
                 return res;
@@ -369,23 +334,22 @@ create_direct_pt_table(const struct paging_mode *mode,
         else
         {
             void __phys *subtable;
-            res = create_direct_pt_table(
-                    mode,
-                    &subtable,
-                    table_level - 1,
-                    base + (entry_region_size * i),
-                    entry_region_size,
-                    flags);
+            res = create_direct_pt_table(mode,
+                                         &subtable,
+                                         table_level - 1,
+                                         base + (entry_region_size * i),
+                                         entry_region_size,
+                                         flags);
             if(res)
             {
                 return res;
             }
-            res = create_pt_table_entry(
-                    mode,
-                    ((void*)__va(*table_ptr)) + (i * entry_size),
-                    table_level,
-                    subtable,
-                    flags);
+            res = create_pt_table_entry(mode,
+                                        ((void *)__va(*table_ptr)) +
+                                            (i * entry_size),
+                                        table_level,
+                                        subtable,
+                                        flags);
             if(res)
             {
                 return res;
@@ -410,12 +374,12 @@ create_direct_pt_table(const struct paging_mode *mode,
         {
             return res;
         }
-        res = create_pt_table_entry(
-                mode,
-                ((void*)__va(*table_ptr)) + (num_whole_entries * entry_size),
-                table_level,
-                subtable,
-                flags);
+        res = create_pt_table_entry(mode,
+                                    ((void *)__va(*table_ptr)) +
+                                        (num_whole_entries * entry_size),
+                                    table_level,
+                                    subtable,
+                                    flags);
         if(res)
         {
             return res;
@@ -433,7 +397,7 @@ arch_vmem_region_init_direct(struct vmem_region *region)
     const struct paging_mode *mode = arch_paging_mode();
 
     order_t min_page_order = paging_level_entry_region_order(mode, 0);
-    size_t min_page_size = 1ULL<<min_page_order;
+    size_t min_page_size = 1ULL << min_page_order;
 
     if((uintptr_t)region->direct.phys_base % min_page_size != 0)
     {
@@ -466,12 +430,14 @@ arch_vmem_region_init_direct(struct vmem_region *region)
 
     int num_levels = paging_mode_num_levels(mode);
 
-    for(int level = 0; level < num_levels-1; level++) {
-        size_t table_region_size = paging_level_table_region_size(mode, level+1);
+    for(int level = 0; level < num_levels - 1; level++)
+    {
+        size_t table_region_size =
+            paging_level_table_region_size(mode, level + 1);
         if((region->size <= table_region_size) &&
            (base / table_region_size == end / table_region_size))
         {
-            pt_state->pt_level = level+1;
+            pt_state->pt_level = level + 1;
             pt_level_region_size = table_region_size;
             can_be_leaf = paging_level_can_be_leaf(mode, level);
         }
@@ -492,12 +458,11 @@ arch_vmem_region_init_direct(struct vmem_region *region)
     if(can_be_leaf && region->size == pt_level_region_size)
     {
         pt_state->entry_only = 1;
-        res = create_pt_leaf_entry(
-                mode,
-                &pt_state->pt_entry_buffer,
-                pt_state->pt_level,
-                region->direct.phys_base,
-                region->direct.flags);
+        res = create_pt_leaf_entry(mode,
+                                   &pt_state->pt_entry_buffer,
+                                   pt_state->pt_level,
+                                   region->direct.phys_base,
+                                   region->direct.flags);
         if(res)
         {
             return res;
@@ -506,23 +471,21 @@ arch_vmem_region_init_direct(struct vmem_region *region)
     else
     {
         pt_state->entry_only = 0;
-        res = create_direct_pt_table(
-                mode,
-                &pt_state->pt_table,
-                pt_state->pt_level,
-                region->direct.phys_base,
-                region->size,
-                region->direct.flags);
+        res = create_direct_pt_table(mode,
+                                     &pt_state->pt_table,
+                                     pt_state->pt_level,
+                                     region->direct.phys_base,
+                                     region->size,
+                                     region->direct.flags);
         if(res)
         {
             return res;
         }
-        res = create_pt_table_entry(
-                mode,
-                &pt_state->pt_entry_buffer,
-                pt_state->pt_level + 1,
-                pt_state->pt_table,
-                region->direct.flags);
+        res = create_pt_table_entry(mode,
+                                    &pt_state->pt_entry_buffer,
+                                    pt_state->pt_level + 1,
+                                    pt_state->pt_table,
+                                    region->direct.flags);
         if(res)
         {
             return res;
@@ -541,7 +504,8 @@ arch_vmem_region_init_paged(struct vmem_region *region)
     DEBUG_ASSERT(mode != NULL);
 
     int num_levels = paging_mode_num_levels(mode);
-    if(num_levels <= 1) {
+    if(num_levels <= 1)
+    {
         return -EINVAL;
     }
 
@@ -565,7 +529,8 @@ arch_vmem_region_init_paged(struct vmem_region *region)
 
     pt_state->pt_level = -1;
 
-    for(int level = 1; level < num_levels; level++) {
+    for(int level = 1; level < num_levels; level++)
+    {
         size_t table_region_size = paging_level_table_region_size(mode, level);
         if((region->size < table_region_size) &&
            ((base / table_region_size) == (end / table_region_size)))
@@ -587,22 +552,20 @@ arch_vmem_region_init_paged(struct vmem_region *region)
     }
 
     pt_state->entry_only = 0;
-    res = create_paged_pt_table(
-            mode,
-            &pt_state->pt_table,
-            pt_state->pt_level,
-            region->size);
+    res = create_paged_pt_table(mode,
+                                &pt_state->pt_table,
+                                pt_state->pt_level,
+                                region->size);
     if(res)
     {
         return res;
     }
-    DEBUG_ASSERT(PAGING_PT_ENTRY_BUFLEN
-                 >= paging_level_entry_size(mode, pt_state->pt_level+1));
-    res = create_permissive_pt_table_entry(
-            mode,
-            &pt_state->pt_entry_buffer,
-            pt_state->pt_level + 1,
-            pt_state->pt_table);
+    DEBUG_ASSERT(PAGING_PT_ENTRY_BUFLEN >=
+                 paging_level_entry_size(mode, pt_state->pt_level + 1));
+    res = create_permissive_pt_table_entry(mode,
+                                           &pt_state->pt_entry_buffer,
+                                           pt_state->pt_level + 1,
+                                           pt_state->pt_table);
     if(res)
     {
         return res;
@@ -630,9 +593,12 @@ arch_vmem_region_alignment(struct vmem_region *region)
 {
     order_t order;
     const struct paging_mode *mode = arch_paging_mode();
-    if(region->type == VMEM_REGION_TYPE_DIRECT) {
+    if(region->type == VMEM_REGION_TYPE_DIRECT)
+    {
         order = paging_level_entry_region_order(mode, 0);
-    } else {
+    }
+    else
+    {
         order = paging_level_entry_region_order(mode, 1);
     }
     return order;
@@ -678,22 +644,18 @@ map_region_tables(const struct paging_mode *mode,
         void *map_entry;
         void *region_entry;
 
-        map_entry = ((void*)__va(map_table)) + (vi * entry_size);
-        region_entry = ((void*)__va(region_table)) + ((vi - vindex) * entry_size);
+        map_entry = ((void *)__va(map_table)) + (vi * entry_size);
+        region_entry =
+            ((void *)__va(region_table)) + ((vi - vindex) * entry_size);
 
         unsigned long map_entry_flags;
-        paging_entry_get_flags(
-                mode,
-                table_level,
-                map_entry,
-                &map_entry_flags);
+        paging_entry_get_flags(mode, table_level, map_entry, &map_entry_flags);
 
         unsigned long region_entry_flags;
-        paging_entry_get_flags(
-                mode,
-                table_level,
-                region_entry,
-                &region_entry_flags);
+        paging_entry_get_flags(mode,
+                               table_level,
+                               region_entry,
+                               &region_entry_flags);
 
         if(!(region_entry_flags & PAGING_ENTRY_PRESENT))
         {
@@ -731,18 +693,13 @@ map_region_tables(const struct paging_mode *mode,
         }
 
         void __phys *region_next_addr;
-        paging_entry_read_addr(
-                mode,
-                table_level,
-                region_entry,
-                &region_next_addr);
+        paging_entry_read_addr(mode,
+                               table_level,
+                               region_entry,
+                               &region_next_addr);
 
         void __phys *map_next_addr;
-        paging_entry_read_addr(
-                mode,
-                table_level,
-                map_entry,
-                &map_next_addr);
+        paging_entry_read_addr(mode, table_level, map_entry, &map_next_addr);
 
         // They are both tables
         if(!(map_entry_flags & PAGING_ENTRY_SHARED))
@@ -761,22 +718,17 @@ map_region_tables(const struct paging_mode *mode,
                    level_below_size);
 
             // Create a shared table entry
-            res = create_shared_pt_table_entry(
-                    mode,
-                    map_entry,
-                    table_level,
-                    shared_table);
+            res = create_shared_pt_table_entry(mode,
+                                               map_entry,
+                                               table_level,
+                                               shared_table);
             if(res)
             {
                 return res;
             }
         }
 
-        paging_entry_read_addr(
-                mode,
-                table_level,
-                map_entry,
-                &map_next_addr);
+        paging_entry_read_addr(mode, table_level, map_entry, &map_next_addr);
 
         // Already was or is now a shared page,
         // so we can recursively call ourselves on it
@@ -798,10 +750,7 @@ map_region_tables(const struct paging_mode *mode,
 }
 
 static int
-free_page_tables(
-        const struct paging_mode *mode,
-        void __phys *table,
-        int level)
+free_page_tables(const struct paging_mode *mode, void __phys *table, int level)
 {
     int res;
 
@@ -813,12 +762,9 @@ free_page_tables(
     {
         void *entry = table_entries + (i * entry_size);
         unsigned long entry_flags;
-        res = paging_entry_get_flags(
-                mode,
-                level,
-                entry,
-                &entry_flags);
-        if(res) {
+        res = paging_entry_get_flags(mode, level, entry, &entry_flags);
+        if(res)
+        {
             wprintk("free_page_tables: failed to get entry flags!\n");
             return res;
         }
@@ -839,13 +785,11 @@ free_page_tables(
 
         // This must be a present table
         void __phys *subtable;
-        res = paging_entry_read_addr(
-                mode,
-                level,
-                entry,
-                &subtable);
-        if(res) {
-            wprintk("free_page_tables: failed to get entry subtable address!\n");
+        res = paging_entry_read_addr(mode, level, entry, &subtable);
+        if(res)
+        {
+            wprintk(
+                "free_page_tables: failed to get entry subtable address!\n");
             return res;
         }
 
@@ -882,17 +826,12 @@ arch_vmem_region_deinit(struct vmem_region *region)
     }
     else
     {
-        return free_page_tables(
-                mode,
-                pt_state->pt_table,
-                pt_state->pt_level);
+        return free_page_tables(mode, pt_state->pt_table, pt_state->pt_level);
     }
 }
 
 int
-arch_vmem_map_map_region(
-        struct vmem_map *map,
-        struct vmem_region_ref *ref)
+arch_vmem_map_map_region(struct vmem_map *map, struct vmem_region_ref *ref)
 {
     int res;
 
@@ -924,14 +863,10 @@ arch_vmem_map_map_region(
     while(pt_level > region_state->pt_level)
     {
 
-        size_t index = paging_level_addr_table_index(
-                mode,
-                pt_level,
-                ref->virt_addr);
-        size_t entry_size = paging_level_entry_size(
-                mode,
-                pt_level);
-        map_entry = ((void*)__va(map_table)) + (index * entry_size);
+        size_t index =
+            paging_level_addr_table_index(mode, pt_level, ref->virt_addr);
+        size_t entry_size = paging_level_entry_size(mode, pt_level);
+        map_entry = ((void *)__va(map_table)) + (index * entry_size);
 
         order_t next_table_order;
         uint64_t present_mask;
@@ -940,21 +875,13 @@ arch_vmem_map_map_region(
         next_table_order = paging_level_table_order(mode, pt_level - 1);
 
         unsigned long map_entry_flags;
-        paging_entry_get_flags(
-                mode,
-                pt_level,
-                map_entry,
-                &map_entry_flags);
+        paging_entry_get_flags(mode, pt_level, map_entry, &map_entry_flags);
 
         if(map_entry_flags & PAGING_ENTRY_PRESENT)
         {
             if(map_entry_flags & PAGING_ENTRY_SHARED)
             {
-                paging_entry_read_addr(
-                        mode,
-                        pt_level,
-                        map_entry,
-                        &map_table);
+                paging_entry_read_addr(mode, pt_level, map_entry, &map_table);
             }
             else
             {
@@ -970,21 +897,16 @@ arch_vmem_map_map_region(
 
                 // Make a copy of the other region's top level
                 // table
-                paging_entry_read_addr(
-                        mode,
-                        pt_level,
-                        map_entry,
-                        &map_table);
+                paging_entry_read_addr(mode, pt_level, map_entry, &map_table);
                 memcpy((void *)__va(shared_table),
                        (void *)__va(map_table),
-                       1ULL<<next_table_order);
+                       1ULL << next_table_order);
 
                 // Create a shared table entry
-                res = create_shared_pt_table_entry(
-                        mode,
-                        map_entry,
-                        pt_level,
-                        shared_table);
+                res = create_shared_pt_table_entry(mode,
+                                                   map_entry,
+                                                   pt_level,
+                                                   shared_table);
                 if(res)
                 {
                     return res;
@@ -1001,15 +923,13 @@ arch_vmem_map_map_region(
             {
                 return -ENOMEM;
             }
-            memset((void *)__va(shared_table), 0, 1ULL<<next_table_order);
+            memset((void *)__va(shared_table), 0, 1ULL << next_table_order);
 
             // Create a shared table entry
-            res =
-                create_shared_pt_table_entry(
-                        mode,
-                        map_entry,
-                        pt_level,
-                        shared_table);
+            res = create_shared_pt_table_entry(mode,
+                                               map_entry,
+                                               pt_level,
+                                               shared_table);
             if(res)
             {
                 return res;
@@ -1024,16 +944,11 @@ arch_vmem_map_map_region(
     if(region_state->entry_only)
     {
         size_t index;
-        index = paging_level_addr_table_index(
-                mode,
-                pt_level,
-                ref->virt_addr);
+        index = paging_level_addr_table_index(mode, pt_level, ref->virt_addr);
         size_t entry_size;
-        entry_size = paging_level_entry_size(
-                mode,
-                pt_level);
+        entry_size = paging_level_entry_size(mode, pt_level);
 
-        void *entry = ((void*)__va(map_table)) + (index * entry_size);
+        void *entry = ((void *)__va(map_table)) + (index * entry_size);
 
         int can_be_leaf = paging_level_can_be_leaf(mode, pt_level);
         if(!can_be_leaf)
@@ -1045,11 +960,7 @@ arch_vmem_map_map_region(
         }
 
         unsigned long entry_flags;
-        paging_entry_get_flags(
-                mode,
-                pt_level,
-                entry,
-                &entry_flags);
+        paging_entry_get_flags(mode, pt_level, entry, &entry_flags);
 
         if(entry_flags & PAGING_ENTRY_PRESENT)
         {
@@ -1059,9 +970,7 @@ arch_vmem_map_map_region(
         }
 
         DEBUG_ASSERT(PAGING_PT_ENTRY_BUFLEN >= entry_size);
-        memcpy(entry,
-               region_state->pt_entry_buffer,
-               entry_size);
+        memcpy(entry, region_state->pt_entry_buffer, entry_size);
     }
     else
     {
@@ -1082,12 +991,11 @@ arch_vmem_map_map_region(
 }
 
 static int
-unmap_region_tables(
-        const struct paging_mode *mode,
-        void __phys *map_table,
-        void __phys *region_table,
-        int table_level,
-        void *vbase)
+unmap_region_tables(const struct paging_mode *mode,
+                    void __phys *map_table,
+                    void __phys *region_table,
+                    int table_level,
+                    void *vbase)
 {
     int res;
 
@@ -1103,32 +1011,34 @@ unmap_region_tables(
     entry_size = paging_level_entry_size(mode, table_level);
     entry_region_size = paging_level_entry_region_size(mode, table_level);
     num_possible_entries = paging_level_num_entries(mode, table_level);
-    vindex = paging_level_addr_table_index(
-            mode,
-            table_level,
-            vbase);
+    vindex = paging_level_addr_table_index(mode, table_level, vbase);
 
-    if(table_level == 0) {
+    if(table_level == 0)
+    {
         level_below_table_order = 0;
         level_below_num_possible_entries = 0;
         level_below_entry_size = 0;
-    } else {
-        level_below_table_order = paging_level_table_order(mode, table_level-1);
-        level_below_num_possible_entries = paging_level_num_entries(mode, table_level-1);
-        level_below_entry_size = paging_level_entry_size(mode, table_level-1);
+    }
+    else
+    {
+        level_below_table_order =
+            paging_level_table_order(mode, table_level - 1);
+        level_below_num_possible_entries =
+            paging_level_num_entries(mode, table_level - 1);
+        level_below_entry_size = paging_level_entry_size(mode, table_level - 1);
     }
 
     for(size_t vi = vindex; vi < num_possible_entries; vi++)
     {
-        void *map_entry = ((void*)__va(map_table)) + (vi * entry_size);
-        void *region_entry = ((void*)__va(region_table)) + ((vi - vindex) * entry_size);
+        void *map_entry = ((void *)__va(map_table)) + (vi * entry_size);
+        void *region_entry =
+            ((void *)__va(region_table)) + ((vi - vindex) * entry_size);
 
         unsigned long region_entry_flags;
-        paging_entry_get_flags(
-                mode,
-                table_level,
-                region_entry,
-                &region_entry_flags);
+        paging_entry_get_flags(mode,
+                               table_level,
+                               region_entry,
+                               &region_entry_flags);
 
         if(!(region_entry_flags & PAGING_ENTRY_PRESENT))
         {
@@ -1137,11 +1047,7 @@ unmap_region_tables(
         }
 
         unsigned long map_entry_flags;
-        paging_entry_get_flags(
-                mode,
-                table_level,
-                map_entry,
-                &map_entry_flags);
+        paging_entry_get_flags(mode, table_level, map_entry, &map_entry_flags);
 
         int map_is_leaf = map_entry_flags & PAGING_ENTRY_IS_LEAF;
         int region_is_leaf = region_entry_flags & PAGING_ENTRY_IS_LEAF;
@@ -1155,30 +1061,25 @@ unmap_region_tables(
         else if(map_is_leaf /* && region_is_leaf */)
         {
             // Zero out the entry in the map
-            paging_entry_clear(
-                    mode,
-                    table_level,
-                    map_entry);
+            paging_entry_clear(mode, table_level, map_entry);
         }
         else
         {
             // They are both tables
-            DEBUG_ASSERT((region_entry_flags & PAGING_ENTRY_IS_TABLE)
-                      && (map_entry_flags & PAGING_ENTRY_IS_TABLE));
+            DEBUG_ASSERT((region_entry_flags & PAGING_ENTRY_IS_TABLE) &&
+                         (map_entry_flags & PAGING_ENTRY_IS_TABLE));
 
             void __phys *map_next_addr;
-            paging_entry_read_addr(
-                    mode,
-                    table_level,
-                    map_entry,
-                    &map_next_addr);
+            paging_entry_read_addr(mode,
+                                   table_level,
+                                   map_entry,
+                                   &map_next_addr);
 
             void __phys *region_next_addr;
-            paging_entry_read_addr(
-                    mode,
-                    table_level,
-                    region_entry,
-                    &region_next_addr);
+            paging_entry_read_addr(mode,
+                                   table_level,
+                                   region_entry,
+                                   &region_next_addr);
 
             if(map_next_addr == region_next_addr)
             {
@@ -1208,15 +1109,14 @@ unmap_region_tables(
                     below++)
                 {
                     void *below_entry;
-                    below_entry = ((void*)__va(map_next_addr))
-                                + (below * level_below_entry_size);
+                    below_entry = ((void *)__va(map_next_addr)) +
+                                  (below * level_below_entry_size);
 
                     unsigned long below_flags;
-                    paging_entry_get_flags(
-                            mode,
-                            table_level-1,
-                            below_entry,
-                            &below_flags);
+                    paging_entry_get_flags(mode,
+                                           table_level - 1,
+                                           below_entry,
+                                           &below_flags);
 
                     if(below_flags & PAGING_ENTRY_PRESENT)
                     {
@@ -1228,10 +1128,7 @@ unmap_region_tables(
                 {
                     // Free the shared table if it's now empty
                     page_free(level_below_table_order, map_next_addr);
-                    paging_entry_clear(
-                            mode,
-                            table_level,
-                            map_entry);
+                    paging_entry_clear(mode, table_level, map_entry);
                 }
             }
         }
@@ -1241,9 +1138,7 @@ unmap_region_tables(
 }
 
 int
-arch_vmem_map_unmap_region(
-        struct vmem_map *map,
-        struct vmem_region_ref *ref)
+arch_vmem_map_unmap_region(struct vmem_map *map, struct vmem_region_ref *ref)
 {
     int res;
 
@@ -1272,19 +1167,12 @@ arch_vmem_map_unmap_region(
     while(pt_level > region_state->pt_level)
     {
         size_t index =
-            paging_level_addr_table_index(
-                    mode,
-                    pt_level,
-                    ref->virt_addr);
+            paging_level_addr_table_index(mode, pt_level, ref->virt_addr);
         size_t entry_size = paging_level_entry_size(mode, pt_level);
         void *map_entry = ((void *)__va(map_table)) + (index * entry_size);
 
         unsigned long map_entry_flags;
-        paging_entry_get_flags(
-                mode,
-                pt_level,
-                map_entry,
-                &map_entry_flags);
+        paging_entry_get_flags(mode, pt_level, map_entry, &map_entry_flags);
 
         if(!(map_entry_flags & PAGING_ENTRY_PRESENT))
         {
@@ -1297,39 +1185,27 @@ arch_vmem_map_unmap_region(
         DEBUG_ASSERT(map_entry_flags & PAGING_ENTRY_IS_TABLE);
 
         void __phys *next_table_addr;
-        paging_entry_read_addr(
-                mode,
-                pt_level,
-                map_entry,
-                &next_table_addr);
+        paging_entry_read_addr(mode, pt_level, map_entry, &next_table_addr);
 
         map_table = next_table_addr;
         pt_level--;
     }
 
-    size_t entry_size = paging_level_entry_size(
-            mode,
-            pt_level);
+    size_t entry_size = paging_level_entry_size(mode, pt_level);
 
     if(region_state->entry_only)
     {
         size_t index =
-            paging_level_addr_table_index(
-                mode,
-                pt_level,
-                ref->virt_addr);
+            paging_level_addr_table_index(mode, pt_level, ref->virt_addr);
 
-        void *entry = ((void*)__va(map_table)) + (index * entry_size);
+        void *entry = ((void *)__va(map_table)) + (index * entry_size);
 
         unsigned long entry_flags;
-        paging_entry_get_flags(
-                mode,
-                pt_level,
-                entry,
-                &entry_flags);
+        paging_entry_get_flags(mode, pt_level, entry, &entry_flags);
 
-        if((!(entry_flags & PAGING_ENTRY_PRESENT))
-         ||(!(entry_flags & PAGING_ENTRY_IS_LEAF))) {
+        if((!(entry_flags & PAGING_ENTRY_PRESENT)) ||
+           (!(entry_flags & PAGING_ENTRY_IS_LEAF)))
+        {
             eprintk("Found not-present page when unmapping "
                     "entry_only "
                     "vmem_region!\n");
@@ -1338,12 +1214,11 @@ arch_vmem_map_unmap_region(
     }
     else
     {
-        res = unmap_region_tables(
-                mode,
-                map_table,
-                region_table,
-                pt_level,
-                ref->virt_addr);
+        res = unmap_region_tables(mode,
+                                  map_table,
+                                  region_table,
+                                  pt_level,
+                                  ref->virt_addr);
         if(res)
         {
             return res;
@@ -1390,7 +1265,7 @@ arch_vmem_paged_region_map(struct vmem_region *region,
 
     size_t min_region_size = paging_level_entry_region_size(mode, 0);
 
-    if((offset % min_region_size)|| (size % min_region_size))
+    if((offset % min_region_size) || (size % min_region_size))
     {
         eprintk("Cannot map paged area offsets: [%p - %p)"
                 " (No page size small enough to align)\n",
@@ -1418,9 +1293,7 @@ arch_vmem_paged_region_map(struct vmem_region *region,
         size_t entries_per_table;
         size_t page_size;
 
-        for(int level = paging_mode_num_levels(mode)-1;
-                level >= 0;
-                level--)
+        for(int level = paging_mode_num_levels(mode) - 1; level >= 0; level--)
         {
             size_t entry_region_size =
                 paging_level_entry_region_size(mode, level);
@@ -1436,7 +1309,8 @@ arch_vmem_paged_region_map(struct vmem_region *region,
             }
         }
 
-        if(entry_level < 0) {
+        if(entry_level < 0)
+        {
             // We failed a check we should have already passed,
             // something screw-y is going on with our memory (PANIC!)
             panic("End of paged region mapping is misaligned (even "
@@ -1452,27 +1326,23 @@ arch_vmem_paged_region_map(struct vmem_region *region,
 
         do
         {
-            size_t cur_region_size = paging_level_entry_region_size(
-                    mode,
-                    cur_level);
-            size_t cur_entry_size = paging_level_entry_size(
-                    mode,
-                    cur_level);
+            size_t cur_region_size =
+                paging_level_entry_region_size(mode, cur_level);
+            size_t cur_entry_size = paging_level_entry_size(mode, cur_level);
             size_t cur_entries_per_table =
                 paging_level_num_entries(mode, cur_level);
 
             size_t cur_index =
                 (offset / cur_region_size) % cur_entries_per_table;
 
-            void *cur_entry = ((void*)__va(cur_table))
-                            + (cur_index * cur_entry_size);
+            void *cur_entry =
+                ((void *)__va(cur_table)) + (cur_index * cur_entry_size);
 
             unsigned long cur_entry_flags;
-            paging_entry_get_flags(
-                    mode,
-                    cur_level,
-                    cur_entry,
-                    &cur_entry_flags);
+            paging_entry_get_flags(mode,
+                                   cur_level,
+                                   cur_entry,
+                                   &cur_entry_flags);
 
             if(cur_entry_flags & PAGING_ENTRY_PRESENT)
             {
@@ -1480,11 +1350,10 @@ arch_vmem_paged_region_map(struct vmem_region *region,
                 DEBUG_ASSERT(cur_entry_flags & PAGING_ENTRY_IS_TABLE);
 
                 void __phys *next_table_addr;
-                paging_entry_read_addr(
-                        mode,
-                        cur_level,
-                        cur_entry,
-                        &next_table_addr);
+                paging_entry_read_addr(mode,
+                                       cur_level,
+                                       cur_entry,
+                                       &next_table_addr);
 
                 cur_table = next_table_addr;
 
@@ -1499,10 +1368,7 @@ arch_vmem_paged_region_map(struct vmem_region *region,
             {
                 // The entry isn't present
                 void __phys *subtable;
-                res = create_empty_pt_table(
-                        mode,
-                        &subtable,
-                        cur_level - 1);
+                res = create_empty_pt_table(mode, &subtable, cur_level - 1);
                 if(res)
                 {
                     return res;
@@ -1510,11 +1376,10 @@ arch_vmem_paged_region_map(struct vmem_region *region,
 
                 DEBUG_ASSERT(KERNEL_ADDR((void *)__va(subtable)));
 
-                res = create_permissive_pt_table_entry(
-                        mode,
-                        cur_entry,
-                        cur_level,
-                        subtable);
+                res = create_permissive_pt_table_entry(mode,
+                                                       cur_entry,
+                                                       cur_level,
+                                                       subtable);
                 if(res)
                 {
                     return res;
@@ -1534,14 +1399,9 @@ arch_vmem_paged_region_map(struct vmem_region *region,
                 "Level %d]\n",
                 (int)cur_level,
                 (int)index,
-                region-state->pt_level);
+                region - state->pt_level);
 
-        res = create_pt_leaf_entry(
-                mode,
-                entry,
-                entry_level,
-                phys_addr,
-                flags);
+        res = create_pt_leaf_entry(mode, entry, entry_level, phys_addr, flags);
         if(res)
         {
             wprintk("Failed to create pt_leaf_entry!\n");
@@ -1590,13 +1450,12 @@ arch_vmem_paged_region_unmap(struct vmem_region *region,
         size_t page_size;
         int entry_level = -1;
 
-        for(int level = paging_mode_num_levels(mode)-1;
-                level >= 0;
-                level--)
+        for(int level = paging_mode_num_levels(mode) - 1; level >= 0; level--)
         {
-            size_t entry_region_size = paging_level_entry_region_size(mode, level);
+            size_t entry_region_size =
+                paging_level_entry_region_size(mode, level);
             if((size >= entry_region_size) &&
-               ((offset % entry_region_size )== 0) &&
+               ((offset % entry_region_size) == 0) &&
                (max_entry_level >= level))
             {
                 page_size = entry_region_size;
@@ -1623,23 +1482,24 @@ arch_vmem_paged_region_unmap(struct vmem_region *region,
 
         do
         {
-            size_t cur_region_size = paging_level_entry_region_size(mode, cur_level);
+            size_t cur_region_size =
+                paging_level_entry_region_size(mode, cur_level);
             size_t cur_entry_size = paging_level_entry_size(mode, cur_level);
             size_t cur_entries_per_table =
                 paging_level_num_entries(mode, cur_level);
             size_t cur_index =
                 (offset / cur_region_size) % cur_entries_per_table;
 
-            void *cur_entry = ((void *)__va(cur_table)) + (cur_index * cur_entry_size);
+            void *cur_entry =
+                ((void *)__va(cur_table)) + (cur_index * cur_entry_size);
 
             DEBUG_ASSERT(KERNEL_ADDR(cur_entry));
 
             unsigned long cur_entry_flags;
-            paging_entry_get_flags(
-                    mode,
-                    cur_level,
-                    cur_entry,
-                    &cur_entry_flags);
+            paging_entry_get_flags(mode,
+                                   cur_level,
+                                   cur_entry,
+                                   &cur_entry_flags);
 
             if(cur_entry_flags & PAGING_ENTRY_PRESENT)
             {
@@ -1647,11 +1507,10 @@ arch_vmem_paged_region_unmap(struct vmem_region *region,
                 DEBUG_ASSERT(cur_entry_flags & PAGING_ENTRY_IS_TABLE);
 
                 void __phys *next_table_addr;
-                paging_entry_read_addr(
-                        mode,
-                        cur_level,
-                        cur_entry,
-                        &next_table_addr);
+                paging_entry_read_addr(mode,
+                                       cur_level,
+                                       cur_entry,
+                                       &next_table_addr);
 
                 cur_table = next_table_addr;
                 cur_level--;
@@ -1660,10 +1519,7 @@ arch_vmem_paged_region_unmap(struct vmem_region *region,
             {
                 // The entry isn't present
                 void __phys *subtable;
-                res = create_empty_pt_table(
-                        mode,
-                        &subtable,
-                        cur_level - 1);
+                res = create_empty_pt_table(mode, &subtable, cur_level - 1);
                 if(res)
                 {
                     return res;
@@ -1671,11 +1527,10 @@ arch_vmem_paged_region_unmap(struct vmem_region *region,
 
                 DEBUG_ASSERT(KERNEL_ADDR((void *)__va(subtable)));
 
-                res = create_permissive_pt_table_entry(
-                        mode,
-                        cur_entry,
-                        cur_level,
-                        subtable);
+                res = create_permissive_pt_table_entry(mode,
+                                                       cur_entry,
+                                                       cur_level,
+                                                       subtable);
                 if(res)
                 {
                     return res;
@@ -1689,7 +1544,7 @@ arch_vmem_paged_region_unmap(struct vmem_region *region,
         // We should be on the correct level
         size_t index = (offset / page_size) % entries_per_table;
         size_t cur_entry_size = paging_level_entry_size(mode, cur_level);
-        void *entry = ((void*)__va(cur_table)) + (index * cur_entry_size);
+        void *entry = ((void *)__va(cur_table)) + (index * cur_entry_size);
 
         // Unmap the entry fully
         paging_entry_clear(mode, cur_level, entry);
@@ -1702,13 +1557,12 @@ arch_vmem_paged_region_unmap(struct vmem_region *region,
 }
 
 static int
-dump_page_table(
-        printk_f *printer,
-        const struct paging_mode *mode,
-        void __phys *table_phys_addr,
-        int level,
-        void *virt_base,
-        int is_root)
+dump_page_table(printk_f *printer,
+                const struct paging_mode *mode,
+                void __phys *table_phys_addr,
+                int level,
+                void *virt_base,
+                int is_root)
 {
     int res = 0;
 
@@ -1848,7 +1702,8 @@ dump_page_table(
             PUT_TABS();
             (*printer)("[level(%d) index(%d)] ", level, entry_index);
             uint64_t shared_mask;
-            (*printer)("Table %s\n", flags & PAGING_ENTRY_SHARED ? "[SHARED]" : "");
+            (*printer)("Table %s\n",
+                       flags &PAGING_ENTRY_SHARED ? "[SHARED]" : "");
             res = dump_page_table(printer, mode, addr, level - 1, virt_base, 0);
             if(res)
             {
@@ -1869,7 +1724,6 @@ dump_page_table(
 #undef DUMP_PENDING_LEAF
 
     return res;
-
 }
 
 int
@@ -1879,8 +1733,7 @@ arch_vmem_map_activate(struct vmem_map *map)
 
     const struct paging_mode *mode = arch_paging_mode();
 
-    struct vmem_map_paging_state *state =
-        vmem_map_get_paging_state(map);
+    struct vmem_map_paging_state *state = vmem_map_get_paging_state(map);
 
     return arch_paging_set_pt_root(state->pt_root, state->pt_level);
 }
@@ -1897,7 +1750,6 @@ tlb_shootdown_xcall(void *with_pt_root_phys)
 
     enable_restore_irqs(irq_flags);
 }
-
 
 int
 arch_vmem_map_flush(struct vmem_map *map)
@@ -1916,8 +1768,7 @@ arch_vmem_map_flush(struct vmem_map *map)
     struct vmem_map_paging_state *map_state;
     map_state = vmem_map_get_paging_state(map);
 
-    int res =
-        xcall_broadcast(tlb_shootdown_xcall, (void *)map_state->pt_root);
+    int res = xcall_broadcast(tlb_shootdown_xcall, (void *)map_state->pt_root);
     if(res)
     {
         return res;
@@ -1930,8 +1781,7 @@ void
 arch_dump_vmem_map(printk_f *printer, struct vmem_map *map)
 {
     const struct paging_mode *mode = arch_paging_mode();
-    struct vmem_map_paging_state *map_state =
-        vmem_map_get_paging_state(map);
+    struct vmem_map_paging_state *map_state = vmem_map_get_paging_state(map);
     void __phys *root = map_state->pt_root;
     (*printer)("--- Virtual Memory Mapping (Root Level = %d) ---\n",
                map_state->pt_level);
@@ -1966,19 +1816,16 @@ arch_vmem_map_init(struct vmem_map *map)
 
     map_state->pt_level = 0;
 
-    order_t root_order = paging_level_table_order(mode, num_levels-1);
+    order_t root_order = paging_level_table_order(mode, num_levels - 1);
 
-    res = page_alloc(
-            root_order,
-            &map_state->pt_root,
-            0);
+    res = page_alloc(root_order, &map_state->pt_root, 0);
     if(res)
     {
         return res;
     }
 
-    map_state->pt_level = num_levels-1;
-    memset((void *)__va(map_state->pt_root), 0, 1ULL<<root_order);
+    map_state->pt_level = num_levels - 1;
+    memset((void *)__va(map_state->pt_root), 0, 1ULL << root_order);
 
     return 0;
 }
@@ -2008,4 +1855,3 @@ arch_vmem_map_deinit(struct vmem_map *map)
 
     return 0;
 }
-

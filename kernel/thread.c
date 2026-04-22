@@ -4,12 +4,12 @@
 #include <kanawha/attribute.h>
 #include <kanawha/errno.h>
 #include <kanawha/event.h>
-#include <kanawha/tasklet.h>
 #include <kanawha/init.h>
 #include <kanawha/irq.h>
 #include <kanawha/kmalloc.h>
 #include <kanawha/lock.h>
 #include <kanawha/percpu.h>
+#include <kanawha/perf.h>
 #include <kanawha/printk.h>
 #include <kanawha/proc/process.h>
 #include <kanawha/ptree.h>
@@ -17,11 +17,12 @@
 #include <kanawha/slab.h>
 #include <kanawha/spinlock.h>
 #include <kanawha/string.h>
+#include <kanawha/tasklet.h>
 #include <kanawha/thread.h>
 #include <kanawha/vmem.h>
-#include <kanawha/perf.h>
 
-static void set_current_thread(struct thread_state *state);
+static void
+set_current_thread(struct thread_state *state);
 
 static void
 dump_thread_flags(struct thread_state *thread,
@@ -58,7 +59,8 @@ get_thread_id(struct thread_state *state)
 {
     int res;
     res = ptree_insert_any(&thread_tree, &state->tree_node);
-    if(res) {
+    if(res)
+    {
         state->id = NULL_THREAD_ID;
     }
     state->id = (thread_id_t)state->tree_node.key;
@@ -68,11 +70,10 @@ DECLARE_PERCPU_VAR(struct thread_state *, __current_thread);
 DECLARE_STATIC_PERCPU_VAR(struct thread_state *, __idle_thread);
 
 DEFINE_LOCAL_IRQ_LOCK(thread_status_count_lock);
-static size_t thread_status_counts[NUM_THREAD_STATUSES] = { 0 };
+static size_t thread_status_counts[NUM_THREAD_STATUSES] = {0};
 
 size_t
-thread_status_count(
-        thread_status_t status)
+thread_status_count(thread_status_t status)
 {
     size_t count;
     DEBUG_ASSERT(status < NUM_THREAD_STATUSES);
@@ -85,7 +86,8 @@ thread_status_count(
 static inline void
 thread_set_status(struct thread_state *thread, thread_status_t status)
 {
-    if(status == THREAD_STATUS_PREPARING) {
+    if(status == THREAD_STATUS_PREPARING)
+    {
         // We should not previously have had a status
         thread_status_count_lock_acquire();
         thread->status = status;
@@ -95,11 +97,10 @@ thread_set_status(struct thread_state *thread, thread_status_t status)
     }
 
     // We should have the lock held already...
-    DEBUG_ASSERT(!(thread->flags & THREAD_FLAG_IDLE)
-                 || (status == THREAD_STATUS_READY)
-                 || (status == THREAD_STATUS_RUNNING)
-                 || (status == THREAD_STATUS_SCHEDULED)
-                 );
+    DEBUG_ASSERT(!(thread->flags & THREAD_FLAG_IDLE) ||
+                 (status == THREAD_STATUS_READY) ||
+                 (status == THREAD_STATUS_RUNNING) ||
+                 (status == THREAD_STATUS_SCHEDULED));
     DEBUG_ASSERT(thread->status == THREAD_STATUS_PREPARING ||
                  spin_try_lock(&thread->lock) != 0);
     DEBUG_ASSERT(thread->status != THREAD_STATUS_ABANDONED);
@@ -121,15 +122,17 @@ thread_set_status(struct thread_state *thread, thread_status_t status)
 static int
 thread_is_running(struct thread_state *thread)
 {
-    switch(thread->status) {
-        case THREAD_STATUS_RUNNING:
-        case THREAD_STATUS_TIRED:
-            return 1;
-        default:
-            break;
+    switch(thread->status)
+    {
+    case THREAD_STATUS_RUNNING:
+    case THREAD_STATUS_TIRED:
+        return 1;
+    default:
+        break;
     }
 
-    if(thread->running_on != NULL_CPU_ID) {
+    if(thread->running_on != NULL_CPU_ID)
+    {
         return 1;
     }
 
@@ -143,13 +146,16 @@ idle_loop(void)
     enable_irqs();
     while(1)
     {
-        if(!irqs_enabled()) {
+        if(!irqs_enabled())
+        {
             panic("Running the idle thread with interrupts disabled!\n");
         }
 
         size_t num_ready = thread_status_count(THREAD_STATUS_READY);
-        if(num_ready > total_num_cpus()) {
-            dprintk("Running idle thread when there are %lu threads ready!\n", num_ready);
+        if(num_ready > total_num_cpus())
+        {
+            dprintk("Running idle thread when there are %lu threads ready!\n",
+                    num_ready);
         }
 
         arch_halt();
@@ -188,7 +194,9 @@ set_current_thread(struct thread_state *state)
     DEBUG_ASSERT(!irqs_enabled());
     struct thread_state **ptr = percpu_ptr(percpu_addr(__current_thread));
     *ptr = state;
-    dprintk("CPU(%ld) setting current thread to id(%ld)\n", (sl_t)current_cpu_id(), (sl_t)state->id);
+    dprintk("CPU(%ld) setting current thread to id(%ld)\n",
+            (sl_t)current_cpu_id(),
+            (sl_t)state->id);
     mbarrier();
 }
 
@@ -274,7 +282,8 @@ idle_thread(void)
 struct thread_state *
 cpu_idle_thread(cpu_id_t cpu)
 {
-    struct thread_state **ptr = percpu_ptr_specific(percpu_addr(__idle_thread), cpu);
+    struct thread_state **ptr =
+        percpu_ptr_specific(percpu_addr(__idle_thread), cpu);
     return *ptr;
 }
 
@@ -406,8 +415,10 @@ thread_deinit(struct thread_state *state)
         return res;
     }
 
-    if(state->kmalloc_allocated > 0) {
-        wprintk("Thread %ld still had 0x%lx bytes of KM_THREAD allocated memory after destruction!\n",
+    if(state->kmalloc_allocated > 0)
+    {
+        wprintk("Thread %ld still had 0x%lx bytes of KM_THREAD allocated "
+                "memory after destruction!\n",
                 (sl_t)id,
                 (ul_t)state->kmalloc_allocated);
     }
@@ -451,10 +462,12 @@ thread_schedule(struct thread_state *state)
 
     if(state->status != THREAD_STATUS_READY)
     {
-        if(state->flags & THREAD_FLAG_IDLE) {
-            panic("Failed to schedule the idle thread on CPU %ld! (status=%s)\n",
-                    current_cpu_id(),
-                    thread_status_to_string(state->status));
+        if(state->flags & THREAD_FLAG_IDLE)
+        {
+            panic(
+                "Failed to schedule the idle thread on CPU %ld! (status=%s)\n",
+                current_cpu_id(),
+                thread_status_to_string(state->status));
         }
         spin_unlock_irq_restore(&state->lock, irq_flags);
         return -EINVAL;
@@ -491,7 +504,9 @@ __thread_switch_threadless(void *in)
     struct thread_state *switching_from = current_thread();
     struct thread_state *switching_to = (struct thread_state *)in;
 
-    DEBUG_ASSERT_MSG(!irqs_enabled(), "IRQ(s) cannot be enabled during __thread_switch_threadless!");
+    DEBUG_ASSERT_MSG(
+        !irqs_enabled(),
+        "IRQ(s) cannot be enabled during __thread_switch_threadless!");
 
     DEBUG_ASSERT(KERNEL_ADDR(switching_to));
 
@@ -955,9 +970,11 @@ alloc_thread_global_vmem_region_struct(void)
 }
 
 static void
-free_thread_global_vmem_region_struct(struct thread_global_vmem_region *region) {
+free_thread_global_vmem_region_struct(struct thread_global_vmem_region *region)
+{
     dprintk("free_thread_global_vmem_region() -> %p (list_node=%p)\n",
-    &region, &region->list_node);
+            &region,
+            &region->list_node);
     slab_free(global_vmem_region_slab_allocator, region);
 }
 
@@ -1022,16 +1039,19 @@ thread_relax_mapping(void *virtual_addr)
 
     struct thread_global_vmem_region *global_region = NULL;
     ilist_node_t *iter;
-    ilist_for_each(iter, &global_vmem_regions) {
+    ilist_for_each(iter, &global_vmem_regions)
+    {
         struct thread_global_vmem_region *cur;
         cur = container_of(iter, struct thread_global_vmem_region, list_node);
-        if(cur->virtual_addr == virtual_addr) {
+        if(cur->virtual_addr == virtual_addr)
+        {
             global_region = cur;
             break;
         }
     }
 
-    if(global_region == NULL) {
+    if(global_region == NULL)
+    {
         thread_tree_lock_release();
         return -ENXIO;
     }
@@ -1062,8 +1082,7 @@ thread_status_to_string(thread_status_t status)
 #define SAMPLE_THREAD_RUNNING_PERIOD_MS (5000 / 64)
 
 static int
-tick_thread_running_percent(
-        struct thread_state *state)
+tick_thread_running_percent(struct thread_state *state)
 {
     state->running_tracker = (state->running_tracker << 1ULL);
     int running = thread_is_running(state);
@@ -1079,23 +1098,22 @@ sample_thread_running_percentage(void *state)
 
     thread_tree_lock_acquire();
     struct ptree_node *pnode = ptree_get_first(&thread_tree);
-    while(pnode) {
-        struct thread_state *thread = container_of(
-                pnode,
-                struct thread_state,
-                tree_node);
+    while(pnode)
+    {
+        struct thread_state *thread =
+            container_of(pnode, struct thread_state, tree_node);
 
-        total_running += tick_thread_running_percent(thread); 
+        total_running += tick_thread_running_percent(thread);
 
         pnode = ptree_get_next(pnode);
     }
     thread_tree_lock_release();
-//    if(total_running < total_num_cpus()) {
-//        printk("Weird: total running = %ld, num cpus = %ld?\n",
-//                (sl_t)total_running,
-//                (sl_t)total_num_cpus());
-//        dump_threads(do_printk);
-//    }
+    //    if(total_running < total_num_cpus()) {
+    //        printk("Weird: total running = %ld, num cpus = %ld?\n",
+    //                (sl_t)total_running,
+    //                (sl_t)total_num_cpus());
+    //        dump_threads(do_printk);
+    //    }
 }
 static int
 init_sample_thread_running_percentage(void)
@@ -1113,15 +1131,17 @@ init_sample_thread_running_percentage(void)
 declare_init(launch, init_sample_thread_running_percentage);
 
 ssize_t
-thread_running_percentage(
-        struct thread_state *thread)
+thread_running_percentage(struct thread_state *thread)
 {
-    if(thread->running_tracker == 0) {
+    if(thread->running_tracker == 0)
+    {
         return 0;
-    } else {
+    }
+    else
+    {
         size_t num = __builtin_popcountl(thread->running_tracker);
         size_t den = sizeof(thread->running_tracker) * 8;
-        ssize_t percent = ((num * 100)/den);
+        ssize_t percent = ((num * 100) / den);
         dprintk("tracker=0x%lx, num=%ld, den=%ld, percent=%ld\n",
                 (ul_t)thread->running_tracker,
                 (sl_t)num,
@@ -1132,15 +1152,15 @@ thread_running_percentage(
 }
 
 ssize_t
-all_threads_running_percentage(void) {
+all_threads_running_percentage(void)
+{
     ssize_t total = 0;
     thread_tree_lock_acquire();
     struct ptree_node *pnode = ptree_get_first(&thread_tree);
-    while(pnode) {
-        struct thread_state *thread = container_of(
-                pnode,
-                struct thread_state,
-                tree_node);
+    while(pnode)
+    {
+        struct thread_state *thread =
+            container_of(pnode, struct thread_state, tree_node);
 
         total += thread_running_percentage(thread);
 
@@ -1149,4 +1169,3 @@ all_threads_running_percentage(void) {
     thread_tree_lock_release();
     return total;
 }
-

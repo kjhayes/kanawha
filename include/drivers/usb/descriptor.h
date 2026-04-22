@@ -26,7 +26,8 @@ usb_device_read_descriptor(struct usb_device *device,
                            void *buffer,
                            size_t buflen);
 
-struct usb_descriptor_device {
+struct usb_descriptor_device
+{
     uint8_t bLength;
     uint8_t bDescriptorType;
     le16_t bcdUSB;
@@ -43,7 +44,8 @@ struct usb_descriptor_device {
     uint8_t bNumConfigurations;
 } __packed;
 
-struct usb_descriptor_configuration {
+struct usb_descriptor_configuration
+{
     uint8_t bLength;
     uint8_t bDescriptorType;
     le16_t wTotalLength;
@@ -54,7 +56,8 @@ struct usb_descriptor_configuration {
     uint8_t bMaxPower;
 } __packed;
 
-struct usb_descriptor_interface {
+struct usb_descriptor_interface
+{
     uint8_t bLength;
     uint8_t bDescriptorType;
     uint8_t bInterfaceNumber;
@@ -66,19 +69,22 @@ struct usb_descriptor_interface {
     uint8_t iInterface;
 } __packed;
 
-struct usb_descriptor_string_lang {
+struct usb_descriptor_string_lang
+{
     uint8_t bLength;
     uint8_t bDescriptorType;
     le16_t wLANGID[];
 } __packed;
 
-struct usb_descriptor_string {
+struct usb_descriptor_string
+{
     uint8_t bLength;
     uint8_t bDescriptorType;
     uint8_t bString[];
 } __packed;
 
-struct usb_descriptor_endpoint {
+struct usb_descriptor_endpoint
+{
     uint8_t bLength;
     uint8_t bDescriptorType;
     uint8_t bEndpointAddress;

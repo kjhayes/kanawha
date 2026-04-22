@@ -4,11 +4,11 @@
 #include <kanawha/clk.h>
 #include <kanawha/cpu.h>
 #include <kanawha/dev/clk.h>
+#include <kanawha/dev/timer.h>
 #include <kanawha/init.h>
 #include <kanawha/irq_domain.h>
 #include <kanawha/printk.h>
 #include <kanawha/stddef.h>
-#include <kanawha/dev/timer.h>
 #include <kanawha/types.h>
 #include <kanawha/xcall.h>
 
@@ -439,9 +439,10 @@ register_cpu_lapic_timer(struct x64_cpu *cpu)
     res = register_timer_dev(&timer->timer_dev, timer->name);
     if(res)
     {
-        eprintk("Failed to register APIC Timer %ld as a timer device! (err=%s)\n",
-                (sl_t)cpu->apic.id,
-                errnostr(res));
+        eprintk(
+            "Failed to register APIC Timer %ld as a timer device! (err=%s)\n",
+            (sl_t)cpu->apic.id,
+            errnostr(res));
     }
 
     return res;

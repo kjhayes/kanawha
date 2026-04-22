@@ -2,10 +2,10 @@
 #define __KANAWHA__PCI_PCI_H__
 
 #include <kanawha/list.h>
+#include <kanawha/mem_flags.h>
 #include <kanawha/ops.h>
 #include <kanawha/ptree.h>
 #include <kanawha/types.h>
-#include <kanawha/mem_flags.h>
 
 #include <drivers/pci/bar.h>
 #include <kanawha/dev/irq.h>
@@ -185,89 +185,68 @@ register_pci_cam(struct pci_cam *cam, unsigned long flags);
 int
 register_pci_driver(struct pci_driver *driver);
 
-int pci_for_each_segment(int(*callback)(struct pci_segment *segment));
-
-int pci_for_each_func(int(*callback)(struct pci_func *func));
-int pci_segment_for_each_func(struct pci_segment *segment,
-                              int(*callback)(struct pci_func *func));
-int pci_bus_for_each_func(struct pci_bus *bus,
-                          int(*callback)(struct pci_func *func));
-int pci_device_for_each_func(struct pci_device *device,
-                             int(*callback)(struct pci_func *func));
-
-#define PCI_MMIO_MEM_MAPPED  (1UL<<0)
-#define PCI_MMIO_MEM_32_BIT  (1UL<<1)
-#define PCI_MMIO_MEM_SNOOPED (1UL<<2)
-#define PCI_MMIO_MEM_PREFETCH (1UL<<3)
-#define PCI_MMIO_MEM_CONFIG   (1UL<<4)
 int
-pci_segment_dump_mmio_mem_flags(
-        struct pci_segment *segment,
-        printk_f *printer);
+pci_for_each_segment(int (*callback)(struct pci_segment *segment));
 
-#define PCI_PIO_MEM_MAPPED (1UL<<0)
-#define PCI_PIO_MEM_SNOOPED (1UL<<1)
 int
-pci_segment_dump_pio_mem_flags(
-        struct pci_segment *segment,
-        printk_f *printer);
+pci_for_each_func(int (*callback)(struct pci_func *func));
+int
+pci_segment_for_each_func(struct pci_segment *segment,
+                          int (*callback)(struct pci_func *func));
+int
+pci_bus_for_each_func(struct pci_bus *bus,
+                      int (*callback)(struct pci_func *func));
+int
+pci_device_for_each_func(struct pci_device *device,
+                         int (*callback)(struct pci_func *func));
+
+#define PCI_MMIO_MEM_MAPPED (1UL << 0)
+#define PCI_MMIO_MEM_32_BIT (1UL << 1)
+#define PCI_MMIO_MEM_SNOOPED (1UL << 2)
+#define PCI_MMIO_MEM_PREFETCH (1UL << 3)
+#define PCI_MMIO_MEM_CONFIG (1UL << 4)
+int
+pci_segment_dump_mmio_mem_flags(struct pci_segment *segment, printk_f *printer);
+
+#define PCI_PIO_MEM_MAPPED (1UL << 0)
+#define PCI_PIO_MEM_SNOOPED (1UL << 1)
+int
+pci_segment_dump_pio_mem_flags(struct pci_segment *segment, printk_f *printer);
 
 static inline int
-pci_segment_set_mmio_flags(
-        struct pci_segment *segment,
-        uintptr_t base,
-        size_t size,
-        unsigned long flags)
+pci_segment_set_mmio_flags(struct pci_segment *segment,
+                           uintptr_t base,
+                           size_t size,
+                           unsigned long flags)
 {
-    return mem_flags_set_flags(
-            &segment->mmio_flags,
-            base,
-            size,
-            flags);
+    return mem_flags_set_flags(&segment->mmio_flags, base, size, flags);
 }
 
 static inline int
-pci_segment_clear_mmio_flags(
-        struct pci_segment *segment,
-        uintptr_t base,
-        size_t size,
-        unsigned long flags)
+pci_segment_clear_mmio_flags(struct pci_segment *segment,
+                             uintptr_t base,
+                             size_t size,
+                             unsigned long flags)
 {
-    return mem_flags_clear_flags(
-            &segment->mmio_flags,
-            base,
-            size,
-            flags);
+    return mem_flags_clear_flags(&segment->mmio_flags, base, size, flags);
 }
 
 static inline int
-pci_segment_set_pio_flags(
-        struct pci_segment *segment,
-        uintptr_t base,
-        size_t size,
-        unsigned long flags)
+pci_segment_set_pio_flags(struct pci_segment *segment,
+                          uintptr_t base,
+                          size_t size,
+                          unsigned long flags)
 {
-    return mem_flags_set_flags(
-            &segment->pio_flags,
-            base,
-            size,
-            flags);
+    return mem_flags_set_flags(&segment->pio_flags, base, size, flags);
 }
 
 static inline int
-pci_segment_clear_pio_flags(
-        struct pci_segment *segment,
-        uintptr_t base,
-        size_t size,
-        unsigned long flags)
+pci_segment_clear_pio_flags(struct pci_segment *segment,
+                            uintptr_t base,
+                            size_t size,
+                            unsigned long flags)
 {
-    return mem_flags_clear_flags(
-            &segment->pio_flags,
-            base,
-            size,
-            flags);
-
+    return mem_flags_clear_flags(&segment->pio_flags, base, size, flags);
 }
-
 
 #endif

@@ -29,12 +29,12 @@ typedef struct ilist_head ilist_node_t;
 #define DEBUG_KERNEL_ILIST_CHECK(list_ptr)                                     \
     do                                                                         \
     {                                                                          \
-        size_t elements = 0;\
+        size_t elements = 0;                                                   \
         ilist_node_t *node;                                                    \
         ilist_for_each(node, (list_ptr))                                       \
         {                                                                      \
-            elements++;\
-            DEBUG_ASSERT(elements < (1UL<<48)); \
+            elements++;                                                        \
+            DEBUG_ASSERT(elements < (1UL << 48));                              \
             DEBUG_ASSERT(KERNEL_ADDR(node));                                   \
             DEBUG_ASSERT(KERNEL_ADDR(node->prev));                             \
             DEBUG_ASSERT(KERNEL_ADDR(node->next));                             \
@@ -226,7 +226,8 @@ ilist_insert_before(ilist_t *list, ilist_node_t *to_insert, ilist_node_t *ref)
 static inline ilist_node_t *
 ilist_peek_head(ilist_t *list)
 {
-    if(ilist_empty(list)) {
+    if(ilist_empty(list))
+    {
         return NULL;
     }
     return list->next;

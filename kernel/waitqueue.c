@@ -95,12 +95,15 @@ wait_on_with_callback(struct waitqueue *queue,
 
     struct thread_state *cur = current_thread();
 
-    if(thread_irq_depth() > 0) {
+    if(thread_irq_depth() > 0)
+    {
         // We cannot wait on a queue if we are in
         // an interrupt
-        printk("thread %ld attempted to wait on a waitqueue while handling an interrupt!\n",
-                (sl_t)cur->id);
-        if(callback != NULL) {
+        printk("thread %ld attempted to wait on a waitqueue while handling an "
+               "interrupt!\n",
+               (sl_t)cur->id);
+        if(callback != NULL)
+        {
             (*callback)(priv_state);
         }
         return -EINTR;
@@ -110,7 +113,8 @@ wait_on_with_callback(struct waitqueue *queue,
 
     if(queue->flags & WAITQUEUE_DISABLED)
     {
-        if(callback != NULL) {
+        if(callback != NULL)
+        {
             (*callback)(priv_state);
         }
         irq_lock_release(&queue->lock);
@@ -123,7 +127,8 @@ wait_on_with_callback(struct waitqueue *queue,
     res = thread_tire(cur);
     if(res)
     {
-        if(callback != NULL) {
+        if(callback != NULL)
+        {
             (*callback)(priv_state);
         }
         irq_lock_release(&queue->lock);
@@ -146,16 +151,20 @@ wait_on_with_callback(struct waitqueue *queue,
     // Force a reschedule (TIRED -> SLEEPING)
     DEBUG_ASSERT(!irqs_enabled());
     res = hard_resched();
-    if(res) {
-        wprintk("Failed to go to sleep on the waitqueue! hard_resched() -> %s\n",
-                errnostr(res));
+    if(res)
+    {
+        wprintk(
+            "Failed to go to sleep on the waitqueue! hard_resched() -> %s\n",
+            errnostr(res));
         thread_wake(cur);
-    } else {
+    }
+    else
+    {
         DEBUG_ASSERT(!irqs_enabled());
         DEBUG_ASSERT(current_thread_is_rescheduled());
         thread_switch();
     }
-    
+
     // We're back! (a "wake_*" function should have
     // removed us from the queue already)
 
@@ -204,7 +213,8 @@ wait_on_thread_lock_release_callback(void *__lock)
     thread_lock_release(lock);
 }
 
-struct wait_on_irq_lock_release_data {
+struct wait_on_irq_lock_release_data
+{
     struct irq_lock *lock;
     int irq_flags;
 };
@@ -231,17 +241,19 @@ wait_on_thread_lock_release(struct waitqueue *queue, thread_lock_t *to_unlock)
                                  to_unlock);
 }
 int
-wait_on_irq_lock_release(struct waitqueue *queue, irq_lock_t *to_unlock, int *irq_flags)
+wait_on_irq_lock_release(struct waitqueue *queue,
+                         irq_lock_t *to_unlock,
+                         int *irq_flags)
 {
     int res;
     struct wait_on_irq_lock_release_data data = {
         .lock = to_unlock,
         .irq_flags = irqs_enabled(),
     };
-    res = wait_on_with_callback(queue,
-                                wait_on_irq_lock_release_callback,
-                                &data);
-    if(irq_flags) {
+    res =
+        wait_on_with_callback(queue, wait_on_irq_lock_release_callback, &data);
+    if(irq_flags)
+    {
         *irq_flags = data.irq_flags;
     }
     return res;

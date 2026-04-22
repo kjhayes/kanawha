@@ -4,10 +4,10 @@
 #include <drivers/pci/irq.h>
 #include <drivers/pci/pci.h>
 #include <kanawha/kmalloc.h>
+#include <kanawha/mem_flags.h>
 #include <kanawha/page_alloc.h>
 #include <kanawha/string.h>
 #include <kanawha/types.h>
-#include <kanawha/mem_flags.h>
 
 static int
 pci_setup_bars(struct pci_func *func)
@@ -15,7 +15,8 @@ pci_setup_bars(struct pci_func *func)
     for(int i = 0; i < 6; i++)
     {
         struct pci_bar *bar = &func->bars[i];
-        if(bar->type != PCI_BAR_UNINIT) {
+        if(bar->type != PCI_BAR_UNINIT)
+        {
             continue;
         }
 
@@ -110,11 +111,10 @@ pci_setup_bars(struct pci_func *func)
             bar->phys_addr = (void __phys *)(uintptr_t)(original & ~0x3ULL);
             bar->pio.base = (uintptr_t)(bar->phys_addr);
 
-            pci_segment_set_pio_flags(
-                    func->segment,
-                    bar->pio.base,
-                    bar->size,
-                    PCI_PIO_MEM_MAPPED);
+            pci_segment_set_pio_flags(func->segment,
+                                      bar->pio.base,
+                                      bar->size,
+                                      PCI_PIO_MEM_MAPPED);
         }
         else
         {
@@ -142,18 +142,16 @@ pci_setup_bars(struct pci_func *func)
                 }
                 uintptr_t reserved_base;
                 res = mem_flags_find_and_reserve(
-                        &func->segment->mmio_flags,
-                        bar->size,
-                        order,
-                        PCI_MMIO_MEM_SNOOPED
-                       |(is_64_bit ? 0 : PCI_MMIO_MEM_32_BIT)
-                       ,
-                        // Must NOT be...
-                        PCI_MMIO_MEM_MAPPED
-                       ,
-                       0,
-                       PCI_MMIO_MEM_MAPPED,
-                       &reserved_base); 
+                    &func->segment->mmio_flags,
+                    bar->size,
+                    order,
+                    PCI_MMIO_MEM_SNOOPED |
+                        (is_64_bit ? 0 : PCI_MMIO_MEM_32_BIT),
+                    // Must NOT be...
+                    PCI_MMIO_MEM_MAPPED,
+                    0,
+                    PCI_MMIO_MEM_MAPPED,
+                    &reserved_base);
                 if(res)
                 {
                     wprintk("Failed to remap uninitialized "
@@ -188,12 +186,12 @@ pci_setup_bars(struct pci_func *func)
                 }
             }
 #endif
-            if(bar->phys_addr != 0) {
-                pci_segment_set_mmio_flags(
-                        func->segment,
-                        (uintptr_t)bar->phys_addr,
-                        bar->size,
-                        PCI_PIO_MEM_MAPPED);
+            if(bar->phys_addr != 0)
+            {
+                pci_segment_set_mmio_flags(func->segment,
+                                           (uintptr_t)bar->phys_addr,
+                                           bar->size,
+                                           PCI_PIO_MEM_MAPPED);
                 bar->mmio.base = mmio_map((void __phys *)bar->phys_addr, size);
                 if(bar->mmio.base == NULL)
                 {
@@ -203,7 +201,9 @@ pci_setup_bars(struct pci_func *func)
                     bar->type = PCI_BAR_NONE;
                     continue;
                 }
-            } else {
+            }
+            else
+            {
                 eprintk("PCI MMIO BAR mapped to address zero!\n");
                 bar->type = PCI_BAR_NONE;
                 continue;
@@ -215,8 +215,7 @@ pci_setup_bars(struct pci_func *func)
 }
 
 int
-pci_func_init(
-        struct pci_func *func)
+pci_func_init(struct pci_func *func)
 {
     int res;
 
@@ -232,7 +231,8 @@ pci_func_init(
         {
             eprintk("Failed to initialize PCI device BAR(s)! (err=%s)\n",
                     errnostr(res));
-            for(size_t i = 0; i < 6; i++) {
+            for(size_t i = 0; i < 6; i++)
+            {
                 func->bars[i].type = PCI_BAR_NONE;
             }
         }
@@ -296,7 +296,8 @@ pci_probe_bars(struct pci_func *func)
     for(int i = 0; i < 6; i++)
     {
         struct pci_bar bar = func->bars[i];
-        if(bar.type != PCI_BAR_UNINIT) {
+        if(bar.type != PCI_BAR_UNINIT)
+        {
             continue;
         }
 
@@ -383,22 +384,21 @@ pci_probe_bars(struct pci_func *func)
             bar.phys_addr = (void __phys *)(uintptr_t)(original & ~0x3ULL);
             bar.pio.base = (uintptr_t)(bar.phys_addr);
 
-            pci_segment_set_pio_flags(
-                    func->segment,
-                    bar.pio.base,
-                    bar.size,
-                    PCI_PIO_MEM_MAPPED);
+            pci_segment_set_pio_flags(func->segment,
+                                      bar.pio.base,
+                                      bar.size,
+                                      PCI_PIO_MEM_MAPPED);
         }
         else
         {
             // MMIO
             bar.phys_addr = (void __phys *)(uintptr_t)(original & ~0xFULL);
-            if(bar.phys_addr != 0) {
-                pci_segment_set_mmio_flags(
-                        func->segment,
-                        (uintptr_t)bar.phys_addr,
-                        bar.size,
-                        PCI_PIO_MEM_MAPPED);
+            if(bar.phys_addr != 0)
+            {
+                pci_segment_set_mmio_flags(func->segment,
+                                           (uintptr_t)bar.phys_addr,
+                                           bar.size,
+                                           PCI_PIO_MEM_MAPPED);
             }
         }
     }
@@ -413,8 +413,10 @@ pci_probe_func(struct pci_device *device, uint8_t index)
     struct pci_bus *bus = device->bus;
 
     struct pci_func *func = NULL;
-    struct ptree_node *device_tree_node = ptree_get(&device->function_tree, index);
-    if(device_tree_node != NULL) {
+    struct ptree_node *device_tree_node =
+        ptree_get(&device->function_tree, index);
+    if(device_tree_node != NULL)
+    {
         func = container_of(device_tree_node, struct pci_func, device_node);
     }
 
@@ -422,7 +424,8 @@ pci_probe_func(struct pci_device *device, uint8_t index)
     pci_bus_readw(bus, device->index, index, PCI_CFG_VENDOR_ID, &vendor_id);
     if(vendor_id == 0xFFFF)
     {
-        if(func != NULL) {
+        if(func != NULL)
+        {
             panic("PCI Function Stopped Existing on Re-probe!\n");
         }
         return -ENXIO;
@@ -443,7 +446,8 @@ pci_probe_func(struct pci_device *device, uint8_t index)
         ptree_insert(&device->function_tree, &func->device_node, index);
         func->device = device;
 
-        for(size_t i = 0; i < 6; i++) {
+        for(size_t i = 0; i < 6; i++)
+        {
             func->bars[i].type = PCI_BAR_UNINIT;
         }
     }

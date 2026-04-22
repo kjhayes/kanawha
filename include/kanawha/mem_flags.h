@@ -29,15 +29,13 @@ struct mem_flags
 };
 
 int
-mem_flags_init(
-        struct mem_flags *mem_flags,
-        unsigned long initial_flags,
-        size_t static_buflen,
-        struct mem_flags_entry *static_buffer);
+mem_flags_init(struct mem_flags *mem_flags,
+               unsigned long initial_flags,
+               size_t static_buflen,
+               struct mem_flags_entry *static_buffer);
 
 int
-mem_flags_deinit(
-        struct mem_flags *mem_flags);
+mem_flags_deinit(struct mem_flags *mem_flags);
 
 int
 mem_flags_clear_all(struct mem_flags *map, unsigned long flags);

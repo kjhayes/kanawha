@@ -106,24 +106,27 @@ usb_xhci_create_device(struct usb_xhci *xhci)
 
     // Allocate a device input context
     dev->input_ctx = usb_xhci_create_input_ctx(dev->xhci);
-    if(dev->input_ctx == NULL) {
+    if(dev->input_ctx == NULL)
+    {
         usb_xhci_device_issue_disable_slot_command(dev);
         kfree(dev);
-        return NULL; 
+        return NULL;
     }
 
     // Allocate a device context output
     dev->device_ctx = usb_xhci_create_device_ctx(dev->xhci);
-    if(dev->device_ctx == NULL) {
+    if(dev->device_ctx == NULL)
+    {
         usb_xhci_destroy_input_ctx(dev->input_ctx);
         usb_xhci_device_issue_disable_slot_command(dev);
         kfree(dev);
         return NULL;
     }
 
-    dprintk("XHCI: writing device context to DCBAA slot index %d\n", dev->slot_index-1);
-    xhci->dcbaa->output_ctx_base_address[dev->slot_index - 1]
-        = usb_xhci_device_ctx_phys_addr(dev->device_ctx);
+    dprintk("XHCI: writing device context to DCBAA slot index %d\n",
+            dev->slot_index - 1);
+    xhci->dcbaa->output_ctx_base_address[dev->slot_index - 1] =
+        usb_xhci_device_ctx_phys_addr(dev->device_ctx);
 
     printk("USB XHCI: setup context for slot %d\n", (int)dev->slot_index);
 
@@ -151,7 +154,7 @@ usb_xhci_address_root_hub_device(struct usb_xhci_device *dev,
         usb_xhci_create_endpoint(dev,
                                  USB_XHCI_CONTROL_TRANSFER_RING_SIZE,
                                  1 // Device Context Index 1
-                );
+        );
     if(default_endpoint == NULL)
     {
         return -EINVAL;
@@ -179,17 +182,17 @@ usb_xhci_address_root_hub_device(struct usb_xhci_device *dev,
 
     dprintk("slot_ctx->root_hub_port_number=0x%lx\n",
             (ul_t)slot_ctx->root_hub_port_number);
-    dprintk("slot_ctx->speed=0x%lx\n",
-            (ul_t)slot_ctx->speed);
+    dprintk("slot_ctx->speed=0x%lx\n", (ul_t)slot_ctx->speed);
 
     struct usb_xhci_endpoint_ctx *endpoint_ctx;
     endpoint_ctx = usb_xhci_input_ctx_endpoint_ctx(dev->input_ctx, 1);
     memset(endpoint_ctx, 0, ctx_size);
 
     uintptr_t dequeue_ptr =
-        (uintptr_t)usb_xhci_endpoint_get_transfer_ring_dequeue_pointer(default_endpoint);
+        (uintptr_t)usb_xhci_endpoint_get_transfer_ring_dequeue_pointer(
+            default_endpoint);
     endpoint_ctx->endpoint_type = 4; // Control endpoint
-    endpoint_ctx->error_count = 3; // Allow up to 3 retries
+    endpoint_ctx->error_count = 3;   // Allow up to 3 retries
     endpoint_ctx->tr_dequeue_shifted_ptr = dequeue_ptr >> 4;
     endpoint_ctx->dequeue_cycle_state = 1;
     endpoint_ctx->avg_trb_length = 8;
@@ -197,10 +200,10 @@ usb_xhci_address_root_hub_device(struct usb_xhci_device *dev,
 
     uint32_t max_packet_size = 8;
     uint32_t max_burst_size = 0; // zero-coded
-    uint32_t max_esit_payload = max_packet_size * (max_burst_size+1);
+    uint32_t max_esit_payload = max_packet_size * (max_burst_size + 1);
 
     endpoint_ctx->max_packet_size = max_packet_size;
-    endpoint_ctx->max_burst_size  = max_burst_size;
+    endpoint_ctx->max_burst_size = max_burst_size;
     endpoint_ctx->max_esit_payload_hi = (max_burst_size >> 16) & 0xFF;
     endpoint_ctx->max_esit_payload_lo = max_burst_size & 0xFFFF;
 
@@ -241,9 +244,9 @@ usb_xhci_address_root_hub_device(struct usb_xhci_device *dev,
 
 static struct usb_transfer *
 usb_xhci_device_create_bulk_transfer(struct usb_device *usb_dev,
-                                       usb_endpoint_id_t endpoint,
-                                       void __phys *buffer,
-                                       size_t buflen)
+                                     usb_endpoint_id_t endpoint,
+                                     void __phys *buffer,
+                                     size_t buflen)
 {
     uint8_t dci = usb_xhci_endpoint_id_to_dci(endpoint);
 
@@ -267,15 +270,14 @@ usb_xhci_device_create_bulk_transfer(struct usb_device *usb_dev,
 
 static struct usb_transfer *
 usb_xhci_device_create_control_transfer(struct usb_device *usb_dev,
-                                            usb_endpoint_id_t endpoint,
-                                            uint8_t bmRequestType,
-                                            uint8_t bRequest,
-                                            uint16_t wValue,
-                                            uint16_t wIndex,
-                                            uint16_t wLength,
-                                            void __phys *buffer,
-                                            size_t buflen
-                                            )
+                                        usb_endpoint_id_t endpoint,
+                                        uint8_t bmRequestType,
+                                        uint8_t bRequest,
+                                        uint16_t wValue,
+                                        uint16_t wIndex,
+                                        uint16_t wLength,
+                                        void __phys *buffer,
+                                        size_t buflen)
 {
     uint8_t dci = usb_xhci_endpoint_id_to_dci(endpoint);
 
@@ -289,13 +291,13 @@ usb_xhci_device_create_control_transfer(struct usb_device *usb_dev,
 
     struct usb_xhci_transfer *xfer;
     xfer = usb_xhci_endpoint_create_control_transfer(endp,
-                                                         bmRequestType,
-                                                         bRequest,
-                                                         wValue,
-                                                         wIndex,
-                                                         wLength,
-                                                         buffer,
-                                                         buflen);
+                                                     bmRequestType,
+                                                     bRequest,
+                                                     wValue,
+                                                     wIndex,
+                                                     wLength,
+                                                     buffer,
+                                                     buflen);
     if(xfer == NULL)
     {
         return NULL;
@@ -367,7 +369,8 @@ usb_xhci_register_root_hub_device(struct usb_xhci_device *dev)
     }
 
     res = register_usb_device(&dev->usb_device);
-    if(res) {
+    if(res)
+    {
         usb_host_deinit_device(&dev->usb_device);
         irq_lock_release(&dev->registry_lock);
         return res;

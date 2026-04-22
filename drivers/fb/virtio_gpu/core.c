@@ -395,7 +395,8 @@ virtio_gpu_deinit_device(struct virtio_driver *driver,
     struct virtio_gpu *gpu = device->driver_priv;
 
     res = unregister_fb_dev(&gpu->fb_dev);
-    if(res) {
+    if(res)
+    {
         return res;
     }
 

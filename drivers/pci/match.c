@@ -1,6 +1,6 @@
 
-#include <drivers/pci/pci.h>
 #include <drivers/pci/cfg.h>
+#include <drivers/pci/pci.h>
 #include <kanawha/stddef.h>
 
 #ifdef CONFIG_SYSFS_PCI
@@ -194,19 +194,20 @@ register_all_pci_funcs(void)
 
     // Trying to keep this function hidden...
     // I should rework this... -KJH
-    extern int pci_func_init(struct pci_func *func);
+    extern int pci_func_init(struct pci_func * func);
 
     res = pci_for_each_func(pci_func_init);
-    if(res) {
+    if(res)
+    {
         return res;
     }
 
     res = pci_for_each_func(register_pci_func);
-    if(res) {
+    if(res)
+    {
         return res;
     }
 
     return 0;
 }
 declare_init(device, register_all_pci_funcs);
-

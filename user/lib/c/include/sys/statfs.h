@@ -18,7 +18,9 @@ struct statfs
     unsigned int f_flags;
 };
 
-int statfs(const char *path, struct statfs *buf);
-int fstatfs(int fd, struct statfs *buf);
+int
+statfs(const char *path, struct statfs *buf);
+int
+fstatfs(int fd, struct statfs *buf);
 
 #endif

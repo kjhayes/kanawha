@@ -5,8 +5,8 @@
 #include <kanawha/kmalloc.h>
 #include <kanawha/lock.h>
 #include <kanawha/stddef.h>
-#include <kanawha/types.h>
 #include <kanawha/thread.h>
+#include <kanawha/types.h>
 
 #ifdef CONFIG_DEBUG_KMALLOC_BITMAP
 #include <kanawha/bitmap.h>
@@ -133,11 +133,16 @@ kmalloc(size_t size, unsigned long flags)
     }
 #endif
 
-    if(flags & KM_THREAD) {
+    if(flags & KM_THREAD)
+    {
         struct thread_state *thread = current_thread();
-        if(thread == NULL) {
-            wprintk("allocating KM_THREAD allocation without a current thread!\n");
-        } else {
+        if(thread == NULL)
+        {
+            wprintk(
+                "allocating KM_THREAD allocation without a current thread!\n");
+        }
+        else
+        {
             thread->kmalloc_allocated += req_size;
         }
     }
@@ -169,11 +174,15 @@ kfree(void *addr)
 
     size_t size = allocation->hdr.total_size;
 
-    if(allocation->hdr.flags & KM_THREAD) {
+    if(allocation->hdr.flags & KM_THREAD)
+    {
         struct thread_state *thread = current_thread();
-        if(thread == NULL) {
+        if(thread == NULL)
+        {
             wprintk("freeing KM_THREAD allocation without a current thread!\n");
-        } else {
+        }
+        else
+        {
             thread->kmalloc_allocated -= allocation->hdr.total_size;
         }
     }

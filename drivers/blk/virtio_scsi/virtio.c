@@ -53,7 +53,8 @@ struct virtio_scsi
  * Request Structure
  */
 
-struct virtio_scsi_req_cmd_header {
+struct virtio_scsi_req_cmd_header
+{
     // Device-readable part
     uint8_t lun[8];
     le64_t id;
@@ -63,7 +64,8 @@ struct virtio_scsi_req_cmd_header {
     uint8_t cdb[];
 };
 
-struct virtio_scsi_req_cmd_resp {
+struct virtio_scsi_req_cmd_resp
+{
     // Device-writable part
     le32_t sense_len;
     le32_t residual;
@@ -76,7 +78,8 @@ struct virtio_scsi_req_cmd_resp {
 /*
  * Virtio Configuration Fields
  */
-struct virtio_scsi_config {
+struct virtio_scsi_config
+{
     le32_t num_queues;
     le32_t seg_max;
     le32_t max_sectors;
@@ -89,7 +92,8 @@ struct virtio_scsi_config {
     le32_t max_lun;
 };
 
-struct virtio_scsi_command {
+struct virtio_scsi_command
+{
     struct scsi_command scsi_cmd;
     struct virtio_request *req;
 
@@ -120,38 +124,43 @@ unwrap_scsi_command(struct scsi_command *cmd)
 }
 
 static struct scsi_command *
-virtio_scsi_create_command(
-        struct scsi_adaptor *scsi_adaptor,
-        struct scsi_target target,
-        unsigned long flags)
+virtio_scsi_create_command(struct scsi_adaptor *scsi_adaptor,
+                           struct scsi_target target,
+                           unsigned long flags)
 {
     int res;
     struct virtio_scsi *adaptor = unwrap_scsi_adaptor(scsi_adaptor);
 
-    if(target.target > 0xFF) {
+    if(target.target > 0xFF)
+    {
         return NULL;
-    }   
-    if(target.lun > 0xFFFF) {
+    }
+    if(target.lun > 0xFFFF)
+    {
         return NULL;
     }
 
     struct virtio_scsi_command *cmd = kzmalloc(sizeof(*cmd), KM_KERNEL);
-    if(cmd == NULL) {
+    if(cmd == NULL)
+    {
         return NULL;
     }
 
     cmd->req = virtio_request_create(adaptor->request_queue);
-    if(cmd->req == NULL) {
+    if(cmd->req == NULL)
+    {
         kfree(cmd);
         return NULL;
     }
 
-    cmd->hdr_len = adaptor->cdb_size + sizeof(struct virtio_scsi_req_cmd_header);
+    cmd->hdr_len =
+        adaptor->cdb_size + sizeof(struct virtio_scsi_req_cmd_header);
     res = dma_alloc(cmd->hdr_len,
                     alignof(struct virtio_scsi_req_cmd_header),
                     0,
                     &cmd->hdr_dma);
-    if(res) {
+    if(res)
+    {
         virtio_request_destroy(cmd->req);
         kfree(cmd);
         return NULL;
@@ -164,16 +173,18 @@ virtio_scsi_create_command(
 
     cmd->hdr->lun[0] = 0x01;
     cmd->hdr->lun[1] = (uint8_t)target.target;
-    cmd->hdr->lun[2] = (uint8_t)((target.lun>>8) & 0xFF);
+    cmd->hdr->lun[2] = (uint8_t)((target.lun >> 8) & 0xFF);
     cmd->hdr->lun[3] = (uint8_t)(target.lun & 0xFF);
     memset(&cmd->hdr->lun[4], 0, 4);
 
-    cmd->resp_len = adaptor->sense_size + sizeof(struct virtio_scsi_req_cmd_resp);
+    cmd->resp_len =
+        adaptor->sense_size + sizeof(struct virtio_scsi_req_cmd_resp);
     res = dma_alloc(cmd->resp_len,
                     alignof(struct virtio_scsi_req_cmd_resp),
                     0,
                     &cmd->resp_dma);
-    if(res) {
+    if(res)
+    {
         dma_free(cmd->hdr_dma, cmd->hdr_len);
         virtio_request_destroy(cmd->req);
         kfree(cmd);
@@ -191,18 +202,18 @@ virtio_scsi_create_command(
 }
 
 static int
-virtio_scsi_write_cdb(
-        struct scsi_adaptor *scsi_adaptor,
-        struct scsi_command *scsi_command,
-        void *cdb,
-        size_t cdb_len)
+virtio_scsi_write_cdb(struct scsi_adaptor *scsi_adaptor,
+                      struct scsi_command *scsi_command,
+                      void *cdb,
+                      size_t cdb_len)
 {
     int res;
 
     struct virtio_scsi *adaptor = unwrap_scsi_adaptor(scsi_adaptor);
     struct virtio_scsi_command *cmd = unwrap_scsi_command(scsi_command);
 
-    if(cdb_len > adaptor->cdb_size) {
+    if(cdb_len > adaptor->cdb_size)
+    {
         return -EINVAL;
     }
 
@@ -214,11 +225,10 @@ virtio_scsi_write_cdb(
 }
 
 static int
-virtio_scsi_point_in_data(
-        struct scsi_adaptor *scsi_adaptor,
-        struct scsi_command *scsi_command,
-        void __phys * in_data_ptr,
-        size_t in_data_len)
+virtio_scsi_point_in_data(struct scsi_adaptor *scsi_adaptor,
+                          struct scsi_command *scsi_command,
+                          void __phys *in_data_ptr,
+                          size_t in_data_len)
 {
     struct virtio_scsi *adaptor = unwrap_scsi_adaptor(scsi_adaptor);
     struct virtio_scsi_command *cmd = unwrap_scsi_command(scsi_command);
@@ -230,11 +240,10 @@ virtio_scsi_point_in_data(
 }
 
 static int
-virtio_scsi_point_out_data(
-        struct scsi_adaptor *scsi_adaptor,
-        struct scsi_command *scsi_command,
-        void __phys * out_data_ptr,
-        size_t out_data_len)
+virtio_scsi_point_out_data(struct scsi_adaptor *scsi_adaptor,
+                           struct scsi_command *scsi_command,
+                           void __phys *out_data_ptr,
+                           size_t out_data_len)
 {
     struct virtio_scsi *adaptor = unwrap_scsi_adaptor(scsi_adaptor);
     struct virtio_scsi_command *cmd = unwrap_scsi_command(scsi_command);
@@ -246,9 +255,8 @@ virtio_scsi_point_out_data(
 }
 
 static int
-virtio_scsi_launch_command(
-        struct scsi_adaptor *scsi_adaptor,
-        struct scsi_command *scsi_command)
+virtio_scsi_launch_command(struct scsi_adaptor *scsi_adaptor,
+                           struct scsi_command *scsi_command)
 {
     int res;
 
@@ -256,44 +264,47 @@ virtio_scsi_launch_command(
     struct virtio_scsi_command *cmd = unwrap_scsi_command(scsi_command);
 
     // Append all of our buffers to build the request
-    res = virtio_request_append_input(
-            cmd->req,
-            dma_phys_addr(cmd->hdr_dma),
-            cmd->hdr_len);
-    if(res) {
+    res = virtio_request_append_input(cmd->req,
+                                      dma_phys_addr(cmd->hdr_dma),
+                                      cmd->hdr_len);
+    if(res)
+    {
         return res;
     }
 
-    if(cmd->out_data_len) {
-        res = virtio_request_append_input(
-                cmd->req,
-                cmd->out_data,
-                cmd->out_data_len);
-        if(res) {
+    if(cmd->out_data_len)
+    {
+        res = virtio_request_append_input(cmd->req,
+                                          cmd->out_data,
+                                          cmd->out_data_len);
+        if(res)
+        {
             return res;
         }
     }
 
-    res = virtio_request_append_output(
-            cmd->req,
-            dma_phys_addr(cmd->resp_dma),
-            cmd->resp_len);
-    if(res) {
+    res = virtio_request_append_output(cmd->req,
+                                       dma_phys_addr(cmd->resp_dma),
+                                       cmd->resp_len);
+    if(res)
+    {
         return res;
     }
 
-    if(cmd->in_data_len) {
-        res = virtio_request_append_output(
-                cmd->req,
-                cmd->in_data,
-                cmd->in_data_len);
-        if(res) {
+    if(cmd->in_data_len)
+    {
+        res = virtio_request_append_output(cmd->req,
+                                           cmd->in_data,
+                                           cmd->in_data_len);
+        if(res)
+        {
             return res;
         }
     }
 
     res = virtio_request_launch(cmd->req);
-    if(res) {
+    if(res)
+    {
         return res;
     }
 
@@ -303,27 +314,27 @@ virtio_scsi_launch_command(
 }
 
 static int
-virtio_scsi_await_command(
-        struct scsi_adaptor *scsi_adaptor,
-        struct scsi_command *scsi_command)
+virtio_scsi_await_command(struct scsi_adaptor *scsi_adaptor,
+                          struct scsi_command *scsi_command)
 {
     int res;
     struct virtio_scsi *adaptor = unwrap_scsi_adaptor(scsi_adaptor);
     struct virtio_scsi_command *cmd = unwrap_scsi_command(scsi_command);
 
     res = virtio_request_await(cmd->req);
-    if(res) {
+    if(res)
+    {
         return res;
     }
 
-
-    switch(cmd->resp->response) {
-        case VIRTIO_SCSI_S_OK:
-            cmd->scsi_cmd.error = SCSI_ERROR_NONE;
-            break;
-        default:
-            cmd->scsi_cmd.error = SCSI_ERROR_UNKNOWN;
-            break;
+    switch(cmd->resp->response)
+    {
+    case VIRTIO_SCSI_S_OK:
+        cmd->scsi_cmd.error = SCSI_ERROR_NONE;
+        break;
+    default:
+        cmd->scsi_cmd.error = SCSI_ERROR_UNKNOWN;
+        break;
     }
 
     cmd->scsi_cmd.status = SCSI_COMMAND_COMPLETED;
@@ -331,9 +342,8 @@ virtio_scsi_await_command(
 }
 
 static int
-virtio_scsi_destroy_command(
-        struct scsi_adaptor *scsi_adaptor,
-        struct scsi_command *scsi_command)
+virtio_scsi_destroy_command(struct scsi_adaptor *scsi_adaptor,
+                            struct scsi_command *scsi_command)
 {
     struct virtio_scsi *adaptor = unwrap_scsi_adaptor(scsi_adaptor);
     struct virtio_scsi_command *cmd = unwrap_scsi_command(scsi_command);
@@ -346,8 +356,7 @@ virtio_scsi_destroy_command(
     return 0;
 }
 
-static struct scsi_adaptor_ops
-virtio_scsi_adaptor_ops = {
+static struct scsi_adaptor_ops virtio_scsi_adaptor_ops = {
     .create_command = virtio_scsi_create_command,
     .write_cdb = virtio_scsi_write_cdb,
     .point_in_data = virtio_scsi_point_in_data,
@@ -365,7 +374,8 @@ virtio_scsi_probe(struct virtio_driver *driver, struct virtio_device *device)
 }
 
 static int
-virtio_scsi_negotiate(struct virtio_driver *driver, struct virtio_device *device)
+virtio_scsi_negotiate(struct virtio_driver *driver,
+                      struct virtio_device *device)
 {
     dprintk("virtio_scsi_negotiate\n");
     return 0;
@@ -373,7 +383,7 @@ virtio_scsi_negotiate(struct virtio_driver *driver, struct virtio_device *device
 
 static int
 virtio_scsi_init_device(struct virtio_driver *driver,
-                       struct virtio_device *device)
+                        struct virtio_device *device)
 {
     int res;
 
@@ -397,20 +407,22 @@ virtio_scsi_init_device(struct virtio_driver *driver,
     {
         le32_t _cdb_size;
         res = virtio_device_cfg_readl(
-                device,
-                offsetof(struct virtio_scsi_config, cdb_size),
-                &_cdb_size);
-        if(res) {
+            device,
+            offsetof(struct virtio_scsi_config, cdb_size),
+            &_cdb_size);
+        if(res)
+        {
             return res;
         }
         scsi->cdb_size = letoh32(_cdb_size);
 
         le32_t _sense_size;
         res = virtio_device_cfg_readl(
-                device,
-                offsetof(struct virtio_scsi_config, sense_size),
-                &_sense_size);
-        if(res) {
+            device,
+            offsetof(struct virtio_scsi_config, sense_size),
+            &_sense_size);
+        if(res)
+        {
             return res;
         }
         scsi->sense_size = letoh32(_sense_size);
@@ -441,13 +453,9 @@ virtio_scsi_init_device(struct virtio_driver *driver,
 
     {
         static unsigned long id = 0;
-        snprintk(
-                scsi->namebuf,
-                VIRTIO_SCSI_NAMEBUFLEN,
-                "virtio-scsi-%ld",
-                id);
+        snprintk(scsi->namebuf, VIRTIO_SCSI_NAMEBUFLEN, "virtio-scsi-%ld", id);
         id++;
-        scsi->namebuf[VIRTIO_SCSI_NAMEBUFLEN-1] = '\0'; 
+        scsi->namebuf[VIRTIO_SCSI_NAMEBUFLEN - 1] = '\0';
     }
 
     scsi->scsi_adaptor.ops = &virtio_scsi_adaptor_ops;
@@ -466,7 +474,7 @@ virtio_scsi_init_device(struct virtio_driver *driver,
 
 static int
 virtio_scsi_deinit_device(struct virtio_driver *driver,
-                         struct virtio_device *device)
+                          struct virtio_device *device)
 {
     return -EUNIMPL;
 }
@@ -493,5 +501,6 @@ register_virtio_scsi_driver(void)
 {
     return register_virtio_driver(&virtio_scsi_virtio_driver);
 }
-declare_init_desc(device, register_virtio_scsi_driver, "Registering Virtio SCSI Driver");
- 
+declare_init_desc(device,
+                  register_virtio_scsi_driver,
+                  "Registering Virtio SCSI Driver");

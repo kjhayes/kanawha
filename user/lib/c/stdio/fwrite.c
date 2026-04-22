@@ -15,7 +15,8 @@ fwrite_unlocked(const void *restrict ptr,
 {
     struct __sFILE *file = (struct __sFILE *)stream;
 
-    if(size == 0) {
+    if(size == 0)
+    {
         return -EINVAL;
     }
 

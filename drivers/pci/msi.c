@@ -109,17 +109,20 @@ pci_func_start_msi(struct pci_func *func, size_t requested_num_irqs)
     msi_dev->func = func;
 
     {
-        snprintk(msi_dev->namebuf, MSI_DEV_NAMEBUFLEN, "msi-%d.%d.%d.%d",
-                (int)func->segment->segment_id,
-                (int)func->device->bus->bus_index,
-                (int)func->device->index,
-                (int)func->index);
-        msi_dev->namebuf[MSI_DEV_NAMEBUFLEN-1] = '\0';
+        snprintk(msi_dev->namebuf,
+                 MSI_DEV_NAMEBUFLEN,
+                 "msi-%d.%d.%d.%d",
+                 (int)func->segment->segment_id,
+                 (int)func->device->bus->bus_index,
+                 (int)func->device->index,
+                 (int)func->index);
+        msi_dev->namebuf[MSI_DEV_NAMEBUFLEN - 1] = '\0';
     }
 
     msi_dev->irq_dev.driver = &msi_irq_driver;
     res = register_irq_dev(&msi_dev->irq_dev, msi_dev->namebuf);
-    if(res) {
+    if(res)
+    {
         kfree(msi_dev);
         return res;
     }

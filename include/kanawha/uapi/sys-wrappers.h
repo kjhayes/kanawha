@@ -13,9 +13,7 @@
 
 #define __syscall
 
-__syscall
-__attribute__((noreturn))
-void
+__syscall __attribute__((noreturn)) void
 kanawha_sys_exit(int exitcode);
 
 __syscall int
@@ -120,7 +118,10 @@ __syscall int
 kanawha_sys_chwdir(fd_t dir);
 
 __syscall int
-kanawha_sys_pipe(unsigned long flags, unsigned long mode_flags, fd_t *read_out, fd_t *write_out);
+kanawha_sys_pipe(unsigned long flags,
+                 unsigned long mode_flags,
+                 fd_t *read_out,
+                 fd_t *write_out);
 
 __syscall int
 kanawha_sys_insmod(fd_t file, const char *modname, unsigned long flags);
@@ -156,14 +157,10 @@ __syscall int
 kanawha_sys_sigsend(pid_t target, int signal, unsigned long flags);
 
 __syscall int
-kanawha_sys_prget(unsigned long type,
-                  long field,
-                  unsigned long *value);
+kanawha_sys_prget(unsigned long type, long field, unsigned long *value);
 
 __syscall int
-kanawha_sys_prset(unsigned long type,
-                  long field,
-                  unsigned long value);
+kanawha_sys_prset(unsigned long type, long field, unsigned long value);
 
 __syscall int
 kanawha_sys_connect(fd_t file, fd_t *conn, unsigned long flags);

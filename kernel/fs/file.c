@@ -298,4 +298,3 @@ fs_file_nop_on_close(struct file *file)
 {
     return 0;
 }
-

@@ -130,7 +130,8 @@ usb_xhci_launch_command(struct usb_xhci *xhci,
     struct usb_xhci_trb *next_trb = NULL;
     struct usb_xhci_trb __phys *sentinel;
 
-    res = usb_xhci_trb_ring_get_avail_trbs(&ring->ring, &next_trb, &sentinel, 1);
+    res =
+        usb_xhci_trb_ring_get_avail_trbs(&ring->ring, &next_trb, &sentinel, 1);
     if(res)
     {
         irq_lock_release(&ring->lock);

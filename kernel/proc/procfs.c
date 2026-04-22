@@ -79,7 +79,8 @@ __procfs_read_idle(unsigned long *out, void *state)
 {
     struct process *proc = state;
     ssize_t percent = thread_running_percentage(&proc->thread);
-    if(percent < 0) {
+    if(percent < 0)
+    {
         return percent;
     }
     *out = 100 - percent;
@@ -195,8 +196,6 @@ procfs_register_process(struct process *process)
         wprintk("Failed to register procfs \"cpu\" node (err=%s)!\n",
                 errnostr(res));
     }
-
-
 
 #ifdef CONFIG_DEBUG_TRACK_PROCESS_EXEC
     res = vfs_struct_node_add_buffer_field(data->vfs_struct_node,

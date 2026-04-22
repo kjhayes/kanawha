@@ -4,8 +4,7 @@
 #include <drivers/pci/pci.h>
 #include <kanawha/init.h>
 
-__maybe_unused
-static int
+__maybe_unused static int
 qemu_serial_irq_handler(struct excp_state *excp_state,
                         struct irq_action *action)
 {

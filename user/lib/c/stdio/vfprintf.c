@@ -5,21 +5,23 @@
 
 #define BUFLEN 0x1000
 
-struct vfprintf_state {
+struct vfprintf_state
+{
     FILE *stream;
     size_t datalen;
     char buffer[BUFLEN];
 };
 
 static int
-vfprintf_state_flush(
-        struct vfprintf_state *state)
+vfprintf_state_flush(struct vfprintf_state *state)
 {
-    if(state->datalen == 0) {
+    if(state->datalen == 0)
+    {
         return 0;
     }
     ssize_t written = fwrite(state->buffer, state->datalen, 1, state->stream);
-    if(written < 0) {
+    if(written < 0)
+    {
         return written;
     }
     state->datalen = 0;
@@ -30,10 +32,12 @@ static int
 vfprintf_putchar(int c, void *_state)
 {
     struct vfprintf_state *state = (struct vfprintf_state *)_state;
-    if(state->datalen == BUFLEN || c == '\n') {
+    if(state->datalen == BUFLEN || c == '\n')
+    {
         int res;
         res = vfprintf_state_flush(state);
-        if(res) {
+        if(res)
+        {
             return EOF;
         }
     }
@@ -52,7 +56,8 @@ vfprintf(FILE *restrict stream, const char *restrict format, va_list arg)
     };
     res = doprnt(vfprintf_putchar, &state, format, arg);
     int flush_res = vfprintf_state_flush(&state);
-    if(flush_res) {
+    if(flush_res)
+    {
         return flush_res;
     }
     return res;

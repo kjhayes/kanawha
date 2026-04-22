@@ -204,7 +204,8 @@ register_default_port_pci_cam(void)
     }
 
     struct pci_segment *segment = pci_segment_create_or_get(0);
-    if(segment == NULL) {
+    if(segment == NULL)
+    {
         eprintk("Failed to create or get PCI segment 0!\n");
         return -ENXIO;
     }

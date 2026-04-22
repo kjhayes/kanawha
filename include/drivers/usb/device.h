@@ -1,33 +1,34 @@
 #ifndef __KANAWHA__USB_DEVICE_H__
 #define __KANAWHA__USB_DEVICE_H__
 
+#include <drivers/usb/id.h>
 #include <drivers/usb/transfer.h>
 #include <drivers/usb/usb.h>
-#include <drivers/usb/id.h>
 #include <kanawha/ops.h>
 
 struct usb_device;
 
-typedef struct {
+typedef struct
+{
     unsigned endpoint_number : 4;
     unsigned direction : 1;
 } usb_endpoint_id_t;
 
-#define USB_DEV_CREATE_BULK_TRANSFER_SIG(RET, ARG, ...)                      \
+#define USB_DEV_CREATE_BULK_TRANSFER_SIG(RET, ARG, ...)                        \
     RET(struct usb_transfer *)                                                 \
-    ARG(usb_endpoint_id_t, endpoint_id)                                                              \
+    ARG(usb_endpoint_id_t, endpoint_id)                                        \
     ARG(void __phys *, buffer)                                                 \
     ARG(size_t, buflen)
 
-#define USB_DEV_CREATE_CONTROL_TRANSFER_SIG(RET, ARG, ...)                 \
+#define USB_DEV_CREATE_CONTROL_TRANSFER_SIG(RET, ARG, ...)                     \
     RET(struct usb_transfer *)                                                 \
-    ARG(usb_endpoint_id_t, endpoint)                                                              \
+    ARG(usb_endpoint_id_t, endpoint)                                           \
     ARG(uint8_t, bmRequestType)                                                \
     ARG(uint8_t, bRequest)                                                     \
     ARG(uint16_t, wValue)                                                      \
     ARG(uint16_t, wIndex)                                                      \
     ARG(uint16_t, wLength)                                                     \
-    ARG(void __phys *, buffer) \
+    ARG(void __phys *, buffer)                                                 \
     ARG(size_t, buflen)
 
 #define USB_DEV_CREATE_ISOCH_TRANSFER_SIG(RET, ARG, ...)                       \
@@ -39,12 +40,10 @@ typedef struct {
     ARG(struct usb_transfer *, xfer)
 
 #define USB_DEV_OP_LIST(OP, ...)                                               \
-    OP(create_control_transfer,                                            \
-       USB_DEV_CREATE_CONTROL_TRANSFER_SIG,                                \
+    OP(create_control_transfer,                                                \
+       USB_DEV_CREATE_CONTROL_TRANSFER_SIG,                                    \
        ##__VA_ARGS__)                                                          \
-    OP(create_bulk_transfer,                                                 \
-       USB_DEV_CREATE_BULK_TRANSFER_SIG,                                     \
-       ##__VA_ARGS__)                                                          \
+    OP(create_bulk_transfer, USB_DEV_CREATE_BULK_TRANSFER_SIG, ##__VA_ARGS__)  \
     OP(create_isoch_transfer,                                                  \
        USB_DEV_CREATE_ISOCH_TRANSFER_SIG,                                      \
        ##__VA_ARGS__)                                                          \
@@ -114,7 +113,8 @@ usb_host_deinit_device(struct usb_device *device);
 #define USB_DEV_CONTROL_REQUEST_SET_INTERFACE (0x11)
 #define USB_DEV_CONTROL_REQUEST_SYNC_FRAME (0x12)
 
-#define USB_ENDPOINT_ID_DEFAULT_CONTROL ((usb_endpoint_id_t){.endpoint_number=0,.direction=0})
+#define USB_ENDPOINT_ID_DEFAULT_CONTROL                                        \
+    ((usb_endpoint_id_t){.endpoint_number = 0, .direction = 0})
 
 int
 usb_device_control_transfer(struct usb_device *device,
@@ -154,7 +154,8 @@ struct usb_interface
     void *driver_priv_state;
 };
 
-struct usb_interface_endpoint {
+struct usb_interface_endpoint
+{
     usb_endpoint_id_t endpoint;
     uint16_t max_packet_size;
 };

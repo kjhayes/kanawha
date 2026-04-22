@@ -47,10 +47,9 @@ int
 kfb_set_current_mode(struct kfb_framebuffer *buffer, int mode);
 
 static inline int
-kfb_get_dimensions(
-        struct kfb_framebuffer *fb,
-        unsigned long *width,
-        unsigned long *height)
+kfb_get_dimensions(struct kfb_framebuffer *fb,
+                   unsigned long *width,
+                   unsigned long *height)
 {
     int current_mode = kfb_get_current_mode(fb);
     struct fb_mode_info *minfo = kfb_load_mode_info(fb, current_mode);
@@ -87,62 +86,54 @@ kfb_blit(void *to,
          size_t from_height,
          size_t from_off_x,
          size_t from_off_y,
-         struct gfx_layout *from_layout
-         );
+         struct gfx_layout *from_layout);
 
 int
-kfb_blit_with_transform(
-         void *to,
-         size_t to_width,
-         size_t to_height,
-         size_t to_off_x,
-         size_t to_off_y,
-         struct gfx_layout *to_layout,
-         void *from,
-         size_t from_width,
-         size_t from_height,
-         size_t from_off_x,
-         size_t from_off_y,
-         struct gfx_layout *from_layout,
-         void *xform_state,
-         kfb_rgba_t (*xform)(kfb_rgba_t color,void *state)
-         );
+kfb_blit_with_transform(void *to,
+                        size_t to_width,
+                        size_t to_height,
+                        size_t to_off_x,
+                        size_t to_off_y,
+                        struct gfx_layout *to_layout,
+                        void *from,
+                        size_t from_width,
+                        size_t from_height,
+                        size_t from_off_x,
+                        size_t from_off_y,
+                        struct gfx_layout *from_layout,
+                        void *xform_state,
+                        kfb_rgba_t (*xform)(kfb_rgba_t color, void *state));
 
 int
-kfb_blit_image_with_transform(
-        void *to,
-        size_t to_width,
-        size_t to_height,
-        size_t to_offset_x,
-        size_t to_offset_y,
-        struct gfx_layout *to_layout,
-        struct kfb_image *image,
-        void *xform_state,
-        kfb_rgba_t (*xform)(kfb_rgba_t color,void *state)
-        );
+kfb_blit_image_with_transform(void *to,
+                              size_t to_width,
+                              size_t to_height,
+                              size_t to_offset_x,
+                              size_t to_offset_y,
+                              struct gfx_layout *to_layout,
+                              struct kfb_image *image,
+                              void *xform_state,
+                              kfb_rgba_t (*xform)(kfb_rgba_t color,
+                                                  void *state));
 
 int
-kfb_blit_image(
-        void *to,
-        size_t to_width,
-        size_t to_height,
-        size_t to_offset_x,
-        size_t to_offset_y,
-        struct gfx_layout *to_layout,
-        struct kfb_image *image
-        );
+kfb_blit_image(void *to,
+               size_t to_width,
+               size_t to_height,
+               size_t to_offset_x,
+               size_t to_offset_y,
+               struct gfx_layout *to_layout,
+               struct kfb_image *image);
 
 int
-kfb_blit_image_brightness_as_color(
-        void *to,
-        size_t to_width,
-        size_t to_height,
-        size_t to_offset_x,
-        size_t to_offset_y,
-        struct gfx_layout *to_layout,
-        struct kfb_image *image,
-        kfb_rgba_t color
-        );
+kfb_blit_image_brightness_as_color(void *to,
+                                   size_t to_width,
+                                   size_t to_height,
+                                   size_t to_offset_x,
+                                   size_t to_offset_y,
+                                   struct gfx_layout *to_layout,
+                                   struct kfb_image *image,
+                                   kfb_rgba_t color);
 
 int
 kfb_framebuffer_copy_direct(struct kfb_framebuffer *fb,

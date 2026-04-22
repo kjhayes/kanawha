@@ -2,8 +2,8 @@
 #define __KANAWHA__PCI_BAR_H__
 
 #include <kanawha/mmio.h>
-#include <kanawha/types.h>
 #include <kanawha/pio.h>
+#include <kanawha/types.h>
 
 struct pci_bar
 {

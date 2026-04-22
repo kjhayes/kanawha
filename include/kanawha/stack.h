@@ -31,7 +31,7 @@ thread_stack_init(struct thread_stack *thread, order_t order);
 int
 thread_stack_deinit(struct thread_stack *thread);
 
-void*
+void *
 thread_stack_get_base(struct thread_stack *thread);
 
 #define thread_stack_alloca(_STACK_STATE_PTR, _AMT)                            \

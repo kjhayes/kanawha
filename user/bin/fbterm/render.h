@@ -3,23 +3,19 @@
 
 #include "font.h"
 #include "kfb/kfb.h"
-#include <windd/windd.h>
 #include "term.h"
+#include <windd/windd.h>
 
 struct render_ctx;
 
 struct render_ctx *
-create_fb_render_ctx(
-        struct kfb_framebuffer *fb,
-        int layer);
+create_fb_render_ctx(struct kfb_framebuffer *fb, int layer);
 
 struct render_ctx *
-create_windd_render_ctx(
-        struct window *win);
+create_windd_render_ctx(struct window *win);
 
 int
-destroy_render_ctx(
-        struct render_ctx *ctx);
+destroy_render_ctx(struct render_ctx *ctx);
 
 int
 render_update(struct terminal_data *tdata,
@@ -27,16 +23,12 @@ render_update(struct terminal_data *tdata,
               struct render_ctx *ctx);
 
 int
-render_ctx_begin(
-        struct render_ctx *ctx,
-        int layer,
-        struct gfx_layout *gfx,
-        void **buffer,
-        size_t *buflen);
+render_ctx_begin(struct render_ctx *ctx,
+                 int layer,
+                 struct gfx_layout *gfx,
+                 void **buffer,
+                 size_t *buflen);
 int
-render_ctx_end(
-        struct render_ctx *ctx,
-        int layer,
-        int flush);
+render_ctx_end(struct render_ctx *ctx, int layer, int flush);
 
 #endif

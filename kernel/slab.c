@@ -191,8 +191,7 @@ create_dynamic_slab_allocator(size_t obj_size, order_t obj_align)
 }
 
 int
-destroy_dynamic_slab_allocator(
-        struct slab_allocator *alloc)
+destroy_dynamic_slab_allocator(struct slab_allocator *alloc)
 {
     return -EUNIMPL;
 }
@@ -235,9 +234,12 @@ recurse:
         block->num_free--;
         bitmap_set(block->bitmap, first_free);
 
-        if(block->num_free == 0) {
+        if(block->num_free == 0)
+        {
             ptree_remove(&alloc->block_tree, block->pnode.key);
-            ptree_insert(&alloc->full_block_tree, &block->pnode, (uintptr_t)block);
+            ptree_insert(&alloc->full_block_tree,
+                         &block->pnode,
+                         (uintptr_t)block);
         }
 
         return block->objects + (first_free * alloc->obj_size);
@@ -269,10 +271,13 @@ slab_free(struct slab_allocator *alloc, void *obj)
     size_t index;
     struct slab_alloc_block *block = NULL;
 
-    do { // Try and find the block in the "block_tree"
-        struct ptree_node *node = ptree_get_max_less(&alloc->block_tree, (uintptr_t)obj);
+    do
+    { // Try and find the block in the "block_tree"
+        struct ptree_node *node =
+            ptree_get_max_less(&alloc->block_tree, (uintptr_t)obj);
 
-        if(node == NULL) {
+        if(node == NULL)
+        {
             break;
         }
 
@@ -280,7 +285,8 @@ slab_free(struct slab_allocator *alloc, void *obj)
             container_of(node, struct slab_alloc_block, pnode);
 
         void *objs_begin = cur_block->objects;
-        void *objs_end = cur_block->objects + (cur_block->num_slots * alloc->obj_size);
+        void *objs_end =
+            cur_block->objects + (cur_block->num_slots * alloc->obj_size);
         if(obj < objs_begin || obj >= objs_end)
         {
             break;
@@ -290,12 +296,14 @@ slab_free(struct slab_allocator *alloc, void *obj)
         index = (obj - objs_begin) / alloc->obj_size;
     } while(0);
 
-    if(block == NULL) { // Look for the block in the "full_block_tree"
-        struct ptree_node *node = ptree_get_max_less(&alloc->full_block_tree, (uintptr_t)obj);
+    if(block == NULL)
+    { // Look for the block in the "full_block_tree"
+        struct ptree_node *node =
+            ptree_get_max_less(&alloc->full_block_tree, (uintptr_t)obj);
 
-        if(node == NULL) {
-            wprintk("slab_free: passed an invalid pointer! (%p)\n",
-                    obj);
+        if(node == NULL)
+        {
+            wprintk("slab_free: passed an invalid pointer! (%p)\n", obj);
             return;
         }
 
@@ -303,11 +311,11 @@ slab_free(struct slab_allocator *alloc, void *obj)
             container_of(node, struct slab_alloc_block, pnode);
 
         void *objs_begin = cur_block->objects;
-        void *objs_end = cur_block->objects + (cur_block->num_slots * alloc->obj_size);
+        void *objs_end =
+            cur_block->objects + (cur_block->num_slots * alloc->obj_size);
         if(obj < objs_begin || obj >= objs_end)
         {
-            wprintk("slab_free: passed an invalid pointer! (%p)\n",
-                    obj);
+            wprintk("slab_free: passed an invalid pointer! (%p)\n", obj);
             return;
         }
 
@@ -334,7 +342,8 @@ slab_free(struct slab_allocator *alloc, void *obj)
         if(block->num_free == block->num_slots)
         {
             // This block is empty, so free it
-            struct ptree_node *rem = ptree_remove(&alloc->block_tree, block->pnode.key);
+            struct ptree_node *rem =
+                ptree_remove(&alloc->block_tree, block->pnode.key);
             DEBUG_ASSERT(rem == &block->pnode);
             page_free(SLAB_ALLOC_BLOCK_PAGE_ORDER, __pa(block));
         }

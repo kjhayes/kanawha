@@ -83,7 +83,8 @@ pci_ecam_dt_init_node(struct dt_driver *driver, struct dt_node *node)
     }
 
     struct pci_segment *segment = pci_segment_create_or_get(0);
-    if(segment == NULL) {
+    if(segment == NULL)
+    {
         wprintk("Failed to obtain PCI segment 0!\n");
         return -ENXIO;
     }
@@ -96,80 +97,100 @@ pci_ecam_dt_init_node(struct dt_driver *driver, struct dt_node *node)
 
         struct fdt_property *ranges_prop =
             fdt_find_property_by_name(fdt, fdt_node, "ranges");
-        if(ranges_prop != NULL) {
+        if(ranges_prop != NULL)
+        {
             printk("Found ranges prop of length %lu\n",
-                    (ul_t)fdttoh32(ranges_prop->len));
+                   (ul_t)fdttoh32(ranges_prop->len));
             fdt32_t *cells = fdt_property_data(fdt, ranges_prop);
-            size_t num_cells = fdt_property_size(fdt, ranges_prop) / sizeof(fdt32_t);
-    
+            size_t num_cells =
+                fdt_property_size(fdt, ranges_prop) / sizeof(fdt32_t);
+
             size_t num_entries = num_cells / entry_cells;
             DEBUG_ASSERT((num_cells % entry_cells) == 0);
-            for(size_t i = 0; i < num_entries; i++) {
+            for(size_t i = 0; i < num_entries; i++)
+            {
                 fdt32_t *pci_addr_data = &cells[(i * entry_cells)];
-                fdt32_t *cpu_addr_data = &cells[(i * entry_cells) + pci_addr_cells];
-                fdt32_t *size_data = &cells[(i * entry_cells) + pci_addr_cells + addr_cells];
+                fdt32_t *cpu_addr_data =
+                    &cells[(i * entry_cells) + pci_addr_cells];
+                fdt32_t *size_data =
+                    &cells[(i * entry_cells) + pci_addr_cells + addr_cells];
 
                 size_t size;
-                if(size_cells == 1) {
+                if(size_cells == 1)
+                {
                     size = fdttoh32(size_data[0]);
-                } else if(size_cells == 2) {
-                    size = fdttoh64(*(fdt64_t*)size_data);
-                } else {
+                }
+                else if(size_cells == 2)
+                {
+                    size = fdttoh64(*(fdt64_t *)size_data);
+                }
+                else
+                {
                     continue;
                 }
 
                 uint64_t cpu_addr;
-                if(addr_cells == 1) {
+                if(addr_cells == 1)
+                {
                     cpu_addr = fdttoh32(cpu_addr_data[0]);
-                } else if(addr_cells == 2) {
-                    cpu_addr = fdttoh64(*(fdt64_t*)cpu_addr_data);
-                } else {
+                }
+                else if(addr_cells == 2)
+                {
+                    cpu_addr = fdttoh64(*(fdt64_t *)cpu_addr_data);
+                }
+                else
+                {
                     continue;
                 }
 
                 uint32_t pci_flags = fdttoh32(pci_addr_data[0]);
-                uint64_t pci_addr = fdttoh64(*(fdt64_t*)&pci_addr_data[1]);
+                uint64_t pci_addr = fdttoh64(*(fdt64_t *)&pci_addr_data[1]);
 
                 int space = (pci_flags >> 24) & 0x3;
 
-                if((space & 2) && pci_addr != cpu_addr) {
-                    wprintk("Device Tree PCI \"ranges\" mismatch between CPU physical and PCI bus addresses!"
+                if((space & 2) && pci_addr != cpu_addr)
+                {
+                    wprintk("Device Tree PCI \"ranges\" mismatch between CPU "
+                            "physical and PCI bus addresses!"
                             " (cpu=%p, pci=%p)\n",
                             (uintptr_t)cpu_addr,
                             (uintptr_t)pci_addr);
                     continue;
                 }
-                if (space == 0) {
+                if(space == 0)
+                {
                     // This represents configuration space
-                    pci_segment_set_mmio_flags(
-                            segment,
-                            cpu_addr,
-                            size,
-                            PCI_MMIO_MEM_CONFIG);
+                    pci_segment_set_mmio_flags(segment,
+                                               cpu_addr,
+                                               size,
+                                               PCI_MMIO_MEM_CONFIG);
                 }
-                else if(space & 2) {
+                else if(space & 2)
+                {
                     // This is an MMIO range
-                    pci_segment_set_mmio_flags(
-                            segment,
-                            cpu_addr,
-                            size,
-                            (PCI_MMIO_MEM_SNOOPED)
-                           |(((pci_flags >> 30) & 1) ? PCI_MMIO_MEM_PREFETCH : 0)
-                           );
-                } else {
+                    pci_segment_set_mmio_flags(segment,
+                                               cpu_addr,
+                                               size,
+                                               (PCI_MMIO_MEM_SNOOPED) |
+                                                   (((pci_flags >> 30) & 1)
+                                                        ? PCI_MMIO_MEM_PREFETCH
+                                                        : 0));
+                }
+                else
+                {
                     // This is a PIO range
-                    pci_segment_set_pio_flags(
-                            segment,
-                            cpu_addr,
-                            size,
-                            PCI_PIO_MEM_SNOOPED);
+                    pci_segment_set_pio_flags(segment,
+                                              cpu_addr,
+                                              size,
+                                              PCI_PIO_MEM_SNOOPED);
                 }
 
-                printk("Device Tree PCI Range: pci=%p, cpu=%p, size=%p, flags=0x%lx\n",
-                        (uintptr_t)pci_addr,
-                        (uintptr_t)cpu_addr,
-                        (uintptr_t)size,
-                        (ul_t)pci_flags);
+                printk("Device Tree PCI Range: pci=%p, cpu=%p, size=%p, "
+                       "flags=0x%lx\n",
+                       (uintptr_t)pci_addr,
+                       (uintptr_t)cpu_addr,
+                       (uintptr_t)size,
+                       (ul_t)pci_flags);
             }
         }
     }

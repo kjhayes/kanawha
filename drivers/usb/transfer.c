@@ -18,21 +18,23 @@ usb_transfer_init_struct(struct usb_transfer *xfer,
     irq_lock_init(&xfer->status_lock);
     xfer->status = USB_TRANSFER_STATUS_IDLE;
     res = waitqueue_init(&xfer->status_waitqueue);
-    if(res) {
+    if(res)
+    {
         return res;
     }
 
     char *name = "usb-transfer";
-    switch(xfer->type) {
-        case USB_TRANSFER_CONTROL:
-            name = "usb-control-transfer";
-            break;
-        case USB_TRANSFER_BULK:
-            name = "usb-bulk-transfer";
-            break;
-        case USB_TRANSFER_ISOCH:
-            name = "usb-isoch-transfer";
-            break;
+    switch(xfer->type)
+    {
+    case USB_TRANSFER_CONTROL:
+        name = "usb-control-transfer";
+        break;
+    case USB_TRANSFER_BULK:
+        name = "usb-bulk-transfer";
+        break;
+    case USB_TRANSFER_ISOCH:
+        name = "usb-isoch-transfer";
+        break;
     }
 
     waitqueue_name(&xfer->status_waitqueue, name);
@@ -63,14 +65,14 @@ usb_transfer_await(struct usb_transfer *xfer)
             irq_lock_release(&xfer->status_lock);
             return xfer->status;
         }
-        if(xfer->status == USB_TRANSFER_STATUS_IDLE) {
+        if(xfer->status == USB_TRANSFER_STATUS_IDLE)
+        {
             return -EINVAL;
         }
         int irq_flags;
-        res = wait_on_irq_lock_release(
-                &xfer->status_waitqueue,
-                &xfer->status_lock,
-                &irq_flags);
+        res = wait_on_irq_lock_release(&xfer->status_waitqueue,
+                                       &xfer->status_lock,
+                                       &irq_flags);
         enable_restore_irqs(irq_flags);
         if(res == -EINTR)
         {

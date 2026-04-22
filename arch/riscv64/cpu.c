@@ -118,9 +118,10 @@ riscv64_dt_cpu_init(struct dt_driver *driver, struct dt_node *node)
     {
         char namebuf[32];
         snprintk(namebuf, 32, "hart%ld", current_hartid());
-        namebuf[32-1] = '\0';
+        namebuf[32 - 1] = '\0';
         cpu->name = kstrdup(namebuf);
-        if(cpu->name == NULL) {
+        if(cpu->name == NULL)
+        {
             cpu->name = "";
         }
     }
@@ -128,9 +129,12 @@ riscv64_dt_cpu_init(struct dt_driver *driver, struct dt_node *node)
     int is_bsp = (hartid == current_hartid());
 
     dprintk("hartid=0x%lx, is_bsp = %d\n", (ul_t)hartid, is_bsp);
-    if(is_bsp) {
+    if(is_bsp)
+    {
         cpu->cpu.flags |= CPU_FLAG_IS_BSP;
-    } else {
+    }
+    else
+    {
         cpu->cpu.flags &= ~CPU_FLAG_IS_BSP;
     }
     res = register_cpu(&cpu->cpu, cpu->name);

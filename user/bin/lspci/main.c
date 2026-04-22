@@ -1,4 +1,5 @@
 
+#include "pciids.h"
 #include <errno.h>
 #include <getopt.h>
 #include <kanawha/file.h>
@@ -6,14 +7,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "pciids.h"
 
 const char *progname = "lspci";
 
 __attribute__((noreturn)) static void
 panic_usage(void)
 {
-    fprintf(stderr, "Usage: %s [-s SYSFS_PCI_DIR] [-p PCI_IDS_PATH] [-i]\n",
+    fprintf(stderr,
+            "Usage: %s [-s SYSFS_PCI_DIR] [-p PCI_IDS_PATH] [-i]\n",
             progname);
     exit(EXIT_FAILURE);
 }
@@ -74,7 +75,8 @@ main(int argc, const char **argv)
     }
 
     res = init_pciids(pciids_path);
-    if(res) {
+    if(res)
+    {
         fprintf(stderr, "Warning: failed to read PCI ID database file!\n");
     }
 

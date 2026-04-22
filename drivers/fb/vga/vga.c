@@ -1,6 +1,6 @@
 
-#include <drivers/vga/vga.h>
 #include <drivers/fb/vga/vga.h>
+#include <drivers/vga/vga.h>
 #include <kanawha/dev/fb.h>
 #include <kanawha/endian.h>
 #include <kanawha/init.h>
@@ -316,4 +316,3 @@ vga_fb_install_vga_dev_owner(void)
     return 0;
 }
 declare_init(device, vga_fb_install_vga_dev_owner);
-

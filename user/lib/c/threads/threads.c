@@ -1,16 +1,17 @@
 
-#include <threads.h>
-#include <kanawha/sys-wrappers.h>
-#include <kanawha/spawn.h>
 #include <errno.h>
-#include <sys/wait.h>
-#include <unistd.h>
+#include <kanawha/spawn.h>
+#include <kanawha/sys-wrappers.h>
 #include <stdint.h>
+#include <sys/wait.h>
+#include <threads.h>
+#include <unistd.h>
 
 // TODO: We don't clean up old thread's
 // stacks...
 
-struct __libc_thrd_creation_state {
+struct __libc_thrd_creation_state
+{
     thrd_start_t func;
     void *state;
     void *tmp;
@@ -22,7 +23,8 @@ _Static_assert(offsetof(struct __libc_thrd_creation_state, state) == 8, "");
 _Static_assert(offsetof(struct __libc_thrd_creation_state, tmp) == 16, "");
 _Static_assert(offsetof(struct __libc_thrd_creation_state, inited) == 24, "");
 
-extern void _thrd_start(struct __libc_thrd_creation_state * state);
+extern void
+_thrd_start(struct __libc_thrd_creation_state *state);
 
 int
 thrd_create(thrd_t *thrd, thrd_start_t func, void *state)
@@ -36,20 +38,19 @@ thrd_create(thrd_t *thrd, thrd_start_t func, void *state)
     };
 
     pid_t child_pid;
-    res = kanawha_sys_spawn(
-            _thrd_start,
-            (void*)&_state,
-             SPAWN_ENV_SHARED
-            |SPAWN_FILES_SHARED
-            |SPAWN_MMAP_SHARED
-            ,
-            &child_pid);
-    if(res) {
+    res = kanawha_sys_spawn(_thrd_start,
+                            (void *)&_state,
+                            SPAWN_ENV_SHARED | SPAWN_FILES_SHARED |
+                                SPAWN_MMAP_SHARED,
+                            &child_pid);
+    if(res)
+    {
         return res;
     }
     thrd->pid = child_pid;
 
-    while(_state.inited == 0) {
+    while(_state.inited == 0)
+    {
         thrd_yield();
     }
 
@@ -85,7 +86,9 @@ thrd_exit(int exitcode)
     kanawha_sys_exit(exitcode);
 
     // We should never reach here!
-    while(1) {}
+    while(1)
+    {
+    }
 }
 
 int
@@ -93,7 +96,8 @@ thrd_join(thrd_t thrd, int *joined_res)
 {
     int res;
     res = waitpid(thrd.pid, joined_res, 0);
-    if(res) {
+    if(res)
+    {
         return thrd_error;
     }
     return thrd_success;
@@ -103,19 +107,22 @@ int
 thrd_sleep(const struct timespec *duration, struct timespec *remaining)
 {
     int res;
-    res = kanawha_sys_sleep(duration->tv_nsec/1000, SLEEP_DURATION_MSEC);
-    if(res) {
+    res = kanawha_sys_sleep(duration->tv_nsec / 1000, SLEEP_DURATION_MSEC);
+    if(res)
+    {
         // We have no way of getting how much time actually passed...
         // Just lie and say half the duration happened
         // TODO
-        if(remaining) {
+        if(remaining)
+        {
             remaining->tv_nsec = duration->tv_nsec / 2;
             remaining->tv_sec = duration->tv_sec / 2;
         }
         errno = res;
         return res;
     }
-    if(remaining) {
+    if(remaining)
+    {
         *remaining = *duration;
     }
     return 0;
@@ -127,4 +134,3 @@ thrd_yield(void)
     // TODO (this is okay for now)
     return;
 }
-

@@ -1,8 +1,8 @@
 
 #include "command.h"
 #include "directive.h"
-#include <kanawha/sys-wrappers.h>
 #include <kanawha/prinfo.h>
+#include <kanawha/sys-wrappers.h>
 
 #include <ctype.h>
 #include <errno.h>
@@ -104,12 +104,12 @@ main(int argc, const char **argv)
         script_size = ftell(script_file);
         fseek(script_file, 0, SEEK_SET);
 
-        script_buffer = malloc(script_size+1);
+        script_buffer = malloc(script_size + 1);
         if(script_buffer == NULL)
         {
             return -1;
         }
-        memset(script_buffer, 0, script_size+1);
+        memset(script_buffer, 0, script_size + 1);
 
         size_t to_read = script_size;
         char *buf_iter = script_buffer;
@@ -118,7 +118,13 @@ main(int argc, const char **argv)
             ssize_t read = fread(buf_iter, 1, to_read, script_file);
             if(read <= 0)
             {
-                fprintf(stderr, "Failed to read script \"%s\" (err=%ld, script_size=%ld, read=%ld)!\n", argv[1], read, (long)script_size, (long)(script_size-to_read));
+                fprintf(stderr,
+                        "Failed to read script \"%s\" (err=%ld, "
+                        "script_size=%ld, read=%ld)!\n",
+                        argv[1],
+                        read,
+                        (long)script_size,
+                        (long)(script_size - to_read));
                 return -1;
             }
             buf_iter += read;
@@ -142,13 +148,15 @@ main(int argc, const char **argv)
             getcwd(cwd_buffer, 256);
             cwd_buffer[256 - 1] = '\0';
             unsigned long cur_proc;
-            res = kanawha_sys_prget(
-                    PRINFO_TYPE_SMP,
-                    PRGET_SMP_CURRENT,
-                    &cur_proc);
-            if(res) {
+            res = kanawha_sys_prget(PRINFO_TYPE_SMP,
+                                    PRGET_SMP_CURRENT,
+                                    &cur_proc);
+            if(res)
+            {
                 printf("[%s] ", cwd_buffer);
-            } else {
+            }
+            else
+            {
                 printf("[%lu][%s] ", cur_proc, cwd_buffer);
             }
         }

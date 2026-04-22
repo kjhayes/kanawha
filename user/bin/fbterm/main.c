@@ -6,84 +6,86 @@
 #include <kanawha/spawn.h>
 #include <kanawha/sys-wrappers.h>
 #include <kfb/kfb.h>
-#include <windd/windd.h>
 #include <poll.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 #include <threads.h>
+#include <unistd.h>
+#include <windd/windd.h>
 
 #include "ansi.h"
 #include "color.h"
 #include "font.h"
-#include "render.h"
 #include "input.h"
+#include "render.h"
 #include "term.h"
 
 static const char *prog_name = "fbterm";
 
-//static inline void
-//find_maximum_fb_mode(struct kfb_framebuffer *fb,
-//                     int *best_mode_out,
-//                     int *best_layer_out)
+// static inline void
+// find_maximum_fb_mode(struct kfb_framebuffer *fb,
+//                      int *best_mode_out,
+//                      int *best_layer_out)
 //{
-//    int best_mode = -EINVAL;
-//    int best_layer = -EINVAL;
-//    size_t best_dimensions = 0;
-//    int mode = 0;
+//     int best_mode = -EINVAL;
+//     int best_layer = -EINVAL;
+//     size_t best_dimensions = 0;
+//     int mode = 0;
 //
-//    while(1)
-//    {
-//        struct fb_mode_info *info = kfb_load_mode_info(fb, mode);
-//        if(info == NULL)
-//        {
-//            break;
-//        }
+//     while(1)
+//     {
+//         struct fb_mode_info *info = kfb_load_mode_info(fb, mode);
+//         if(info == NULL)
+//         {
+//             break;
+//         }
 //
-//        for(int layer = 0; layer < info->layer_count; layer++)
-//        {
-//            struct fb_layer_info *layer_info = &info->layer_infos[layer];
-//            size_t dimensions;
-//            switch(layer_info->layout.format)
-//            {
-//            case GFX_FORMAT_ASCII:
-//            case GFX_FORMAT_VGA_CHAR:
-//                dimensions = 0;
-//                break;
-//            default:
-//                dimensions =
-//                    layer_info->layout.width * layer_info->layout.height;
-//                break;
-//            }
+//         for(int layer = 0; layer < info->layer_count; layer++)
+//         {
+//             struct fb_layer_info *layer_info = &info->layer_infos[layer];
+//             size_t dimensions;
+//             switch(layer_info->layout.format)
+//             {
+//             case GFX_FORMAT_ASCII:
+//             case GFX_FORMAT_VGA_CHAR:
+//                 dimensions = 0;
+//                 break;
+//             default:
+//                 dimensions =
+//                     layer_info->layout.width * layer_info->layout.height;
+//                 break;
+//             }
 //
-//            if(dimensions > best_dimensions)
-//            {
-//                best_mode = mode;
-//                best_layer = layer;
-//                break;
-//            }
-//        }
+//             if(dimensions > best_dimensions)
+//             {
+//                 best_mode = mode;
+//                 best_layer = layer;
+//                 break;
+//             }
+//         }
 //
-//        kfb_unload_mode_info(fb, info);
-//        mode++;
-//    }
+//         kfb_unload_mode_info(fb, info);
+//         mode++;
+//     }
 //
-//    *best_mode_out = best_mode;
-//    *best_layer_out = best_layer;
-//}
+//     *best_mode_out = best_mode;
+//     *best_layer_out = best_layer;
+// }
 
 static inline void
 panic_usage(void)
 {
     fprintf(stderr,
-            "Usage: %s [-f framebuffer] [-t psf1-font] [-m mode] [-l layer] [SHELL] [SHELL-ARGS...]"
+            "Usage: %s [-f framebuffer] [-t psf1-font] [-m mode] [-l layer] "
+            "[SHELL] [SHELL-ARGS...]"
             "[-d log_file]\n",
             prog_name);
     exit(EXIT_FAILURE);
 }
 
-struct shell {
+struct shell
+{
     int shell_pid;
     int shell_stdin;
     int shell_stdout;
@@ -97,16 +99,21 @@ shell_input_main(void *_input_ctx)
 {
     struct input_ctx *ctx = _input_ctx;
     int running = 1;
-    while(running) {
+    while(running)
+    {
         char c = input_getc(ctx);
-        if(terminal_data.echo_on) {
-            if(c == 8 || c == 127) {
+        if(terminal_data.echo_on)
+        {
+            if(c == 8 || c == 127)
+            {
                 char bs_seq[3];
                 bs_seq[0] = '\b';
                 bs_seq[1] = ' ';
                 bs_seq[2] = '\b';
                 write(shell.shell_stdout_hijack, &bs_seq, 3);
-            } else {
+            }
+            else
+            {
                 write(shell.shell_stdout_hijack, &c, 1);
             }
         }
@@ -123,12 +130,13 @@ launch_shell(int argc, const char **argv)
     pipe(shell_stdout);
 
     int pid = fork();
-    if(pid == 0) {
+    if(pid == 0)
+    {
         // We are becoming the shell
         dup2(shell_stdin[0], 0);
         dup2(shell_stdout[1], 1);
         dup2(shell_stdout[1], 2);
-        execvp(argv[0], (char**)argv);
+        execvp(argv[0], (char **)argv);
         exit(EXIT_FAILURE);
     }
 
@@ -187,12 +195,14 @@ main(int argc, const char **argv)
     const char **shell_argv;
     {
         int pos_argc = argc - optind;
-        if(pos_argc < 0) {
+        if(pos_argc < 0)
+        {
             pos_argc = 0;
         }
         const char **pos_argv = argv + optind;
 
-        if(pos_argc <= 0) {
+        if(pos_argc <= 0)
+        {
             panic_usage();
         }
 
@@ -201,7 +211,8 @@ main(int argc, const char **argv)
     }
 
     printf("SHELL:");
-    for(size_t i = 0; i < shell_argc; i++) {
+    for(size_t i = 0; i < shell_argc; i++)
+    {
         printf(" %s", shell_argv[i]);
     }
     printf("\n");
@@ -224,12 +235,13 @@ main(int argc, const char **argv)
         fprintf(stderr, "Failed to load font \"%s\"!\n", font_path);
         exit(EXIT_FAILURE);
     }
-    
+
     struct window *window = NULL;
     struct render_ctx *render = NULL;
     struct input_ctx *input_for_shell = NULL;
 
-    if(fb_path != NULL) {
+    if(fb_path != NULL)
+    {
         struct kfb_framebuffer *fb = kfb_open_framebuffer(fb_path);
         if(fb == NULL)
         {
@@ -245,33 +257,36 @@ main(int argc, const char **argv)
         }
         render = create_fb_render_ctx(fb, layer);
         input_for_shell = create_file_input_ctx(stdin);
-    } else {
+    }
+    else
+    {
         windd_client_init();
         window = windd_client_open();
-        if(window == NULL) {
+        if(window == NULL)
+        {
             fprintf(stderr, "fbterm: failed to create window!\n");
             exit(EXIT_FAILURE);
         }
         render = create_windd_render_ctx(window);
         input_for_shell = create_windd_input_ctx(window);
     }
-    
-    if(input_for_shell == NULL) {
+
+    if(input_for_shell == NULL)
+    {
         fprintf(stderr, "failed to create input context!\n");
         exit(EXIT_FAILURE);
     }
 
-    if(render == NULL) {
+    if(render == NULL)
+    {
         fprintf(stderr, "failed to create render context!\n");
         exit(EXIT_FAILURE);
     }
 
     thrd_t shell_input_thrd;
-    res = thrd_create(
-            &shell_input_thrd,
-            shell_input_main,
-            input_for_shell);
-    if(res) {
+    res = thrd_create(&shell_input_thrd, shell_input_main, input_for_shell);
+    if(res)
+    {
         fprintf(stderr, "failed to create shell input thread!\n");
         exit(EXIT_FAILURE);
     }
@@ -299,8 +314,10 @@ main(int argc, const char **argv)
 
     while(terminal_data.running)
     {
-        if(window) {
-            if(windd_window_disconnected(window)) {
+        if(window)
+        {
+            if(windd_window_disconnected(window))
+            {
                 break;
             }
         }
@@ -309,9 +326,12 @@ main(int argc, const char **argv)
         ansi_terminal_update(&terminal_data, input_from_shell);
         for(size_t __i = 0; __i < 256; __i++)
         {
-            if(input_poll(input_from_shell)) {
+            if(input_poll(input_from_shell))
+            {
                 ansi_terminal_update(&terminal_data, input_from_shell);
-            } else {
+            }
+            else
+            {
                 break;
             }
         }
@@ -322,7 +342,8 @@ main(int argc, const char **argv)
     destroy_input_ctx(input_for_shell);
     destroy_input_ctx(input_from_shell);
     destroy_render_ctx(render);
-    if(window) {
+    if(window)
+    {
         windd_client_close(window);
         window = NULL;
         windd_client_deinit();

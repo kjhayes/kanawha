@@ -1,9 +1,9 @@
 
+#include "render.h"
 #include "font.h"
 #include "term.h"
-#include "render.h"
-#include <kfb/kfb.h>
 #include <kanawha/gfx.h>
+#include <kfb/kfb.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -111,7 +111,7 @@ render_ascii_glyph(size_t x,
 
     char c = terminal_data.character_buffer[x + (y * tdata->width)];
 
-    ((uint8_t*)buffer)[offset] = c;
+    ((uint8_t *)buffer)[offset] = c;
 
     return;
 }
@@ -221,7 +221,7 @@ render_vga_attr(size_t x,
         }
     }
 
-    ((uint8_t*)buffer)[offset] = attr;
+    ((uint8_t *)buffer)[offset] = attr;
 
     return;
 }
@@ -252,7 +252,13 @@ render_all(int force,
                     render_vga_attr(x, y, tdata, layout, buffer, buflen);
                     break;
                 default:
-                    render_graphical_glyph(x, y, tdata, fdata, layout, buffer, buflen);
+                    render_graphical_glyph(x,
+                                           y,
+                                           tdata,
+                                           fdata,
+                                           layout,
+                                           buffer,
+                                           buflen);
                     break;
                 }
                 terminal_data.redraw_buffer[x + (y * tdata->width)] = 0;
@@ -284,9 +290,11 @@ render_update(struct terminal_data *tdata,
 
     size_t layer_i = 0;
 
-    while(1) {
+    while(1)
+    {
         res = render_ctx_begin(ctx, layer_i, &layout, &buffer, &buflen);
-        if(res) {
+        if(res)
+        {
             break;
         }
 
@@ -296,10 +304,7 @@ render_update(struct terminal_data *tdata,
         case GFX_FORMAT_ASCII:
         case GFX_FORMAT_VGA_CHAR:
         case GFX_FORMAT_VGA_ATTR:
-            terminal_resize(
-                tdata,
-                layout.width,
-                layout.height);
+            terminal_resize(tdata, layout.width, layout.height);
             break;
         default:
             pix_width = layout.width;
@@ -311,7 +316,9 @@ render_update(struct terminal_data *tdata,
         }
 
         int render_changed = 0;
-        render_all(force, tdata, fdata,
+        render_all(force,
+                   tdata,
+                   fdata,
                    &layout,
                    buffer,
                    buflen,

@@ -12,7 +12,8 @@ pci_probe_bus(struct pci_segment *segment, uint8_t bus_index)
 
     struct pci_bus *bus = NULL;
     struct ptree_node *bus_tree_node = ptree_get(&segment->bus_tree, bus_index);
-    if(bus_tree_node != NULL) {
+    if(bus_tree_node != NULL)
+    {
         bus = container_of(bus_tree_node, struct pci_bus, segment_node);
     }
 
@@ -31,7 +32,9 @@ pci_probe_bus(struct pci_segment *segment, uint8_t bus_index)
                 (ul_t)segment->segment_id,
                 (ul_t)bus_index);
         return 0;
-    } else {
+    }
+    else
+    {
 
         bus = kmalloc(sizeof(struct pci_bus), KM_KERNEL);
         if(bus == NULL)
@@ -52,7 +55,7 @@ pci_probe_bus(struct pci_segment *segment, uint8_t bus_index)
         if(res == -ENXIO)
         {
 #ifdef CONFIG_PCI_ASSUME_CONTIGUOUS_DEVICES
-                break;
+            break;
 #endif
         }
         else if(res)

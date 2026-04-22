@@ -372,7 +372,7 @@ STV_XLIST(DECLARE_UCHAR_CONSTANTS)
     X(PT_HIPROC, 0x7FFFFFFF, "HIPROC")                                         \
     X(PT_GNU_EH_FRAME, 0x6474E550, "GNU_EH_FRAME")                             \
     X(PT_GNU_STACK, 0x6474E551, "GNU_STACK")                                   \
-    X(PT_GNU_RELRO, 0x6474E552, "GNU_RELRO") \
+    X(PT_GNU_RELRO, 0x6474E552, "GNU_RELRO")                                   \
     X(PT_RISCV_ATTRIBUTES, 0x70000003, "RISCV_ATTRIBUTES")
 PT_XLIST(DECLARE_U32_CONSTANTS)
 

@@ -77,13 +77,15 @@ pcie_acpi_probe_mcfg_table(void)
         // NOTE: We leak the "ecam" struct here.
 
         struct pci_segment *segment = pci_segment_create_or_get(cur->segment);
-        if(segment == NULL) {
+        if(segment == NULL)
+        {
             wprintk("Failed to get PCI segment %d!\n", (int)cur->segment);
-        } else {
-            res = pci_segment_probe(
-                segment,
-                cur->start_bus,
-                (cur->end_bus - cur->start_bus) + 1);
+        }
+        else
+        {
+            res = pci_segment_probe(segment,
+                                    cur->start_bus,
+                                    (cur->end_bus - cur->start_bus) + 1);
             if(res)
             {
                 wprintk("Failed to probe buses specified by MCFG PCIe!\n");

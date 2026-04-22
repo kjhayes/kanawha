@@ -59,11 +59,13 @@ ps2_mouse_recv_callback(struct ps2_port *port, void *priv_data, uint8_t recv)
 
             dprintk("PS/2 Mouse Event! (%d,%d)\n", delta_x, delta_y);
 
-            if(delta_x != 0 && delta_y != 0) {
+            if(delta_x != 0 && delta_y != 0)
+            {
                 input_driver_enqueue_event(&mouse->input_dev, &evt);
             }
 
-            if(flags & (1<<0)) {
+            if(flags & (1 << 0))
+            {
                 // Left mouse button pressed
                 struct input_event evt = {
                     .type = INPUT_EVT_KEY,
@@ -72,7 +74,8 @@ ps2_mouse_recv_callback(struct ps2_port *port, void *priv_data, uint8_t recv)
                 };
                 input_driver_enqueue_event(&mouse->input_dev, &evt);
             }
-            if(flags & (1<<1)) {
+            if(flags & (1 << 1))
+            {
                 // Right mouse button pressed
                 struct input_event evt = {
                     .type = INPUT_EVT_KEY,
@@ -81,7 +84,8 @@ ps2_mouse_recv_callback(struct ps2_port *port, void *priv_data, uint8_t recv)
                 };
                 input_driver_enqueue_event(&mouse->input_dev, &evt);
             }
-            if(flags & (1<<2)) {
+            if(flags & (1 << 2))
+            {
                 // Middle mouse button pressed
                 struct input_event evt = {
                     .type = INPUT_EVT_KEY,
@@ -158,15 +162,19 @@ ps2_mouse_deattach(struct ps2_driver *driver, struct ps2_port *port)
     DEBUG_ASSERT(KERNEL_ADDR(mouse));
 
     res = ps2_port_disable_scanning(port);
-    if(res) {
-        wprintk("PS/2 Mouse: Failed to disable port scanning on deattach! (err=%s)\n",
+    if(res)
+    {
+        wprintk("PS/2 Mouse: Failed to disable port scanning on deattach! "
+                "(err=%s)\n",
                 errnostr(res));
     }
 
     res = unregister_input_dev(&mouse->input_dev);
-    if(res) {
-        panic("PS/2 Mouse: Failed to unregister input_dev on deattach! (err=%s)\n",
-                errnostr(res));
+    if(res)
+    {
+        panic("PS/2 Mouse: Failed to unregister input_dev on deattach! "
+              "(err=%s)\n",
+              errnostr(res));
     }
 
     kfree(mouse);

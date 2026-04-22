@@ -23,11 +23,12 @@ handle_syscall(syscall_id_t id, struct syscall_args *args, uint64_t *ret_out)
     uint64_t ret_val;
 
     struct process *process = current_process();
-    if(!KERNEL_ADDR(process)) {
-        eprintk("handle_syscall: invoked from a non-process thread? TID(%ld) thread_flags=0x%lx returning -EINVAL?",
+    if(!KERNEL_ADDR(process))
+    {
+        eprintk("handle_syscall: invoked from a non-process thread? TID(%ld) "
+                "thread_flags=0x%lx returning -EINVAL?",
                 (sl_t)current_thread()->id,
-                (ul_t)current_thread()->flags
-                );
+                (ul_t)current_thread()->flags);
         return -EINVAL;
     }
 
@@ -230,7 +231,7 @@ handle_syscall(syscall_id_t id, struct syscall_args *args, uint64_t *ret_out)
             (unsigned long)args->args[1], // mode_flags
             (fd_t __user *)args->args[2], // read_out
             (fd_t __user *)args->args[3]  // write_out
-            );
+        );
         break;
     case SYSCALL_ID_INSMOD:
         ret_val =
@@ -311,14 +312,12 @@ handle_syscall(syscall_id_t id, struct syscall_args *args, uint64_t *ret_out)
     case SYSCALL_ID_ACCEPT:
         ret_val = (uint64_t)(int)syscall_accept((fd_t)args->args[0],
                                                 (fd_t __user *)args->args[1],
-                                                (unsigned long)args->args[2]
-                                                );
+                                                (unsigned long)args->args[2]);
         break;
     case SYSCALL_ID_CONNECT:
         ret_val = (uint64_t)(int)syscall_connect((fd_t)args->args[0],
                                                  (fd_t __user *)args->args[1],
-                                                 (unsigned long)args->args[2]
-                                                 );
+                                                 (unsigned long)args->args[2]);
         break;
     case SYSCALL_ID_SOCKET:
         ret_val = (uint64_t)(int)syscall_socket((unsigned long)args->args[0],

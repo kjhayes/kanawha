@@ -1,11 +1,11 @@
 
-#include <kanawha/sys-wrappers.h>
+#include <errno.h>
 #include <fcntl.h>
-#include <unistd.h>
+#include <kanawha/sys-wrappers.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <errno.h>
 #include <string.h>
+#include <unistd.h>
 
 struct proc
 {
@@ -24,14 +24,16 @@ read_string_file(int dir, const char *file)
 {
     int res;
     int strfile = openat(dir, file, O_RDONLY);
-    if(strfile < 0) {
+    if(strfile < 0)
+    {
         fprintf(stderr, "failed to open \"%s\"\n", file);
         return "???";
     }
 
     char buf[128] = {0};
     res = read(strfile, buf, 127);
-    if(res <= 0) {
+    if(res <= 0)
+    {
         return "???";
     }
 
@@ -45,14 +47,16 @@ read_int_file(int dir, const char *file)
 {
     int res;
     int strfile = openat(dir, file, O_RDONLY);
-    if(strfile < 0) {
+    if(strfile < 0)
+    {
         fprintf(stderr, "failed to open \"%s\"\n", file);
         return strfile;
     }
 
     char buf[128] = {0};
     res = read(strfile, buf, 127);
-    if(res < 0) {
+    if(res < 0)
+    {
         return res;
     }
     close(strfile);
@@ -63,12 +67,14 @@ read_int_file(int dir, const char *file)
 static struct proc *proc_list = NULL;
 
 static inline int
-init_proc(char *fname, int procfile) {
+init_proc(char *fname, int procfile)
+{
 
     int res;
 
     struct proc *p = malloc(sizeof(*p));
-    if(p == NULL) {
+    if(p == NULL)
+    {
         return -ENOMEM;
     }
     memset(p, 0, sizeof(*p));
@@ -76,7 +82,8 @@ init_proc(char *fname, int procfile) {
     // parse the procid
     p->id = strtol(fname, NULL, 0);
     // Don't consider ourselves
-    if(p->id == getpid()) {
+    if(p->id == getpid())
+    {
         free(p);
         return 0;
     }
@@ -85,9 +92,12 @@ init_proc(char *fname, int procfile) {
     p->next = proc_list;
     proc_list = p;
 
-    if(p->id == getpid()) {
+    if(p->id == getpid())
+    {
         p->exec = "ps (self)";
-    } else {
+    }
+    else
+    {
         p->exec = read_string_file(procfile, "exec");
         p->parent = read_int_file(procfile, "parent");
         p->idle = read_int_file(procfile, "idle");
@@ -97,14 +107,13 @@ init_proc(char *fname, int procfile) {
 }
 
 static inline void
-print_proc(struct proc *p, int depth) {
-    for(int i = 0; i < depth; i++) {
+print_proc(struct proc *p, int depth)
+{
+    for(int i = 0; i < depth; i++)
+    {
         printf("\t");
     }
-    printf("%s(%d) %d%%",
-            p->exec,
-            (int)p->id,
-            100 - p->idle);
+    printf("%s(%d) %d%%", p->exec, (int)p->id, 100 - p->idle);
     printf("\n");
 }
 
@@ -120,11 +129,13 @@ retry:
     prev_slot = &proc_list;
     i = proc_list;
 
-    while(i) {
-        if(i->parent == p->id) {
+    while(i)
+    {
+        if(i->parent == p->id)
+        {
             // Remove "i" from the list
             *prev_slot = i->next;
-            dump_proc(i, depth+1);
+            dump_proc(i, depth + 1);
             goto retry;
         }
 
@@ -134,17 +145,19 @@ retry:
 }
 
 static inline struct proc *
-remove_proc(int id) {
+remove_proc(int id)
+{
 
     struct proc **prev_slot;
     struct proc *i;
 
-
     prev_slot = &proc_list;
     i = proc_list;
 
-    while(i) {
-        if(i->id == id) {
+    while(i)
+    {
+        if(i->id == id)
+        {
             // Remove and return
             *prev_slot = i->next;
             return i;
@@ -157,7 +170,8 @@ remove_proc(int id) {
     return NULL;
 }
 
-int main(int argc, const char **argv)
+int
+main(int argc, const char **argv)
 {
     int res;
 
@@ -165,22 +179,27 @@ int main(int argc, const char **argv)
 
     int dir;
     res = kanawha_sys_open(dirpath, FILE_PERM_READ, 0, &dir);
-    if(res) {
-        fprintf(stderr, "failed to open \"%s\"\n",
-                dirpath);
+    if(res)
+    {
+        fprintf(stderr, "failed to open \"%s\"\n", dirpath);
         exit(EXIT_FAILURE);
     }
 
     res = kanawha_sys_dirbegin(dir);
-    while(res == 0) {
+    while(res == 0)
+    {
         char namebuf[128];
         res = kanawha_sys_dirname(dir, namebuf, 128);
-        if(res) {
+        if(res)
+        {
             break;
         }
 
         int procfile = dir;
-        res = kanawha_sys_open(namebuf, FILE_PERM_READ, FILE_MODE_OPEN_RELATIVE, &procfile);
+        res = kanawha_sys_open(namebuf,
+                               FILE_PERM_READ,
+                               FILE_MODE_OPEN_RELATIVE,
+                               &procfile);
 
         init_proc(namebuf, procfile);
 
@@ -190,7 +209,8 @@ int main(int argc, const char **argv)
     }
 
     struct proc *init = remove_proc(0);
-    if(init == NULL) {
+    if(init == NULL)
+    {
         fprintf(stderr, "could not find process 0!\n");
         return -1;
     }
@@ -198,4 +218,3 @@ int main(int argc, const char **argv)
 
     return 0;
 }
-

@@ -1,10 +1,10 @@
 
+#include <arch/x64/exception.h>
+#include <arch/x64/sysreg.h>
+#include <kanawha/init.h>
 #include <kanawha/irq.h>
 #include <kanawha/irq_domain.h>
 #include <kanawha/vmem.h>
-#include <kanawha/init.h>
-#include <arch/x64/sysreg.h>
-#include <arch/x64/exception.h>
 
 static struct irq_action *x64_pf_action = NULL;
 
@@ -73,4 +73,3 @@ x64_install_page_fault_handler(void)
 declare_init_desc(dynamic,
                   x64_install_page_fault_handler,
                   "Installing x64 Page Fault Handler");
-

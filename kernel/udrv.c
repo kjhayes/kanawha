@@ -415,7 +415,9 @@ udrv_send_user_pkt(struct udrv_dev *dev, struct udrv_pkt *pkt)
     while(dev->read_pkts_queued > dev->max_read_pkts_queued)
     {
         int irq_flags;
-        res = wait_on_irq_lock_release(&dev->send_wq, &dev->read_pkt_queue_lock, &irq_flags);
+        res = wait_on_irq_lock_release(&dev->send_wq,
+                                       &dev->read_pkt_queue_lock,
+                                       &irq_flags);
         enable_restore_irqs(irq_flags);
         if(res)
         {

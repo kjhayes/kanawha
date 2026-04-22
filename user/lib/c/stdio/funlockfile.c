@@ -8,7 +8,8 @@ void
 funlockfile(FILE *filehandle)
 {
     int res;
-    do {
+    do
+    {
         res = sem_wait(&filehandle->owner_sem);
     } while(res != 0);
 

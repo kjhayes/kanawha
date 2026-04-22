@@ -1,11 +1,11 @@
 #ifndef __KANAWHA_DRIVERS__PS2_PORT_H__
 #define __KANAWHA_DRIVERS__PS2_PORT_H__
 
+#include <drivers/ps2/driver.h>
 #include <kanawha/list.h>
 #include <kanawha/ops.h>
 #include <kanawha/spinlock.h>
 #include <kanawha/time.h>
-#include <drivers/ps2/driver.h>
 
 struct ps2_port;
 struct ps2_port_ops;

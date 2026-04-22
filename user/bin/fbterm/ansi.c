@@ -1,8 +1,8 @@
 
 #include "ansi.h"
+#include "input.h"
 #include "palette.h"
 #include "term.h"
-#include "input.h"
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -220,8 +220,7 @@ handle_sgr(struct terminal_data *tdata, int *param, int num_param)
 }
 
 static void
-handle_csi(struct terminal_data *tdata,
-           struct input_ctx *idata)
+handle_csi(struct terminal_data *tdata, struct input_ctx *idata)
 {
     char c;
 
@@ -486,8 +485,7 @@ handle_csi(struct terminal_data *tdata,
 }
 
 static inline void
-handle_escape(struct terminal_data *tdata,
-              struct input_ctx *idata)
+handle_escape(struct terminal_data *tdata, struct input_ctx *idata)
 {
     char c = input_getc(idata);
 
@@ -581,9 +579,9 @@ ansi_terminal_update(struct terminal_data *tdata, struct input_ctx *idata)
         }
         else
         {
-            //LOG(tdata,
-            //    "Unexpected un-printable character 0x%x\n",
-            //    (unsigned int)c);
+            // LOG(tdata,
+            //     "Unexpected un-printable character 0x%x\n",
+            //     (unsigned int)c);
             terminal_put_at_cursor(tdata, '?');
             terminal_advance_cursor(tdata);
         }

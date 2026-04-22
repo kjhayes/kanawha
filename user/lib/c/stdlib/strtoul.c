@@ -17,7 +17,8 @@ interp_char(char c, int base)
     {
         value = 10 + (c - 'a');
     }
-    else if('A' <= c && c <= 'Z') {
+    else if('A' <= c && c <= 'Z')
+    {
         value = 10 + (c - 'A');
     }
     return value;

@@ -11,7 +11,8 @@ pci_probe_device(struct pci_bus *bus, uint8_t dev_index)
 
     struct pci_device *device = NULL;
     struct ptree_node *bus_tree_node = ptree_get(&bus->device_tree, dev_index);
-    if(bus_tree_node != NULL) {
+    if(bus_tree_node != NULL)
+    {
         device = container_of(bus_tree_node, struct pci_device, bus_node);
     }
 
@@ -20,7 +21,8 @@ pci_probe_device(struct pci_bus *bus, uint8_t dev_index)
     if(probe_id == 0xFFFF)
     {
         // Device does not exist
-        if(device != NULL) {
+        if(device != NULL)
+        {
             panic("PCI Device Stopped Existing on Re-probe!\n");
         }
         return -ENXIO;

@@ -84,8 +84,7 @@ pci_msix_bir_write_addr(struct pci_func *func,
     return 0;
 }
 
-__maybe_unused
-static inline uint64_t
+__maybe_unused static inline uint64_t
 pci_msix_bir_read_addr(struct pci_func *func,
                        struct pci_msix_info *info,
                        hwirq_t hwirq)
@@ -107,8 +106,7 @@ pci_msix_bir_write_data(struct pci_func *func,
     return pci_msix_bir_writel(func, info, (hwirq * 0x10) + 0x8, data);
 }
 
-__maybe_unused
-static inline uint32_t
+__maybe_unused static inline uint32_t
 pci_msix_bir_read_data(struct pci_func *func,
                        struct pci_msix_info *info,
                        hwirq_t hwirq)
@@ -173,11 +171,11 @@ pci_func_init_msix_info(struct pci_func *func)
         eprintk("pci_func_init_msix_info: Invalid BIR (0x%x) bar_type != "
                 "MMIO (type=%s)\n",
                 bir,
-                func->bars[bir].type == PCI_BAR_NONE ? "NONE" :
-                func->bars[bir].type == PCI_BAR_UNINIT ? "UNINIT" :
-                func->bars[bir].type == PCI_BAR_MMIO ? "MMIO" :
-                func->bars[bir].type == PCI_BAR_PIO ? "PIO" : "UNKNOWN"
-                );
+                func->bars[bir].type == PCI_BAR_NONE     ? "NONE"
+                : func->bars[bir].type == PCI_BAR_UNINIT ? "UNINIT"
+                : func->bars[bir].type == PCI_BAR_MMIO   ? "MMIO"
+                : func->bars[bir].type == PCI_BAR_PIO    ? "PIO"
+                                                         : "UNKNOWN");
         return -EINVAL;
     }
     info->bir = &func->bars[bir];
@@ -271,16 +269,19 @@ pci_func_start_msix(struct pci_func *func, size_t requested_num_irqs)
     msix_dev->irq_dev.driver = &msix_irq_driver;
 
     {
-        snprintk(msix_dev->namebuf, MSIX_DEV_NAMEBUFLEN, "msix-%d.%d.%d.%d",
-                (int)func->segment->segment_id,
-                (int)func->device->bus->bus_index,
-                (int)func->device->index,
-                (int)func->index);
-        msix_dev->namebuf[MSIX_DEV_NAMEBUFLEN-1] = '\0';
+        snprintk(msix_dev->namebuf,
+                 MSIX_DEV_NAMEBUFLEN,
+                 "msix-%d.%d.%d.%d",
+                 (int)func->segment->segment_id,
+                 (int)func->device->bus->bus_index,
+                 (int)func->device->index,
+                 (int)func->index);
+        msix_dev->namebuf[MSIX_DEV_NAMEBUFLEN - 1] = '\0';
     }
 
     res = register_irq_dev(&msix_dev->irq_dev, msix_dev->namebuf);
-    if(res) {
+    if(res)
+    {
         kfree(msix_dev);
         return res;
     }
@@ -413,11 +414,11 @@ pci_func_start_msix(struct pci_func *func, size_t requested_num_irqs)
         }
 
         dprintk("Installing Link from IRQ 0x%lx (hwirq=0x%lx) to IRQ 0x%lx "
-               "(hwirq=0x%lx)\n",
-               (ul_t)link_from->irq,
-               (ul_t)link_from->hwirq,
-               (ul_t)link_to->irq,
-               (ul_t)link_to->hwirq);
+                "(hwirq=0x%lx)\n",
+                (ul_t)link_from->irq,
+                (ul_t)link_from->hwirq,
+                (ul_t)link_to->irq,
+                (ul_t)link_to->hwirq);
 
         msix_dev->link_actions[i] = irq_install_direct_link(link_from, link_to);
         if(msix_dev->link_actions[i] == NULL)
@@ -484,7 +485,8 @@ pci_func_stop_msix(struct pci_func *func)
     free_irq_domain_linear(func->irq_domain);
 
     res = unregister_irq_dev(func->irq_dev);
-    if(res) {
+    if(res)
+    {
         return res;
     }
     func->irq_dev = NULL;

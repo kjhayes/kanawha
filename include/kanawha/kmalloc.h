@@ -7,9 +7,9 @@
 #define KMALLOC_ALIGN_ORDER 4
 
 // Default, no flags
-#define KM_KERNEL  (0)
+#define KM_KERNEL (0)
 // Allocation should not out-live the thread which allocated it
-#define KM_THREAD  (1UL<<0)
+#define KM_THREAD (1UL << 0)
 
 // size is both an input and an output,
 // but as an output it must be >= the input value

@@ -1,4 +1,5 @@
 
+#include <ctype.h>
 #include <errno.h>
 #include <kanawha/fb.h>
 #include <kanawha/file.h>
@@ -8,7 +9,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <ctype.h>
 
 static int
 __kfb_set_mode_info(struct kfb_framebuffer *fb, int mode)
@@ -242,7 +242,6 @@ kfb_attach_framebuffer(fd_t dev_file)
     }
 
     return fb;
-
 }
 int
 kfb_deattach_framebuffer(struct kfb_framebuffer *fb)
@@ -260,7 +259,6 @@ kfb_deattach_framebuffer(struct kfb_framebuffer *fb)
     }
     free(fb);
     return 0;
-
 }
 
 struct fb_mode_info *
@@ -376,32 +374,33 @@ kfb_set_current_mode(struct kfb_framebuffer *fb, int mode)
 static inline int
 __kfb_format_size(unsigned long format, size_t *size)
 {
-    switch(format) {
-        case GFX_FORMAT_MONO8:
-        case GFX_FORMAT_BYTE_R1G1B1I1:
-        case GFX_FORMAT_BYTE_R3G3B2:
-        case GFX_FORMAT_ASCII:
-        case GFX_FORMAT_VGA_CHAR:
-        case GFX_FORMAT_VGA_ATTR:
-            *size = 1;
-            break;
-        case GFX_FORMAT_MONO16:
-            *size = 2;
-            break;
-        case GFX_FORMAT_MONO32:
-        case GFX_FORMAT_RGBA32:
-        case GFX_FORMAT_RBGA32:
-        case GFX_FORMAT_GRBA32:
-        case GFX_FORMAT_GBRA32:
-        case GFX_FORMAT_BRGA32:
-        case GFX_FORMAT_BGRA32:
-            *size = 4;
-            break;
-        case GFX_FORMAT_MONO64:
-            *size = 8;
-            break;
-        default:
-            return -ENXIO;
+    switch(format)
+    {
+    case GFX_FORMAT_MONO8:
+    case GFX_FORMAT_BYTE_R1G1B1I1:
+    case GFX_FORMAT_BYTE_R3G3B2:
+    case GFX_FORMAT_ASCII:
+    case GFX_FORMAT_VGA_CHAR:
+    case GFX_FORMAT_VGA_ATTR:
+        *size = 1;
+        break;
+    case GFX_FORMAT_MONO16:
+        *size = 2;
+        break;
+    case GFX_FORMAT_MONO32:
+    case GFX_FORMAT_RGBA32:
+    case GFX_FORMAT_RBGA32:
+    case GFX_FORMAT_GRBA32:
+    case GFX_FORMAT_GBRA32:
+    case GFX_FORMAT_BRGA32:
+    case GFX_FORMAT_BGRA32:
+        *size = 4;
+        break;
+    case GFX_FORMAT_MONO64:
+        *size = 8;
+        break;
+    default:
+        return -ENXIO;
     }
     return 0;
 }
@@ -451,22 +450,22 @@ __kfb_convert_to_rgba(unsigned long format, void *data, uint8_t *rgba_out)
         a = ((uint8_t *)data)[3];
         break;
     case GFX_FORMAT_BYTE_R1G1B1I1:
-        tmp_byte = *(uint8_t*)data;
+        tmp_byte = *(uint8_t *)data;
         r = ((tmp_byte >> 0) & 1);
         g = ((tmp_byte >> 1) & 1);
         b = ((tmp_byte >> 2) & 1);
-        tmp_byte = ((tmp_byte>>3)&1) ? 0xFF : 0x80;
+        tmp_byte = ((tmp_byte >> 3) & 1) ? 0xFF : 0x80;
         r *= tmp_byte;
         g *= tmp_byte;
         b *= tmp_byte;
         a = 0xFF;
         break;
     case GFX_FORMAT_VGA_ATTR:
-        tmp_byte = *(uint8_t*)data >> 4;
+        tmp_byte = *(uint8_t *)data >> 4;
         r = ((tmp_byte >> 0) & 1);
         g = ((tmp_byte >> 1) & 1);
         b = ((tmp_byte >> 2) & 1);
-        tmp_byte = ((tmp_byte>>3)&1) ? 0xFF : 0x80;
+        tmp_byte = ((tmp_byte >> 3) & 1) ? 0xFF : 0x80;
         r *= tmp_byte;
         g *= tmp_byte;
         b *= tmp_byte;
@@ -474,13 +473,16 @@ __kfb_convert_to_rgba(unsigned long format, void *data, uint8_t *rgba_out)
         break;
     case GFX_FORMAT_ASCII:
     case GFX_FORMAT_VGA_CHAR:
-        tmp_byte = *(uint8_t*)data;
-        if(isgraph(tmp_byte) && (tmp_byte != ' ')) {
+        tmp_byte = *(uint8_t *)data;
+        if(isgraph(tmp_byte) && (tmp_byte != ' '))
+        {
             r = 0xB0;
             g = 0xB0;
             b = 0xB0;
             a = 0xFF;
-        } else {
+        }
+        else
+        {
             r = 0x00;
             g = 0x00;
             b = 0x00;
@@ -557,29 +559,38 @@ __kfb_convert_from_rgba(uint32_t *rgba, unsigned long to_format, void *to_data)
         return 0;
     case GFX_FORMAT_VGA_CHAR:
     case GFX_FORMAT_ASCII:
+    {
+        char c;
+        if(avg > 0xC0)
         {
-            char c;
-            if(avg > 0xC0) {
-                c = '@';
-            } else if(avg > 0x80) {
-                c = '#';
-            } else if(avg > 0x40) {
-                c = '*';
-            } else if(avg > 0x20) {
-                c = '.';
-            } else {
-                c = ' ';
-            }
-            *(uint8_t *)to_data = c;
+            c = '@';
         }
+        else if(avg > 0x80)
+        {
+            c = '#';
+        }
+        else if(avg > 0x40)
+        {
+            c = '*';
+        }
+        else if(avg > 0x20)
+        {
+            c = '.';
+        }
+        else
+        {
+            c = ' ';
+        }
+        *(uint8_t *)to_data = c;
+    }
         return 0;
     case GFX_FORMAT_VGA_ATTR:
-        tmp_byte = ((r >= 0xF0) | ((g >= 0xF0) << 1) |
-                   ((b >= 0xF0) << 2) | ((avg >= 0xF0) << 3))
-                    << 4;
-        tmp_byte |=((r >= 0x80) | ((g >= 0x80) << 1) |
-                   ((b >= 0x80) << 2) | ((avg >= 0xA0) << 3));
-        *(uint8_t*)to_data = tmp_byte;
+        tmp_byte = ((r >= 0xF0) | ((g >= 0xF0) << 1) | ((b >= 0xF0) << 2) |
+                    ((avg >= 0xF0) << 3))
+                   << 4;
+        tmp_byte |= ((r >= 0x80) | ((g >= 0x80) << 1) | ((b >= 0x80) << 2) |
+                     ((avg >= 0xA0) << 3));
+        *(uint8_t *)to_data = tmp_byte;
         return 0;
     default:
         break;
@@ -595,10 +606,12 @@ __kfb_convert_pixel(unsigned long from_format,
                     void *to_data)
 {
     int res;
-    if(from_format == to_format) {
+    if(from_format == to_format)
+    {
         size_t pixel_size;
         res = __kfb_format_size(from_format, &pixel_size);
-        if(res == 0) {
+        if(res == 0)
+        {
             memcpy(to_data, from_data, pixel_size);
             return 0;
         }
@@ -641,22 +654,20 @@ kfb_flush_framebuffer(struct kfb_framebuffer *buffer)
 }
 
 int
-kfb_blit_with_transform(
-         void *to,
-         size_t to_width,
-         size_t to_height,
-         size_t to_offset_x,
-         size_t to_offset_y,
-         struct gfx_layout *to_layout,
-         void *from,
-         size_t from_width,
-         size_t from_height,
-         size_t from_offset_x,
-         size_t from_offset_y,
-         struct gfx_layout *from_layout,
-         void *xform_state,
-         kfb_rgba_t (*xform)(kfb_rgba_t color,void *state)
-         )
+kfb_blit_with_transform(void *to,
+                        size_t to_width,
+                        size_t to_height,
+                        size_t to_offset_x,
+                        size_t to_offset_y,
+                        struct gfx_layout *to_layout,
+                        void *from,
+                        size_t from_width,
+                        size_t from_height,
+                        size_t from_offset_x,
+                        size_t from_offset_y,
+                        struct gfx_layout *from_layout,
+                        void *xform_state,
+                        kfb_rgba_t (*xform)(kfb_rgba_t color, void *state))
 {
     int res;
 
@@ -690,15 +701,16 @@ kfb_blit_with_transform(
 
 #undef FROM_OFFSET
 #define FROM_OFFSET(__px, __py)                                                \
-    from_layout->offset + (((size_t)((__px * from_width) + from_offset_x)) * from_layout->stride) +         \
-        (((size_t)((__py * from_height) + from_offset_y)) * from_layout->stride * from_layout->width)
+    from_layout->offset +                                                      \
+        (((size_t)((__px * from_width) + from_offset_x)) *                     \
+         from_layout->stride) +                                                \
+        (((size_t)((__py * from_height) + from_offset_y)) *                    \
+         from_layout->stride * from_layout->width)
 
 #undef TO_OFFSET
 #define TO_OFFSET(__x, __y)                                                    \
-    to_layout->offset +                                                \
-        (((size_t)(__x)) * to_layout->stride) +                        \
-        (((size_t)(__y)) * to_layout->stride *                         \
-         to_layout->width)
+    to_layout->offset + (((size_t)(__x)) * to_layout->stride) +                \
+        (((size_t)(__y)) * to_layout->stride * to_layout->width)
 
     for(size_t y = 0; y < to_height; y++)
     {
@@ -711,7 +723,7 @@ kfb_blit_with_transform(
             double py = (double)y / (double)to_height;
 
             size_t from_offset = FROM_OFFSET(px, py);
-            uint8_t *from_data = &((uint8_t*)from)[from_offset];
+            uint8_t *from_data = &((uint8_t *)from)[from_offset];
 
             size_t to_offset = TO_OFFSET(to_offset_x + x, to_offset_y + y);
             if(to_offset_x + x >= to_layout->width)
@@ -722,7 +734,7 @@ kfb_blit_with_transform(
             {
                 break;
             }
-            uint8_t *to_data = &((uint8_t*)to)[to_offset];
+            uint8_t *to_data = &((uint8_t *)to)[to_offset];
 
             if(xform)
             {
@@ -734,7 +746,6 @@ kfb_blit_with_transform(
                     printf("kfb: Failed to convert to rgba!\n");
                     continue;
                 }
-
 
                 kfb_rgba_t to_xform = {
                     .r = (cur_rgba) & 0xFF,
@@ -750,35 +761,35 @@ kfb_blit_with_transform(
                 if(((cur_rgba >> 24) & 0xFF) > 0)
                 {
                     res = __kfb_convert_from_rgba(&cur_rgba,
-                                                      to_layout->format,
-                                                      to_data);
-                    if(res) {
+                                                  to_layout->format,
+                                                  to_data);
+                    if(res)
+                    {
                         printf("kfb: Failed to convert from rgba!\n");
                     }
                 }
-            } else {
+            }
+            else
+            {
 
                 unsigned long from_format = from_layout->format;
                 unsigned long to_format = to_layout->format;
-                res = __kfb_convert_pixel(
-                                    from_layout->format,
-                                    from_data,
-                                    to_layout->format,
-                                    to_data);
-                if(res) {
+                res = __kfb_convert_pixel(from_layout->format,
+                                          from_data,
+                                          to_layout->format,
+                                          to_data);
+                if(res)
+                {
                     printf("kfb: failed to convert pixel to=%d, from=%d!\n",
-                            (int)to_format,
-                            (int)from_format);
+                           (int)to_format,
+                           (int)from_format);
                 }
             }
         }
     }
 
     return 0;
-
 }
-
-
 
 int
 kfb_blit(void *to,
@@ -792,38 +803,35 @@ kfb_blit(void *to,
          size_t from_height,
          size_t from_offset_x,
          size_t from_offset_y,
-         struct gfx_layout *from_layout
-         )
+         struct gfx_layout *from_layout)
 {
-    return kfb_blit_with_transform(
-         to,
-         to_width,
-         to_height,
-         to_offset_x,
-         to_offset_y,
-         to_layout,
-         from,
-         from_width,
-         from_height,
-         from_offset_x,
-         from_offset_y,
-         from_layout,
-         NULL, NULL
-         );
+    return kfb_blit_with_transform(to,
+                                   to_width,
+                                   to_height,
+                                   to_offset_x,
+                                   to_offset_y,
+                                   to_layout,
+                                   from,
+                                   from_width,
+                                   from_height,
+                                   from_offset_x,
+                                   from_offset_y,
+                                   from_layout,
+                                   NULL,
+                                   NULL);
 }
 
 int
-kfb_blit_image_with_transform(
-        void *to,
-        size_t to_width,
-        size_t to_height,
-        size_t to_offset_x,
-        size_t to_offset_y,
-        struct gfx_layout *to_layout,
-        struct kfb_image *image,
-        void *xform_state,
-        kfb_rgba_t (*xform)(kfb_rgba_t color,void *state)
-        )
+kfb_blit_image_with_transform(void *to,
+                              size_t to_width,
+                              size_t to_height,
+                              size_t to_offset_x,
+                              size_t to_offset_y,
+                              struct gfx_layout *to_layout,
+                              struct kfb_image *image,
+                              void *xform_state,
+                              kfb_rgba_t (*xform)(kfb_rgba_t color,
+                                                  void *state))
 {
     struct gfx_layout img_layout = {
         .format = image->format,
@@ -833,82 +841,81 @@ kfb_blit_image_with_transform(
         .height = image->resx,
         .order = image->order,
     };
-    return kfb_blit_with_transform(
-            to,
-            to_width,
-            to_height,
-            to_offset_x,
-            to_offset_y,
-            to_layout,
-            image->data,
-            image->resx,
-            image->resy,
-            0, 0,
-            &img_layout,
-            xform_state,
-            xform);
+    return kfb_blit_with_transform(to,
+                                   to_width,
+                                   to_height,
+                                   to_offset_x,
+                                   to_offset_y,
+                                   to_layout,
+                                   image->data,
+                                   image->resx,
+                                   image->resy,
+                                   0,
+                                   0,
+                                   &img_layout,
+                                   xform_state,
+                                   xform);
 }
 
 int
-kfb_blit_image(
-        void *to,
-        size_t to_width,
-        size_t to_height,
-        size_t to_offset_x,
-        size_t to_offset_y,
-        struct gfx_layout *to_layout,
-        struct kfb_image *image
-        )
+kfb_blit_image(void *to,
+               size_t to_width,
+               size_t to_height,
+               size_t to_offset_x,
+               size_t to_offset_y,
+               struct gfx_layout *to_layout,
+               struct kfb_image *image)
 {
-    return kfb_blit_image_with_transform(
-            to,
-            to_width,
-            to_height,
-            to_offset_x,
-            to_offset_y,
-            to_layout,
-            image,
-            NULL, NULL);
+    return kfb_blit_image_with_transform(to,
+                                         to_width,
+                                         to_height,
+                                         to_offset_x,
+                                         to_offset_y,
+                                         to_layout,
+                                         image,
+                                         NULL,
+                                         NULL);
 }
 
-//static inline kfb_rgba_t
+// static inline kfb_rgba_t
 //__kfb_rgba_tint(kfb_rgba_t to_tint, void *tint_ptr)
 //{
-//    kfb_rgba_t tint = *(kfb_rgba_t *)tint_ptr;
-//    if(to_tint.a == 0)
-//    {
-//        return to_tint;
-//    }
-//    if(tint.a == 0)
-//    {
-//        return to_tint;
-//    }
+//     kfb_rgba_t tint = *(kfb_rgba_t *)tint_ptr;
+//     if(to_tint.a == 0)
+//     {
+//         return to_tint;
+//     }
+//     if(tint.a == 0)
+//     {
+//         return to_tint;
+//     }
 //
-//    uint16_t a_sum = to_tint.a + tint.a;
-//    float tint_strength = (float)tint.a / (float)a_sum;
+//     uint16_t a_sum = to_tint.a + tint.a;
+//     float tint_strength = (float)tint.a / (float)a_sum;
 //
-//    uint16_t r = (tint_strength * tint.r) + ((1.0 - tint_strength) * to_tint.r);
-//    uint16_t g = (tint_strength * tint.g) + ((1.0 - tint_strength) * to_tint.g);
-//    uint16_t b = (tint_strength * tint.b) + ((1.0 - tint_strength) * to_tint.b);
+//     uint16_t r = (tint_strength * tint.r) + ((1.0 - tint_strength) *
+//     to_tint.r); uint16_t g = (tint_strength * tint.g) + ((1.0 -
+//     tint_strength) * to_tint.g); uint16_t b = (tint_strength * tint.b) +
+//     ((1.0 - tint_strength) * to_tint.b);
 //
-//    if(r > 255)
-//    {
-//        r = 255;
-//    }
-//    if(g > 255)
-//    {
-//        g = 255;
-//    }
-//    if(b > 255)
-//    {
-//        b = 255;
-//    }
+//     if(r > 255)
+//     {
+//         r = 255;
+//     }
+//     if(g > 255)
+//     {
+//         g = 255;
+//     }
+//     if(b > 255)
+//     {
+//         b = 255;
+//     }
 //
-//    to_tint.r = r;
-//    to_tint.g = g;
-//    to_tint.b = b;
-//    return to_tint;
-//}
+//     to_tint.r = r;
+//     to_tint.g = g;
+//     to_tint.b = b;
+//     return to_tint;
+// }
 
 static kfb_rgba_t
 __kfb_brightness_as_color(kfb_rgba_t b_color, void *color_ptr)
@@ -943,27 +950,24 @@ __kfb_brightness_as_color(kfb_rgba_t b_color, void *color_ptr)
 }
 
 int
-kfb_blit_image_brightness_as_color(
-        void *to,
-        size_t to_width,
-        size_t to_height,
-        size_t to_offset_x,
-        size_t to_offset_y,
-        struct gfx_layout *to_layout,
-        struct kfb_image *image,
-        kfb_rgba_t color
-        )
+kfb_blit_image_brightness_as_color(void *to,
+                                   size_t to_width,
+                                   size_t to_height,
+                                   size_t to_offset_x,
+                                   size_t to_offset_y,
+                                   struct gfx_layout *to_layout,
+                                   struct kfb_image *image,
+                                   kfb_rgba_t color)
 {
-    return kfb_blit_image_with_transform(
-            to,
-            to_width,
-            to_height,
-            to_offset_x,
-            to_offset_y,
-            to_layout,
-            image,
-            &color,
-            __kfb_brightness_as_color);
+    return kfb_blit_image_with_transform(to,
+                                         to_width,
+                                         to_height,
+                                         to_offset_x,
+                                         to_offset_y,
+                                         to_layout,
+                                         image,
+                                         &color,
+                                         __kfb_brightness_as_color);
 }
 
 int

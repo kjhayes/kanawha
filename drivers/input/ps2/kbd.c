@@ -121,14 +121,18 @@ ps2_kbd_deattach(struct ps2_driver *driver, struct ps2_port *port)
     DEBUG_ASSERT(KERNEL_ADDR(kbd));
 
     res = ps2_port_disable_scanning(port);
-    if(res) {
-        wprintk("PS/2 Keyboard: Failed to disable port scanning on deattach!\n");
+    if(res)
+    {
+        wprintk(
+            "PS/2 Keyboard: Failed to disable port scanning on deattach!\n");
     }
 
     res = unregister_input_dev(&kbd->input_dev);
-    if(res) {
-        panic("PS/2 Keyboard: Failed to unregister input device on deattach! (err=%s)\n",
-                errnostr(res));
+    if(res)
+    {
+        panic("PS/2 Keyboard: Failed to unregister input device on deattach! "
+              "(err=%s)\n",
+              errnostr(res));
     }
 
     kfree(kbd);

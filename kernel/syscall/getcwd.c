@@ -43,12 +43,13 @@ syscall_getcwd(char __user *buffer, size_t buflen)
 
     size_t kernel_buflen = buflen > MAX_CWD_PATHLEN ? MAX_CWD_PATHLEN : buflen;
     char *kernel_buffer = kmalloc(kernel_buflen, KM_KERNEL);
-    if(kernel_buffer == NULL) {
+    if(kernel_buffer == NULL)
+    {
         return -ENOMEM;
     }
 
     size_t pathlen = 1; // includes the null terminator
-    char *path = kernel_buffer + (kernel_buflen-pathlen);
+    char *path = kernel_buffer + (kernel_buflen - pathlen);
     *path = '\0'; // Add the final NULL terminator
 
     {
@@ -61,7 +62,8 @@ syscall_getcwd(char __user *buffer, size_t buflen)
         }
         do
         {
-            if(cwd == process->root_directory) {
+            if(cwd == process->root_directory)
+            {
                 fs_path_put(cwd);
                 break;
             }
@@ -72,15 +74,16 @@ syscall_getcwd(char __user *buffer, size_t buflen)
                 name = "ERROR_NULL_PATH_NAME";
             }
             size_t curlen = strlen(name);
-            path -= (curlen+1);
-            pathlen += curlen+1;
-            if(pathlen > kernel_buflen) {
+            path -= (curlen + 1);
+            pathlen += curlen + 1;
+            if(pathlen > kernel_buflen)
+            {
                 kfree(kernel_buffer);
                 return -ENOMEM;
             }
 
             *path = '/';
-            memcpy(path+1, name, curlen);
+            memcpy(path + 1, name, curlen);
 
             struct fs_path *parent = fs_path_get_parent(cwd);
             fs_path_put(cwd);
@@ -100,10 +103,7 @@ syscall_getcwd(char __user *buffer, size_t buflen)
         } while(1);
     }
 
-    res = process_write_usermem(process,
-                                buffer,
-                                (void *)path,
-                                pathlen);
+    res = process_write_usermem(process, buffer, (void *)path, pathlen);
     kfree(kernel_buffer);
     if(res)
     {

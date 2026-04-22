@@ -7,7 +7,8 @@
 #define ONCE_FLAG_INIT (0)
 #define TSS_DTOR_ITERATIONS (0)
 
-enum {
+enum
+{
     thrd_busy,
     thrd_error,
     thrd_nomem,
@@ -15,20 +16,27 @@ enum {
     thrd_timedout,
 };
 
-typedef struct {
+typedef struct
+{
     pid_t pid;
 } thrd_t;
 
-typedef int(*thrd_start_t)(void*);
+typedef int (*thrd_start_t)(void *);
 
-int             thrd_create(thrd_t *, thrd_start_t, void *);
-thrd_t          thrd_current(void);
-int             thrd_detach(thrd_t);
-int             thrd_equal(thrd_t, thrd_t);
-_Noreturn void  thrd_exit(int);
-int             thrd_join(thrd_t, int *);
-int             thrd_sleep(const struct timespec *, struct timespec *);
-void            thrd_yield(void);
+int
+thrd_create(thrd_t *, thrd_start_t, void *);
+thrd_t
+thrd_current(void);
+int thrd_detach(thrd_t);
+int thrd_equal(thrd_t, thrd_t);
+_Noreturn void
+thrd_exit(int);
+int
+thrd_join(thrd_t, int *);
+int
+thrd_sleep(const struct timespec *, struct timespec *);
+void
+thrd_yield(void);
 
 /*
  * We don't implement call_once yet

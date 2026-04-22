@@ -1,8 +1,8 @@
 
+#include <errno.h>
 #include <kanawha/file.h>
 #include <kanawha/sys-wrappers.h>
 #include <unistd.h>
-#include <errno.h>
 
 int
 pipe(int fd_out[2])

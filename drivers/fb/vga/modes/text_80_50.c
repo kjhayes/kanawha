@@ -1,6 +1,6 @@
 
-#include <drivers/fb/vga/vga.h>
 #include <drivers/fb/vga/font.h>
+#include <drivers/fb/vga/vga.h>
 #include <drivers/vga/vga.h>
 #include <kanawha/dev/fb.h>
 #include <kanawha/endian.h>

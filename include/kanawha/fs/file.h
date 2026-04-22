@@ -5,12 +5,12 @@
 #include <kanawha/fs/path.h>
 #include <kanawha/ops.h>
 
-#define FILE_INTERNAL_FLAG_PIPE       (1UL<<0)
-#define FILE_INTERNAL_FLAG_CLIENT     (1UL<<1)
-#define FILE_INTERNAL_FLAG_SERVER     (1UL<<2)
-#define FILE_INTERNAL_FLAG_SOCKET     (1UL<<3)
-#define FILE_INTERNAL_FLAG_MOUNT_TEMP (1UL<<4)
-#define FILE_INTERNAL_FLAG_EXEC_TEMP  (1UL<<5)
+#define FILE_INTERNAL_FLAG_PIPE (1UL << 0)
+#define FILE_INTERNAL_FLAG_CLIENT (1UL << 1)
+#define FILE_INTERNAL_FLAG_SERVER (1UL << 2)
+#define FILE_INTERNAL_FLAG_SOCKET (1UL << 3)
+#define FILE_INTERNAL_FLAG_MOUNT_TEMP (1UL << 4)
+#define FILE_INTERNAL_FLAG_EXEC_TEMP (1UL << 5)
 
 struct file
 {
@@ -80,16 +80,14 @@ struct file
     ARG(unsigned long *, triggered)
 
 #define FILE_STATUS_CONNECTED (1)
-#define FS_FILE_STATUS_SIG(RET, ARG, ...) \
-    RET(int) \
-    ARG(unsigned long, type) \
+#define FS_FILE_STATUS_SIG(RET, ARG, ...)                                      \
+    RET(int)                                                                   \
+    ARG(unsigned long, type)                                                   \
     ARG(unsigned long *, value)
 
-#define FS_FILE_ON_OPEN_SIG(RET, ARG, ...) \
-    RET(int)
+#define FS_FILE_ON_OPEN_SIG(RET, ARG, ...) RET(int)
 
-#define FS_FILE_ON_CLOSE_SIG(RET, ARG, ...) \
-    RET(int)
+#define FS_FILE_ON_CLOSE_SIG(RET, ARG, ...) RET(int)
 
 #define FS_FILE_OP_LIST(OP, ...)                                               \
     OP(read, FS_FILE_READ_SIG, ##__VA_ARGS__)                                  \
@@ -100,9 +98,9 @@ struct file
     OP(dir_next, FS_FILE_DIR_NEXT_SIG, ##__VA_ARGS__)                          \
     OP(dir_readattr, FS_FILE_DIR_READATTR_SIG, ##__VA_ARGS__)                  \
     OP(dir_readname, FS_FILE_DIR_READNAME_SIG, ##__VA_ARGS__)                  \
-    OP(poll, FS_FILE_POLL_SIG, ##__VA_ARGS__) \
-    OP(status, FS_FILE_STATUS_SIG, ##__VA_ARGS__) \
-    OP(on_open, FS_FILE_ON_OPEN_SIG, ##__VA_ARGS__) \
+    OP(poll, FS_FILE_POLL_SIG, ##__VA_ARGS__)                                  \
+    OP(status, FS_FILE_STATUS_SIG, ##__VA_ARGS__)                              \
+    OP(on_open, FS_FILE_ON_OPEN_SIG, ##__VA_ARGS__)                            \
     OP(on_close, FS_FILE_ON_CLOSE_SIG, ##__VA_ARGS__)
 
 struct fs_file_ops
@@ -162,14 +160,20 @@ fs_file_cannot_status(struct file *file,
                       unsigned long type,
                       unsigned long *value);
 
-int fs_file_nop_on_open(struct file *file);
-int fs_file_nop_on_close(struct file *file);
+int
+fs_file_nop_on_open(struct file *file);
+int
+fs_file_nop_on_close(struct file *file);
 
 // These are NOP implementations (naming scheme here is misleading TODO)
-static inline int fs_file_cannot_on_open(struct file *file) {
+static inline int
+fs_file_cannot_on_open(struct file *file)
+{
     return fs_file_nop_on_open(file);
 }
-static inline int fs_file_cannot_on_close(struct file *file) {
+static inline int
+fs_file_cannot_on_close(struct file *file)
+{
     return fs_file_nop_on_close(file);
 }
 

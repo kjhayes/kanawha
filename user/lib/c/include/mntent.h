@@ -13,11 +13,15 @@ struct mntent
     int mnt_passno;
 };
 
-FILE *setmntent(const char *filename, const char *type);
-struct mntent *getmntent(FILE *stream);
-int addmntent(FILE *restrict stream,
-              const struct mntent *restrict mnt);
-int endmntent(FILE *streamp);
-char *hasmntopt(const struct mntent *mnt, const char *opt);
+FILE *
+setmntent(const char *filename, const char *type);
+struct mntent *
+getmntent(FILE *stream);
+int
+addmntent(FILE *restrict stream, const struct mntent *restrict mnt);
+int
+endmntent(FILE *streamp);
+char *
+hasmntopt(const struct mntent *mnt, const char *opt);
 
 #endif

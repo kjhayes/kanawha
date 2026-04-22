@@ -52,8 +52,10 @@ static struct daemon randd = {
     .sockets = randd_sockets,
 };
 
-static const char *windd_args[] = {"windd",
-    WINDD_FB_PATH_STR, WINDD_FB_MODE_STR,
+static const char *windd_args[] = {
+    "windd",
+    WINDD_FB_PATH_STR,
+    WINDD_FB_MODE_STR,
     "/dev/input/ps2-kbd-0",
     NULL,
 };
@@ -78,12 +80,13 @@ static struct daemon sh = {
     .num_sockets = 0,
 };
 
-static const char *klog_args[] = {
-    "fbterm",
-    "-t", "/sys/initrd/arm8.psf",
-    "-d", "/dev/term/COM1",
-    "/sys/initrd/klog",
-    NULL};
+static const char *klog_args[] = {"fbterm",
+                                  "-t",
+                                  "/sys/initrd/arm8.psf",
+                                  "-d",
+                                  "/dev/term/COM1",
+                                  "/sys/initrd/klog",
+                                  NULL};
 static struct daemon klog = {
     .command = "/sys/initrd/fbterm",
     .args = klog_args,

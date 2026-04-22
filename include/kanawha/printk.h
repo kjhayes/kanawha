@@ -27,9 +27,10 @@ do_vprintk(const char *fmt, va_list args);
 #define printk(fmt, ...)                                                       \
     do                                                                         \
     {                                                                          \
-        nsec_t time_ns = time_to_nsec(current_timestamp());                \
+        nsec_t time_ns = time_to_nsec(current_timestamp());                    \
         unsigned long __printk__sec = time_ns / NSEC_PER_SEC;                  \
-        unsigned long __printk__sec_dec = ((time_ns % NSEC_PER_SEC)*10)/NSEC_PER_SEC; \
+        unsigned long __printk__sec_dec =                                      \
+            ((time_ns % NSEC_PER_SEC) * 10) / NSEC_PER_SEC;                    \
         do_printk("[%lu.%lu]: " fmt,                                           \
                   __printk__sec,                                               \
                   __printk__sec_dec,                                           \
@@ -39,9 +40,10 @@ do_vprintk(const char *fmt, va_list args);
 #define eprintk(fmt, ...)                                                      \
     do                                                                         \
     {                                                                          \
-        nsec_t time_ns = time_to_nsec(current_timestamp());                \
+        nsec_t time_ns = time_to_nsec(current_timestamp());                    \
         unsigned long __printk__sec = time_ns / NSEC_PER_SEC;                  \
-        unsigned long __printk__sec_dec = ((time_ns % NSEC_PER_SEC)*10)/NSEC_PER_SEC; \
+        unsigned long __printk__sec_dec =                                      \
+            ((time_ns % NSEC_PER_SEC) * 10) / NSEC_PER_SEC;                    \
         do_printk("[ERROR (%lu.%lu)]: " fmt,                                   \
                   __printk__sec,                                               \
                   __printk__sec_dec,                                           \
@@ -51,9 +53,10 @@ do_vprintk(const char *fmt, va_list args);
 #define wprintk(fmt, ...)                                                      \
     do                                                                         \
     {                                                                          \
-        nsec_t time_ns = time_to_nsec(current_timestamp());                \
+        nsec_t time_ns = time_to_nsec(current_timestamp());                    \
         unsigned long __printk__sec = time_ns / NSEC_PER_SEC;                  \
-        unsigned long __printk__sec_dec = ((time_ns % NSEC_PER_SEC)*10)/NSEC_PER_SEC; \
+        unsigned long __printk__sec_dec =                                      \
+            ((time_ns % NSEC_PER_SEC) * 10) / NSEC_PER_SEC;                    \
         do_printk("[WARN (%lu.%lu)]: " fmt,                                    \
                   __printk__sec,                                               \
                   __printk__sec_dec,                                           \
@@ -64,9 +67,10 @@ do_vprintk(const char *fmt, va_list args);
 #define dprintk(fmt, ...)                                                      \
     do                                                                         \
     {                                                                          \
-        nsec_t time_ns = time_to_nsec(current_timestamp());                \
+        nsec_t time_ns = time_to_nsec(current_timestamp());                    \
         unsigned long __printk__sec = time_ns / NSEC_PER_SEC;                  \
-        unsigned long __printk__sec_dec = ((time_ns % NSEC_PER_SEC)*10)/NSEC_PER_SEC; \
+        unsigned long __printk__sec_dec =                                      \
+            ((time_ns % NSEC_PER_SEC) * 10) / NSEC_PER_SEC;                    \
         do_printk("[DEBUG (%lu.%lu)]: " fmt,                                   \
                   __printk__sec,                                               \
                   __printk__sec_dec,                                           \

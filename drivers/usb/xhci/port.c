@@ -1,9 +1,9 @@
 
+#include <drivers/usb/xhci/cap.h>
 #include <drivers/usb/xhci/device.h>
 #include <drivers/usb/xhci/port.h>
 #include <drivers/usb/xhci/reg.h>
 #include <drivers/usb/xhci/xhci.h>
-#include <drivers/usb/xhci/cap.h>
 #include <kanawha/tasklet.h>
 
 // Forward Decl
@@ -59,10 +59,10 @@ usb_xhci_port_assert_powered(struct usb_xhci_port *port)
 
     uint32_t portsc = usb_xhci_port_read_portsc(port);
 
-    portsc &= ~(1UL<<1); // Do not set the Enabled/Disabled bit
-    portsc &= ~(1UL<<4); // Do not set the Port reset bit
-    portsc &= ~(0xF<<5); // Clear the PLS field
-    portsc |=  (1UL<<5); // Set PLS to 1 (ignored by device)
+    portsc &= ~(1UL << 1); // Do not set the Enabled/Disabled bit
+    portsc &= ~(1UL << 4); // Do not set the Port reset bit
+    portsc &= ~(0xF << 5); // Clear the PLS field
+    portsc |= (1UL << 5);  // Set PLS to 1 (ignored by device)
 
     if(!((portsc >> 9) & 0b1))
     {
@@ -100,10 +100,14 @@ usb_xhci_reset_port(struct usb_xhci_port *port)
     // Wait for 100ms
     clk_delay(msec_to_duration(100));
     portsc = usb_xhci_port_read_portsc(port);
-    if(portsc & (1UL<<1)) {
+    if(portsc & (1UL << 1))
+    {
         return 0;
-    } else {
-        if(port->version_major == 3) {
+    }
+    else
+    {
+        if(port->version_major == 3)
+        {
             // USB 3 devices require a PLS write
             // to re-enable after reset
             return 0;
@@ -122,32 +126,36 @@ usb_xhci_enable_port(struct usb_xhci_port *port)
         return res;
     }
 
-    if(port->version_major == 2 || port->version_major == 1) {
+    if(port->version_major == 2 || port->version_major == 1)
+    {
         printk("XHCI: Resetting port %d to enable USB2 port\n",
-                (int)usb_xhci_port_index(port));
+               (int)usb_xhci_port_index(port));
         return usb_xhci_reset_port(port);
-    } else if(port->version_major == 3) {
+    }
+    else if(port->version_major == 3)
+    {
         uint32_t portsc = usb_xhci_port_read_portsc(port);
 
-        portsc &= ~(1UL<<1); // Do not set the Enabled/Disabled bit
-        portsc &= ~(1UL<<4); // Do not set the Port reset bit
-        portsc &= ~(0xF<<5); // Clear the PLS field
-        portsc |=  (1UL<<5); // Set PLS to 5 (Disabled -> RxDetect)
-        portsc |=  (1UL<<16); // Allow writes to PLS
-        portsc &= ~(0x3F<<17); // Do not clear any status flags
+        portsc &= ~(1UL << 1);   // Do not set the Enabled/Disabled bit
+        portsc &= ~(1UL << 4);   // Do not set the Port reset bit
+        portsc &= ~(0xF << 5);   // Clear the PLS field
+        portsc |= (1UL << 5);    // Set PLS to 5 (Disabled -> RxDetect)
+        portsc |= (1UL << 16);   // Allow writes to PLS
+        portsc &= ~(0x3F << 17); // Do not clear any status flags
 
         usb_xhci_port_write_portsc(port, portsc);
         return 0;
-    } else {
+    }
+    else
+    {
         return -EINVAL;
     }
 }
 
 static void
-usb_xhci_supported_protocol_cap_callback(
-        struct usb_xhci *xhci,
-        size_t cap_offset,
-        void *priv_state)
+usb_xhci_supported_protocol_cap_callback(struct usb_xhci *xhci,
+                                         size_t cap_offset,
+                                         void *priv_state)
 {
     uint32_t version_data = pci_bar_readl(&xhci->func->bars[0], cap_offset);
 
@@ -157,28 +165,31 @@ usb_xhci_supported_protocol_cap_callback(
     uint32_t namestring = pci_bar_readl(&xhci->func->bars[0], cap_offset + 4);
     uint32_t data = pci_bar_readl(&xhci->func->bars[0], cap_offset + 8);
     uint8_t port_offset = data & 0xFF;
-    uint8_t port_count = (data>>8) & 0xFF;
+    uint8_t port_count = (data >> 8) & 0xFF;
     uint16_t protocol_defined = (data >> 16) & 0xFFF;
     uint8_t psic = (data >> 28) & 0xF;
 
-    printk("XHCI: supported protocol capability \"%c%c%c%c\" (USB %d.%d) (ports=[%d-%d])\n",
-            ((char*)&namestring)[0],
-            ((char*)&namestring)[1],
-            ((char*)&namestring)[2],
-            ((char*)&namestring)[3],
-            (int)major,
-            (int)minor,
-            (int)port_offset,
-            (int)(port_offset + (port_count-1))
-          );
+    printk("XHCI: supported protocol capability \"%c%c%c%c\" (USB %d.%d) "
+           "(ports=[%d-%d])\n",
+           ((char *)&namestring)[0],
+           ((char *)&namestring)[1],
+           ((char *)&namestring)[2],
+           ((char *)&namestring)[3],
+           (int)major,
+           (int)minor,
+           (int)port_offset,
+           (int)(port_offset + (port_count - 1)));
 
-    for(size_t i = port_offset; i < port_offset+port_count; i++) {
-        if(i > xhci->num_ports) {
-            wprintk("XHCI: Found invalid port number %d in supported protocols capability!\n",
+    for(size_t i = port_offset; i < port_offset + port_count; i++)
+    {
+        if(i > xhci->num_ports)
+        {
+            wprintk("XHCI: Found invalid port number %d in supported protocols "
+                    "capability!\n",
                     i);
             continue;
         }
-        struct usb_xhci_port *port = &xhci->ports[i-1];
+        struct usb_xhci_port *port = &xhci->ports[i - 1];
         port->version_major = major;
         port->version_minor = minor;
     }
@@ -209,10 +220,10 @@ usb_xhci_init_ports(struct usb_xhci *xhci)
     }
 
     usb_xhci_for_each_capability_of_type(
-            xhci,
-            USB_XHCI_EXT_CAPABILITY_ID_SUPPORTED_PROTOCOLS,
-            usb_xhci_supported_protocol_cap_callback,
-            NULL);
+        xhci,
+        USB_XHCI_EXT_CAPABILITY_ID_SUPPORTED_PROTOCOLS,
+        usb_xhci_supported_protocol_cap_callback,
+        NULL);
 
     for(size_t i = 0; i < xhci->num_ports; i++)
     {
@@ -227,7 +238,8 @@ usb_xhci_init_ports(struct usb_xhci *xhci)
             kfree(xhci->ports);
             return -EINVAL;
         }
-        tasklet_name(xhci->ports[i].status_change_tasklet, "xhci-status-change");
+        tasklet_name(xhci->ports[i].status_change_tasklet,
+                     "xhci-status-change");
     }
 
     return 0;
@@ -316,17 +328,18 @@ usb_xhci_port_on_deattach(struct usb_xhci_port *port, uint32_t portsc)
 int
 usb_xhci_port_notify_status_change(struct usb_xhci_port *port)
 {
-    if(port->status_change_tasklet) {
+    if(port->status_change_tasklet)
+    {
         return tasklet_trigger(port->status_change_tasklet);
-    } else {
+    }
+    else
+    {
         return 0;
     }
 }
 
 static int
-usb_xhci_dump_port(
-        struct usb_xhci_port *port,
-        printk_f *printer)
+usb_xhci_dump_port(struct usb_xhci_port *port, printk_f *printer)
 {
     uint32_t portsc = usb_xhci_port_read_portsc(port);
     unsigned link_state = (portsc >> 5) & 0xF;
@@ -349,9 +362,8 @@ usb_xhci_dump_port(
                portsc & (1ULL << 1) ? "YES" : "NO",
                portsc & (1ULL << 9) ? "YES" : "NO",
                portsc & (1ULL << 3) ? "YES" : "NO",
-               link_state == 0 ? "U0 (Normal Operational)"
-               : link_state == 1
-                   ? "U1 (Receive/Transmit Circuitry Quiesced)"
+               link_state == 0    ? "U0 (Normal Operational)"
+               : link_state == 1  ? "U1 (Receive/Transmit Circuitry Quiesced)"
                : link_state == 2  ? "U2 (Clock Possibly Quiesced)"
                : link_state == 3  ? "U3 (Suspend)"
                : link_state == 4  ? "Disabled"
@@ -383,32 +395,35 @@ usb_xhci_port_handle_status_change(void *state)
     uint32_t portsc = usb_xhci_port_read_portsc(port);
 
     uint32_t portsc_clear = portsc;
-    portsc_clear &= ~(1UL<<1); // Do not set the Enabled/Disabled bit
-    portsc_clear &= ~(1UL<<4); // Do not set the Port reset bit
-    portsc_clear &= ~(0xF<<5); // Clear the PLS field
-    portsc_clear |=  (1UL<<5); // Set PLS to 1 (ignored by device)
+    portsc_clear &= ~(1UL << 1); // Do not set the Enabled/Disabled bit
+    portsc_clear &= ~(1UL << 4); // Do not set the Port reset bit
+    portsc_clear &= ~(0xF << 5); // Clear the PLS field
+    portsc_clear |= (1UL << 5);  // Set PLS to 1 (ignored by device)
 
     usb_xhci_port_write_portsc(port, portsc_clear); // Clear all changed events
 
     printk("XHCI: Port Status Change on Port %d\n", usb_xhci_port_index(port));
     usb_xhci_dump_port(port, do_printk);
 
-    if(!(portsc & (1UL<<1))) {
+    if(!(portsc & (1UL << 1)))
+    {
         // The port is disabled,
         wprintk("XHCI: port status change ignored due to disable!\n");
         res = usb_xhci_enable_port(port);
-        if(res) {
+        if(res)
+        {
             wprintk("XHCI: Failed to enable USB port on port status change!\n");
             return;
         }
-        printk("XHCI: Port Status Change on Port %d (After Enable)\n", usb_xhci_port_index(port));
+        printk("XHCI: Port Status Change on Port %d (After Enable)\n",
+               usb_xhci_port_index(port));
         usb_xhci_dump_port(port, do_printk);
     }
 
-    if(portsc & (1UL<<17))
+    if(portsc & (1UL << 17))
     {
         // Connect Status Change
-        int connected = portsc & (1UL<<0);
+        int connected = portsc & (1UL << 0);
         if(connected)
         {
             usb_xhci_port_on_attach(port, portsc);
@@ -427,7 +442,8 @@ usb_xhci_dump_ports(struct usb_xhci *dev, printk_f *printer)
     for(size_t i = 0; i < dev->num_ports; i++)
     {
         res = usb_xhci_dump_port(&dev->ports[i], printer);
-        if(res) {
+        if(res)
+        {
             return res;
         }
     }

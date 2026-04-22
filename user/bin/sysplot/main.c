@@ -1,53 +1,69 @@
 
-#include <windd/windd.h>
+#include <kanawha/sys-wrappers.h>
+#include <kanawha/time.h>
 #include <kfb/kfb.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
-#include <unistd.h>
-#include <kanawha/time.h>
 #include <threads.h>
-#include <kanawha/sys-wrappers.h>
+#include <unistd.h>
+#include <windd/windd.h>
 
 static int
-window_poll_main(void *_win) {
+window_poll_main(void *_win)
+{
     struct window *win = _win;
-    while(!windd_window_disconnected(win)) {
+    while(!windd_window_disconnected(win))
+    {
         windd_window_poll(win);
     }
     return 0;
 }
 
-struct metric {
+struct metric
+{
     size_t max;
     size_t min;
     size_t cur;
     const char *name;
     kfb_rgba_t color;
-    void(*update)(struct metric *self);
+    void (*update)(struct metric *self);
 };
 
 static int metrics_lock = 0;
-static inline void lock_metrics(void) {while(__atomic_fetch_or(&metrics_lock, 1, __ATOMIC_SEQ_CST)) {}}
-static inline void unlock_metrics(void) {__atomic_fetch_and(&metrics_lock, 0, __ATOMIC_SEQ_CST);}
+static inline void
+lock_metrics(void)
+{
+    while(__atomic_fetch_or(&metrics_lock, 1, __ATOMIC_SEQ_CST))
+    {
+    }
+}
+static inline void
+unlock_metrics(void)
+{
+    __atomic_fetch_and(&metrics_lock, 0, __ATOMIC_SEQ_CST);
+}
 
 static int metrics_buflen = 0;
 static int num_metrics = 0;
 static struct metric **metrics = NULL;
 
 static inline void
-register_metric(
-        struct metric *metric)
+register_metric(struct metric *metric)
 {
     lock_metrics();
-    if(num_metrics == metrics_buflen) {
+    if(num_metrics == metrics_buflen)
+    {
         metrics_buflen++;
-        struct metric **n_metrics = malloc(sizeof(struct metric *) * (metrics_buflen));
-        if(metrics != NULL) {
-            memcpy(n_metrics, metrics, sizeof(struct metric*) * num_metrics);
+        struct metric **n_metrics =
+            malloc(sizeof(struct metric *) * (metrics_buflen));
+        if(metrics != NULL)
+        {
+            memcpy(n_metrics, metrics, sizeof(struct metric *) * num_metrics);
         }
         metrics = n_metrics;
-        if(metrics == NULL) {
+        if(metrics == NULL)
+        {
             abort();
         }
     }
@@ -57,7 +73,8 @@ register_metric(
 }
 
 static int
-render_main(void *_win) {
+render_main(void *_win)
+{
     struct window *window = _win;
 
     int running = 1;
@@ -71,7 +88,8 @@ render_main(void *_win) {
         windd_window_reload_buffer(window);
         windd_window_lock_buffer(window);
 
-        if(!window->layout_valid || !(window->buffer_size > 0)) {
+        if(!window->layout_valid || !(window->buffer_size > 0))
+        {
             windd_window_unlock_buffer(window);
             continue;
         }
@@ -81,7 +99,7 @@ render_main(void *_win) {
 
         uint32_t bg = 0xFF101010;
         struct kfb_image bg_img = {
-            .data = (void*)&bg,
+            .data = (void *)&bg,
             .resx = 1,
             .resy = 1,
             .order = GFX_ORDER_ROW_MAJOR,
@@ -92,15 +110,17 @@ render_main(void *_win) {
         };
 
         lock_metrics();
-        for(size_t mi = 0; mi < num_metrics; mi++) {  
+        for(size_t mi = 0; mi < num_metrics; mi++)
+        {
             struct metric *m = metrics[mi];
-            //printf("update(%s)\n", m->name);
+            // printf("update(%s)\n", m->name);
             (*m->update)(m);
         }
-        for(size_t mi = 0; mi < num_metrics; mi++) {
+        for(size_t mi = 0; mi < num_metrics; mi++)
+        {
             struct metric *m = metrics[mi];
             struct kfb_image img = {
-                .data = (void*)&m->color,
+                .data = (void *)&m->color,
                 .resx = 1,
                 .resy = 1,
                 .order = GFX_ORDER_ROW_MAJOR,
@@ -115,29 +135,27 @@ render_main(void *_win) {
             double percentage = offset / range;
 
             size_t height = percentage * layout.height;
-            if(height > layout.height) {
+            if(height > layout.height)
+            {
                 height = layout.height;
             }
-            
+
             size_t y_off = layout.height - height;
 
-            kfb_blit_image(
-                    window->buffer,
-                    bar_width,
-                    height,
-                    bar_width * mi,
-                    y_off,
-                    &layout,
-                    &img);
-            kfb_blit_image(
-                window->buffer,
-                bar_width,
-                layout.height - height,
-                bar_width * mi,
-                0,
-                &layout,
-                &bg_img);
-
+            kfb_blit_image(window->buffer,
+                           bar_width,
+                           height,
+                           bar_width * mi,
+                           y_off,
+                           &layout,
+                           &img);
+            kfb_blit_image(window->buffer,
+                           bar_width,
+                           layout.height - height,
+                           bar_width * mi,
+                           0,
+                           &layout,
+                           &bg_img);
         }
         unlock_metrics();
 
@@ -145,10 +163,12 @@ render_main(void *_win) {
     }
 }
 
-static size_t read_file_to_number(const char *path)
+static size_t
+read_file_to_number(const char *path)
 {
     FILE *file = fopen(path, "r");
-    if(file == NULL) {
+    if(file == NULL)
+    {
         fprintf(stderr, "failed to open file: \"%s\"\n", path);
         return 0;
     }
@@ -171,24 +191,27 @@ mem_update(struct metric *metric)
 }
 
 static void
-init_mem_metric(void) {
+init_mem_metric(void)
+{
     static struct metric m = {
         .min = 0,
         .max = 1,
         .cur = 0,
         .name = "memory",
         .update = mem_update,
-        .color = {
-            .r = 0x00,
-            .g = 0x80,
-            .b = 0x00,
-            .a = 0xFF,
-        },
+        .color =
+            {
+                .r = 0x00,
+                .g = 0x80,
+                .b = 0x00,
+                .a = 0xFF,
+            },
     };
     register_metric(&m);
 }
 
-struct cpu_metric {
+struct cpu_metric
+{
     const char *name;
     struct metric metric;
 };
@@ -196,19 +219,21 @@ struct cpu_metric {
 static void
 cpu_update(struct metric *metric)
 {
-    //printf("cpu_update()\n");
-    struct cpu_metric *m = ((void*)metric) - offsetof(struct cpu_metric, metric);
+    // printf("cpu_update()\n");
+    struct cpu_metric *m =
+        ((void *)metric) - offsetof(struct cpu_metric, metric);
     char pathbuf[128];
     snprintf(pathbuf, 128, "/sys/cpu/%s/idle", m->name);
     pathbuf[127] = '\0';
-    //printf("reading file %s\n", pathbuf);
+    // printf("reading file %s\n", pathbuf);
 
     size_t idle_percent = read_file_to_number(pathbuf);
     metric->cur = 100 - idle_percent;
 }
 
 static void
-init_cpu_metric(const char *name) {
+init_cpu_metric(const char *name)
+{
     struct cpu_metric *cpu = malloc(sizeof(struct cpu_metric));
     cpu->name = strdup(name);
     cpu->metric = (struct metric){
@@ -217,26 +242,30 @@ init_cpu_metric(const char *name) {
         .cur = 0,
         .name = "cpu",
         .update = cpu_update,
-        .color = {
-            .r = 0x80,
-            .g = 0x00,
-            .b = 0x00,
-            .a = 0xFF,
-        },
+        .color =
+            {
+                .r = 0x80,
+                .g = 0x00,
+                .b = 0x00,
+                .a = 0xFF,
+            },
     };
     register_metric(&cpu->metric);
 }
 
-int main(int argc, const char **argv)
+int
+main(int argc, const char **argv)
 {
     int res;
     res = windd_client_init();
-    if(res) {
+    if(res)
+    {
         fprintf(stderr, "Failed to initialize windd!\n");
         exit(EXIT_FAILURE);
     }
     struct window *window = windd_client_open();
-    if(window == NULL) {
+    if(window == NULL)
+    {
         fprintf(stderr, "Failed to open window!\n");
         exit(EXIT_FAILURE);
     }
@@ -250,13 +279,15 @@ int main(int argc, const char **argv)
     { // init all of our metrics
         int dir;
         res = kanawha_sys_open("/sys/cpu", FILE_PERM_READ, 0, &dir);
-        if(res) {
+        if(res)
+        {
             perror("failed to open \"/sys/cpu\"\n");
             exit(EXIT_FAILURE);
         }
 
         res = kanawha_sys_dirbegin(dir);
-        while(res == 0) {
+        while(res == 0)
+        {
             char cpu_name[128];
             kanawha_sys_dirname(dir, cpu_name, 128);
             cpu_name[127] = '\0';
@@ -274,4 +305,3 @@ int main(int argc, const char **argv)
     windd_client_deinit();
     return 0;
 }
-

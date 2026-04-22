@@ -72,17 +72,12 @@ int
 usb_xhci_destroy_input_ctx(struct usb_xhci_input_ctx *ctx);
 
 int
-usb_xhci_input_ctx_reset_add_drop(
-        struct usb_xhci_input_ctx *ctx);
+usb_xhci_input_ctx_reset_add_drop(struct usb_xhci_input_ctx *ctx);
 
 int
-usb_xhci_input_ctx_mark_add_ctx(
-        struct usb_xhci_input_ctx *ctx,
-        int dci);
+usb_xhci_input_ctx_mark_add_ctx(struct usb_xhci_input_ctx *ctx, int dci);
 int
-usb_xhci_input_ctx_mark_drop_ctx(
-        struct usb_xhci_input_ctx *ctx,
-        int dci);
+usb_xhci_input_ctx_mark_drop_ctx(struct usb_xhci_input_ctx *ctx, int dci);
 
 size_t
 usb_xhci_input_ctx_entry_size(struct usb_xhci_input_ctx *ctx);
@@ -91,13 +86,10 @@ void __phys *
 usb_xhci_input_ctx_phys_addr(struct usb_xhci_input_ctx *ctx);
 
 struct usb_xhci_slot_ctx *
-usb_xhci_input_ctx_slot_ctx(
-        struct usb_xhci_input_ctx *ctx);
+usb_xhci_input_ctx_slot_ctx(struct usb_xhci_input_ctx *ctx);
 
 struct usb_xhci_endpoint_ctx *
-usb_xhci_input_ctx_endpoint_ctx(
-        struct usb_xhci_input_ctx *ctx,
-        int dci);
+usb_xhci_input_ctx_endpoint_ctx(struct usb_xhci_input_ctx *ctx, int dci);
 
 /*
  * Device (Output) Context
@@ -109,7 +101,6 @@ int
 usb_xhci_destroy_device_ctx(struct usb_xhci_device_ctx *ctx);
 
 void __phys *
-usb_xhci_device_ctx_phys_addr(
-        struct usb_xhci_device_ctx *ctx);
+usb_xhci_device_ctx_phys_addr(struct usb_xhci_device_ctx *ctx);
 
 #endif

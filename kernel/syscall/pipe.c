@@ -14,7 +14,10 @@
 #endif
 
 int
-syscall_pipe(unsigned long flags, unsigned long mode_flags, fd_t __user *read_out, fd_t __user *write_out)
+syscall_pipe(unsigned long flags,
+             unsigned long mode_flags,
+             fd_t __user *read_out,
+             fd_t __user *write_out)
 {
     int res;
 
@@ -73,7 +76,6 @@ syscall_pipe(unsigned long flags, unsigned long mode_flags, fd_t __user *read_ou
         fs_path_put(pipe_path);
         return res;
     }
-
 
     res = process_write_usermem(process, read_out, &read_fd, sizeof(fd_t));
     if(res)

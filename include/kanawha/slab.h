@@ -1,8 +1,8 @@
 #ifndef __KANAWHA__SLAB_H__
 #define __KANAWHA__SLAB_H__
 
-#include <kanawha/ptree.h>
 #include <kanawha/list.h>
+#include <kanawha/ptree.h>
 
 /*
  * Kanawha Kernel "Slab" allocator framework
@@ -59,9 +59,7 @@ struct slab_allocator *
 create_dynamic_slab_allocator(size_t obj_size, order_t obj_align);
 
 int
-destroy_dynamic_slab_allocator(
-        struct slab_allocator *alloc);
-
+destroy_dynamic_slab_allocator(struct slab_allocator *alloc);
 
 void *
 slab_alloc(struct slab_allocator *alloc);

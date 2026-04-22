@@ -116,7 +116,8 @@ usb_xhci_trb_ring_get_avail_trbs(struct usb_xhci_trb_ring *ring,
     size_t enqueue_index = ring->enqueue_index;
     size_t enqueue_region = ring->enqueue_region;
 
-    for(size_t i = 0; i < buflen; i++) {
+    for(size_t i = 0; i < buflen; i++)
+    {
 
         int full = 0;
         if(enqueue_index == ring->trbs_per_region - 1)
@@ -153,7 +154,8 @@ usb_xhci_trb_ring_get_avail_trbs(struct usb_xhci_trb_ring *ring,
             dma_virt_addr(ring->dma_regions[enqueue_region]);
         struct usb_xhci_trb *trb = &region[enqueue_index];
 
-        if(i == buflen-1) {
+        if(i == buflen - 1)
+        {
             struct usb_xhci_trb __phys *region_phys =
                 dma_phys_addr(ring->dma_regions[enqueue_region]);
             *sentinel = &region_phys[enqueue_index];
@@ -161,10 +163,12 @@ usb_xhci_trb_ring_get_avail_trbs(struct usb_xhci_trb_ring *ring,
         trbbuf[i] = trb;
 
         enqueue_index++;
-        if(enqueue_index >= ring->trbs_per_region) {
+        if(enqueue_index >= ring->trbs_per_region)
+        {
             enqueue_index = 0;
             enqueue_region++;
-            if(enqueue_region >= ring->num_dma_regions) {
+            if(enqueue_region >= ring->num_dma_regions)
+            {
                 enqueue_region = 0;
             }
         }

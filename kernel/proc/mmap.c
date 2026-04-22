@@ -394,7 +394,8 @@ __mmap_locked_hint_offset(struct process *process,
 
     if(size >= mmap_size)
     {
-        wprintk("process(%ld)[\"%s\"] MMAP requested too large of a region! (requested=0x%lx, mmap_size=0x%lx)\n",
+        wprintk("process(%ld)[\"%s\"] MMAP requested too large of a region! "
+                "(requested=0x%lx, mmap_size=0x%lx)\n",
                 (sl_t)process->id,
 #ifdef CONFIG_DEBUG_TRACK_PROCESS_EXEC
                 (process->tracked_exec ? process->tracked_exec : ""),
@@ -425,7 +426,8 @@ __mmap_locked_hint_offset(struct process *process,
         if((mmap_size - size) < cur_offset)
         {
             // Would run off the end of user memory
-            wprintk("Process MMAP ran out of virtual memory! (mmap_size=0x%lx, size=0x%lx, cur_offset=0x%lx)\n",
+            wprintk("Process MMAP ran out of virtual memory! (mmap_size=0x%lx, "
+                    "size=0x%lx, cur_offset=0x%lx)\n",
                     (ul_t)mmap_size,
                     (ul_t)size,
                     (ul_t)cur_offset);
@@ -487,7 +489,8 @@ mmap_map_region(struct process *process,
     {
         struct file *desc =
             file_table_get_file(process->file_table, process, file);
-        if(desc == NULL) {
+        if(desc == NULL)
+        {
             res = -EINVAL;
             goto err0;
         }
@@ -1633,8 +1636,8 @@ mmap_page_fault_handler(struct excp_state *state,
     if((pf_flags & PF_FLAG_USERMODE) == 0)
     {
         panic("Kernel attempted to access process mmap region directly! "
-                "(mmap_offset=%p)\n",
-                offset);
+              "(mmap_offset=%p)\n",
+              offset);
     }
 
     int res;

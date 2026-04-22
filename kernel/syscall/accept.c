@@ -51,7 +51,7 @@ syscall_accept(fd_t sock_fd, fd_t __user *conn, unsigned long flags)
     res = file_table_open_node(process->file_table,
                                process,
                                conn_node,
-                               FILE_PERM_WRITE|FILE_PERM_READ,
+                               FILE_PERM_WRITE | FILE_PERM_READ,
                                0,
                                FILE_INTERNAL_FLAG_SERVER,
                                &conn_fd);

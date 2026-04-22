@@ -155,7 +155,6 @@ static struct fs_node_ops total_cpu_percent_fs_node_ops;
 static struct fs_file_ops total_cpu_percent_fs_file_ops;
 static struct vfs_node total_cpu_percent_fs_node = {0};
 
-
 static int
 klog_init_fs_mount(void)
 {
@@ -182,7 +181,9 @@ klog_init_fs_mount(void)
 
     kmem_total_fs_node.fs_file_ops = &kmem_total_fs_file_ops;
     kmem_total_fs_node.fs_node_ops = &kmem_total_fs_node_ops;
-    res = vfs_mount_insert_node_and_link_root(mnt, &kmem_total_fs_node, "mem_total");
+    res = vfs_mount_insert_node_and_link_root(mnt,
+                                              &kmem_total_fs_node,
+                                              "mem_total");
     if(res)
     {
         vfs_mount_destroy(mnt);
@@ -191,7 +192,9 @@ klog_init_fs_mount(void)
 
     kmem_free_fs_node.fs_file_ops = &kmem_free_fs_file_ops;
     kmem_free_fs_node.fs_node_ops = &kmem_free_fs_node_ops;
-    res = vfs_mount_insert_node_and_link_root(mnt, &kmem_free_fs_node, "mem_free");
+    res = vfs_mount_insert_node_and_link_root(mnt,
+                                              &kmem_free_fs_node,
+                                              "mem_free");
     if(res)
     {
         vfs_mount_destroy(mnt);
@@ -200,7 +203,9 @@ klog_init_fs_mount(void)
 
     total_cpu_percent_fs_node.fs_file_ops = &total_cpu_percent_fs_file_ops;
     total_cpu_percent_fs_node.fs_node_ops = &total_cpu_percent_fs_node_ops;
-    res = vfs_mount_insert_node_and_link_root(mnt, &total_cpu_percent_fs_node, "usage_percent");
+    res = vfs_mount_insert_node_and_link_root(mnt,
+                                              &total_cpu_percent_fs_node,
+                                              "usage_percent");
     if(res)
     {
         vfs_mount_destroy(mnt);
@@ -279,9 +284,9 @@ FS_FILE_OPS_INIT_UNDEF(klog_fs_file_ops);
 
 static ssize_t
 kmem_total_fs_file_read(struct file *file,
-                       void *buffer,
-                       ssize_t amount,
-                       unsigned long flags)
+                        void *buffer,
+                        ssize_t amount,
+                        unsigned long flags)
 {
     if(file->seek_offset != 0)
     {
@@ -336,9 +341,9 @@ FS_FILE_OPS_INIT_UNDEF(kmem_free_fs_file_ops);
 
 static ssize_t
 total_cpu_percent_fs_file_read(struct file *file,
-                       void *buffer,
-                       ssize_t amount,
-                       unsigned long flags)
+                               void *buffer,
+                               ssize_t amount,
+                               unsigned long flags)
 {
     if(file->seek_offset != 0)
     {

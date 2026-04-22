@@ -1,4 +1,5 @@
 
+#include <kanawha/dev/timer.h>
 #include <kanawha/event.h>
 #include <kanawha/init.h>
 #include <kanawha/irq.h>
@@ -8,7 +9,6 @@
 #include <kanawha/stddef.h>
 #include <kanawha/string.h>
 #include <kanawha/tasklet.h>
-#include <kanawha/dev/timer.h>
 #include <kanawha/types.h>
 
 static size_t num_enabled_periodic_events = 0;
@@ -65,11 +65,10 @@ periodic_kickstart_lockless(void)
 
     tick_length = msec_to_duration(CONFIG_PERIODIC_RESOLUTION_MS);
 
-    res = timer_dev_set_alarm_periodic(
-            periodic_timer,
-            0,
-            tick_length,
-            periodic_callback);
+    res = timer_dev_set_alarm_periodic(periodic_timer,
+                                       0,
+                                       tick_length,
+                                       periodic_callback);
     if(res)
     {
         return res;
@@ -175,21 +174,21 @@ destroy_periodic_event(struct periodic_event *event)
 }
 
 static int
-probe_timer(
-        struct timer_dev *dev)
+probe_timer(struct timer_dev *dev)
 {
-    if(periodic_timer == NULL) {
+    if(periodic_timer == NULL)
+    {
         return 0;
     }
     return -EALREADY;
 }
 
 static int
-receive_timer(
-        struct timer_dev *timer)
+receive_timer(struct timer_dev *timer)
 {
     periodic_event_list_lock_acquire();
-    if(periodic_timer == NULL) {
+    if(periodic_timer == NULL)
+    {
         periodic_timer = timer;
         periodic_event_list_lock_release();
         return 0;
@@ -199,16 +198,16 @@ receive_timer(
 }
 
 static int
-revoke_timer(
-        struct timer_dev *timer)
+revoke_timer(struct timer_dev *timer)
 {
     periodic_event_list_lock_acquire();
-    if(periodic_timer != timer) {
-        wprintk("tried to revoke timer from periodic event subsystem which was not owned!"
+    if(periodic_timer != timer)
+    {
+        wprintk("tried to revoke timer from periodic event subsystem which was "
+                "not owned!"
                 " (owned=%s, revoked=%s)\n",
                 periodic_timer ? timer_dev_get_name(periodic_timer) : "NULL",
-                timer ? timer_dev_get_name(timer) : "NULL"
-                );
+                timer ? timer_dev_get_name(timer) : "NULL");
         periodic_event_list_lock_release();
         return 0; // "success?"
     }
@@ -226,7 +225,6 @@ static struct timer_dev_owner timer_owner = {
 static int
 register_periodic_timer_owner(void)
 {
-   return register_timer_dev_owner(&timer_owner); 
+    return register_timer_dev_owner(&timer_owner);
 }
 declare_init(dynamic, register_periodic_timer_owner);
-

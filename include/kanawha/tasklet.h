@@ -33,13 +33,9 @@ tasklet_trigger(struct tasklet *tasklet);
 struct periodic_tasklet;
 
 struct periodic_tasklet *
-tasklet_create_periodic(
-        duration_t period,
-        void *state,
-        tasklet_f *func);
+tasklet_create_periodic(duration_t period, void *state, tasklet_f *func);
 
 int
-tasklet_destroy_periodic(
-        struct periodic_tasklet *task);
+tasklet_destroy_periodic(struct periodic_tasklet *task);
 
 #endif

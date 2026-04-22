@@ -52,7 +52,8 @@ typedef __noreturn void(threadless_f)(void *in);
  *
  */
 
-typedef enum {
+typedef enum
+{
     // Still in the process of being created
     THREAD_STATUS_PREPARING = 0,
 
@@ -74,7 +75,7 @@ typedef enum {
     THREAD_STATUS_ABANDONED,
 } thread_status_t;
 
-#define NUM_THREAD_STATUSES (THREAD_STATUS_ABANDONED+1)
+#define NUM_THREAD_STATUSES (THREAD_STATUS_ABANDONED + 1)
 
 #define THREAD_FLAG_IDLE (1ULL << 0)
 #define THREAD_FLAG_PROCESS (1ULL << 1)
@@ -273,25 +274,31 @@ const char *
 thread_status_to_string(thread_status_t status);
 
 static inline void
-thread_begin_irq(void) {
+thread_begin_irq(void)
+{
     struct thread_state *cur = current_thread();
-    if(cur) {
+    if(cur)
+    {
         cur->irq_depth++;
     }
 }
 
 static inline void
-thread_end_irq(void) {
+thread_end_irq(void)
+{
     struct thread_state *cur = current_thread();
-    if(cur) {
+    if(cur)
+    {
         cur->irq_depth--;
     }
 }
 
 static inline int
-thread_irq_depth(void) {
+thread_irq_depth(void)
+{
     struct thread_state *cur = current_thread();
-    if(cur) {
+    if(cur)
+    {
         return cur->irq_depth;
     }
     return 0; // Assume we are not in an IRQ if we do not have a thread.
@@ -302,27 +309,24 @@ thread_irq_depth(void) {
 //                         been running for
 //              sample_length -> length of the current sample)
 int
-thread_get_runtime(
-        struct thread_state *thread,
-        duration_t *runtime,
-        duration_t *sample_length);
+thread_get_runtime(struct thread_state *thread,
+                   duration_t *runtime,
+                   duration_t *sample_length);
 
 // >=0 -> percent of current same period this thread
 //        has been running
 // <0 -> errno value
 ssize_t
-thread_get_running_percentage(
-        struct thread_state *thread);
-
-ssize_t threads_total_running_percentage(void);
-
-size_t
-thread_status_count(
-        thread_status_t status);
+thread_get_running_percentage(struct thread_state *thread);
 
 ssize_t
-thread_running_percentage(
-        struct thread_state *thread);
+threads_total_running_percentage(void);
+
+size_t
+thread_status_count(thread_status_t status);
+
+ssize_t
+thread_running_percentage(struct thread_state *thread);
 
 ssize_t
 all_threads_running_percentage(void);

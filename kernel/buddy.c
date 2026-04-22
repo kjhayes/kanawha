@@ -634,23 +634,22 @@ buddy_page_allocator_amount_free(void *state)
 }
 
 static int
-buddy_page_allocator_debug_dump(
-        void *state,
-        printk_f *printer)
+buddy_page_allocator_debug_dump(void *state, printk_f *printer)
 {
     struct buddy_region *region = (struct buddy_region *)state;
 
     (*printer)("Buddy Region [%p-%p) (orders[%d-%d])\n",
-            (uintptr_t)region->region_base,
-            (uintptr_t)(region->region_base + region->region_size),
-            (int)region->min_order,
-            (int)region->max_order);
-    for(size_t index = 0; index < (region->max_order-region->min_order)+1; index++) {
+               (uintptr_t)region->region_base,
+               (uintptr_t)(region->region_base + region->region_size),
+               (int)region->min_order,
+               (int)region->max_order);
+    for(size_t index = 0; index < (region->max_order - region->min_order) + 1;
+        index++)
+    {
         struct buddy_order *order = &region->order_lists[index];
         (*printer)("\tOrder[%d] (num-pages=%lu)\n",
-                (int)order->order,
-                (ul_t)order->num_pages
-                );
+                   (int)order->order,
+                   (ul_t)order->num_pages);
         DEBUG_ASSERT(ilist_count(&order->page_list) == order->num_pages);
     }
 
@@ -658,25 +657,28 @@ buddy_page_allocator_debug_dump(
 }
 
 static int
-buddy_page_allocator_verify(
-        void *state)
+buddy_page_allocator_verify(void *state)
 {
     struct buddy_region *region = (struct buddy_region *)state;
 
-    for(size_t index = 0; index < (region->max_order-region->min_order)+1; index++) {
+    for(size_t index = 0; index < (region->max_order - region->min_order) + 1;
+        index++)
+    {
         struct buddy_order *order = &region->order_lists[index];
         ilist_node_t *page_node;
-        ilist_for_each(page_node, &order->page_list) {
-            struct buddy_page *page = container_of(page_node, struct buddy_page, list_node);
+        ilist_for_each(page_node, &order->page_list)
+        {
+            struct buddy_page *page =
+                container_of(page_node, struct buddy_page, list_node);
             ASSERT(page->order == order->order);
-            ASSERT((void*)page >= region->region_base);
-            ASSERT(((void*)page + (1ULL<<order->order)) <= (region->region_base + region->region_size));
+            ASSERT((void *)page >= region->region_base);
+            ASSERT(((void *)page + (1ULL << order->order)) <=
+                   (region->region_base + region->region_size));
         }
     }
 
     return 0;
 }
-
 
 static struct page_allocator_ops buddy_page_allocator_ops = {
     .alloc = buddy_page_allocator_alloc,

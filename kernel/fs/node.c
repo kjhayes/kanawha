@@ -661,7 +661,6 @@ fs_file_deattached_poll(struct file *file,
     return -ENODEV;
 }
 
-
 static struct fs_node_ops fs_node_deattached_node_ops = {
     .read_page = fs_node_deattached_read_page,
     .write_page = fs_node_deattached_write_page,

@@ -14,7 +14,8 @@ struct usb_xhci_port
     int version_major;
     int version_minor;
 
-    enum {
+    enum
+    {
         USB_XHCI_PORT_STATUS_UNKNOWN = 0,
     } status;
 

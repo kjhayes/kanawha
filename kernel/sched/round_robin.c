@@ -71,10 +71,10 @@ rr_sched_alloc_instance(struct scheduler_type *type)
     ilist_init(&sched->thread_list);
     spinlock_init(&sched->list_lock);
 
-    struct periodic_event *event =
-        create_periodic_event(msec_to_duration(CONFIG_ROUND_ROBIN_SCHED_TIMESLICE_MS),
-                              (void *)sched,
-                              rr_sched_kick);
+    struct periodic_event *event = create_periodic_event(
+        msec_to_duration(CONFIG_ROUND_ROBIN_SCHED_TIMESLICE_MS),
+        (void *)sched,
+        rr_sched_kick);
 
     if(event == NULL)
     {
@@ -165,7 +165,10 @@ rr_sched_hard_resched(struct scheduler *sched)
 
     *current_ptr = current;
 
-    dprintk("scheduling thread (%lld) on CPU (%ld) # active threads (%ld)\n", (ull_t)current->state->id, current_cpu_id(), ilist_count(&rr_sched->thread_list));
+    dprintk("scheduling thread (%lld) on CPU (%ld) # active threads (%ld)\n",
+            (ull_t)current->state->id,
+            current_cpu_id(),
+            ilist_count(&rr_sched->thread_list));
 
     spin_unlock_irq_restore(&rr_sched->list_lock, irq_flags);
 
@@ -179,9 +182,12 @@ rr_sched_soft_resched(struct scheduler *sched)
     dprintk("rr_sched_soft_resched CPU (%ld)\n", (sl_t)current_cpu_id());
 
     struct thread_state *cur = current_thread();
-    if(cur != NULL) {
-        duration_t runtime = duration_between(cur->last_scheduled_timestamp, current_timestamp());
-        if(runtime < msec_to_duration(CONFIG_ROUND_ROBIN_SCHED_TIMESLICE_MS)) {
+    if(cur != NULL)
+    {
+        duration_t runtime = duration_between(cur->last_scheduled_timestamp,
+                                              current_timestamp());
+        if(runtime < msec_to_duration(CONFIG_ROUND_ROBIN_SCHED_TIMESLICE_MS))
+        {
             // Don't reschedule yet...
             return 0;
         }

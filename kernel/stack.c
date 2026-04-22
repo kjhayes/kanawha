@@ -182,10 +182,10 @@ thread_stack_deinit(struct thread_stack *stack)
     return 0;
 }
 
-void*
+void *
 thread_stack_get_base(struct thread_stack *thread)
 {
-    return (void*)thread->stack_base;
+    return (void *)thread->stack_base;
 }
 
 #else
@@ -194,9 +194,10 @@ int
 thread_stack_init(struct thread_stack *stack, order_t order)
 {
     // Allocate the stack on the heap
-    size_t size = 1ULL<<order;
+    size_t size = 1ULL << order;
     stack->data = kmalloc(size, KM_KERNEL);
-    if(stack->data == NULL) {
+    if(stack->data == NULL)
+    {
         return -ENOMEM;
     }
     stack->order = order;
@@ -211,10 +212,10 @@ thread_stack_deinit(struct thread_stack *stack)
     return 0;
 }
 
-void*
+void *
 thread_stack_get_base(struct thread_stack *thread)
 {
-    return thread->data + (1ULL<<thread->order);
+    return thread->data + (1ULL << thread->order);
 }
 
 #endif

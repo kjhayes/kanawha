@@ -141,8 +141,10 @@ usb_xhci_dispatch_port_status_change(struct usb_xhci *dev,
         return -EINVAL;
     }
 
-    if(dev->ports == NULL) {
-        wprintk("XHCI: received status change notification before ports have been initialized!\n");
+    if(dev->ports == NULL)
+    {
+        wprintk("XHCI: received status change notification before ports have "
+                "been initialized!\n");
         return -EINVAL;
     }
     struct usb_xhci_port *port = &dev->ports[port_id];
@@ -171,7 +173,8 @@ usb_xhci_dispatch_transfer_event(struct usb_xhci *xhci,
     if(dev == NULL)
     {
         irq_lock_release(&xhci->devices_lock);
-        wprintk("USB XHCI received transfer event for missing device (slotid=%ld)!\n",
+        wprintk("USB XHCI received transfer event for missing device "
+                "(slotid=%ld)!\n",
                 (sl_t)slot_id);
         return -ENXIO;
     }

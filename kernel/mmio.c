@@ -57,7 +57,8 @@ mmio_create_mmio_map(void)
 
     if(res)
     {
-        eprintk("mmio_create_mmio_map: failed find and reserve virtual memory range!\n");
+        eprintk("mmio_create_mmio_map: failed find and reserve virtual memory "
+                "range!\n");
         virt_mem_flags_dump();
         vmem_region_destroy(__mmio_vmem_region);
         return res;

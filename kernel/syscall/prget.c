@@ -11,15 +11,16 @@ arch_prget(long field, unsigned long *value)
 static int
 smp_prget(long field, unsigned long *value)
 {
-    switch(field) {
-        case PRGET_SMP_COUNT:
-            *value = total_num_cpus();
-            break;
-        case PRGET_SMP_CURRENT:
-            *value = current_cpu_id();
-            break;
-        default:
-            return -EINVAL;
+    switch(field)
+    {
+    case PRGET_SMP_COUNT:
+        *value = total_num_cpus();
+        break;
+    case PRGET_SMP_CURRENT:
+        *value = current_cpu_id();
+        break;
+    default:
+        return -EINVAL;
     }
 
     return 0;
@@ -46,14 +47,15 @@ syscall_prget(unsigned long type,
         break;
     case PRINFO_TYPE_SMP:
         res = smp_prget(field, &value);
-        if(res) {
+        if(res)
+        {
             return res;
         }
         break;
     default:
         return -EINVAL;
     }
-    
+
     res = process_write_usermem(process,
                                 user_value_ptr,
                                 &value,

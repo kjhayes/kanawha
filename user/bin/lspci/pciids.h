@@ -3,10 +3,13 @@
 
 #include <stdint.h>
 
-int init_pciids(const char *path);
-int deinit_pciids(void);
+int
+init_pciids(const char *path);
+int
+deinit_pciids(void);
 
-struct pciid {
+struct pciid
+{
     unsigned vendor_valid : 1;
     const char *vendor;
 
@@ -24,15 +27,13 @@ struct pciid {
 };
 
 struct pciid *
-lookup_pciid(
-        uint16_t vendor,
-        uint16_t device,
-        uint32_t cls,
-        uint16_t subsystem_vendor,
-        uint16_t subsystem_id);
+lookup_pciid(uint16_t vendor,
+             uint16_t device,
+             uint32_t cls,
+             uint16_t subsystem_vendor,
+             uint16_t subsystem_id);
 
 int
-free_pciid(
-        struct pciid *id);
+free_pciid(struct pciid *id);
 
 #endif

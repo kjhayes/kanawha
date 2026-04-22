@@ -127,7 +127,8 @@ virtio_pci_init_queues(struct virtio_device *vdev)
         virtio_pci_cap_bar_readw(vpci_dev,
                                  vpci_dev->common_cfg_cap,
                                  VIRTIO_PCI_COMMON_CFG_NUM_QUEUES);
-    if(vdev->num_queues == 0) {
+    if(vdev->num_queues == 0)
+    {
         wprintk("virtio-pci: Device has no queues? (very unexpected)\n");
         return 0;
     }
@@ -137,7 +138,8 @@ virtio_pci_init_queues(struct virtio_device *vdev)
                  KM_KERNEL);
     if(vdev->queues == NULL)
     {
-        eprintk("virtio_pci_init_queues: failed to allocate queues (ENOMEM)! (num=%lu)\n",
+        eprintk("virtio_pci_init_queues: failed to allocate queues (ENOMEM)! "
+                "(num=%lu)\n",
                 (ul_t)vdev->num_queues);
         return -ENOMEM;
     }

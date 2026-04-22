@@ -122,7 +122,7 @@ register_uart_8250(const char *name,
 
     uart_8250_set_irqs_enabled(uart_8250,
                                UART_8250_IRQ_RECV_AVAIL |
-                               UART_8250_IRQ_RECV_STATUS);
+                                   UART_8250_IRQ_RECV_STATUS);
 
     return 0;
 }

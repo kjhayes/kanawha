@@ -1,6 +1,6 @@
 
-#include <drivers/vga/vga.h>
 #include <drivers/fb/vga/font.h>
+#include <drivers/vga/vga.h>
 #include <kanawha/gfx/convert.h>
 #include <kanawha/gfx/font.h>
 #include <kanawha/gfx/layout.h>
@@ -28,7 +28,8 @@ vga_load_glyph(struct vga_dev *dev,
         [0b111] = 0xE000,
     };
 
-    size_t offset = (((size_t)(unsigned char)c) * 32) + character_set_offsets[character_set];
+    size_t offset = (((size_t)(unsigned char)c) * 32) +
+                    character_set_offsets[character_set];
 
     // Enable plane 2 where the font data is stored
     vga_write_field(dev, MemoryPlaneWriteEnable, 0b0100);
@@ -116,4 +117,3 @@ vga_load_font(struct vga_dev *vga,
 
     return 0;
 }
-

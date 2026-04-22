@@ -119,9 +119,9 @@ file_table_clone(struct file_table *parent, struct process *process)
         child->num_open_files++;
 
         res = direct_file_on_open(child_file);
-        if(res) {
-            eprintk("fs_file_on_open returned %s!\n",
-                    errnostr(res));
+        if(res)
+        {
+            eprintk("fs_file_on_open returned %s!\n", errnostr(res));
             ptree_remove(&child->descriptor_tree, child_file->table_node.key);
             child->num_open_files--;
             thread_lock_release(&parent->lock);
@@ -168,9 +168,9 @@ __file_table_free_descriptor(struct file_table *table, struct file *desc)
     int res;
 
     res = direct_file_on_close(desc);
-    if(res) {
-        eprintk("fs_file_on_close returned %s!\n",
-                errnostr(res));
+    if(res)
+    {
+        eprintk("fs_file_on_close returned %s!\n", errnostr(res));
         return res;
     }
 
@@ -278,9 +278,9 @@ file_table_open_path(struct file_table *table,
     table->num_open_files++;
 
     res = direct_file_on_open(desc);
-    if(res) {
-        eprintk("fs_file_on_open returned %s!\n",
-                errnostr(res));
+    if(res)
+    {
+        eprintk("fs_file_on_open returned %s!\n", errnostr(res));
         ptree_remove(&table->descriptor_tree, desc->table_node.key);
         table->num_open_files--;
         thread_lock_release(&table->lock);
@@ -587,9 +587,9 @@ file_table_dup_into(struct file_table *table,
     table->num_open_files++;
 
     res = direct_file_on_open(dst_file);
-    if(res) {
-        eprintk("fs_file_on_open returned %s!\n",
-                errnostr(res));
+    if(res)
+    {
+        eprintk("fs_file_on_open returned %s!\n", errnostr(res));
         ptree_remove(&table->descriptor_tree, dst_file->table_node.key);
         table->num_open_files--;
         thread_lock_release(&table->lock);

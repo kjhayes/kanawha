@@ -8,11 +8,11 @@
 #include <drivers/usb/xhci/event.h>
 #include <drivers/usb/xhci/reg.h>
 #include <drivers/usb/xhci/xhci.h>
+#include <kanawha/dma.h>
 #include <kanawha/endian.h>
 #include <kanawha/init.h>
-#include <kanawha/types.h>
 #include <kanawha/page_alloc.h>
-#include <kanawha/dma.h>
+#include <kanawha/types.h>
 
 static void
 usb_xhci_legacy_support_capability_mark_os_ownership(struct usb_xhci *xhci,

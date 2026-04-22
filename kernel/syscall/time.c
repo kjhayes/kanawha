@@ -18,7 +18,8 @@ syscall_time(unsigned long flags)
         value = time_to_duration(current_timestamp());
         break;
     case TIME_PROC:
-        value = duration_between(process->thread.creation_timestamp, current_timestamp());
+        value = duration_between(process->thread.creation_timestamp,
+                                 current_timestamp());
         break;
     default:
         value = 0;

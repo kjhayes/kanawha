@@ -25,7 +25,8 @@ syscall_read(fd_t file, void __user *dst, size_t size)
            (void *)dst);
 #endif
 
-    if(size == 0) {
+    if(size == 0)
+    {
         return -EINVAL;
     }
 

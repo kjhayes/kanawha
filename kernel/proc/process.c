@@ -7,19 +7,19 @@
 #include <kanawha/irq.h>
 #include <kanawha/kmalloc.h>
 #include <kanawha/lock.h>
+#include <kanawha/perf.h>
 #include <kanawha/proc/mmap.h>
 #include <kanawha/proc/process.h>
 #include <kanawha/ramfile.h>
+#include <kanawha/sleep.h>
 #include <kanawha/stddef.h>
 #include <kanawha/string.h>
 #include <kanawha/sysfs/sysfs.h>
 #include <kanawha/thread.h>
-#include <kanawha/sleep.h>
 #include <kanawha/types.h>
 #include <kanawha/uapi/spawn.h>
 #include <kanawha/usermode.h>
 #include <kanawha/vmem.h>
-#include <kanawha/perf.h>
 
 static DECLARE_PTREE(process_pid_tree);
 DEFINE_LOCAL_IRQ_LOCK(process_pid_lock);
@@ -1010,7 +1010,6 @@ __process_reap_parent_lock(struct process *process)
     ilist_remove(&process->parent->children, &process->child_node);
     process->parent = NULL;
 
-
     // Free up the PID
     res = __process_remove_pid_lockless(process);
     if(res)
@@ -1095,14 +1094,14 @@ process_terminate(int exitcode)
     // Keep reaping children until we have none
     while(!ilist_empty(&process->children))
     {
-        //printk("Still waiting on children:\n");
-        //ilist_for_each(child_node, &process->children)
+        // printk("Still waiting on children:\n");
+        // ilist_for_each(child_node, &process->children)
         //{
-        //    struct process *child =
-        //        container_of(child_node, struct process, child_node);
-        //    dump_process(do_printk, child);
-        //}
-        //dump_threads(do_printk);
+        //     struct process *child =
+        //         container_of(child_node, struct process, child_node);
+        //     dump_process(do_printk, child);
+        // }
+        // dump_threads(do_printk);
         process_hierarchy_lock_release(process);
         pid_t to_reap_id;
         res = process_get_reapable_child(process, 0, &to_reap_id);
@@ -1565,12 +1564,13 @@ process_is_running(struct process *process)
 {
     // unsigned long proc_status = process->status;
     unsigned long thread_status = process->thread.status;
-    switch(thread_status) {
-        case THREAD_STATUS_RUNNING:
-        case THREAD_STATUS_TIRED:
-            return 1;
-        default:
-            return 0;
+    switch(thread_status)
+    {
+    case THREAD_STATUS_RUNNING:
+    case THREAD_STATUS_TIRED:
+        return 1;
+    default:
+        return 0;
     }
 }
 
@@ -1578,9 +1578,9 @@ cpu_id_t
 process_current_cpu(struct process *process)
 {
     cpu_id_t cpu = process->thread.running_on;
-    if(!process_is_running(process)) {
+    if(!process_is_running(process))
+    {
         return NULL_CPU_ID;
     }
     return cpu;
 }
-

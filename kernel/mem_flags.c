@@ -2,20 +2,19 @@
 #include <kanawha/buddy.h>
 #include <kanawha/errno.h>
 #include <kanawha/init.h>
+#include <kanawha/kmalloc.h>
 #include <kanawha/mem_flags.h>
 #include <kanawha/page_alloc.h>
 #include <kanawha/string.h>
 #include <kanawha/vmem.h>
-#include <kanawha/kmalloc.h>
 
-#define MEM_FLAGS_FLAG_STATIC_BUFFER (1UL<<0)
+#define MEM_FLAGS_FLAG_STATIC_BUFFER (1UL << 0)
 
 int
-mem_flags_init(
-        struct mem_flags *mem_flags,
-        unsigned long initial_flags,
-        size_t static_buflen,
-        struct mem_flags_entry *static_buffer)
+mem_flags_init(struct mem_flags *mem_flags,
+               unsigned long initial_flags,
+               size_t static_buflen,
+               struct mem_flags_entry *static_buffer)
 {
     int res;
 
@@ -24,13 +23,19 @@ mem_flags_init(
     mem_flags->num_entries = 0;
     mem_flags->flags = 0;
 
-    if(static_buffer != NULL) {
+    if(static_buffer != NULL)
+    {
         mem_flags->entries = static_buffer;
         mem_flags->flags |= MEM_FLAGS_FLAG_STATIC_BUFFER;
-    } else {
-        mem_flags->entries = kmalloc(sizeof(struct mem_flags_entry) * mem_flags->max_entries, KM_KERNEL);
+    }
+    else
+    {
+        mem_flags->entries =
+            kmalloc(sizeof(struct mem_flags_entry) * mem_flags->max_entries,
+                    KM_KERNEL);
 
-        if(mem_flags->entries == NULL) {
+        if(mem_flags->entries == NULL)
+        {
             return -ENOMEM;
         }
     }
@@ -45,8 +50,7 @@ mem_flags_init(
 }
 
 int
-mem_flags_deinit(
-        struct mem_flags *mem_flags)
+mem_flags_deinit(struct mem_flags *mem_flags)
 {
     if(!(mem_flags->flags & MEM_FLAGS_FLAG_STATIC_BUFFER))
     {
@@ -577,12 +581,12 @@ phys_mem_flags_static_init(void)
 {
     int res;
 
-    res = mem_flags_init(
-            &__phys_mem_flags,
-            PHYS_MEM_FLAGS_AVAIL,
-            MAX_PHYS_MEM_FLAGS_ENTRIES,
-            __phys_mem_flags_buffer);
-    if(res) {
+    res = mem_flags_init(&__phys_mem_flags,
+                         PHYS_MEM_FLAGS_AVAIL,
+                         MAX_PHYS_MEM_FLAGS_ENTRIES,
+                         __phys_mem_flags_buffer);
+    if(res)
+    {
         return res;
     }
 
@@ -725,13 +729,12 @@ virt_mem_flags_static_init(void)
 {
     int res;
 
-    res = mem_flags_init(
-            &__virt_mem_flags,
-            VIRT_MEM_FLAGS_NONCANON
-           |VIRT_MEM_FLAGS_AVAIL,
-            MAX_VIRT_MEM_FLAGS_ENTRIES,
-            __virt_mem_flags_buffer);
-    if(res) {
+    res = mem_flags_init(&__virt_mem_flags,
+                         VIRT_MEM_FLAGS_NONCANON | VIRT_MEM_FLAGS_AVAIL,
+                         MAX_VIRT_MEM_FLAGS_ENTRIES,
+                         __virt_mem_flags_buffer);
+    if(res)
+    {
         return res;
     }
 

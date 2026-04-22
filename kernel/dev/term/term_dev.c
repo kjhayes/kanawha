@@ -1,7 +1,7 @@
 
 #include <kanawha/dev/term.h>
-#include <kanawha/init.h>
 #include <kanawha/event.h>
+#include <kanawha/init.h>
 #include <kanawha/tasklet.h>
 
 #define TERM_DEV_BUFLEN (0x1000)
@@ -691,24 +691,27 @@ flush_term_dev_tasklet_callback(void *state)
 static void
 flush_term_dev_periodic_callback(void *state)
 {
-    if(periodic_flush_term_dev_tasklet != NULL) {
+    if(periodic_flush_term_dev_tasklet != NULL)
+    {
         tasklet_trigger(periodic_flush_term_dev_tasklet);
     }
 }
 static int
-init_periodic_flush_term_dev(void) {
+init_periodic_flush_term_dev(void)
+{
     periodic_flush_term_dev_tasklet =
         tasklet_create(flush_term_dev_tasklet_callback, NULL);
-    if(periodic_flush_term_dev_tasklet == NULL) {
+    if(periodic_flush_term_dev_tasklet == NULL)
+    {
         return -ENOMEM;
     }
     tasklet_name(periodic_flush_term_dev_tasklet, "periodic_flush_term_dev");
     periodic_flush_term_dev_event =
-        create_periodic_event(
-            msec_to_duration(50),
-            NULL,
-            flush_term_dev_periodic_callback);
-    if(periodic_flush_term_dev_event == NULL) {
+        create_periodic_event(msec_to_duration(50),
+                              NULL,
+                              flush_term_dev_periodic_callback);
+    if(periodic_flush_term_dev_event == NULL)
+    {
         return -ENOMEM;
     }
     return 0;

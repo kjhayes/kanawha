@@ -223,7 +223,9 @@ dump_processes(printk_f *printer);
 int
 arch_on_process_entry(void);
 
-int process_is_running(struct process *process);
-cpu_id_t process_current_cpu(struct process *process);
+int
+process_is_running(struct process *process);
+cpu_id_t
+process_current_cpu(struct process *process);
 
 #endif

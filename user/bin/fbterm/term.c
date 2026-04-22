@@ -10,7 +10,8 @@ struct terminal_data terminal_data = {0};
 int
 terminal_resize(struct terminal_data *tdata, size_t width, size_t height)
 {
-    if(tdata->width == width && tdata->height == height) {
+    if(tdata->width == width && tdata->height == height)
+    {
         return 0;
     }
 
@@ -74,9 +75,7 @@ terminal_resize(struct terminal_data *tdata, size_t width, size_t height)
 }
 
 int
-init_terminal(FILE *log_file,
-              size_t width,
-              size_t height)
+init_terminal(FILE *log_file, size_t width, size_t height)
 {
     struct terminal_data *tdata = &terminal_data;
     memset(tdata, 0, sizeof(struct terminal_data));
@@ -475,4 +474,3 @@ terminal_clear_line(struct terminal_data *tdata, size_t __y)
     }
     terminal_mark_redraw_line(tdata, __y);
 }
-

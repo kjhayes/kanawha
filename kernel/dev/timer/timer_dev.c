@@ -26,4 +26,3 @@ dump_timer_dev_on_launch(void)
 }
 declare_init(launch, dump_timer_dev_on_launch);
 #endif
-

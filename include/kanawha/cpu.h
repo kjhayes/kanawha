@@ -1,8 +1,8 @@
 #ifndef __KANAWHA__CPU_H__
 #define __KANAWHA__CPU_H__
 
-#include <kanawha/stddef.h>
 #include <kanawha/registry.h>
+#include <kanawha/stddef.h>
 
 // CPU ID's must be non-negative and contiguous
 typedef int cpu_id_t;

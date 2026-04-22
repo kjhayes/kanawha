@@ -7,35 +7,38 @@ _Static_assert(CONFIG_HEAP_GROWTH_ORDER <= CONFIG_HEAP_ALIGN_ORDER,
                "CONFIG_HEAP_GROWTH_ORDER > CONFIG_HEAP_ALIGN_ORDER!");
 
 const size_t kheap_slab_sizes[KHEAP_NUM_SLABS] = {
-#define KHEAP_SLAB_XLIST_DECL(__NUM,__ALIGN,...)\
-    [KHEAP_SLAB_INDEX_ ## __NUM ## _ ## __ALIGN] = __NUM,
+#define KHEAP_SLAB_XLIST_DECL(__NUM, __ALIGN, ...)                             \
+    [KHEAP_SLAB_INDEX_##__NUM##_##__ALIGN] = __NUM,
     KHEAP_SLAB_XLIST(KHEAP_SLAB_XLIST_DECL)
 #undef KHEAP_SLAB_XLIST_DECL
 };
 
 const order_t kheap_slab_alignments[KHEAP_NUM_SLABS] = {
-#define KHEAP_SLAB_XLIST_DECL(__NUM,__ALIGN,...)\
-    [KHEAP_SLAB_INDEX_ ## __NUM ## _ ## __ALIGN] = __ALIGN,
+#define KHEAP_SLAB_XLIST_DECL(__NUM, __ALIGN, ...)                             \
+    [KHEAP_SLAB_INDEX_##__NUM##_##__ALIGN] = __ALIGN,
     KHEAP_SLAB_XLIST(KHEAP_SLAB_XLIST_DECL)
 #undef KHEAP_SLAB_XLIST_DECL
 };
 
 static inline int
-kheap_slab_alloc_index(
-        size_t *size,
-        order_t align)
+kheap_slab_alloc_index(size_t *size, order_t align)
 {
     int index = -1;
-    if(0) {}
-#define KHEAP_SLAB_XLIST_DECL(__NUM,__ALIGN,...)\
-    else if((*size <= (__NUM)) && (align == (__ALIGN))) {\
-        *size = (__NUM); \
-        index = (KHEAP_SLAB_INDEX_ ## __NUM ## _ ## __ALIGN);\
-    } 
+    if(0)
+    {
+    }
+#define KHEAP_SLAB_XLIST_DECL(__NUM, __ALIGN, ...)                             \
+    else if((*size <= (__NUM)) && (align == (__ALIGN)))                        \
+    {                                                                          \
+        *size = (__NUM);                                                       \
+        index = (KHEAP_SLAB_INDEX_##__NUM##_##__ALIGN);                        \
+    }
     KHEAP_SLAB_XLIST(KHEAP_SLAB_XLIST_DECL)
 #undef KHEAP_SLAB_XLIST_DECL
     dprintk("kheap_slab_alloc_index: size=0x%lx, align=%d -> %d\n",
-            (ul_t)size, (int)align, index);
+            (ul_t)size,
+            (int)align,
+            index);
     return index;
 }
 
@@ -46,11 +49,10 @@ struct kheap_free_region
 };
 
 static int
-kheap_free_specific_lockless(
-        struct kheap *heap,
-        void *addr,
-        order_t align_order,
-        size_t size);
+kheap_free_specific_lockless(struct kheap *heap,
+                             void *addr,
+                             order_t align_order,
+                             size_t size);
 
 static void
 kheap_dump(struct kheap *heap, printk_f *printer)
@@ -93,7 +95,8 @@ kheap_grow(struct kheap *heap)
 
     void *page_virt = heap->vbase + heap->mapped;
 
-    // printk("kheap_grow: page_phys=%p, page_virt=%p, page_size=%p, mapped=%p\n",
+    // printk("kheap_grow: page_phys=%p, page_virt=%p, page_size=%p,
+    // mapped=%p\n",
     //       (uintptr_t)page_phys,
     //       (uintptr_t)page_virt,
     //       (uintptr_t)page_size,
@@ -115,11 +118,10 @@ kheap_grow(struct kheap *heap)
 
     heap->mapped += page_size;
 
-    res = kheap_free_specific_lockless(
-            heap,
-            (void *)page_virt,
-            CONFIG_HEAP_GROWTH_ORDER,
-            page_size);
+    res = kheap_free_specific_lockless(heap,
+                                       (void *)page_virt,
+                                       CONFIG_HEAP_GROWTH_ORDER,
+                                       page_size);
     if(res)
     {
         eprintk("kheap_grow: kheap_free_specific returned %s\n", errnostr(res));
@@ -218,22 +220,21 @@ kheap_amount_free(struct kheap *heap)
 }
 
 static void *
-kheap_alloc_specific_lockless(
-        struct kheap *heap,
-        order_t align_order,
-        size_t *size)
+kheap_alloc_specific_lockless(struct kheap *heap,
+                              order_t align_order,
+                              size_t *size)
 {
     ilist_node_t *node;
 
     int slab_index = kheap_slab_alloc_index(size, align_order);
-    if(slab_index >= 0) {
+    if(slab_index >= 0)
+    {
         DEBUG_ASSERT(slab_index < KHEAP_NUM_SLABS);
         struct kheap_slab *slab = &heap->slabs[slab_index];
         irq_lock_acquire(&slab->lock);
         void *obj = slab_alloc(slab->alloc);
         irq_lock_release(&slab->lock);
-        dprintk("kheap: slab allocating %p\n",
-                obj);
+        dprintk("kheap: slab allocating %p\n", obj);
         return obj;
     }
 
@@ -397,33 +398,27 @@ kheap_alloc_specific_lockless(
 }
 
 void *
-kheap_alloc_specific(
-        struct kheap *heap,
-        order_t align_order,
-        size_t *size)
+kheap_alloc_specific(struct kheap *heap, order_t align_order, size_t *size)
 {
     void *ret;
     irq_lock_acquire(&heap->lock);
-    ret = kheap_alloc_specific_lockless(
-            heap,
-            align_order,
-            size);
+    ret = kheap_alloc_specific_lockless(heap, align_order, size);
     irq_lock_release(&heap->lock);
     return ret;
 }
 
 static int
-kheap_free_specific_lockless(
-        struct kheap *heap,
-        void *addr,
-        order_t align_order,
-        size_t size)
+kheap_free_specific_lockless(struct kheap *heap,
+                             void *addr,
+                             order_t align_order,
+                             size_t size)
 {
     dprintk("kheap_free_specific <- [%p - %p)\n", addr, addr + size);
 
     size_t slab_size = size;
     int slab_index = kheap_slab_alloc_index(&slab_size, align_order);
-    if(slab_index >= 0) {
+    if(slab_index >= 0)
+    {
         DEBUG_ASSERT(slab_index < KHEAP_NUM_SLABS);
         struct kheap_slab *slab = &heap->slabs[slab_index];
         dprintk("kheap: slab freeing %p (align=%d, size=0x%lx)\n",
@@ -477,19 +472,14 @@ kheap_free_specific_lockless(
 }
 
 int
-kheap_free_specific(
-        struct kheap *heap,
-        void *addr,
-        order_t align_order,
-        size_t size)
+kheap_free_specific(struct kheap *heap,
+                    void *addr,
+                    order_t align_order,
+                    size_t size)
 {
     int res;
     irq_lock_acquire(&heap->lock);
-    res = kheap_free_specific_lockless(
-            heap,
-            addr,
-            align_order,
-            size);
+    res = kheap_free_specific_lockless(heap, addr, align_order, size);
     irq_lock_release(&heap->lock);
     return res;
 }
@@ -529,16 +519,17 @@ kheap_init(struct kheap *heap, void *base, size_t size)
 
     ilist_init(&heap->free_list);
 
-    for(size_t i = 0; i < KHEAP_NUM_SLABS; i++) {
+    for(size_t i = 0; i < KHEAP_NUM_SLABS; i++)
+    {
         irq_lock_init(&heap->slabs[i].lock);
         heap->slabs[i].alloc =
-            create_dynamic_slab_allocator(
-                kheap_slab_sizes[i],
-                kheap_slab_alignments[i]);
-        if(heap->slabs[i].alloc == NULL) {
-            for(size_t j = 0; j < i; j++) {
-                destroy_dynamic_slab_allocator(
-                        heap->slabs[j].alloc);
+            create_dynamic_slab_allocator(kheap_slab_sizes[i],
+                                          kheap_slab_alignments[i]);
+        if(heap->slabs[i].alloc == NULL)
+        {
+            for(size_t j = 0; j < i; j++)
+            {
+                destroy_dynamic_slab_allocator(heap->slabs[j].alloc);
             }
             return -ENOMEM;
         }
@@ -549,7 +540,8 @@ kheap_init(struct kheap *heap, void *base, size_t size)
                                             (void *)heap);
     if(heap->region == NULL)
     {
-        for(size_t i = 0; i < KHEAP_NUM_SLABS; i++) {
+        for(size_t i = 0; i < KHEAP_NUM_SLABS; i++)
+        {
             destroy_dynamic_slab_allocator(heap->slabs[i].alloc);
         }
         return -ENOMEM;
@@ -562,7 +554,8 @@ kheap_init(struct kheap *heap, void *base, size_t size)
     if(res)
     {
         vmem_region_destroy(heap->region);
-        for(size_t i = 0; i < KHEAP_NUM_SLABS; i++) {
+        for(size_t i = 0; i < KHEAP_NUM_SLABS; i++)
+        {
             destroy_dynamic_slab_allocator(heap->slabs[i].alloc);
         }
         return res;
@@ -572,7 +565,8 @@ kheap_init(struct kheap *heap, void *base, size_t size)
     if(res)
     {
         vmem_region_destroy(heap->region);
-        for(size_t i = 0; i < KHEAP_NUM_SLABS; i++) {
+        for(size_t i = 0; i < KHEAP_NUM_SLABS; i++)
+        {
             destroy_dynamic_slab_allocator(heap->slabs[i].alloc);
         }
         return res;

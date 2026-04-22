@@ -29,9 +29,8 @@ x64_bsp_register_smp_cpu(struct x64_cpu *cpu, apic_id_t apic_id, int is_bsp)
     cpu->apic.id = apic_id;
     cpu->apic_tree_node.key = (uintptr_t)apic_id;
 
-    snprintk(cpu->name, X64_CPU_NAME_BUFLEN,
-             "apic%lu", (ul_t)apic_id);
-    cpu->name[X64_CPU_NAME_BUFLEN-1] = '\0';
+    snprintk(cpu->name, X64_CPU_NAME_BUFLEN, "apic%lu", (ul_t)apic_id);
+    cpu->name[X64_CPU_NAME_BUFLEN - 1] = '\0';
 
     if(is_bsp)
     {
@@ -43,7 +42,7 @@ x64_bsp_register_smp_cpu(struct x64_cpu *cpu, apic_id_t apic_id, int is_bsp)
         cpu->cpu.flags &= ~CPU_FLAG_IS_BSP;
         printk("AP APICID = 0x%08x\n", cpu->apic.id);
     }
-    
+
     res = register_cpu(&cpu->cpu, cpu->name);
     if(res)
     {

@@ -52,9 +52,7 @@ extern struct terminal_data
 
 // "input" must outlive this terminal
 int
-init_terminal(FILE *log_file,
-              size_t width,
-              size_t height);
+init_terminal(FILE *log_file, size_t width, size_t height);
 
 void
 deinit_terminal(void);
@@ -131,6 +129,7 @@ terminal_clear_cursor_line(struct terminal_data *tdata);
 void
 terminal_clear_line(struct terminal_data *tdata, size_t __y);
 
-char terminal_getc(struct terminal_data *tdata);
+char
+terminal_getc(struct terminal_data *tdata);
 
 #endif

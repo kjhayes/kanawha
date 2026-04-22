@@ -5,7 +5,7 @@
 #include <kanawha/uapi/fb.h>
 #else
 #include <kanawha/fb.h>
-#endif 
+#endif
 
 #define UDRV_FB_PKT_PROVIDE_MODE_INFO (1) // User -> Kernel
 struct udrv_fb_pkt_provide_mode_info

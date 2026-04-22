@@ -36,7 +36,8 @@ usb_xhci_create_input_ctx(struct usb_xhci *xhci)
     ctx->size = ctx->entry_size * 33;
 
     res = dma_alloc(ctx->size,
-                    VMEM_MIN_PAGE_ORDER, // 16-byte aligned but must be within a single physical page
+                    VMEM_MIN_PAGE_ORDER, // 16-byte aligned but must be within a
+                                         // single physical page
                     usb_xhci_read(xhci, AC64) ? DMA_PHYS_64 : DMA_PHYS_32,
                     &ctx->dma_buffer);
     if(res)
@@ -67,8 +68,7 @@ usb_xhci_destroy_input_ctx(struct usb_xhci_input_ctx *ctx)
     return 0;
 }
 int
-usb_xhci_input_ctx_reset_add_drop(
-        struct usb_xhci_input_ctx *ctx)
+usb_xhci_input_ctx_reset_add_drop(struct usb_xhci_input_ctx *ctx)
 {
     uint32_t *virt;
     virt = dma_virt_addr(ctx->dma_buffer);
@@ -78,9 +78,7 @@ usb_xhci_input_ctx_reset_add_drop(
 }
 
 int
-usb_xhci_input_ctx_mark_add_ctx(
-        struct usb_xhci_input_ctx *ctx,
-        int dci)
+usb_xhci_input_ctx_mark_add_ctx(struct usb_xhci_input_ctx *ctx, int dci)
 {
     if(dci > 31)
     {
@@ -95,9 +93,7 @@ usb_xhci_input_ctx_mark_add_ctx(
 }
 
 int
-usb_xhci_input_ctx_mark_drop_ctx(
-        struct usb_xhci_input_ctx *ctx,
-        int dci)
+usb_xhci_input_ctx_mark_drop_ctx(struct usb_xhci_input_ctx *ctx, int dci)
 {
     if(dci > 31 || dci <= 1)
     {
@@ -124,21 +120,18 @@ usb_xhci_input_ctx_phys_addr(struct usb_xhci_input_ctx *ctx)
 }
 
 struct usb_xhci_slot_ctx *
-usb_xhci_input_ctx_slot_ctx(
-        struct usb_xhci_input_ctx *ctx)
+usb_xhci_input_ctx_slot_ctx(struct usb_xhci_input_ctx *ctx)
 {
     void *data = dma_virt_addr(ctx->dma_buffer);
     return data + ctx->entry_size;
 }
 
 struct usb_xhci_endpoint_ctx *
-usb_xhci_input_ctx_endpoint_ctx(
-        struct usb_xhci_input_ctx *ctx,
-        int dci)
+usb_xhci_input_ctx_endpoint_ctx(struct usb_xhci_input_ctx *ctx, int dci)
 {
     void *data = dma_virt_addr(ctx->dma_buffer);
     DEBUG_ASSERT(dci > 0);
-    return data + (ctx->entry_size * (1+dci));
+    return data + (ctx->entry_size * (1 + dci));
 }
 
 /*
@@ -160,19 +153,21 @@ usb_xhci_create_device_ctx(struct usb_xhci *xhci)
 
     struct usb_xhci_device_ctx *ctx;
     ctx = kzmalloc(sizeof(*ctx), KM_KERNEL);
-    if(ctx == NULL) {
+    if(ctx == NULL)
+    {
         return NULL;
     }
     ctx->xhci = xhci;
 
     ctx->entry_size = usb_xhci_read(xhci, CSZ) ? 64 : 32;
     ctx->size = ctx->entry_size * 32;
-    res = dma_alloc(
-            ctx->size,
-            VMEM_MIN_PAGE_ORDER, // 16-byte aligned (but might need to be within one page?)
-            usb_xhci_read(xhci, AC64) ? DMA_PHYS_64 : DMA_PHYS_32,
-            &ctx->dma_buffer);
-    if(res) {
+    res = dma_alloc(ctx->size,
+                    VMEM_MIN_PAGE_ORDER, // 16-byte aligned (but might need to
+                                         // be within one page?)
+                    usb_xhci_read(xhci, AC64) ? DMA_PHYS_64 : DMA_PHYS_32,
+                    &ctx->dma_buffer);
+    if(res)
+    {
         kfree(ctx);
         return NULL;
     }
@@ -192,9 +187,7 @@ usb_xhci_destroy_device_ctx(struct usb_xhci_device_ctx *ctx)
 }
 
 void __phys *
-usb_xhci_device_ctx_phys_addr(
-        struct usb_xhci_device_ctx *ctx)
+usb_xhci_device_ctx_phys_addr(struct usb_xhci_device_ctx *ctx)
 {
     return dma_phys_addr(ctx->dma_buffer);
 }
-
