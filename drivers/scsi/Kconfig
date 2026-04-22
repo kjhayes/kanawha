@@ -4,10 +4,3 @@ config SCSI
     help
       Base SCSI Protocol Support
 
-config VIRTIO_SCSI
-    tristate "Virtio SCSI"
-    default y
-    depends on SCSI && VIRTIO
-    help
-      Virtio SCSI Driver
-

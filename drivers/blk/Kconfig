@@ -6,6 +6,11 @@ config VIRTIO_BLK
     help
       Include a driver for the virtio-blk device.
 
+config VIRTIO_SCSI
+    tristate "Virtio SCSI Device Driver"
+    default y
+    depends on VIRTIO && SCSI
+
 config NVME
     tristate "NVME Driver"
     default y
