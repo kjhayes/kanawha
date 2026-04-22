@@ -456,7 +456,7 @@ scsi_dev_init(
         snprintk(
                 namebuf,
                 64,
-                "%s-%lu-%lu-%lu",
+                "%s-%lu-%lu",
                 (ul_t)adaptor->name,
                 (ul_t)target.target,
                 (ul_t)target.lun
