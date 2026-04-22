@@ -17,9 +17,18 @@ config NVME
     depends on PCI
 
 config IDE
-    tristate "IDE Driver"
+    bool "IDE Driver"
     default y
-    depends on WIP
+
+config LEGACY_IDE
+    bool "Legacy IDE Discovery"
+    default y
+    depends on IDE && PORT_IO
+
+config PCI_IDE
+    bool "PCI IDE Discovery"
+    default y
+    depends on IDE && PCI
 
 config AHCI
     tristate "AHCI Driver"

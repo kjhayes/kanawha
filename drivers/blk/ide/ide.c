@@ -355,10 +355,9 @@ ide_handle_running_task(struct ide_dev *dev, struct ide_command *cmd)
 }
 
 static void
-ide_check_current_command_task(void *__dev)
+ide_check_current_command(struct ide_dev *dev)
 {
     int res;
-    struct ide_dev *dev = __dev;
 
     thread_lock_acquire(&dev->command_lock);
 
@@ -415,6 +414,14 @@ ide_check_current_command_task(void *__dev)
     }
 
     thread_lock_release(&dev->command_lock);
+    return;
+}
+
+static void
+ide_check_current_command_task(void *__dev)
+{
+    struct ide_dev *dev = __dev;
+    ide_check_current_command(dev);
     return;
 }
 
@@ -497,7 +504,7 @@ ide_dev_probe(struct ide_dev *dev)
         duration_t delay = msec_to_duration(DELAY_MS);
         while(cmd.state != IDE_COMMAND_COMPLETE)
         {
-            tasklet_run(dev->cmd_tasklet);
+            ide_check_current_command(dev);
             if(timeout_counter >= ATTEMPTS)
             {
                 wprintk("#IDENTIFY command timed-out!\n");
@@ -662,7 +669,7 @@ ide_dev_register(pio_t io_base,
     {
         {
             char namebuf[128];
-            snprintk(namebuf, 128, "%s-primary", name);
+            snprintk(namebuf, 128, "%s.0", name);
             namebuf[128 - 1] = '\0';
             dev->primary_name = kstrdup(namebuf);
             if(dev->primary_name == NULL)
@@ -685,7 +692,7 @@ ide_dev_register(pio_t io_base,
     {
         {
             char namebuf[128];
-            snprintk(namebuf, 128, "%s-secondary", name);
+            snprintk(namebuf, 128, "%s.1", name);
             namebuf[128 - 1] = '\0';
             dev->secondary_name = kstrdup(namebuf);
             if(dev->secondary_name == NULL)

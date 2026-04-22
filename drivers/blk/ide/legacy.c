@@ -11,7 +11,7 @@ static int
 ide_probe_legacy(void)
 {
     int res;
-    res = ide_dev_register(0x1F0, 0x3F6, "ide-0", &legacy_ide_0);
+    res = ide_dev_register(0x1F0, 0x3F6, "legacy-ide-0", &legacy_ide_0);
     if(res)
     {
         legacy_ide_0 = NULL;
@@ -19,7 +19,7 @@ ide_probe_legacy(void)
                 errnostr(res));
         return 0;
     }
-    res = ide_dev_register(0x170, 0x376, "ide-1", &legacy_ide_1);
+    res = ide_dev_register(0x170, 0x376, "legacy-ide-1", &legacy_ide_1);
     if(res)
     {
         legacy_ide_1 = NULL;
