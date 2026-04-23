@@ -50,7 +50,7 @@ $$(CUR_OUTPUT_DIR)/lib/$(1)/obj.o: uapi userincludes FORCE
 
 userlibs: $$(USER_SYSROOT_LIB_DIR)/lib$(1).a userincludes
 $$(USER_SYSROOT_LIB_DIR)/lib$(1).a: $$(CUR_OUTPUT_DIR)/lib/$(1)/obj.o
-	$$(call qinfo, USER_LD, $$(call rel-dir, $$@, $$(OUTPUT_DIR)))
+	$$(call qinfo, ULD, $$(call rel-dir, $$@, $$(OUTPUT_DIR)))
 	$$(Q)$$(USER_LD) -r $$(USER_LDFLAGS) $$(LDFLAGS) \
 		$$(CUR_OUTPUT_DIR)/lib/$(1)/obj.o -o $$(USER_SYSROOT_LIB_DIR)/lib$(1).a
 endef
@@ -73,7 +73,7 @@ $(CUR_OUTPUT_DIR)/bin/$(1)/obj.o: uapi userincludes userlibs FORCE
 
 userbins: $$(USER_SYSROOT_BIN_DIR)/$(1)
 $$(USER_SYSROOT_BIN_DIR)/$(1): $$(CUR_OUTPUT_DIR)/bin/$(1)/obj.o $$(foreach lib,$$(libs),$$(USER_SYSROOT_LIB_DIR)/lib$$(lib).a)
-	$$(call qinfo, USER_LD, $$(call rel-dir, $$@, $$(OUTPUT_DIR)))
+	$$(call qinfo, ULD, $$(call rel-dir, $$@, $$(OUTPUT_DIR)))
 	$$(Q)$$(USER_LD) $$(USER_LDFLAGS) $$(LDFLAGS) \
 		$$(CUR_OUTPUT_DIR)/bin/$(1)/obj.o -o $$(USER_SYSROOT_BIN_DIR)/$(1) \
 		-lwindd -lkfb -lcrt -lc
