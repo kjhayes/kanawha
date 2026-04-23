@@ -23,6 +23,7 @@ sock_connection_init(
     conn->on_recv = on_recv;
     conn->conn_fd = conn_fd;
     conn->status = SOCK_CONNECTION_CONNECTED;
+    return 0;
 }
 
 int
@@ -33,6 +34,7 @@ sock_connection_deinit(
     return 0;
 }
 
+__attribute__((unused))
 static int
 sock_connection_check_for_disconnect(
         struct sock_connection *conn)
@@ -60,16 +62,51 @@ sock_connection_send_msg(
 {
     int res;
 
-    res = sock_connection_check_for_disconnect(conn);
-    if(res) {
-        return res;
-    }
-
     if(conn->status != SOCK_CONNECTION_CONNECTED) {
         return -EINVAL;
     }
 
     sem_wait(&conn->write_lock);
+
+    struct sock_msg msg = {
+        .type = type,
+        .index = index,
+        .length = datalen,
+    };
+
+    if(msg.length != datalen) {
+        sem_post(&conn->write_lock);
+        return -EINVAL;
+    }
+
+    {
+        ssize_t amt;
+        ssize_t total = 0;
+
+        while(total < sizeof(msg)) {
+            amt = write(conn->conn_fd,((void*)&msg) + total,sizeof(msg)-total);
+            if(amt < 0) {
+                sem_post(&conn->write_lock);
+                return amt;
+            }
+            total += amt;
+        }
+    }
+
+    {
+        ssize_t amt;
+        ssize_t total = 0;
+
+        while(total < datalen) {
+            amt = write(conn->conn_fd,data+total,datalen-total);
+            if(amt < 0) {
+                sem_post(&conn->write_lock);
+                return amt;
+            }
+            total += amt;
+        }
+    }
+
     sem_post(&conn->write_lock);
 
     return 0;
@@ -81,11 +118,6 @@ sock_connection_await_msg(
 {
     int res;
 
-    res = sock_connection_check_for_disconnect(conn);
-    if(res) {
-        return res;
-    }
-
     if(conn->status != SOCK_CONNECTION_CONNECTED) {
         return -EINVAL;
     }
@@ -93,10 +125,16 @@ sock_connection_await_msg(
     struct sock_msg msg;
     sem_wait(&conn->read_lock);
 
-    ssize_t amt = read(conn->conn_fd, &msg, sizeof(msg));
-    if(amt != sizeof(msg)) {
-        sem_post(&conn->read_lock);
-        return -EFAULT;
+    { // Read a sock_msg header
+        ssize_t total = 0;
+        while(total < sizeof(msg)) {
+            ssize_t amt = read(conn->conn_fd, ((void*)&msg) + total, sizeof(msg) - total);
+            if(amt <= 0) {
+                sem_post(&conn->read_lock);
+                return -EFAULT;
+            }
+            total += amt;
+        }
     }
 
     size_t buflen = sizeof(struct sock_msg) + msg.length;
@@ -105,11 +143,20 @@ sock_connection_await_msg(
         sem_post(&conn->read_lock);
         return -ENOMEM;
     }
-
     memcpy(buffer, &msg, sizeof(msg));
-    amt = read(conn->conn_fd, buffer + sizeof(msg), msg.length);
-    if(amt != msg.length) {
-        return -EINVAL;
+
+    { // Read in the rest of the data
+
+        ssize_t total = 0;
+        while(total < msg.length) {
+            ssize_t amt = read(conn->conn_fd, (buffer + sizeof(msg)) + total, msg.length - total);
+            if(amt <= 0) {
+                sem_post(&conn->read_lock);
+                free(buffer);
+                return -EINVAL;
+            }
+            total += amt;
+        }
     }
 
     struct sock_msg *full = buffer;
@@ -118,11 +165,13 @@ sock_connection_await_msg(
         res = (*conn->on_recv)(conn, full);
         if(res) {
             sem_post(&conn->read_lock);
+            free(buffer);
             return res;
         }
     }
 
     sem_post(&conn->read_lock);
+    free(buffer);
     return 0;
 }
 

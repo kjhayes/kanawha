@@ -71,6 +71,22 @@ static struct daemon windd = {
     .sockets = windd_sockets,
 };
 
+static const char *barkd_args[] = {
+    "barkd",
+    NULL,
+};
+static struct daemon_socket barkd_sockets[] = {{
+    .env = "BARKD_SOCKET",
+}};
+static struct daemon barkd = {
+    .command = "/sys/initrd/barkd",
+    .args = barkd_args,
+    .status = DAEMON_UNINIT,
+    .restart_on_exit = 1,
+    .num_sockets = 1,
+    .sockets = barkd_sockets,
+};
+
 static const char *sh_args[] = {"sh", "/sys/initrd/aidedinit.sh", NULL};
 static struct daemon sh = {
     .command = "/sys/initrd/sh",
@@ -106,6 +122,7 @@ static struct daemon sysplot = {
 static struct daemon *daemons[] = {
     &randd,
     &windd,
+    &barkd,
     &sh,
     &sysplot,
     &klog,

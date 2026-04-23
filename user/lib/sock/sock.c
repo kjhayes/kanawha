@@ -99,10 +99,14 @@ sock_open_server_connection(
         )
 {
     int res;
-
     int conn_fd;
+retry:
+
     res = kanawha_sys_accept(socket->socket_fd, &conn_fd, 0);
     if(res) {
+        if(res == -EINTR) {
+            goto retry;
+        }
         return res;
     }
 

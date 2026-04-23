@@ -7,11 +7,13 @@ libs += \
 	ksnd \
 	windd \
 	sock \
+	bark \
 
 bins += \
 	init \
 	randd \
-	windd
+	windd \
+	barkd \
 
 bins += \
     cat \
@@ -47,4 +49,5 @@ bins += \
 	sysplot \
 	ps \
 	klog \
+	beep \
 

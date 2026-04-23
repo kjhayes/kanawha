@@ -44,7 +44,7 @@ syscall_accept(fd_t sock_fd, fd_t __user *conn, unsigned long flags)
     file_table_put_file(process->file_table, process, sock_desc);
     if(conn_node == NULL)
     {
-        return -EINTR;
+        return -EINVAL;
     }
 
     fd_t conn_fd;
