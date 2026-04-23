@@ -3,6 +3,8 @@
 #include <sock/sock.h>
 #include <sock/msg.h>
 
+#include <kanawha/sys-wrappers.h>
+
 #include <unistd.h>
 #include <errno.h>
 #include <stdlib.h>
@@ -31,6 +33,23 @@ sock_connection_deinit(
     return 0;
 }
 
+static int
+sock_connection_check_for_disconnect(
+        struct sock_connection *conn)
+{
+    int res;
+    unsigned long connected;
+    res = kanawha_sys_fattr(conn->conn_fd, FILE_ATTR_CONNECTED, &connected);
+    if(res)
+    {
+        return res;
+    }
+    if(!connected) {
+        conn->status = SOCK_CONNECTION_DISCONNECTED;
+    }
+    return 0;
+}
+
 int
 sock_connection_send_msg(
         struct sock_connection *conn,
@@ -39,11 +58,20 @@ sock_connection_send_msg(
         void *data,
         size_t datalen)
 {
+    int res;
+
+    res = sock_connection_check_for_disconnect(conn);
+    if(res) {
+        return res;
+    }
+
     if(conn->status != SOCK_CONNECTION_CONNECTED) {
         return -EINVAL;
     }
+
     sem_wait(&conn->write_lock);
     sem_post(&conn->write_lock);
+
     return 0;
 }
 
@@ -52,6 +80,11 @@ sock_connection_await_msg(
         struct sock_connection *conn)
 {
     int res;
+
+    res = sock_connection_check_for_disconnect(conn);
+    if(res) {
+        return res;
+    }
 
     if(conn->status != SOCK_CONNECTION_CONNECTED) {
         return -EINVAL;
