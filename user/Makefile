@@ -6,6 +6,7 @@ libs += \
 	kfb \
 	ksnd \
 	windd \
+	sock \
 
 bins += \
 	init \
