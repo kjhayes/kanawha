@@ -11,6 +11,13 @@ struct fs_type;
 struct fs_mount;
 struct fs_node;
 
+#define FS_TYPE_PROBE_MAYBE   (0)
+#define FS_TYPE_PROBE_VALID   (1)
+#define FS_TYPE_PROBE_INVALID (2)
+#define FS_TYPE_PROBE_SIG(RET,ARG,...)\
+    RET(int) \
+    ARG(struct fs_node *, node)
+
 #define FS_TYPE_MOUNT_FILE_SIG(RET, ARG, ...)                                  \
     RET(int)                                                                   \
     ARG(struct fs_node *, node)                                                \
@@ -26,6 +33,7 @@ struct fs_node;
     ARG(struct fs_mount *, mnt)
 
 #define FS_TYPE_OP_LIST(OP, ...)                                               \
+    OP(probe, FS_TYPE_PROBE_SIG, ##__VA_ARGS__)                      \
     OP(mount_file, FS_TYPE_MOUNT_FILE_SIG, ##__VA_ARGS__)                      \
     OP(mount_special, FS_TYPE_MOUNT_SPECIAL_SIG, ##__VA_ARGS__)                \
     OP(unmount, FS_TYPE_UNMOUNT_SIG, ##__VA_ARGS__)
@@ -51,6 +59,21 @@ register_fs_type(struct fs_type *type, char *name);
 
 struct fs_type *
 fs_type_find(const char *name);
+
+// Fixed response implementations of "fs_type_probe"
+
+int
+fs_type_probe_always_maybe(
+        struct fs_type *type,
+        struct fs_node *node);
+int
+fs_type_probe_always_invalid(
+        struct fs_type *type,
+        struct fs_node *node);
+int
+fs_type_probe_always_valid(
+        struct fs_type *type,
+        struct fs_node *node);
 
 // Always Fail Implementations
 // (For FS types which are all special or all file-backed)

@@ -261,6 +261,7 @@ static struct fs_mount_ops mbr_fs_mount_ops = {
 };
 
 static struct fs_type mbr_fs_type = {
+    .probe = fs_type_probe_always_maybe,
     .mount_file = mbr_mount_file,
     .mount_special = fs_type_cannot_mount_special,
     .unmount = mbr_unmount,

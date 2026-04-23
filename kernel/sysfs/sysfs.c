@@ -132,6 +132,7 @@ sysfs_mount_find(const char *id)
 }
 
 struct fs_type sysfs_fs_type = {
+    .probe = fs_type_probe_always_invalid,
     .mount_file = fs_type_cannot_mount_file,
     .mount_special = sysfs_mount_special,
     .unmount = sysfs_unmount,

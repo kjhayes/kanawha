@@ -1391,6 +1391,7 @@ fat_unmount(struct fs_type *type, struct fs_mount *fs_mount)
 }
 
 static struct fs_type fat_fs_type = {
+    .probe = fs_type_probe_always_maybe,
     .mount_file = fat_mount_file,
     .mount_special = fs_type_cannot_mount_special,
     .unmount = fat_unmount,

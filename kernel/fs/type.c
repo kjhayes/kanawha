@@ -33,6 +33,30 @@ fs_type_find(const char *name)
 }
 
 int
+fs_type_probe_always_maybe(
+        struct fs_type *type,
+        struct fs_node *node)
+{
+    return FS_TYPE_PROBE_MAYBE;
+}
+
+int
+fs_type_probe_always_invalid(
+        struct fs_type *type,
+        struct fs_node *node)
+{
+    return FS_TYPE_PROBE_INVALID;
+}
+
+int
+fs_type_probe_always_valid(
+        struct fs_type *type,
+        struct fs_node *node)
+{
+    return FS_TYPE_PROBE_VALID;
+}
+
+int
 fs_type_cannot_mount_file(struct fs_type *type,
                           struct fs_node *node,
                           struct fs_mount **out)

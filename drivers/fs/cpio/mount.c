@@ -241,6 +241,7 @@ static struct fs_mount_ops cpio_fs_mount_ops = {
 };
 
 static struct fs_type cpio_fs_type = {
+    .probe = fs_type_probe_always_maybe,
     .mount_file = cpio_mount_file,
     .mount_special = fs_type_cannot_mount_special,
     .unmount = cpio_unmount,

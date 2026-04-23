@@ -427,6 +427,7 @@ ext2_unmount(struct fs_type *fs_type, struct fs_mount *fs_mount)
 }
 
 static struct fs_type ext2_fs_type = {
+    .probe = fs_type_probe_always_maybe,
     .mount_file = ext2_mount_file,
     .mount_special = fs_type_cannot_mount_special,
     .unmount = ext2_unmount,

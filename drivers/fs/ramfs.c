@@ -681,6 +681,7 @@ ramfs_type_unmount(struct fs_type *type, struct fs_mount *mnt)
 }
 
 struct fs_type ramfs_fs_type = {
+    .probe = fs_type_probe_always_maybe,
     .mount_file = fs_type_cannot_mount_file,
     .mount_special = ramfs_type_mount_special,
     .unmount = ramfs_type_unmount,
