@@ -4,6 +4,7 @@
 #include <kanawha/sys-wrappers.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <sock/sock.h>
 
 #include "log.h"
 
@@ -18,17 +19,10 @@ start_daemon(struct daemon *daemon)
         for(int i = 0; i < daemon->num_sockets; i++)
         {
             struct daemon_socket *sock = &daemon->sockets[i];
-            int file;
-            res = kanawha_sys_socket(0, 0, &file);
-            if(res)
-            {
+            res = sock_create_socket(sock->env);
+            if(res) {
                 return res;
             }
-            sock->socket = file;
-            char SOCK_NUM_BUFFER[64];
-            snprintf(SOCK_NUM_BUFFER, 64, "%d", file);
-            SOCK_NUM_BUFFER[64 - 1] = '\0';
-            setenv(sock->env, SOCK_NUM_BUFFER, 1);
         }
     }
 

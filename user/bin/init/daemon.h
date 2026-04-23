@@ -24,7 +24,6 @@ struct daemon
 
 struct daemon_socket
 {
-    int socket;
     const char *env;
 };
 
