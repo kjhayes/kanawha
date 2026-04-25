@@ -58,8 +58,7 @@ sock_close_socket(struct sock_socket *socket)
 int
 sock_open_client_connection(
         struct sock_socket *socket,
-        struct sock_connection *conn,
-        int(*on_recv)(struct sock_connection *conn, struct sock_msg *msg)
+        struct sock_connection *conn
         )
 {
     int res;
@@ -72,7 +71,6 @@ sock_open_client_connection(
 
     res = sock_connection_init(
             conn,
-            on_recv,
             conn_fd);
     if(res) {
         return res;
@@ -94,8 +92,7 @@ sock_close_client_connection(
 int
 sock_open_server_connection(
         struct sock_socket *socket,
-        struct sock_connection *conn,
-        int(*on_recv)(struct sock_connection *conn, struct sock_msg *msg)
+        struct sock_connection *conn
         )
 {
     int res;
@@ -112,7 +109,6 @@ retry:
 
     res = sock_connection_init(
             conn,
-            on_recv,
             conn_fd);
     if(res) {
         return res;

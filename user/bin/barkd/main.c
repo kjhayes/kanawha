@@ -13,7 +13,7 @@ client_thread(void *_client)
 
     int running = 1;
     while(running) {
-        res = bark_client_await_msg(client);
+        res = bark_client_poll(client);
         if(res) {
             break;
         }

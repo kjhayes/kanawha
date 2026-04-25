@@ -13,6 +13,8 @@
 #include <threads.h>
 #include <unistd.h>
 #include <windd/windd.h>
+#include <lens/lens.h>
+#include <lens/window.h>
 
 #include "ansi.h"
 #include "color.h"
@@ -20,6 +22,8 @@
 #include "input.h"
 #include "render.h"
 #include "term.h"
+
+// #define USE_WINDD
 
 static const char *prog_name = "fbterm";
 
@@ -237,6 +241,7 @@ main(int argc, const char **argv)
     }
 
     struct window *window = NULL;
+    struct lens_window *l_window = NULL;
     struct render_ctx *render = NULL;
     struct input_ctx *input_for_shell = NULL;
 
@@ -260,6 +265,7 @@ main(int argc, const char **argv)
     }
     else
     {
+#ifdef USE_WINDD
         windd_client_init();
         window = windd_client_open();
         if(window == NULL)
@@ -269,6 +275,16 @@ main(int argc, const char **argv)
         }
         render = create_windd_render_ctx(window);
         input_for_shell = create_windd_input_ctx(window);
+#else
+        lens_init();
+        l_window = lens_open_window();
+        if(l_window == NULL) {
+            fprintf(stderr, "fbterm: failed to create window!\n");
+            exit(EXIT_FAILURE);
+        }
+        render = create_lens_render_ctx(l_window);
+        input_for_shell = create_lens_input_ctx(l_window);
+#endif
     }
 
     if(input_for_shell == NULL)

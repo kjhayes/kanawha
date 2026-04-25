@@ -19,8 +19,7 @@ sock_close_socket(struct sock_socket *sock);
 int
 sock_open_client_connection(
         struct sock_socket *socket,
-        struct sock_connection *conn,
-        int(*on_recv)(struct sock_connection *conn, struct sock_msg *msg)
+        struct sock_connection *conn
         );
 int
 sock_close_client_connection(
@@ -30,8 +29,7 @@ sock_close_client_connection(
 int
 sock_open_server_connection(
         struct sock_socket *socket,
-        struct sock_connection *conn,
-        int(*on_recv)(struct sock_connection *conn, struct sock_msg *msg)
+        struct sock_connection *conn
         );
 int
 sock_close_server_connection(

@@ -27,7 +27,7 @@ bark_server_close_client(
         struct bark_client *client);
 
 int
-bark_client_await_msg(
+bark_client_poll(
         struct bark_client *client);
 
 #endif

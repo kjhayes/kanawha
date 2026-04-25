@@ -261,7 +261,6 @@ render_all(int force,
                                            buflen);
                     break;
                 }
-                terminal_data.redraw_buffer[x + (y * tdata->width)] = 0;
             }
         }
     }
@@ -328,6 +327,8 @@ render_update(struct terminal_data *tdata,
 
         layer_i++;
     }
+
+    memset(tdata->redraw_buffer, 0, tdata->width * tdata->height);
 
     return 0;
 }

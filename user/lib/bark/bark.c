@@ -45,7 +45,8 @@ struct bark_stream {
 static int
 bark_stream_handle_msg(
         struct sock_connection *conn,
-        struct sock_msg *msg)
+        struct sock_msg *msg,
+        void *state)
 {
     struct bark_stream *stream = container_of(conn, struct bark_stream, conn);
     switch(msg->type) {
@@ -70,8 +71,7 @@ bark_stream_open(void)
 
     res = sock_open_client_connection(
             barkd_socket,
-            &stream->conn,
-            bark_stream_handle_msg);
+            &stream->conn);
     if(res) {
         free(stream);
         return NULL;
@@ -112,7 +112,8 @@ struct bark_client {
 static int
 bark_server_handle_msg(
         struct sock_connection *conn,
-        struct sock_msg *msg)
+        struct sock_msg *msg,
+        void *state)
 {
     struct bark_client *client = container_of(conn, struct bark_client, conn);
     switch(msg->type) {
@@ -139,8 +140,7 @@ bark_server_wait_for_client(void)
     
     res = sock_open_server_connection(
             barkd_socket,
-            &client->conn,
-            bark_server_handle_msg);
+            &client->conn);
     if(res) {
         free(client);
         return NULL;
@@ -162,9 +162,9 @@ bark_server_close_client(
 }
 
 int
-bark_client_await_msg(
+bark_client_poll(
         struct bark_client *client)
 {
-    return sock_connection_await_msg(&client->conn);
+    return sock_connection_poll(&client->conn, bark_server_handle_msg, NULL);
 }
 

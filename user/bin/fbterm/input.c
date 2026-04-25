@@ -11,6 +11,7 @@ struct input_ctx
     {
         INPUT_CTX_TYPE_FILE,
         INPUT_CTX_TYPE_WINDD,
+        INPUT_CTX_TYPE_LENS,
     } type;
 
     union
@@ -22,10 +23,14 @@ struct input_ctx
         struct
         {
             struct window *win;
-            unsigned shift_pressed : 1;
-            unsigned ctrl_pressed : 1;
         } windd;
+        struct
+        {
+            struct lens_window *window;
+        } lens;
     };
+    unsigned shift_pressed : 1;
+    unsigned ctrl_pressed : 1;
 };
 
 struct input_ctx *
@@ -51,8 +56,23 @@ create_windd_input_ctx(struct window *win)
     }
     ctx->type = INPUT_CTX_TYPE_WINDD;
     ctx->windd.win = win;
-    ctx->windd.shift_pressed = 0;
-    ctx->windd.ctrl_pressed = 0;
+    ctx->shift_pressed = 0;
+    ctx->ctrl_pressed = 0;
+    return ctx;
+}
+
+struct input_ctx *
+create_lens_input_ctx(struct lens_window *win)
+{
+    struct input_ctx *ctx = malloc(sizeof(*ctx));
+    if(ctx == NULL)
+    {
+        return NULL;
+    }
+    ctx->type = INPUT_CTX_TYPE_LENS;
+    ctx->lens.window = win;
+    ctx->shift_pressed = 0;
+    ctx->ctrl_pressed = 0;
     return ctx;
 }
 
@@ -71,9 +91,9 @@ destroy_input_ctx(struct input_ctx *ctx)
 }
 
 static int
-handle_windd_input_event(struct input_ctx *ctx,
-                         struct input_event *evt,
-                         char *c_out)
+handle_input_event(struct input_ctx *ctx,
+                   struct input_event *evt,
+                   char *c_out)
 {
     if(evt->type != INPUT_EVT_KEY)
     {
@@ -88,10 +108,10 @@ handle_windd_input_event(struct input_ctx *ctx,
         switch(key)
         {
         case INPUT_KEY_LSHIFT:
-            ctx->windd.shift_pressed = 0;
+            ctx->shift_pressed = 0;
             break;
         case INPUT_KEY_LCTRL:
-            ctx->windd.ctrl_pressed = 0;
+            ctx->ctrl_pressed = 0;
             break;
         default:
             break;
@@ -105,10 +125,10 @@ handle_windd_input_event(struct input_ctx *ctx,
         switch(key)
         {
         case INPUT_KEY_LCTRL:
-            ctx->windd.ctrl_pressed = 1;
+            ctx->ctrl_pressed = 1;
             return -EAGAIN;
         case INPUT_KEY_LSHIFT:
-            ctx->windd.shift_pressed = 1;
+            ctx->shift_pressed = 1;
             return -EAGAIN;
         case INPUT_KEY_MOUSE_LEFT:
         case INPUT_KEY_MOUSE_RIGHT:
@@ -118,7 +138,7 @@ handle_windd_input_event(struct input_ctx *ctx,
             break;
         }
 
-        if(ctx->windd.ctrl_pressed)
+        if(ctx->ctrl_pressed)
         {
             switch(key)
             {
@@ -216,145 +236,145 @@ handle_windd_input_event(struct input_ctx *ctx,
             switch(key)
             {
             case INPUT_KEY_A:
-                c = ctx->windd.shift_pressed ? 'A' : 'a';
+                c = ctx->shift_pressed ? 'A' : 'a';
                 break;
             case INPUT_KEY_B:
-                c = ctx->windd.shift_pressed ? 'B' : 'b';
+                c = ctx->shift_pressed ? 'B' : 'b';
                 break;
             case INPUT_KEY_C:
-                c = ctx->windd.shift_pressed ? 'C' : 'c';
+                c = ctx->shift_pressed ? 'C' : 'c';
                 break;
             case INPUT_KEY_D:
-                c = ctx->windd.shift_pressed ? 'D' : 'd';
+                c = ctx->shift_pressed ? 'D' : 'd';
                 break;
             case INPUT_KEY_E:
-                c = ctx->windd.shift_pressed ? 'E' : 'e';
+                c = ctx->shift_pressed ? 'E' : 'e';
                 break;
             case INPUT_KEY_F:
-                c = ctx->windd.shift_pressed ? 'F' : 'f';
+                c = ctx->shift_pressed ? 'F' : 'f';
                 break;
             case INPUT_KEY_G:
-                c = ctx->windd.shift_pressed ? 'G' : 'g';
+                c = ctx->shift_pressed ? 'G' : 'g';
                 break;
             case INPUT_KEY_H:
-                c = ctx->windd.shift_pressed ? 'H' : 'h';
+                c = ctx->shift_pressed ? 'H' : 'h';
                 break;
             case INPUT_KEY_I:
-                c = ctx->windd.shift_pressed ? 'I' : 'i';
+                c = ctx->shift_pressed ? 'I' : 'i';
                 break;
             case INPUT_KEY_J:
-                c = ctx->windd.shift_pressed ? 'J' : 'j';
+                c = ctx->shift_pressed ? 'J' : 'j';
                 break;
             case INPUT_KEY_K:
-                c = ctx->windd.shift_pressed ? 'K' : 'k';
+                c = ctx->shift_pressed ? 'K' : 'k';
                 break;
             case INPUT_KEY_L:
-                c = ctx->windd.shift_pressed ? 'L' : 'l';
+                c = ctx->shift_pressed ? 'L' : 'l';
                 break;
             case INPUT_KEY_M:
-                c = ctx->windd.shift_pressed ? 'M' : 'm';
+                c = ctx->shift_pressed ? 'M' : 'm';
                 break;
             case INPUT_KEY_N:
-                c = ctx->windd.shift_pressed ? 'N' : 'n';
+                c = ctx->shift_pressed ? 'N' : 'n';
                 break;
             case INPUT_KEY_O:
-                c = ctx->windd.shift_pressed ? 'O' : 'o';
+                c = ctx->shift_pressed ? 'O' : 'o';
                 break;
             case INPUT_KEY_P:
-                c = ctx->windd.shift_pressed ? 'P' : 'p';
+                c = ctx->shift_pressed ? 'P' : 'p';
                 break;
             case INPUT_KEY_Q:
-                c = ctx->windd.shift_pressed ? 'Q' : 'q';
+                c = ctx->shift_pressed ? 'Q' : 'q';
                 break;
             case INPUT_KEY_R:
-                c = ctx->windd.shift_pressed ? 'R' : 'r';
+                c = ctx->shift_pressed ? 'R' : 'r';
                 break;
             case INPUT_KEY_S:
-                c = ctx->windd.shift_pressed ? 'S' : 's';
+                c = ctx->shift_pressed ? 'S' : 's';
                 break;
             case INPUT_KEY_T:
-                c = ctx->windd.shift_pressed ? 'T' : 't';
+                c = ctx->shift_pressed ? 'T' : 't';
                 break;
             case INPUT_KEY_U:
-                c = ctx->windd.shift_pressed ? 'U' : 'u';
+                c = ctx->shift_pressed ? 'U' : 'u';
                 break;
             case INPUT_KEY_V:
-                c = ctx->windd.shift_pressed ? 'V' : 'v';
+                c = ctx->shift_pressed ? 'V' : 'v';
                 break;
             case INPUT_KEY_W:
-                c = ctx->windd.shift_pressed ? 'W' : 'w';
+                c = ctx->shift_pressed ? 'W' : 'w';
                 break;
             case INPUT_KEY_X:
-                c = ctx->windd.shift_pressed ? 'X' : 'x';
+                c = ctx->shift_pressed ? 'X' : 'x';
                 break;
             case INPUT_KEY_Y:
-                c = ctx->windd.shift_pressed ? 'Y' : 'y';
+                c = ctx->shift_pressed ? 'Y' : 'y';
                 break;
             case INPUT_KEY_Z:
-                c = ctx->windd.shift_pressed ? 'Z' : 'z';
+                c = ctx->shift_pressed ? 'Z' : 'z';
                 break;
             case INPUT_KEY_1:
-                c = ctx->windd.shift_pressed ? '!' : '1';
+                c = ctx->shift_pressed ? '!' : '1';
                 break;
             case INPUT_KEY_2:
-                c = ctx->windd.shift_pressed ? '@' : '2';
+                c = ctx->shift_pressed ? '@' : '2';
                 break;
             case INPUT_KEY_3:
-                c = ctx->windd.shift_pressed ? '#' : '3';
+                c = ctx->shift_pressed ? '#' : '3';
                 break;
             case INPUT_KEY_4:
-                c = ctx->windd.shift_pressed ? '$' : '4';
+                c = ctx->shift_pressed ? '$' : '4';
                 break;
             case INPUT_KEY_5:
-                c = ctx->windd.shift_pressed ? '%' : '5';
+                c = ctx->shift_pressed ? '%' : '5';
                 break;
             case INPUT_KEY_6:
-                c = ctx->windd.shift_pressed ? '^' : '6';
+                c = ctx->shift_pressed ? '^' : '6';
                 break;
             case INPUT_KEY_7:
-                c = ctx->windd.shift_pressed ? '&' : '7';
+                c = ctx->shift_pressed ? '&' : '7';
                 break;
             case INPUT_KEY_8:
-                c = ctx->windd.shift_pressed ? '*' : '8';
+                c = ctx->shift_pressed ? '*' : '8';
                 break;
             case INPUT_KEY_9:
-                c = ctx->windd.shift_pressed ? '(' : '9';
+                c = ctx->shift_pressed ? '(' : '9';
                 break;
             case INPUT_KEY_0:
-                c = ctx->windd.shift_pressed ? ')' : '0';
+                c = ctx->shift_pressed ? ')' : '0';
                 break;
             case INPUT_KEY_MINUS:
-                c = ctx->windd.shift_pressed ? '_' : '-';
+                c = ctx->shift_pressed ? '_' : '-';
                 break;
             case INPUT_KEY_EQUAL_SIGN:
-                c = ctx->windd.shift_pressed ? '+' : '=';
+                c = ctx->shift_pressed ? '+' : '=';
                 break;
             case INPUT_KEY_BACKTICK:
-                c = ctx->windd.shift_pressed ? '~' : '`';
+                c = ctx->shift_pressed ? '~' : '`';
                 break;
             case INPUT_KEY_COMMA:
-                c = ctx->windd.shift_pressed ? '<' : ',';
+                c = ctx->shift_pressed ? '<' : ',';
                 break;
             case INPUT_KEY_PERIOD:
-                c = ctx->windd.shift_pressed ? '>' : '.';
+                c = ctx->shift_pressed ? '>' : '.';
                 break;
             case INPUT_KEY_FSLASH:
-                c = ctx->windd.shift_pressed ? '?' : '/';
+                c = ctx->shift_pressed ? '?' : '/';
                 break;
             case INPUT_KEY_SEMICOLON:
-                c = ctx->windd.shift_pressed ? ':' : ';';
+                c = ctx->shift_pressed ? ':' : ';';
                 break;
             case INPUT_KEY_SINGLE_QUOT:
-                c = ctx->windd.shift_pressed ? '"' : '\'';
+                c = ctx->shift_pressed ? '"' : '\'';
                 break;
             case INPUT_KEY_OPEN_SQR:
-                c = ctx->windd.shift_pressed ? '{' : '[';
+                c = ctx->shift_pressed ? '{' : '[';
                 break;
             case INPUT_KEY_CLOSE_SQR:
-                c = ctx->windd.shift_pressed ? '}' : ']';
+                c = ctx->shift_pressed ? '}' : ']';
                 break;
             case INPUT_KEY_BSLASH:
-                c = ctx->windd.shift_pressed ? '|' : '\\';
+                c = ctx->shift_pressed ? '|' : '\\';
                 break;
             case INPUT_KEY_SPACE:
                 c = ' ';
@@ -379,6 +399,7 @@ handle_windd_input_event(struct input_ctx *ctx,
 
         if(no_char)
         {
+            printf("Unrecognized keycode '%d'\n", (int)evt->key);
             c = '?';
         }
         *c_out = c;
@@ -405,7 +426,7 @@ input_getc(struct input_ctx *ctx)
             if(res == 0)
             {
                 char c;
-                res = handle_windd_input_event(ctx, &evt, &c);
+                res = handle_input_event(ctx, &evt, &c);
                 if(res == 0)
                 {
                     return c;
@@ -429,6 +450,27 @@ input_getc(struct input_ctx *ctx)
                 }
             }
         }
+    }
+    case INPUT_CTX_TYPE_LENS:
+    {
+        int res;
+        char c;
+        struct input_event evt;
+        do {
+            lens_window_poll(ctx->lens.window);
+            int popped = lens_window_get_input(
+                    ctx->lens.window,
+                    &evt);
+            if(popped <= 0) {
+                continue;
+            }
+            res = handle_input_event(ctx, &evt, &c);
+            if(res == 0) {
+                return c;
+            } else {
+                continue;
+            }
+        } while(1);
     }
     default:
         return 0;

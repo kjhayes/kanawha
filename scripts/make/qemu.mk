@@ -9,7 +9,7 @@ QEMU_FLAGS += -D $(QEMU_DEBUG_LOG) -d guest_errors
 
 QEMU_FLAGS += -trace "usb*" -trace "xhci*"
 
-# QEMU_FLAGS += -device virtio-gpu-pci
+QEMU_FLAGS += -device virtio-gpu-pci
 
 # QEMU_FLAGS += -drive file=$(ROOT_DIR)/root.ext2,if=none,id=virtio-disk-root,format=raw \
 # 			  -device virtio-blk-pci,drive=virtio-disk-root,id=root-disk
@@ -74,7 +74,7 @@ QEMU_DEPS += $(ISO)
 QEMU_FLAGS += -cdrom $(ISO)
 
 QEMU_FLAGS += -serial stdio
-QEMU_FLAGS += -smp 2
+QEMU_FLAGS += -smp 8
 QEMU_FLAGS += -vga cirrus
 QEMU_FLAGS += -accel kvm 
 QEMU_FLAGS += -machine q35

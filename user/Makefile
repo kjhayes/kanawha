@@ -8,12 +8,14 @@ libs += \
 	windd \
 	sock \
 	bark \
+	lens \
 
 bins += \
 	init \
 	randd \
 	windd \
 	barkd \
+	lensd \
 
 bins += \
     cat \
@@ -50,4 +52,5 @@ bins += \
 	ps \
 	klog \
 	beep \
+	lterm \
 

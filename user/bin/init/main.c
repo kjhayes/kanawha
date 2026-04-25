@@ -56,7 +56,6 @@ static const char *windd_args[] = {
     "windd",
     WINDD_FB_PATH_STR,
     WINDD_FB_MODE_STR,
-    "/dev/input/ps2-kbd-0",
     NULL,
 };
 static struct daemon_socket windd_sockets[] = {{
@@ -85,6 +84,22 @@ static struct daemon barkd = {
     .restart_on_exit = 1,
     .num_sockets = 1,
     .sockets = barkd_sockets,
+};
+
+static const char *lensd_args[] = {
+    "lensd",
+    NULL,
+};
+static struct daemon_socket lensd_sockets[] = {{
+    .env = "LENSD_SOCKET",
+}};
+static struct daemon lensd = {
+    .command = "/sys/initrd/lensd",
+    .args = lensd_args,
+    .status = DAEMON_UNINIT,
+    .restart_on_exit = 1,
+    .num_sockets = 1,
+    .sockets = lensd_sockets,
 };
 
 static const char *sh_args[] = {"sh", "/sys/initrd/aidedinit.sh", NULL};
@@ -121,11 +136,12 @@ static struct daemon sysplot = {
 };
 static struct daemon *daemons[] = {
     &randd,
-    &windd,
+    // &windd,
     &barkd,
+    &lensd,
     &sh,
-    &sysplot,
-    &klog,
+    // &sysplot,
+    // &klog,
     NULL,
 };
 
