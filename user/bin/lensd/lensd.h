@@ -9,8 +9,16 @@
 
 extern int lensd_running;
 
-struct lens_client_ctx {
+struct lens_client_ctx
+{
     struct lens_client *client;
+
+    double percent_pos_x;
+    double percent_pos_y;
+
+    double percent_width;
+    double percent_height;
+
     ilist_node_t list_node;
 };
 

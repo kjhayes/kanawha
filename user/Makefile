@@ -9,6 +9,7 @@ libs += \
 	sock \
 	bark \
 	lens \
+	paint \
 
 bins += \
 	init \

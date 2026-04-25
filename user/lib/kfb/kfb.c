@@ -1,6 +1,7 @@
 
 #include <ctype.h>
 #include <errno.h>
+#include <paint/paint.h>
 #include <kanawha/fb.h>
 #include <kanawha/file.h>
 #include <kanawha/sys-wrappers.h>
@@ -372,270 +373,6 @@ kfb_set_current_mode(struct kfb_framebuffer *fb, int mode)
 }
 
 static inline int
-__kfb_format_size(unsigned long format, size_t *size)
-{
-    switch(format)
-    {
-    case GFX_FORMAT_MONO8:
-    case GFX_FORMAT_BYTE_R1G1B1I1:
-    case GFX_FORMAT_BYTE_R3G3B2:
-    case GFX_FORMAT_ASCII:
-    case GFX_FORMAT_VGA_CHAR:
-    case GFX_FORMAT_VGA_ATTR:
-        *size = 1;
-        break;
-    case GFX_FORMAT_MONO16:
-        *size = 2;
-        break;
-    case GFX_FORMAT_MONO32:
-    case GFX_FORMAT_RGBA32:
-    case GFX_FORMAT_RBGA32:
-    case GFX_FORMAT_GRBA32:
-    case GFX_FORMAT_GBRA32:
-    case GFX_FORMAT_BRGA32:
-    case GFX_FORMAT_BGRA32:
-        *size = 4;
-        break;
-    case GFX_FORMAT_MONO64:
-        *size = 8;
-        break;
-    default:
-        return -ENXIO;
-    }
-    return 0;
-}
-
-// Use FB_FORMAT_RGBA as a "lingua franca"
-static inline int
-__kfb_convert_to_rgba(unsigned long format, void *data, uint8_t *rgba_out)
-{
-    uint8_t tmp_byte;
-    uint8_t r = 0;
-    uint8_t g = 0;
-    uint8_t b = 0;
-    uint8_t a = 0;
-    switch(format)
-    {
-    case GFX_FORMAT_RGBA32:
-        *(uint32_t *)rgba_out = *(uint32_t *)data;
-        return 0;
-    case GFX_FORMAT_RBGA32:
-        r = ((uint8_t *)data)[0];
-        b = ((uint8_t *)data)[1];
-        g = ((uint8_t *)data)[2];
-        a = ((uint8_t *)data)[3];
-        break;
-    case GFX_FORMAT_BRGA32:
-        b = ((uint8_t *)data)[0];
-        r = ((uint8_t *)data)[1];
-        g = ((uint8_t *)data)[2];
-        a = ((uint8_t *)data)[3];
-        break;
-    case GFX_FORMAT_BGRA32:
-        b = ((uint8_t *)data)[0];
-        g = ((uint8_t *)data)[1];
-        r = ((uint8_t *)data)[2];
-        a = ((uint8_t *)data)[3];
-        break;
-    case GFX_FORMAT_GBRA32:
-        g = ((uint8_t *)data)[0];
-        b = ((uint8_t *)data)[1];
-        r = ((uint8_t *)data)[2];
-        a = ((uint8_t *)data)[3];
-        break;
-    case GFX_FORMAT_GRBA32:
-        g = ((uint8_t *)data)[0];
-        r = ((uint8_t *)data)[1];
-        b = ((uint8_t *)data)[2];
-        a = ((uint8_t *)data)[3];
-        break;
-    case GFX_FORMAT_BYTE_R1G1B1I1:
-        tmp_byte = *(uint8_t *)data;
-        r = ((tmp_byte >> 0) & 1);
-        g = ((tmp_byte >> 1) & 1);
-        b = ((tmp_byte >> 2) & 1);
-        tmp_byte = ((tmp_byte >> 3) & 1) ? 0xFF : 0x80;
-        r *= tmp_byte;
-        g *= tmp_byte;
-        b *= tmp_byte;
-        a = 0xFF;
-        break;
-    case GFX_FORMAT_VGA_ATTR:
-        tmp_byte = *(uint8_t *)data >> 4;
-        r = ((tmp_byte >> 0) & 1);
-        g = ((tmp_byte >> 1) & 1);
-        b = ((tmp_byte >> 2) & 1);
-        tmp_byte = ((tmp_byte >> 3) & 1) ? 0xFF : 0x80;
-        r *= tmp_byte;
-        g *= tmp_byte;
-        b *= tmp_byte;
-        a = 0xFF;
-        break;
-    case GFX_FORMAT_ASCII:
-    case GFX_FORMAT_VGA_CHAR:
-        tmp_byte = *(uint8_t *)data;
-        if(isgraph(tmp_byte) && (tmp_byte != ' '))
-        {
-            r = 0xB0;
-            g = 0xB0;
-            b = 0xB0;
-            a = 0xFF;
-        }
-        else
-        {
-            r = 0x00;
-            g = 0x00;
-            b = 0x00;
-            a = 0x00;
-        }
-        break;
-    default:
-        return -EINVAL;
-    }
-
-    *(uint32_t *)rgba_out =
-        r | ((uint32_t)g << 8) | ((uint32_t)b << 16) | ((uint32_t)a << 24);
-
-    return 0;
-}
-
-static inline int
-__kfb_convert_from_rgba(uint32_t *rgba, unsigned long to_format, void *to_data)
-{
-    uint8_t tmp_byte;
-    uint8_t *rgba_bytes = (uint8_t *)rgba;
-    uint32_t r = rgba_bytes[0];
-    uint32_t g = rgba_bytes[1];
-    uint32_t b = rgba_bytes[2];
-    uint32_t a = rgba_bytes[3];
-
-    switch(to_format)
-    {
-    case GFX_FORMAT_RGBA32:
-        *(uint32_t *)to_data = *(uint32_t *)rgba;
-        return 0;
-    case GFX_FORMAT_RBGA32:
-        *(uint32_t *)to_data = r | (b << 8) | (g << 16) | (a << 24);
-        return 0;
-    case GFX_FORMAT_BRGA32:
-        *(uint32_t *)to_data = b | (r << 8) | (g << 16) | (a << 24);
-        return 0;
-    case GFX_FORMAT_BGRA32:
-        *(uint32_t *)to_data = b | (g << 8) | (r << 16) | (a << 24);
-        return 0;
-    case GFX_FORMAT_GBRA32:
-        *(uint32_t *)to_data = g | (b << 8) | (r << 16) | (a << 24);
-        return 0;
-    case GFX_FORMAT_GRBA32:
-        *(uint32_t *)to_data = g | (r << 8) | (b << 16) | (a << 24);
-        return 0;
-    case GFX_FORMAT_MONO8:
-        *(uint8_t *)to_data = (r + b + g) / 3;
-        return 0;
-    case GFX_FORMAT_MONO16:
-        *(uint16_t *)to_data = ((r + b + g) / 3) << 8;
-        return 0;
-    case GFX_FORMAT_MONO32:
-        *(uint32_t *)to_data = ((r + b + g) / 3) << 24;
-        return 0;
-    case GFX_FORMAT_MONO64:
-        *(uint64_t *)to_data = (uint64_t)((r + b + g) / 3) << 56;
-        return 0;
-    default:
-        break;
-    }
-
-    uint8_t avg = (r + b + g) / 3;
-    switch(to_format)
-    {
-    case GFX_FORMAT_BYTE_R1G1B1I1:
-        *(uint8_t *)to_data = (r >= 0x60) | ((g >= 0x60) << 1) |
-                              ((b >= 0x60) << 2) | ((avg >= 0x80) << 3);
-        return 0;
-    case GFX_FORMAT_BYTE_R3G3B2:
-        *(uint8_t *)to_data = (((r >> 5) & 0b111) << 0) |
-                              (((g >> 5) & 0b111) << 3) |
-                              (((b >> 6) & 0b011) << 6);
-        return 0;
-    case GFX_FORMAT_VGA_CHAR:
-    case GFX_FORMAT_ASCII:
-    {
-        char c;
-        if(avg > 0xC0)
-        {
-            c = '@';
-        }
-        else if(avg > 0x80)
-        {
-            c = '#';
-        }
-        else if(avg > 0x40)
-        {
-            c = '*';
-        }
-        else if(avg > 0x20)
-        {
-            c = '.';
-        }
-        else
-        {
-            c = ' ';
-        }
-        *(uint8_t *)to_data = c;
-    }
-        return 0;
-    case GFX_FORMAT_VGA_ATTR:
-        tmp_byte = ((r >= 0xF0) | ((g >= 0xF0) << 1) | ((b >= 0xF0) << 2) |
-                    ((avg >= 0xF0) << 3))
-                   << 4;
-        tmp_byte |= ((r >= 0x80) | ((g >= 0x80) << 1) | ((b >= 0x80) << 2) |
-                     ((avg >= 0xA0) << 3));
-        *(uint8_t *)to_data = tmp_byte;
-        return 0;
-    default:
-        break;
-    }
-
-    return -EINVAL;
-}
-
-static inline int
-__kfb_convert_pixel(unsigned long from_format,
-                    void *from_data,
-                    unsigned long to_format,
-                    void *to_data)
-{
-    int res;
-    if(from_format == to_format)
-    {
-        size_t pixel_size;
-        res = __kfb_format_size(from_format, &pixel_size);
-        if(res == 0)
-        {
-            memcpy(to_data, from_data, pixel_size);
-            return 0;
-        }
-    }
-
-    // Try to convert to RGBA and then back
-    uint32_t rgba;
-
-    res = __kfb_convert_to_rgba(from_format, from_data, (uint8_t *)&rgba);
-    if(res)
-    {
-        printf("__kfb_convert_pixel: failed to convert to rgba!\n");
-        return res;
-    }
-    res = __kfb_convert_from_rgba(&rgba, to_format, to_data);
-    if(res)
-    {
-        printf("__kfb_convert_pixel: failed to convert from rgba!\n");
-        return res;
-    }
-    return 0;
-}
-
-static inline int
 __kfb_merge_rgba(uint32_t *into, uint32_t value, size_t merged_so_far)
 {
     if(merged_so_far == 0)
@@ -738,9 +475,11 @@ kfb_blit_with_transform(void *to,
 
             if(xform)
             {
-                int res = __kfb_convert_to_rgba(from_layout->format,
-                                                from_data,
-                                                (uint8_t *)&cur_rgba);
+                res = paint_convert_pixel(
+                        GFX_FORMAT_RGBA32,
+                        &cur_rgba,
+                        from_layout->format,
+                        from_data);
                 if(res)
                 {
                     printf("kfb: Failed to convert to rgba!\n");
@@ -760,9 +499,11 @@ kfb_blit_with_transform(void *to,
                            (((uint32_t)to_xform.a & 0xFF) << 24);
                 if(((cur_rgba >> 24) & 0xFF) > 0)
                 {
-                    res = __kfb_convert_from_rgba(&cur_rgba,
-                                                  to_layout->format,
-                                                  to_data);
+                    res = paint_convert_pixel(
+                            to_layout->format,
+                            to_data,
+                            GFX_FORMAT_RGBA32,
+                            &cur_rgba);
                     if(res)
                     {
                         printf("kfb: Failed to convert from rgba!\n");
@@ -774,10 +515,11 @@ kfb_blit_with_transform(void *to,
 
                 unsigned long from_format = from_layout->format;
                 unsigned long to_format = to_layout->format;
-                res = __kfb_convert_pixel(from_layout->format,
-                                          from_data,
-                                          to_layout->format,
-                                          to_data);
+                res = paint_convert_pixel(
+                        to_layout->format,
+                        to_data,
+                        from_layout->format,
+                        from_data);
                 if(res)
                 {
                     printf("kfb: failed to convert pixel to=%d, from=%d!\n",

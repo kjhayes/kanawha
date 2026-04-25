@@ -20,9 +20,15 @@ create_lens_client_ctx(
         return NULL;
     }
 
+    ctx->percent_pos_x  = 0.1;
+    ctx->percent_pos_y  = 0.1;
+    ctx->percent_width  = 0.8;
+    ctx->percent_height = 0.8;
+
     ctx->client = client;
     res = render_init_ctx(ctx);
     if(res) {
+        fprintf(stderr, "lensd: failed to initialize render state of window context!\n");
         free(ctx);
         return NULL;
     }
@@ -90,32 +96,6 @@ int remove_lens_client(struct lens_client_ctx *ctx)
     destroy_lens_client_ctx(ctx);
     return 0;
 }
-
-//int foreach_lens_client(
-//        int(*callback)(struct lens_client_ctx *ctx, void *state),
-//        void *state)
-//{
-//    size_t num_clients = ilist_count(&ctx_list);
-//    for(size_t i = 0; i < num_clients; i++) {
-//        sem_wait(&ctx_list_lock);
-//        ilist_node_t *head;
-//        head = ilist_pop_head(&ctx_list);
-//        sem_post(&ctx_list_lock);
-//
-//        if(head == NULL) {
-//            break;
-//        }
-//
-//        struct lens_client_ctx *ctx =
-//            container_of(head, struct lens_client_ctx, list_node);
-//
-//        (*callback)(ctx, state);
-//
-//        sem_wait(&ctx_list_lock);
-//        ilist_push_tail(&ctx_list, &ctx->list_node);
-//        sem_post(&ctx_list_lock);
-//    }
-//}
 
 int foreach_lens_client(
         int(*callback)(struct lens_client_ctx *ctx, void *state),

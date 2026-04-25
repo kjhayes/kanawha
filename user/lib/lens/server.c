@@ -229,7 +229,7 @@ lens_client_set_gfx_info(
             return res;
         }
     }
-    client->gfx_info = info;
+    client->gfx_info = new;
     client->gfx_info_desync = 1;
 
     sem_post(&client->gfx_lock);
