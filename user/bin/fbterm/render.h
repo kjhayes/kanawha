@@ -4,16 +4,12 @@
 #include "font.h"
 #include "kfb/kfb.h"
 #include "term.h"
-#include <windd/windd.h>
 #include <lens/window.h>
 
 struct render_ctx;
 
 struct render_ctx *
 create_fb_render_ctx(struct kfb_framebuffer *fb, int layer);
-
-struct render_ctx *
-create_windd_render_ctx(struct window *win);
 
 struct render_ctx *
 create_lens_render_ctx(struct lens_window *win);

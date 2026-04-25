@@ -84,7 +84,7 @@ int add_lens_client(struct lens_client *client)
         return -ENOMEM;
     }
     sem_wait(&ctx_list_lock);
-    ilist_push_tail(&ctx_list, &ctx->list_node);
+    ilist_push_head(&ctx_list, &ctx->list_node);
     sem_post(&ctx_list_lock);
     return 0;
 }

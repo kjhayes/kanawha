@@ -10,7 +10,6 @@ struct input_ctx
     enum
     {
         INPUT_CTX_TYPE_FILE,
-        INPUT_CTX_TYPE_WINDD,
         INPUT_CTX_TYPE_LENS,
     } type;
 
@@ -20,10 +19,6 @@ struct input_ctx
         {
             FILE *file;
         } file;
-        struct
-        {
-            struct window *win;
-        } windd;
         struct
         {
             struct lens_window *window;
@@ -43,21 +38,6 @@ create_file_input_ctx(FILE *file)
     }
     ctx->type = INPUT_CTX_TYPE_FILE;
     ctx->file.file = file;
-    return ctx;
-}
-
-struct input_ctx *
-create_windd_input_ctx(struct window *win)
-{
-    struct input_ctx *ctx = malloc(sizeof(*ctx));
-    if(ctx == NULL)
-    {
-        return NULL;
-    }
-    ctx->type = INPUT_CTX_TYPE_WINDD;
-    ctx->windd.win = win;
-    ctx->shift_pressed = 0;
-    ctx->ctrl_pressed = 0;
     return ctx;
 }
 
@@ -415,48 +395,12 @@ input_getc(struct input_ctx *ctx)
     {
     case INPUT_CTX_TYPE_FILE:
         return fgetc(ctx->file.file);
-    case INPUT_CTX_TYPE_WINDD:
-    {
-        int res;
-        struct input_event evt;
-
-        while(!windd_window_disconnected(ctx->windd.win))
-        {
-            res = windd_window_recv_input(ctx->windd.win, &evt);
-            if(res == 0)
-            {
-                char c;
-                res = handle_input_event(ctx, &evt, &c);
-                if(res == 0)
-                {
-                    return c;
-                }
-                else
-                {
-                    // continue looping...
-                    // This was probably a control
-                    // key press or mouse motion
-                }
-            }
-            else
-            {
-                if(res == -ENXIO)
-                {
-                    windd_window_poll(ctx->windd.win);
-                }
-                else
-                {
-                    return res;
-                }
-            }
-        }
-    }
     case INPUT_CTX_TYPE_LENS:
     {
         int res;
         char c;
         struct input_event evt;
-        do {
+        while(1) {
             lens_window_poll(ctx->lens.window);
             int popped = lens_window_get_input(
                     ctx->lens.window,
@@ -470,7 +414,7 @@ input_getc(struct input_ctx *ctx)
             } else {
                 continue;
             }
-        } while(1);
+        }
     }
     default:
         return 0;
@@ -492,8 +436,6 @@ input_poll(struct input_ctx *ctx)
         return (res > 0 && (pollfd[0].revents & (POLLIN | POLLPRI)));
     }
     break;
-    case INPUT_CTX_TYPE_WINDD:
-        return 0; // TODO add some polling mechanism to windd
     default:
         return 0;
     }

@@ -1,4 +1,0 @@
-
-obj-y += \
-	windd.o
-

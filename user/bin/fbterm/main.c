@@ -12,7 +12,6 @@
 #include <string.h>
 #include <threads.h>
 #include <unistd.h>
-#include <windd/windd.h>
 #include <lens/lens.h>
 #include <lens/window.h>
 
@@ -22,8 +21,6 @@
 #include "input.h"
 #include "render.h"
 #include "term.h"
-
-// #define USE_WINDD
 
 static const char *prog_name = "fbterm";
 
@@ -240,7 +237,6 @@ main(int argc, const char **argv)
         exit(EXIT_FAILURE);
     }
 
-    struct window *window = NULL;
     struct lens_window *l_window = NULL;
     struct render_ctx *render = NULL;
     struct input_ctx *input_for_shell = NULL;
@@ -265,17 +261,6 @@ main(int argc, const char **argv)
     }
     else
     {
-#ifdef USE_WINDD
-        windd_client_init();
-        window = windd_client_open();
-        if(window == NULL)
-        {
-            fprintf(stderr, "fbterm: failed to create window!\n");
-            exit(EXIT_FAILURE);
-        }
-        render = create_windd_render_ctx(window);
-        input_for_shell = create_windd_input_ctx(window);
-#else
         lens_init();
         l_window = lens_open_window();
         if(l_window == NULL) {
@@ -284,7 +269,6 @@ main(int argc, const char **argv)
         }
         render = create_lens_render_ctx(l_window);
         input_for_shell = create_lens_input_ctx(l_window);
-#endif
     }
 
     if(input_for_shell == NULL)
@@ -330,13 +314,6 @@ main(int argc, const char **argv)
 
     while(terminal_data.running)
     {
-        if(window)
-        {
-            if(windd_window_disconnected(window))
-            {
-                break;
-            }
-        }
         render_update(&terminal_data, fdata, render);
 
         ansi_terminal_update(&terminal_data, input_from_shell);
@@ -358,11 +335,5 @@ main(int argc, const char **argv)
     destroy_input_ctx(input_for_shell);
     destroy_input_ctx(input_from_shell);
     destroy_render_ctx(render);
-    if(window)
-    {
-        windd_client_close(window);
-        window = NULL;
-        windd_client_deinit();
-    }
     return 0;
 }

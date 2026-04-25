@@ -5,7 +5,6 @@ libs += \
 	dl \
 	kfb \
 	ksnd \
-	windd \
 	sock \
 	bark \
 	lens \
@@ -14,7 +13,6 @@ libs += \
 bins += \
 	init \
 	randd \
-	windd \
 	barkd \
 	lensd \
 
@@ -48,7 +46,6 @@ bins += \
     sleep \
     udrv_rand \
     write \
-	wintest \
 	sysplot \
 	ps \
 	klog \

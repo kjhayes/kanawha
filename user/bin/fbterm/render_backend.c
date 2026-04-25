@@ -2,7 +2,6 @@
 #include "render.h"
 #include <errno.h>
 #include <stdlib.h>
-#include <windd/windd.h>
 #include <lens/window.h>
 #include <lens/gfx.h>
 
@@ -11,7 +10,6 @@ struct render_ctx
     enum
     {
         RENDER_CTX_TYPE_FB,
-        RENDER_CTX_TYPE_WINDD,
         RENDER_CTX_TYPE_LENSD,
     } type;
     union
@@ -22,10 +20,6 @@ struct render_ctx
             struct fb_mode_info *minfo;
             int layer;
         } fb;
-        struct
-        {
-            struct window *window;
-        } windd;
         struct 
         {
             struct lens_window *window;
@@ -50,19 +44,6 @@ create_fb_render_ctx(struct kfb_framebuffer *fb, int layer)
 }
 
 struct render_ctx *
-create_windd_render_ctx(struct window *window)
-{
-    struct render_ctx *ctx = malloc(sizeof(struct render_ctx));
-    if(ctx == NULL)
-    {
-        return NULL;
-    }
-    ctx->type = RENDER_CTX_TYPE_WINDD;
-    ctx->windd.window = window;
-    return ctx;
-}
-
-struct render_ctx *
 create_lens_render_ctx(struct lens_window *window)
 {
     struct render_ctx *ctx = malloc(sizeof(struct render_ctx));
@@ -82,8 +63,6 @@ destroy_render_ctx(struct render_ctx *ctx)
     {
     case RENDER_CTX_TYPE_FB:
         kfb_close_framebuffer(ctx->fb.fb);
-        break;
-    case RENDER_CTX_TYPE_WINDD:
         break;
     case RENDER_CTX_TYPE_LENSD:
         break;
@@ -121,22 +100,6 @@ render_ctx_begin(struct render_ctx *ctx,
         *buflen = ctx->fb.minfo->buffer_size;
     }
     break;
-    case RENDER_CTX_TYPE_WINDD:
-        if(layer > 0)
-        {
-            return -EINVAL;
-        }
-        windd_window_get_layout(ctx->windd.window, gfx);
-        windd_window_reload_buffer(ctx->windd.window);
-        windd_window_lock_buffer(ctx->windd.window);
-        if(ctx->windd.window->buffer_size <= 0)
-        {
-            windd_window_unlock_buffer(ctx->windd.window);
-            return -EINVAL;
-        }
-        *buffer = ctx->windd.window->buffer;
-        *buflen = ctx->windd.window->buffer_size;
-        break;
     case RENDER_CTX_TYPE_LENSD:
         lens_window_lock_gfx(ctx->lensd.window);
         struct lens_gfx_info *info;
@@ -167,13 +130,6 @@ render_ctx_end(struct render_ctx *ctx, int layer, int flush)
         {
             kfb_flush_framebuffer(ctx->fb.fb);
         }
-        break;
-    case RENDER_CTX_TYPE_WINDD:
-        if(layer > 0)
-        {
-            return -EINVAL;
-        }
-        windd_window_unlock_buffer(ctx->windd.window);
         break;
     case RENDER_CTX_TYPE_LENSD:
         lens_window_unlock_gfx(ctx->lensd.window);

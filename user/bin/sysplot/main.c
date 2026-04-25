@@ -1,24 +1,17 @@
 
 #include <kanawha/sys-wrappers.h>
 #include <kanawha/time.h>
-#include <kfb/kfb.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <threads.h>
 #include <unistd.h>
-#include <windd/windd.h>
 
-static int
-window_poll_main(void *_win)
-{
-    struct window *win = _win;
-    while(!windd_window_disconnected(win))
-    {
-        windd_window_poll(win);
-    }
-    return 0;
-}
+#include <paint/paint.h>
+
+#include <lens/lens.h>
+#include <lens/gfx.h>
+#include <lens/window.h>
 
 struct metric
 {
@@ -26,7 +19,7 @@ struct metric
     size_t min;
     size_t cur;
     const char *name;
-    kfb_rgba_t color;
+    uint32_t color;
     void (*update)(struct metric *self);
 };
 
@@ -73,94 +66,80 @@ register_metric(struct metric *metric)
 }
 
 static int
-render_main(void *_win)
+render_metrics(struct lens_window *window)
 {
-    struct window *window = _win;
+    lens_window_lock_gfx(window);
+    struct lens_gfx_info *info = lens_window_get_gfx_info(window);
+    void *frame = lens_window_get_gfx_frame(window);
 
-    int running = 1;
-
-    while(running)
-    {
-        sleep(1);
-
-        struct gfx_layout layout;
-        windd_window_get_layout(window, &layout);
-        windd_window_reload_buffer(window);
-        windd_window_lock_buffer(window);
-
-        if(!window->layout_valid || !(window->buffer_size > 0))
-        {
-            windd_window_unlock_buffer(window);
-            continue;
-        }
-
+    for(int i = 0; i < info->num_layers; i++) {
         // Draw
-        size_t bar_width = window->layout.width / num_metrics;
+        struct gfx_layout *layout = &info->layer_layout[i];
 
-        uint32_t bg = 0xFF101010;
-        struct kfb_image bg_img = {
-            .data = (void *)&bg,
-            .resx = 1,
-            .resy = 1,
+        size_t bar_width = layout->width / num_metrics;
+
+        uint32_t bg_color = 0xFF101010;
+        struct gfx_layout color_layout = {
             .order = GFX_ORDER_ROW_MAJOR,
+            .width = 1,
+            .height = 1,
             .format = GFX_FORMAT_RGBA32,
             .offset = 0,
             .stride = 4,
-            .data_size = 4,
         };
 
-        lock_metrics();
         for(size_t mi = 0; mi < num_metrics; mi++)
         {
             struct metric *m = metrics[mi];
-            // printf("update(%s)\n", m->name);
             (*m->update)(m);
         }
         for(size_t mi = 0; mi < num_metrics; mi++)
         {
             struct metric *m = metrics[mi];
-            struct kfb_image img = {
-                .data = (void *)&m->color,
-                .resx = 1,
-                .resy = 1,
-                .order = GFX_ORDER_ROW_MAJOR,
-                .format = GFX_FORMAT_RGBA32,
-                .offset = 0,
-                .stride = 4,
-                .data_size = 4,
-            };
 
             double range = (double)m->max - (double)m->min;
             double offset = (double)m->cur - (double)m->min;
             double percentage = offset / range;
 
-            size_t height = percentage * layout.height;
-            if(height > layout.height)
+            size_t height = percentage * layout->height;
+            if(height > layout->height)
             {
-                height = layout.height;
+                height = layout->height;
             }
 
-            size_t y_off = layout.height - height;
+            size_t y_off = layout->height - height;
 
-            kfb_blit_image(window->buffer,
-                           bar_width,
-                           height,
-                           bar_width * mi,
-                           y_off,
-                           &layout,
-                           &img);
-            kfb_blit_image(window->buffer,
-                           bar_width,
-                           layout.height - height,
-                           bar_width * mi,
-                           0,
-                           &layout,
-                           &bg_img);
+            paint_blit(
+                    frame,
+                    info->frame_size,
+                    bar_width,
+                    height,
+                    bar_width * mi,
+                    y_off,
+                    layout,
+                    &m->color,
+                    sizeof(m->color),
+                    1, 1,
+                    0, 0,
+                    &color_layout);
+            paint_blit(
+                    frame,
+                    info->frame_size,
+                    bar_width,
+                    layout->height - height,
+                    bar_width * mi,
+                    0,
+                    layout,
+                    &bg_color,
+                    sizeof(bg_color),
+                    1, 1,
+                    0, 0,
+                    &color_layout
+                    );
         }
-        unlock_metrics();
-
-        windd_window_unlock_buffer(window);
     }
+    lens_window_unlock_gfx(window);
+    return 0;
 }
 
 static size_t
@@ -199,13 +178,7 @@ init_mem_metric(void)
         .cur = 0,
         .name = "memory",
         .update = mem_update,
-        .color =
-            {
-                .r = 0x00,
-                .g = 0x80,
-                .b = 0x00,
-                .a = 0xFF,
-            },
+        .color = 0xFF008000,
     };
     register_metric(&m);
 }
@@ -242,13 +215,7 @@ init_cpu_metric(const char *name)
         .cur = 0,
         .name = "cpu",
         .update = cpu_update,
-        .color =
-            {
-                .r = 0x80,
-                .g = 0x00,
-                .b = 0x00,
-                .a = 0xFF,
-            },
+        .color = 0xFF000080,
     };
     register_metric(&cpu->metric);
 }
@@ -257,21 +224,20 @@ int
 main(int argc, const char **argv)
 {
     int res;
-    res = windd_client_init();
-    if(res)
-    {
-        fprintf(stderr, "Failed to initialize windd!\n");
+
+    res = lens_init();
+    if(res) {
+        fprintf(stderr, "Failed to initialize windowing library!\n");
         exit(EXIT_FAILURE);
+
     }
-    struct window *window = windd_client_open();
+
+    struct lens_window *window = lens_open_window();
     if(window == NULL)
     {
         fprintf(stderr, "Failed to open window!\n");
         exit(EXIT_FAILURE);
     }
-
-    thrd_t window_renderer;
-    thrd_create(&window_renderer, render_main, window);
 
     // Register all of our metrics
     init_mem_metric();
@@ -299,9 +265,15 @@ main(int argc, const char **argv)
         kanawha_sys_close(dir);
     }
 
-    window_poll_main(window);
+    int running = 1;
+    while(running) {
+        lens_window_poll(window);
+        render_metrics(window);
+        lens_window_flush(window);
+        sleep(1);
+    }
 
-    windd_client_close(window);
-    windd_client_deinit();
+    lens_close_window(window);
+    lens_deinit();
     return 0;
 }
