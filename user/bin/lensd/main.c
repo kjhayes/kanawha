@@ -18,12 +18,10 @@ int main(int argc, const char **argv)
     listener_init();
     input_init();
 
-    // TODO use displays in the render.c code...
     add_display("/dev/fb/vga", 1);
 
-    // TODO allow registering inputs
-//    add_input("/dev/input/ps2-kbd-0");
-//    add_input("/dev/input/ps2-mouse-0");
+    add_input("/dev/input/ps2-kbd-0");
+    add_input("/dev/input/ps2-mouse-0");
 
     while(lensd_running) {
         ctx_loop_iter();

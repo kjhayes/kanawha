@@ -5,27 +5,25 @@
 #include <stdio.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <ilist.h>
+#include <string.h>
+#include <stdlib.h>
+#include <semaphore.h>
 
 #define MAX_INPUT_EVENTS_PER_ITER (8)
 
 static struct lens_input_buffer *input_buffer = NULL;
 
-struct input_source {
-    const char *path;
+sem_t input_source_lock;
+ilist_t input_source_list;
+
+struct input_source
+{
+    char *path;
     thrd_t thread;
-};
 
-static struct input_source
-input_sources[] = {
-    {
-        .path = "/dev/input/ps2-mouse-0",
-    },
-    {
-        .path = "/dev/input/ps2-kbd-0",
-    },
-
+    ilist_node_t list_node;
 };
-#define NUM_INPUT_SOURCES (sizeof(input_sources) / sizeof(struct input_source))
 
 // Centralized function called by all input
 // source's threads
@@ -74,21 +72,59 @@ input_init(void)
     if(input_buffer == NULL) {
         return -ENOMEM;
     }
-    for(size_t i = 0; i < NUM_INPUT_SOURCES; i++) {
-        struct input_source *src = &input_sources[i];
-        thrd_create(&src->thread, input_thread, src);
-    }
+
+    ilist_init(&input_source_list);
+    sem_init(&input_source_lock,1,1);
     return 0;
 }
 
 int
 input_deinit(void)
 {
-    for(size_t i = 0; i < NUM_INPUT_SOURCES; i++) {
+    sem_destroy(&input_source_lock);
+    ilist_node_t *iter;
+    while(1) {
+        iter = ilist_pop_head(&input_source_list);
+        struct input_source *source =
+            container_of(iter, struct input_source, list_node);
+
         int exitcode;
-        thrd_join(input_sources[i].thread, &exitcode);
+        thrd_join(source->thread, &exitcode);
+        free(source->path);
+        free(source);
     }
+ 
     lens_destroy_input_buffer(input_buffer);
+    return 0;
+}
+
+int
+add_input(const char *path)
+{
+    int res;
+
+    struct input_source *src = malloc(sizeof(*src));
+    if(src == NULL) {
+        return -ENOMEM;
+    }
+
+    src->path = strdup(path);
+    if(src->path == NULL) {
+        free(src);
+        return -ENOMEM;
+    }
+
+    res = thrd_create(&src->thread, input_thread, src);
+    if(res) {
+        free(src->path);
+        free(src);
+        return res;
+    }
+
+    while(sem_wait(&input_source_lock)) {}
+    ilist_push_tail(&input_source_list, &src->list_node);
+    sem_post(&input_source_lock);
+
     return 0;
 }
 

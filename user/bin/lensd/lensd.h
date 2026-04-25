@@ -55,6 +55,7 @@ int listener_deinit(void);
 int input_init(void);
 int input_deinit(void);
 int input_loop_iter(void);
+int add_input(const char *path);
 
 int add_lens_client(struct lens_client *client);
 int remove_lens_client(struct lens_client_ctx *ctx);
