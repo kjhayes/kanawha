@@ -22,6 +22,9 @@ struct input_source
     char *path;
     thrd_t thread;
 
+    unsigned shift_pressed : 1;
+    unsigned ctrl_pressed : 1;
+
     ilist_node_t list_node;
 };
 
@@ -29,9 +32,31 @@ struct input_source
 // source's threads
 static int
 handle_input_event(
+        struct input_source *src,
         struct input_event *evt)
 {
-    if(input_buffer != NULL) {
+    int eat_input = 0;
+    if(evt->type == INPUT_EVT_KEY) {
+        switch(evt->key) {
+            case INPUT_KEY_LSHIFT:
+                src->shift_pressed = evt->motion == INPUT_MOTION_RELEASED ? 0 : 1;
+                break;
+            case INPUT_KEY_LCTRL:
+                src->ctrl_pressed = evt->motion == INPUT_MOTION_RELEASED ? 0 : 1;
+                break;
+            case INPUT_KEY_TAB:
+                if(src->shift_pressed && evt->motion == INPUT_MOTION_PRESSED) {
+                    eat_input = 1;
+                    // Cycle the active window
+                    ctx_order_cycle();
+                }
+                break;
+            default:
+                break;
+        }
+    }
+
+    if(!eat_input && input_buffer != NULL) {
         return lens_input_buffer_push(
                 input_buffer,
                 evt);
@@ -60,7 +85,7 @@ input_thread(void *_src)
             total += amt;
         }
 
-        handle_input_event(&evt);
+        handle_input_event(src, &evt);
     }
     return 0;
 }
@@ -154,16 +179,22 @@ input_loop_iter(void)
             return res;
         }
 
-        // Send a message containing this input event
-        // to the active thread... (TODO)
-        // For now just broadcast
-
-        res = foreach_lens_client(
-                input_send_event_to_ctx,
-                &evt);
-        if(res) {
-            return res;
+        ctx_lock_order();
+        {
+            struct lens_client_ctx *active = ctx_get_active();
+            if(active != NULL) {
+                input_send_event_to_ctx(active, &evt);
+            }
         }
+        ctx_unlock_order();
+
+//      BROADCAST
+//        res = foreach_lens_client(
+//                input_send_event_to_ctx,
+//                &evt);
+//        if(res) {
+//            return res;
+//        }
     }
 }
 

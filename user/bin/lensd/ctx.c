@@ -61,7 +61,7 @@ ctx_init(void)
 int
 ctx_deinit(void)
 {
-    sem_wait(&ctx_list_lock);
+    while(sem_wait(&ctx_list_lock)) {}
 
     ilist_node_t *iter;
     ilist_for_each(iter, &ctx_list) {
@@ -83,14 +83,14 @@ int add_lens_client(struct lens_client *client)
     if(ctx == NULL) {
         return -ENOMEM;
     }
-    sem_wait(&ctx_list_lock);
+    while(sem_wait(&ctx_list_lock)) {}
     ilist_push_head(&ctx_list, &ctx->list_node);
     sem_post(&ctx_list_lock);
     return 0;
 }
 int remove_lens_client(struct lens_client_ctx *ctx)
 {
-    sem_wait(&ctx_list_lock);
+    while(sem_wait(&ctx_list_lock)) {}
     ilist_remove(&ctx_list, &ctx->list_node);
     sem_post(&ctx_list_lock);
     destroy_lens_client_ctx(ctx);
@@ -153,6 +153,24 @@ int foreach_lens_client_back_to_front(
     return 0;
 }
 
+int ctx_order_cycle(void)
+{
+    int res;
+    while(sem_wait(&ctx_list_lock)) {}
+
+    size_t num_ctx = ilist_count(&ctx_list);
+    printf("cycling %lu contextes\n", num_ctx);
+
+    ilist_node_t *node = ilist_pop_tail(&ctx_list);
+    if(node != NULL) {
+        ilist_push_head(&ctx_list, node);
+    }
+
+    sem_post(&ctx_list_lock);
+    render_mark_full_redraw();
+    return 0;
+}
+
 static int
 poll_client_callback(
         struct lens_client_ctx *ctx,
@@ -164,5 +182,27 @@ int
 ctx_loop_iter(void)
 {
     foreach_lens_client(poll_client_callback, NULL);
+}
+
+int ctx_lock_order(void)
+{
+    while(sem_wait(&ctx_list_lock)) {}
+}
+int ctx_unlock_order(void)
+{
+    sem_post(&ctx_list_lock);
+}
+
+struct lens_client_ctx *
+ctx_get_active(void)
+{
+    ilist_node_t *iter = ilist_peek_head(&ctx_list);
+    if(iter == NULL) {
+        return NULL;
+    }
+    return container_of(
+            iter,
+            struct lens_client_ctx,
+            list_node);
 }
 

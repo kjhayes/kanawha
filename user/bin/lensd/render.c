@@ -7,6 +7,13 @@
 #include <string.h>
 #include "lensd.h"
 
+static int full_redraw_requested = 0;
+int render_mark_full_redraw(void)
+{
+    full_redraw_requested = 1;
+    return 0;
+}
+
 int render_init(void)
 {
     return 0;
@@ -163,6 +170,7 @@ struct render_loop_ctx {
     int flush_requests;
     unsigned int flush_visible : 1;
     unsigned int window_moved : 1;
+    unsigned int force : 1;
 };
 
 static int
@@ -185,6 +193,7 @@ struct render_window_ctx {
     struct lens_client_ctx *client_ctx;
     struct lens_gfx_info *window_info;
     void *window_frame;
+    unsigned int force : 1;
 };
 
 static int
@@ -273,6 +282,7 @@ render_loop_render_ctx(
         .window_info = info,
         .window_frame = frame,
         .client_ctx = ctx,
+        .force = render_ctx->force,
     };
 
     foreach_display(
@@ -299,6 +309,7 @@ int render_loop_iter(void)
     struct render_loop_ctx ctx = {
         .flush_requests = 0,
         .flush_visible = 0,
+        .force = __atomic_fetch_and(&full_redraw_requested, 0, __ATOMIC_SEQ_CST),
     };
 
     res = foreach_lens_client(
@@ -308,22 +319,24 @@ int render_loop_iter(void)
         return res;
     }
 
-    if(ctx.flush_requests > 0) {
+    if(ctx.flush_requests > 0 || ctx.force) {
 
-        if(ctx.window_moved) {
-            clear_all_displays();
+        if(ctx.flush_visible) {
+            if(ctx.window_moved || ctx.force) {
+                clear_all_displays();
+            }
+
+            // Re-render
+            res = foreach_lens_client_back_to_front(
+                    render_loop_render_ctx,
+                    &ctx);
+            if(res) {
+                fprintf(stderr, "lensd: failed to render all windows!\n");
+            }
+
+            // Flush
+            display_flush_all();
         }
-
-        // Re-render
-        res = foreach_lens_client_back_to_front(
-                render_loop_render_ctx,
-                &ctx);
-        if(res) {
-            fprintf(stderr, "lensd: failed to render all windows!\n");
-        }
-
-        // Flush
-        display_flush_all();
 
         // Ack Flushes
         res = foreach_lens_client(

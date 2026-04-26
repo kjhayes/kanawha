@@ -27,6 +27,7 @@ int main(int argc, const char **argv)
         ctx_loop_iter();
         render_loop_iter();
         input_loop_iter();
+        usleep(10000);
     }
 
     input_deinit();

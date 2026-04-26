@@ -24,7 +24,12 @@ struct lens_client_ctx
 
 int ctx_init(void);
 int ctx_deinit(void);
-int ctx_loop_iter();
+int ctx_loop_iter(void);
+int ctx_order_cycle(void);
+
+int ctx_lock_order(void);
+int ctx_unlock_order(void);
+struct lens_client_ctx *ctx_get_active(void);
 
 struct display
 {
@@ -56,6 +61,7 @@ int render_deinit(void);
 int render_init_ctx(struct lens_client_ctx *ctx);
 int render_deinit_ctx(struct lens_client_ctx *ctx);
 int render_loop_iter(void);
+int render_mark_full_redraw(void);
 
 int listener_init(void);
 int listener_deinit(void);
