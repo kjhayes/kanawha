@@ -28,6 +28,11 @@ struct input_source
     ilist_node_t list_node;
 };
 
+#define KEY_RIGHT INPUT_KEY_L
+#define KEY_LEFT INPUT_KEY_H
+#define KEY_UP INPUT_KEY_K
+#define KEY_DOWN INPUT_KEY_J
+
 // Centralized function called by all input
 // source's threads
 static int
@@ -49,6 +54,72 @@ handle_input_event(
                     eat_input = 1;
                     // Cycle the active window
                     ctx_order_cycle();
+                }
+                break;
+            case KEY_RIGHT:
+            case KEY_LEFT:
+            case KEY_UP:
+            case KEY_DOWN:
+                if(evt->motion != INPUT_MOTION_RELEASED) {
+                    double x_shift = 0.0;
+                    double y_shift = 0.0;
+                    switch(evt->key) {
+                        case KEY_RIGHT:
+                            x_shift += 1.0;
+                            break;
+                        case KEY_LEFT:
+                            x_shift -= 1.0;
+                            break;
+                        case KEY_DOWN:
+                            y_shift += 1.0;
+                            break;
+                        case KEY_UP:
+                            y_shift -= 1.0;
+                            break;
+                        default:
+                            break;
+                    }
+
+                    x_shift *= 0.05;
+                    y_shift *= 0.05;
+
+                    ctx_lock_order();
+                    struct lens_client_ctx *active = ctx_get_active();
+                    if(active != NULL) {
+                        if(!src->shift_pressed && src->ctrl_pressed) {
+                            active->percent_pos_x += x_shift;
+                            active->percent_pos_y += y_shift;
+                            if(active->percent_pos_x > 1.0) {
+                                active->percent_pos_x = 1.0;
+                            } else if(active->percent_pos_x < 0.0) {
+                                active->percent_pos_x = 0.0;
+                            }
+                            if(active->percent_pos_y > 1.0) {
+                                active->percent_pos_y = 1.0;
+                            } else if(active->percent_pos_y < 0.0) {
+                                active->percent_pos_y = 0.0;
+                            }
+                            eat_input = 1;
+                            active->moved = 1;
+                        }
+                        if(!src->ctrl_pressed && src->shift_pressed) {
+                            active->percent_width += x_shift;
+                            active->percent_height += y_shift;
+                            if(active->percent_width < 0.1) {
+                                active->percent_width = 0.1;
+                            } else if(active->percent_width > 1.0) {
+                                active->percent_width = 1.0;
+                            }
+                            if(active->percent_height < 0.1) {
+                                active->percent_height = 0.1;
+                            } else if(active->percent_height > 1.0) {
+                                active->percent_height = 1.0;
+                            }
+                            eat_input = 1;
+                            active->resized = 1;
+                        }
+                    }
+                    ctx_unlock_order();
                 }
                 break;
             default:

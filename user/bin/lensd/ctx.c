@@ -24,6 +24,8 @@ create_lens_client_ctx(
     ctx->percent_pos_y  = 0.1;
     ctx->percent_width  = 0.8;
     ctx->percent_height = 0.8;
+    ctx->resized = 1;
+    ctx->moved = 1;
 
     ctx->client = client;
     res = render_init_ctx(ctx);
@@ -178,6 +180,7 @@ poll_client_callback(
 {
     return lens_server_poll_client(ctx->client);
 }
+
 int
 ctx_loop_iter(void)
 {

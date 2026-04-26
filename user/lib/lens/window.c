@@ -65,8 +65,6 @@ lens_window_handle_notify_gfx_info(
         }
     }
     window->gfx_info = info;
-    printf("lens_window: NOTIFY_GFX_INFO message -> SUCCESS (frame_size=0x%lx)\n",
-            (unsigned long)info->frame_size);
 
     sem_post(&window->gfx_lock);
     return 0;

@@ -15,9 +15,11 @@ struct lens_client_ctx
 
     double percent_pos_x;
     double percent_pos_y;
+    unsigned int moved : 1;
 
     double percent_width;
     double percent_height;
+    unsigned int resized : 1;
 
     ilist_node_t list_node;
 };

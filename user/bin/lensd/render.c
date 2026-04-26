@@ -170,22 +170,37 @@ struct render_loop_ctx {
     int flush_requests;
     unsigned int flush_visible : 1;
     unsigned int window_moved : 1;
+    unsigned int window_resized : 1;
     unsigned int force : 1;
 };
 
 static int
-render_loop_count_flush_request(
+render_loop_check_contextes(
         struct lens_client_ctx *ctx,
         void *_render_ctx)
 {
+    int res;
+
     struct render_loop_ctx *render_ctx = _render_ctx;
-    if(lens_client_requested_flush(ctx->client)) {
+    if(lens_client_requested_flush(ctx->client))
+    {
         render_ctx->flush_requests++;
-        render_ctx->window_moved = 1; // TODO determine if this window
-                                      // has actually moved or not
-        render_ctx->flush_visible = 1; // TODO actually figure out if this window
-                                       // is visible or not...
+        render_ctx->flush_visible = 1;
     }
+
+    render_ctx->window_moved |= ctx->moved;
+    ctx->moved = 0;
+    render_ctx->window_resized |= ctx->resized;
+    if(ctx->resized) {
+        displays_lock();
+        struct display *primary = display_get_primary();
+        res = match_client_ctx_to_display(
+                ctx,
+                primary);
+        displays_unlock();
+    }
+    ctx->resized = 0;
+
     return 0;
 }
 
@@ -309,20 +324,22 @@ int render_loop_iter(void)
     struct render_loop_ctx ctx = {
         .flush_requests = 0,
         .flush_visible = 0,
+        .window_resized = 0,
+        .window_moved = 0,
         .force = __atomic_fetch_and(&full_redraw_requested, 0, __ATOMIC_SEQ_CST),
     };
 
     res = foreach_lens_client(
-            render_loop_count_flush_request,
+            render_loop_check_contextes,
             &ctx);
     if(res) {
         return res;
     }
 
-    if(ctx.flush_requests > 0 || ctx.force) {
+    if(ctx.flush_requests > 0 || ctx.window_moved || ctx.window_resized || ctx.force) {
 
-        if(ctx.flush_visible) {
-            if(ctx.window_moved || ctx.force) {
+        if(ctx.flush_visible || ctx.window_moved || ctx.window_resized || ctx.force) {
+            if(ctx.window_moved || ctx.window_resized || ctx.force) {
                 clear_all_displays();
             }
 
