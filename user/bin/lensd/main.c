@@ -18,7 +18,7 @@ int main(int argc, const char **argv)
     listener_init();
     input_init();
 
-    add_display("/dev/fb/vga", 1);
+    add_display("/dev/fb/vga", 4);
 
     add_input("/dev/input/ps2-kbd-0");
     add_input("/dev/input/ps2-mouse-0");

@@ -221,10 +221,10 @@ paint_convert_pixel_from_rgba(
     }
         return 0;
     case GFX_FORMAT_VGA_ATTR:
-        tmp_byte = ((r >= 0xF0) | ((g >= 0xF0) << 1) | ((b >= 0xF0) << 2) |
+        tmp_byte = ((r >= 0x80) | ((g >= 0x80) << 1) | ((b >= 0x80) << 2) |
                     ((avg >= 0xF0) << 3))
                    << 4;
-        tmp_byte |= ((r >= 0x80) | ((g >= 0x80) << 1) | ((b >= 0x80) << 2) |
+        tmp_byte |= ((r >= 0x40) | ((g >= 0x40) << 1) | ((b >= 0x40) << 2) |
                      ((avg >= 0xA0) << 3));
         *(uint8_t *)to_data = tmp_byte;
         return 0;

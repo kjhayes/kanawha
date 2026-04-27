@@ -102,7 +102,7 @@ handle_input_event(
                             eat_input = 1;
                             active->moved = 1;
                         }
-                        if(!src->ctrl_pressed && src->shift_pressed) {
+                        if(src->ctrl_pressed && src->shift_pressed) {
                             active->percent_width += x_shift;
                             active->percent_height += y_shift;
                             if(active->percent_width < 0.1) {

@@ -225,56 +225,60 @@ render_loop_render_ctx_onto_display(
     struct kfb_framebuffer *fb = display->fb;
 
     if(fb->have_buffer_data) {
-        int num_layers = mode_info->layer_count;
-        for(int i = 0; i < mode_info->layer_count; i++) {
-            size_t to_width = mode_info->layer_infos[i].layout.width
-                            * ctx->client_ctx->percent_width;
-            size_t to_height = mode_info->layer_infos[i].layout.height
-                             * ctx->client_ctx->percent_height;
-            size_t to_x_offset = mode_info->layer_infos[i].layout.width
-                               * ctx->client_ctx->percent_pos_x;
-            size_t to_y_offset = mode_info->layer_infos[i].layout.height
-                               * ctx->client_ctx->percent_pos_y;
-            if(i < info->num_layers) {
-                paint_blit(
-                        fb->buffer_data,
-                        mode_info->buffer_size,
-                        to_width,
-                        to_height,
-                        to_x_offset,
-                        to_y_offset,
-                        &mode_info->layer_infos[i].layout,
-                        frame,
-                        ctx->window_info->frame_size,
-                        info->layer_layout[i].width,
-                        info->layer_layout[i].height,
-                        0, 0,
-                        &info->layer_layout[i]
-                        );
-            } else {
-                uint32_t color = 0xFF000000;
-                struct gfx_layout color_layout = {
-                    .width = 1,
-                    .height = 1,
-                    .order = GFX_ORDER_ROW_MAJOR,
-                    .offset = 0,
-                    .stride = 4,
-                    .format = GFX_FORMAT_RGBA32,
-                };
-                paint_blit(
-                        fb->buffer_data,
-                        mode_info->buffer_size,
-                        to_width,
-                        to_height,
-                        to_x_offset,
-                        to_y_offset,
-                        &mode_info->layer_infos[i].layout,
-                        &color,
-                        4,
-                        1, 1,
-                        0, 0,
-                        &color_layout
-                        );
+        if(mode_info->layer_count == info->num_layers) {
+            int num_layers = mode_info->layer_count;
+            for(int i = 0; i < mode_info->layer_count; i++) {
+                size_t to_width = mode_info->layer_infos[i].layout.width
+                                * ctx->client_ctx->percent_width;
+                size_t to_height = mode_info->layer_infos[i].layout.height
+                                 * ctx->client_ctx->percent_height;
+                size_t to_x_offset = mode_info->layer_infos[i].layout.width
+                                   * ctx->client_ctx->percent_pos_x;
+                size_t to_y_offset = mode_info->layer_infos[i].layout.height
+                                   * ctx->client_ctx->percent_pos_y;
+                if(i < info->num_layers) {
+                    paint_blit(
+                            fb->buffer_data,
+                            mode_info->buffer_size,
+                            to_width,
+                            to_height,
+                            to_x_offset,
+                            to_y_offset,
+                            &mode_info->layer_infos[i].layout,
+                            frame,
+                            ctx->window_info->frame_size,
+                            info->layer_layout[i].width,
+                            info->layer_layout[i].height,
+                            0, 0,
+                            &info->layer_layout[i]
+                            );
+                }
+            }
+        } else {
+            for(int il = 0; il < info->num_layers; il++) {
+                struct gfx_layout *i_layout = &info->layer_layout[il];
+                for(int ol = 0; ol < mode_info->layer_count; ol++) {
+                    struct gfx_layout *o_layout = &mode_info->layer_infos[ol].layout;
+                    size_t to_width = o_layout->width * ctx->client_ctx->percent_width;
+                    size_t to_height = o_layout->height * ctx->client_ctx->percent_height; 
+                    size_t to_x_offset = o_layout->width * ctx->client_ctx->percent_pos_x;
+                    size_t to_y_offset = o_layout->height * ctx->client_ctx->percent_pos_y;
+                    paint_blit(
+                            fb->buffer_data,
+                            mode_info->buffer_size,
+                            to_width,
+                            to_height,
+                            to_x_offset,
+                            to_y_offset,
+                            o_layout,
+                            frame,
+                            ctx->window_info->frame_size,
+                            i_layout->width,
+                            i_layout->height,
+                            0, 0,
+                            i_layout
+                            );
+                }
             }
         }
     }

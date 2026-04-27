@@ -2,6 +2,7 @@
 libs += \
 	crt \
 	c \
+	m \
 	dl \
 	kfb \
 	ksnd \
@@ -51,4 +52,5 @@ bins += \
 	klog \
 	beep \
 	lterm \
+	doomgeneric \
 
