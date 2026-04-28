@@ -85,6 +85,10 @@ const static struct sysfs_mnt dev_sysfs_mnts[] = {
         .dir = "ramfile",
         .sysfs = "ramfile",
     },
+    {
+        .dir = "pty",
+        .sysfs = "pty",
+    },
 };
 
 const static struct sysfs_mnt sys_sysfs_mnts[] = {
