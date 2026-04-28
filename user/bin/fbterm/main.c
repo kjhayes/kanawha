@@ -24,6 +24,8 @@
 
 static const char *prog_name = "fbterm";
 
+#define USE_PTY
+
 // static inline void
 // find_maximum_fb_mode(struct kfb_framebuffer *fb,
 //                      int *best_mode_out,
@@ -103,7 +105,7 @@ shell_input_main(void *_input_ctx)
     while(running)
     {
         char c = input_getc(ctx);
-        if(terminal_data.echo_on)
+        if(shell.shell_stdout_hijack >= 0 && terminal_data.echo_on)
         {
             if(c == 8 || c == 127)
             {
@@ -125,10 +127,57 @@ shell_input_main(void *_input_ctx)
 static int
 launch_shell(int argc, const char **argv)
 {
+    int res;
+
     int shell_stdin[2];
     int shell_stdout[2];
-    pipe(shell_stdin);
-    pipe(shell_stdout);
+
+#ifdef USE_PTY
+    {
+        int ptmx = open("/dev/pty/ptmx", O_RDWR);
+        if(ptmx < 0) {
+            fprintf(stderr, "failed to open \'dev/pty/ptmx\'!\n");
+            return -ENODEV;
+        }
+        int pty_ctrl;
+        res = kanawha_sys_connect(ptmx, &pty_ctrl, 0);
+        if(res) {
+            close(ptmx);
+            return res;
+        }
+
+        close(ptmx);
+
+        unsigned long pty_inode;
+        res = kanawha_sys_fattr(pty_ctrl, FILE_ATTR_INODE, &pty_inode);
+        if(res) {
+            fprintf(stderr, "failed to get pty inode!\n");
+            close(pty_ctrl);
+            return res;
+        }
+        
+        char term_path[128];
+        snprintf(term_path, 128, "/dev/term/pty%lu", pty_inode);
+        term_path[128-1] = '\0';
+
+        int pty_term = open(term_path, O_RDWR);
+        if(pty_term < 0) {
+            close(pty_ctrl);
+            fprintf(stderr, "failed to open \'%s\'!\n", term_path);
+            return -ENODEV;
+        }
+
+        shell_stdin[0] = pty_term;
+        shell_stdin[1] = pty_ctrl;
+        shell_stdout[0] = pty_ctrl;
+        shell_stdout[1] = pty_term;
+    }
+#else
+    {
+        pipe(shell_stdin);
+        pipe(shell_stdout);
+    }
+#endif
 
     int pid = fork();
     if(pid == 0)
@@ -144,7 +193,13 @@ launch_shell(int argc, const char **argv)
     shell.shell_pid = pid;
     shell.shell_stdin = shell_stdin[1];
     shell.shell_stdout = shell_stdout[0];
+
+#ifdef USE_PTY
+    shell.shell_stdout_hijack = -1;
+#else
     shell.shell_stdout_hijack = shell_stdout[1];
+#endif
+
     close(shell_stdin[0]);
     return 0;
 }

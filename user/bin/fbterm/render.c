@@ -266,7 +266,7 @@ render_all(int force,
     }
 }
 
-static int first_update = 1;
+static int first_updates = 100;
 
 int
 render_update(struct terminal_data *tdata,
@@ -277,10 +277,10 @@ render_update(struct terminal_data *tdata,
 
     int force = 0;
 
-    if(first_update)
+    if(first_updates)
     {
         force = 1;
-        first_update = 0;
+        first_updates--;
     }
 
     struct gfx_layout layout;

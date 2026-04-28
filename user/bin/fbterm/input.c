@@ -4,6 +4,7 @@
 #include <poll.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 struct input_ctx
 {
@@ -394,7 +395,19 @@ input_getc(struct input_ctx *ctx)
     switch(ctx->type)
     {
     case INPUT_CTX_TYPE_FILE:
-        return fgetc(ctx->file.file);
+    {
+        int c;
+        while(1) {
+            // Poll if the input file cannot handle blocking...
+            c = fgetc(ctx->file.file);
+            if(c == -EWOULDBLOCK) {
+                usleep(10000);
+                continue;
+            } else {
+                return c;
+            }
+        }
+    }
     case INPUT_CTX_TYPE_LENS:
     {
         int res;
