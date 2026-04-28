@@ -218,7 +218,41 @@ handle_sgr(struct terminal_data *tdata, int *param, int num_param)
         LOG(tdata, "Unknown SGR Value: %d\n", n);
     }
 }
+static void
+handle_dsr(struct terminal_data *tdata, int *param, int num_param)
+{
+    if(num_param == 1) {
+        switch(param[0]) {
+            case 6:
+                { // Cursor Position
+                    char resp_buf[32];
+                    snprintf(resp_buf, 32, "\033[%lu;%luR",
+                            (unsigned long)tdata->width,
+                            (unsigned long)tdata->height);
 
+                    resp_buf[32-1] = '\0';
+
+                    size_t len = strlen(resp_buf);
+                    LOG(tdata, "\n");
+
+                    ssize_t written = terminal_respond(
+                            tdata,
+                            resp_buf,
+                            len);
+
+                    if(written != len) {
+                        LOG(tdata, "DSR 6: Failed to write full response!\n");
+                    }
+                    return;
+                }
+                break;
+            default:
+                LOG(tdata, "DSR %d is unknown!\n", param[0]);
+        }
+    }
+    LOG(tdata, "Unknown DSR request!\n");
+    return;
+}
 static void
 handle_csi(struct terminal_data *tdata, struct input_ctx *idata)
 {
@@ -262,11 +296,11 @@ handle_csi(struct terminal_data *tdata, struct input_ctx *idata)
     if(!(0x40 <= c && c <= 0x7E))
     {
         // Missing Terminator
-        LOG(tdata,
-            "CSI Escape is Missing Terminator (last-char=0x%x)\n",
-            (unsigned int)c);
-        terminal_put_at_cursor(tdata, '?');
-        terminal_advance_cursor(tdata);
+        //LOG(tdata,
+        //    "CSI Escape is Missing Terminator (last-char=0x%x,\'%c\')\n",
+        //    (unsigned int)c, (char)c);
+        //terminal_put_at_cursor(tdata, '?');
+        //terminal_advance_cursor(tdata);
         return;
     }
     char terminator = c;
@@ -431,6 +465,9 @@ handle_csi(struct terminal_data *tdata, struct input_ctx *idata)
         break;
     case 'm':
         handle_sgr(tdata, common_params, num_common_params);
+        break;
+    case 'n':
+        handle_dsr(tdata, common_params, num_common_params);
         break;
     case 'b':
         // Repeat previous character n times

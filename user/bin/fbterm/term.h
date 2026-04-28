@@ -38,6 +38,8 @@ extern struct terminal_data
 
     struct palette *palette;
 
+    int response_fd;
+
 } terminal_data;
 
 #define LOG(tdata, fmt, ...)                                                   \
@@ -131,5 +133,12 @@ terminal_clear_line(struct terminal_data *tdata, size_t __y);
 
 char
 terminal_getc(struct terminal_data *tdata);
+
+// Send data back to the shell
+ssize_t
+terminal_respond(
+        struct terminal_data *tdata,
+        void *response,
+        size_t response_len);
 
 #endif

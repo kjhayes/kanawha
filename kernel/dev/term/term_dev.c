@@ -608,7 +608,7 @@ term_driver_set_raw(struct term_dev *dev, int is_raw)
 {
     int res;
 
-    printk("Setting Terminal RAW=%d\n", is_raw);
+    dprintk("Setting Terminal RAW=%d\n", is_raw);
 
     // Check to make sure we aren't already
     // correctly configured
@@ -674,6 +674,22 @@ term_dev_cannot_set_baudrate(struct term_dev *dev, baud_t baud)
 {
     return -EINVAL;
 }
+
+int
+term_dev_get_baudrate_zero(struct term_dev *dev, baud_t *baud)
+{
+    *baud = 0;
+    return 0;
+}
+int
+term_dev_set_baudrate_zero(struct term_dev *dev, baud_t baud)
+{
+    if(baud != 0) {
+        return -EINVAL;
+    }
+    return 0;
+}
+
 
 // Automatically flushing all term_dev at fixed intervals.
 static struct periodic_event *periodic_flush_term_dev_event = NULL;

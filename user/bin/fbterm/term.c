@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 struct terminal_data terminal_data = {0};
 
@@ -109,6 +110,8 @@ init_terminal(FILE *log_file, size_t width, size_t height)
 
     tdata->last_character = ' ';
     tdata->tabsize = 4;
+
+    tdata->response_fd = -1;
 
     return 0;
 }
@@ -474,3 +477,31 @@ terminal_clear_line(struct terminal_data *tdata, size_t __y)
     }
     terminal_mark_redraw_line(tdata, __y);
 }
+
+ssize_t
+terminal_respond(
+        struct terminal_data *data,
+        void *buffer,
+        size_t len)
+{
+    int fd = data->response_fd;
+    if(fd < 0) {
+        return -ENODEV;
+    }
+    ssize_t total = 0;
+    while(len > 0) {
+        ssize_t written =
+            write(
+                fd,
+                buffer,
+                len);
+        if(written <= 0) {
+            return written;
+        }
+        len -= written;
+        buffer += written;
+        total += written;
+    }
+    return total;
+}
+

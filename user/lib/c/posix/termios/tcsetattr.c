@@ -22,6 +22,7 @@ __tcsetattr_set_baudrate(int filedes, const struct termios *termios_p)
     baudrate_file = openat(filedes, "baud", O_RDWR);
     if(baudrate_file == -1)
     {
+        fprintf(stderr, "tcsetattr: failed to open \'baud\'\n");
         return -1;
     }
 
@@ -29,6 +30,7 @@ __tcsetattr_set_baudrate(int filedes, const struct termios *termios_p)
     close(baudrate_file);
     if(amt_written < 0)
     {
+        fprintf(stderr, "tcsetattr: write() to \'baud\' file failed!\n");
         return amt_written;
     }
 
@@ -46,6 +48,7 @@ __tcsetattr_set_raw(int filedes, const struct termios *termios_p)
     raw_file = openat(filedes, "raw", O_RDWR);
     if(raw_file == -1)
     {
+        fprintf(stderr, "tcsetattr: failed to open \'raw\'\n");
         return -1;
     }
 
@@ -53,6 +56,7 @@ __tcsetattr_set_raw(int filedes, const struct termios *termios_p)
     close(raw_file);
     if(amt_written < 0)
     {
+        fprintf(stderr, "tcsetattr: write() to \'raw\' file failed!\n");
         return amt_written;
     }
 
@@ -83,6 +87,7 @@ tcsetattr(int filedes, int when, const struct termios *termios_p)
         }
         break;
     default:
+        fprintf(stderr, "tcsetattr: unrecognized \'when\'=%d\n", when);
         return -1;
     }
 
@@ -90,6 +95,7 @@ tcsetattr(int filedes, int when, const struct termios *termios_p)
     if(res)
     {
         errno = res;
+        fprintf(stderr, "tcsetattr: __tcsetattr_set_baudrate failed!\n");
         return -1;
     }
 
@@ -97,6 +103,7 @@ tcsetattr(int filedes, int when, const struct termios *termios_p)
     if(res)
     {
         errno = res;
+        fprintf(stderr, "tcsetattr: __tcsetattr_set_raw failed!\n");
         return -1;
     }
 

@@ -125,7 +125,10 @@ shell_input_main(void *_input_ctx)
 }
 
 static int
-launch_shell(int argc, const char **argv)
+launch_shell(
+        struct terminal_data *tdata,
+        int argc,
+        const char **argv)
 {
     int res;
 
@@ -193,6 +196,7 @@ launch_shell(int argc, const char **argv)
     shell.shell_pid = pid;
     shell.shell_stdin = shell_stdin[1];
     shell.shell_stdout = shell_stdout[0];
+    tdata->response_fd = shell.shell_stdin;
 
 #ifdef USE_PTY
     shell.shell_stdout_hijack = -1;
@@ -247,6 +251,28 @@ main(int argc, const char **argv)
         }
     }
 
+#define TERM_WIDTH 80
+#define TERM_HEIGHT 50
+
+    if(log_file_path != NULL)
+    {
+        log_file = fopen(log_file_path, "w");
+    }
+
+    res = init_terminal(log_file, TERM_WIDTH, TERM_HEIGHT);
+    if(res)
+    {
+        fprintf(stderr, "Failed to allocate terminal buffer!\n");
+        exit(EXIT_FAILURE);
+    }
+
+    res = ansi_terminal_init(&terminal_data);
+    if(res)
+    {
+        fprintf(stderr, "Failed to init ansi terminal!\n");
+        exit(EXIT_FAILURE);
+    }
+
     int shell_argc;
     const char **shell_argv;
     {
@@ -273,16 +299,11 @@ main(int argc, const char **argv)
     }
     printf("\n");
 
-    launch_shell(shell_argc, shell_argv);
+    launch_shell(&terminal_data, shell_argc, shell_argv);
 
     if(font_path == NULL)
     {
         panic_usage();
-    }
-
-    if(log_file_path != NULL)
-    {
-        log_file = fopen(log_file_path, "w");
     }
 
     struct font_data *fdata = load_font(font_path);
@@ -349,23 +370,6 @@ main(int argc, const char **argv)
     struct input_ctx *input_from_shell;
     FILE *shell_stdout_file = fdopen(shell.shell_stdout, "r");
     input_from_shell = create_file_input_ctx(shell_stdout_file);
-
-#define TERM_WIDTH 80
-#define TERM_HEIGHT 50
-
-    res = init_terminal(log_file, TERM_WIDTH, TERM_HEIGHT);
-    if(res)
-    {
-        fprintf(stderr, "Failed to allocate terminal buffer!\n");
-        exit(EXIT_FAILURE);
-    }
-
-    res = ansi_terminal_init(&terminal_data);
-    if(res)
-    {
-        fprintf(stderr, "Failed to init ansi terminal!\n");
-        exit(EXIT_FAILURE);
-    }
 
     while(terminal_data.running)
     {

@@ -70,7 +70,7 @@ term_dev_raw_fs_file_write(struct file *file,
 
     memcpy(tmp_buffer, buffer, amount);
 
-    printk("term_dev sysfs raw written with: \"%s\"\n", tmp_buffer);
+    dprintk("term_dev sysfs raw written with: \"%s\"\n", tmp_buffer);
 
     unsigned long value = parse_unsigned_long(tmp_buffer, 0);
 

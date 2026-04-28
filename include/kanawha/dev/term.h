@@ -164,8 +164,12 @@ DECLARE_DEV_TYPE(term_dev);
 
 int
 term_dev_cannot_get_baudrate(struct term_dev *dev, baud_t *baud);
-
 int
 term_dev_cannot_set_baudrate(struct term_dev *dev, baud_t baud);
+
+int
+term_dev_get_baudrate_zero(struct term_dev *dev, baud_t *baud);
+int
+term_dev_set_baudrate_zero(struct term_dev *dev, baud_t baud);
 
 #endif

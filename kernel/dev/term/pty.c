@@ -252,8 +252,8 @@ pty_term_dev_flush(struct term_dev *term_dev)
 
 static struct term_driver
 pty_term_driver = {
-    .get_baudrate = term_dev_cannot_get_baudrate,
-    .set_baudrate = term_dev_cannot_set_baudrate,
+    .get_baudrate = term_dev_get_baudrate_zero,
+    .set_baudrate = term_dev_set_baudrate_zero,
     .flush = pty_term_dev_flush,
     .putc = pty_term_dev_putc,
 };

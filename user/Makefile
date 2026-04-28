@@ -10,6 +10,7 @@ libs += \
 	bark \
 	lens \
 	paint \
+	ansiterm \
 
 bins += \
 	init \
@@ -52,5 +53,5 @@ bins += \
 	klog \
 	beep \
 	lterm \
-	doomgeneric \
+	tinfo \
 
