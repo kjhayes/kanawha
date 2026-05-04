@@ -233,7 +233,6 @@ handle_dsr(struct terminal_data *tdata, int *param, int num_param)
                     resp_buf[32-1] = '\0';
 
                     size_t len = strlen(resp_buf);
-                    LOG(tdata, "\n");
 
                     ssize_t written = terminal_respond(
                             tdata,
@@ -355,169 +354,203 @@ handle_csi(struct terminal_data *tdata, struct input_ctx *idata)
     if(!is_common)
     {
         num_common_params = 0;
-        LOG(tdata,
-            "Ignoring non-common CSI sequence: terminator=0x%x\n",
-            terminator);
-        return;
-    }
-
-    switch(terminator)
-    {
-    case 'J':
-        // Erase in display
-        switch(common_params[0])
+        if(parameter_bytes[0] == '?') {
+            size_t index = atoi(parameter_bytes+1);
+            switch(terminator) {
+            case 'l':
+                switch(index) {
+                    case 25:
+                        tdata->cursor_visible = 0;
+                        break;
+                    default:
+                        LOG(tdata,
+                            "Ignoring unsupported 'l' private CSI sequence! (index=%lu)",
+                            index);
+                        break;
+                }
+                break;
+            case 'h':
+                switch(index) {
+                    case 25:
+                        tdata->cursor_visible = 1;
+                        break;
+                    default:
+                        LOG(tdata,
+                            "Ignoring unsupported 'h' private CSI sequence! (index=%lu)",
+                            index);
+                        break;
+                }
+                break;
+            default:
+                LOG(tdata,
+                    "Ignoring non-common private CSI sequence: terminator=0x%x\n",
+                    terminator);
+                break;
+            }
+        } else {
+            LOG(tdata,
+                "Ignoring non-common CSI sequence: terminator=0x%x\n",
+                terminator);
+        }
+    } else {
+        switch(terminator)
         {
-        case 0:
-            terminal_clear_cursor_to_end_of_screen(tdata);
+        case 'J':
+            // Erase in display
+            switch(common_params[0])
+            {
+            case 0:
+                terminal_clear_cursor_to_end_of_screen(tdata);
+                break;
+            case 1:
+                terminal_clear_cursor_to_beginning_of_screen(tdata);
+                break;
+            case 2:
+                terminal_clear_entire_screen(tdata);
+                tdata->cursor_x = 0;
+                tdata->cursor_y = 0;
+                break;
+            case 3:
+                terminal_clear_entire_screen(
+                    tdata); /* Note we should also erase any "scrollback */
+                break;
+            default:
+                LOG(tdata,
+                    "CSI n %c, invalid parameter n=%d\n",
+                    terminator,
+                    common_params[0]);
+                terminal_put_at_cursor(tdata, '?');
+                terminal_advance_cursor(tdata);
+                break;
+            }
             break;
-        case 1:
-            terminal_clear_cursor_to_beginning_of_screen(tdata);
+        case 'K':
+            // Erase in line
+            switch(common_params[0])
+            {
+            case 0:
+                terminal_clear_cursor_to_end_of_line(tdata);
+                break;
+            case 1:
+                terminal_clear_start_of_line_to_cursor(tdata);
+                break;
+            case 2:
+                terminal_clear_cursor_line(tdata);
+                break;
+            default:
+                LOG(tdata,
+                    "CSI n %c, invalid parameter n=%d\n",
+                    terminator,
+                    common_params[0]);
+                terminal_put_at_cursor(tdata, '?');
+                terminal_advance_cursor(tdata);
+                break;
+            }
             break;
-        case 2:
-            terminal_clear_entire_screen(tdata);
-            tdata->cursor_x = 0;
-            tdata->cursor_y = 0;
+        case 'A':
+            // Move Up n
+            terminal_move_cursor_up(tdata, common_params[0]);
             break;
-        case 3:
-            terminal_clear_entire_screen(
-                tdata); /* Note we should also erase any "scrollback */
+        case 'B':
+            // Move Down n
+            terminal_move_cursor_down(tdata, common_params[0]);
+            break;
+        case 'C':
+            // Move Right n
+            terminal_move_cursor_right(tdata, common_params[0]);
+            break;
+        case 'D':
+            // Move Left n
+            terminal_move_cursor_left(tdata, common_params[0]);
+            break;
+        case 'G':
+            if(common_params[0] > 0)
+            {
+                common_params[0] -= 1;
+            }
+            terminal_move_cursor_to_column(tdata, common_params[0]);
+            break;
+        case 'd':
+            if(common_params[0] > 0)
+            {
+                common_params[0] -= 1;
+            }
+            terminal_move_cursor_to_row(tdata, common_params[0]);
+            break;
+        case 'H':
+        case 'f':
+            // Move to (p-1, n-1) {default (1,1)}
+            if(common_params[0] == 0)
+            {
+                common_params[0] = 1;
+            }
+            if(common_params[1] == 0)
+            {
+                common_params[1] = 1;
+            }
+            terminal_set_cursor(tdata, common_params[1] - 1, common_params[0] - 1);
+            break;
+        case 'S':
+            // nel (act like \r\n)
+            terminal_newline(tdata);
+            terminal_move_cursor_to_column(tdata, 0);
+            break;
+        case 'm':
+            handle_sgr(tdata, common_params, num_common_params);
+            break;
+        case 'n':
+            handle_dsr(tdata, common_params, num_common_params);
+            break;
+        case 'b':
+            // Repeat previous character n times
+            for(size_t i = 0; i < common_params[0]; i++)
+            {
+                terminal_put_at_cursor(tdata, tdata->last_character);
+                terminal_advance_cursor(tdata);
+            }
+            break;
+        case '@':
+            // Insert n blanks
+            if(common_params[0] < 1)
+            {
+                common_params[0] = 1;
+            }
+            for(size_t i = 0; i < common_params[0]; i++)
+            {
+                terminal_insert_at_cursor(tdata, ' ');
+            }
+            break;
+        case 'P':
+            // Delete n characters
+            if(common_params[0] < 1)
+            {
+                common_params[0] = 1;
+            }
+            for(size_t i = 0; i < common_params[0]; i++)
+            {
+                terminal_delete_at_cursor(tdata, ' ');
+            }
+            break;
+        case 'M':
+            // Delete n Lines
+            if(common_params[0] < 1)
+            {
+                common_params[0] = 1;
+            }
+            for(size_t i = 0; i < common_params[0]; i++)
+            {
+                terminal_delete_line_at_cursor(tdata, ' ');
+            }
             break;
         default:
             LOG(tdata,
-                "CSI n %c, invalid parameter n=%d\n",
+                "Unknown CSI Terminator 0x%x, '%c'!\n",
                 terminator,
-                common_params[0]);
+                terminator);
             terminal_put_at_cursor(tdata, '?');
             terminal_advance_cursor(tdata);
             break;
         }
-        break;
-    case 'K':
-        // Erase in line
-        switch(common_params[0])
-        {
-        case 0:
-            terminal_clear_cursor_to_end_of_line(tdata);
-            break;
-        case 1:
-            terminal_clear_start_of_line_to_cursor(tdata);
-            break;
-        case 2:
-            terminal_clear_cursor_line(tdata);
-            break;
-        default:
-            LOG(tdata,
-                "CSI n %c, invalid parameter n=%d\n",
-                terminator,
-                common_params[0]);
-            terminal_put_at_cursor(tdata, '?');
-            terminal_advance_cursor(tdata);
-            break;
-        }
-        break;
-    case 'A':
-        // Move Up n
-        terminal_move_cursor_up(tdata, common_params[0]);
-        break;
-    case 'B':
-        // Move Down n
-        terminal_move_cursor_down(tdata, common_params[0]);
-        break;
-    case 'C':
-        // Move Right n
-        terminal_move_cursor_right(tdata, common_params[0]);
-        break;
-    case 'D':
-        // Move Left n
-        terminal_move_cursor_left(tdata, common_params[0]);
-        break;
-    case 'G':
-        if(common_params[0] > 0)
-        {
-            common_params[0] -= 1;
-        }
-        terminal_move_cursor_to_column(tdata, common_params[0]);
-        break;
-    case 'd':
-        if(common_params[0] > 0)
-        {
-            common_params[0] -= 1;
-        }
-        terminal_move_cursor_to_row(tdata, common_params[0]);
-        break;
-    case 'H':
-    case 'f':
-        // Move to (p-1, n-1) {default (1,1)}
-        if(common_params[0] == 0)
-        {
-            common_params[0] = 1;
-        }
-        if(common_params[1] == 0)
-        {
-            common_params[1] = 1;
-        }
-        terminal_set_cursor(tdata, common_params[1] - 1, common_params[0] - 1);
-        break;
-    case 'S':
-        // nel (act like \r\n)
-        terminal_newline(tdata);
-        terminal_move_cursor_to_column(tdata, 0);
-        break;
-    case 'm':
-        handle_sgr(tdata, common_params, num_common_params);
-        break;
-    case 'n':
-        handle_dsr(tdata, common_params, num_common_params);
-        break;
-    case 'b':
-        // Repeat previous character n times
-        for(size_t i = 0; i < common_params[0]; i++)
-        {
-            terminal_put_at_cursor(tdata, tdata->last_character);
-            terminal_advance_cursor(tdata);
-        }
-        break;
-    case '@':
-        // Insert n blanks
-        if(common_params[0] < 1)
-        {
-            common_params[0] = 1;
-        }
-        for(size_t i = 0; i < common_params[0]; i++)
-        {
-            terminal_insert_at_cursor(tdata, ' ');
-        }
-        break;
-    case 'P':
-        // Delete n characters
-        if(common_params[0] < 1)
-        {
-            common_params[0] = 1;
-        }
-        for(size_t i = 0; i < common_params[0]; i++)
-        {
-            terminal_delete_at_cursor(tdata, ' ');
-        }
-        break;
-    case 'M':
-        // Delete n Lines
-        if(common_params[0] < 1)
-        {
-            common_params[0] = 1;
-        }
-        for(size_t i = 0; i < common_params[0]; i++)
-        {
-            terminal_delete_line_at_cursor(tdata, ' ');
-        }
-        break;
-    default:
-        LOG(tdata,
-            "Unknown CSI Terminator 0x%x, '%c'!\n",
-            terminator,
-            terminator);
-        terminal_put_at_cursor(tdata, '?');
-        terminal_advance_cursor(tdata);
-        break;
     }
 }
 

@@ -50,25 +50,25 @@ ansiterm_get_cursor(
         exit(EXIT_FAILURE);
     }
 
-    size_t x_start = csi+2;
-    size_t x_chars = 0;
-    while(x_start + x_chars < BUFLEN && isdigit(buffer[x_start + x_chars])) {
-        x_chars++;
-    }
-
-    if(buffer[x_start + x_chars] != ';') {
-        fprintf(stderr, "terminal response did not delimit x and y properly!\n");
-        exit(EXIT_FAILURE);
-    }
-
-    size_t y_start = x_start + x_chars + 1;
+    size_t y_start = csi+2;
     size_t y_chars = 0;
     while(y_start + y_chars < BUFLEN && isdigit(buffer[y_start + y_chars])) {
         y_chars++;
     }
+
+    if(buffer[y_start + y_chars] != ';') {
+        fprintf(stderr, "terminal response did not delimit y and y properly!\n");
+        exit(EXIT_FAILURE);
+    }
+
+    size_t x_start = y_start + y_chars + 1;
+    size_t x_chars = 0;
+    while(x_start + x_chars < BUFLEN && isdigit(buffer[x_start + x_chars])) {
+        x_chars++;
+    }
     
-    if(buffer[y_start + y_chars] != 'R') {
-        fprintf(stderr, "terminal response did not terminate correctly!\n");
+    if(buffer[x_start + x_chars] != 'R') {
+        fprintf(stderr, "terminal response did not terminate correctlx!\n");
         exit(EXIT_FAILURE);
     }
 

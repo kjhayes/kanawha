@@ -54,4 +54,5 @@ bins += \
 	beep \
 	lterm \
 	tinfo \
+	kvi \
 

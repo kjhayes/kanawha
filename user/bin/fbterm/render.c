@@ -25,7 +25,7 @@ render_graphical_glyph(size_t x,
     color_t bg_color = terminal_data.bg_color_buffer[x + (y * tdata->width)];
     struct kfb_image *fg_img = fdata->glyphs[c].fg;
     struct kfb_image *bg_img = fdata->glyphs[c].bg;
-    if(x == tdata->cursor_x && y == tdata->cursor_y)
+    if(tdata->cursor_visible && (x == tdata->cursor_x && y == tdata->cursor_y))
     {
         color_t temp = fg_color;
         fg_color = bg_color;

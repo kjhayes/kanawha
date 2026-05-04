@@ -32,6 +32,7 @@ extern struct terminal_data
 
     unsigned raw : 1;
     unsigned echo_on : 1;
+    unsigned cursor_visible : 1;
     unsigned bold_on : 1;
     unsigned italic_on : 1;
     unsigned underline_on : 1;

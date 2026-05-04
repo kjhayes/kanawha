@@ -104,6 +104,7 @@ init_terminal(FILE *log_file, size_t width, size_t height)
 
     tdata->raw = 0;
     tdata->echo_on = 1;
+    tdata->cursor_visible = 1;
     tdata->bold_on = 0;
     tdata->italic_on = 0;
     tdata->underline_on = 0;
