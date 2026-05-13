@@ -90,6 +90,7 @@ CONFIG_DEBUG_HIGHER_HALF_KERNEL_ADDRESSES=y
 
 # CONFIG_DEBUG_BUDDY_ALLOC is not set
 # CONFIG_DEBUG_INIT_STAGES is not set
+# CONFIG_DEBUG_PRIVATE_THREAD_STACKS is not set
 # CONFIG_DEBUG_DUMP_THREADS_PERIODICALLY is not set
 # CONFIG_DEBUG_DUMP_PERF_METRICS_PERIODICALLY is not set
 # CONFIG_DEBUG_LOG_THREAD_STATE_CHANGES is not set
@@ -197,6 +198,7 @@ CONFIG_ARM64_BOOT_STACK_SIZE=0x1000
 # Block Devices
 #
 CONFIG_VIRTIO_BLK=y
+CONFIG_VIRTIO_SCSI=y
 CONFIG_NVME=y
 # end of Block Devices
 
@@ -236,6 +238,14 @@ CONFIG_DEVTREE_8250=y
 # end of Terminal Devices
 
 #
+# Input Devices
+#
+CONFIG_USB_HID=y
+CONFIG_PS2_KBD=y
+CONFIG_PS2_MOUSE=y
+# end of Input Devices
+
+#
 # Framebuffer Devices
 #
 CONFIG_VIRTIO_GPU_FB=y
@@ -259,6 +269,7 @@ CONFIG_VIRTIO_SND=y
 CONFIG_PCI=y
 # CONFIG_PCI_ASSUME_CONTIGUOUS_DEVICES is not set
 CONFIG_PCI_ALLOC_UNINITIALIZED_MMIO_BARS=y
+# CONFIG_POLLING_PCI_MAILBOX is not set
 
 #
 # PCI Configuration Space Access Mechanisms
@@ -275,15 +286,22 @@ CONFIG_PCIE_ACPI_MCFG=y
 #
 # USB Options
 #
+CONFIG_USB=y
+CONFIG_USB_XHCI=y
 # end of USB Options
+
+#
+# SCSI Options
+#
+CONFIG_SCSI=y
+# end of SCSI Options
 
 CONFIG_PS2=y
 
 #
-# PS/2 Devices
+# PS/2 Controllers
 #
-CONFIG_PS2_KBD=y
-# end of PS/2 Devices
+# end of PS/2 Controllers
 
 #
 # Qemu Specific Devices
