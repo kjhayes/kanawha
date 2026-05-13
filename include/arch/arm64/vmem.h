@@ -5,16 +5,24 @@
 #include <kanawha/pointer.h>
 #include <kanawha/types.h>
 
+#ifdef CONFIG_VMEM_VIA_PAGING
+#include <kanawha/paging.h>
+#endif
+
 #define VMEM_MIN_PAGE_ORDER 12
 
 struct arch_vmem_map
 {
-    // TODO
+#ifdef CONFIG_VMEM_VIA_PAGING
+    struct vmem_map_paging_state paging_state;
+#endif
 };
 
 struct arch_vmem_region
 {
-    // TODO
+#ifdef CONFIG_VMEM_VIA_PAGING
+    struct vmem_region_paging_state paging_state;
+#endif
 };
 
 static inline void *
