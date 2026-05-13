@@ -18,9 +18,9 @@ QEMU_FLAGS += -device virtio-gpu-pci
 #              -device ahci,id=ahci \
 #              -device ide-hd,drive=ahcidisk,bus=ahci.0
 
-QEMU_FLAGS += \
-			  -drive id=disk,file=ide.img,format=raw,if=none \
-			  -device piix3-ide,id=ide -device ide-hd,drive=disk,bus=ide.0
+# QEMU_FLAGS += \
+# 			  -drive id=disk,file=ide.img,format=raw,if=none \
+# 			  -device piix3-ide,id=ide -device ide-hd,drive=disk,bus=ide.0
 
 # QEMU_FLAGS += -display gtk
 
