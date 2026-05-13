@@ -227,8 +227,8 @@ handle_dsr(struct terminal_data *tdata, int *param, int num_param)
                 { // Cursor Position
                     char resp_buf[32];
                     snprintf(resp_buf, 32, "\033[%lu;%luR",
-                            (unsigned long)tdata->width,
-                            (unsigned long)tdata->height);
+                            (unsigned long)tdata->height,
+                            (unsigned long)tdata->width);
 
                     resp_buf[32-1] = '\0';
 
