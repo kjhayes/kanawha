@@ -15,4 +15,5 @@ output.txt
 *.img
 
 initrd-extra/**/*
+user/bin/doomgeneric
 
