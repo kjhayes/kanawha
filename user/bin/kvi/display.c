@@ -73,12 +73,11 @@ int display_flush(void)
         frame_resize(frame, width, height);
         frame_rerender_all(frame);
         frame_unlock(frame);
-        printf("skipping display_flush() due to resize old=(%lu,%lu) new=(%lu,%lu)!\n",
-                (unsigned long)cur_width,
-                (unsigned long)cur_height,
-                (unsigned long)width,
-                (unsigned long)height);
-        return 0;
+        // printf("skipping display_flush() due to resize old=(%lu,%lu) new=(%lu,%lu)!\n",
+        //         (unsigned long)cur_width,
+        //         (unsigned long)cur_height,
+        //         (unsigned long)width,
+        //         (unsigned long)height);
     }
 
     unsigned long cursor_x,cursor_y;

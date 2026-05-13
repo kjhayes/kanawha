@@ -33,20 +33,21 @@ int main(int argc, const char **argv)
     }
     command_init();
 
+    struct frame *frame = frame_get_root();
+    frame_lock(frame);
+    frame_set_char(frame,0,0,'!');
+    frame_unlock(frame);
+    display_flush();
+
     while(kvi.running)
     {
         char c = input_getc();
         switch(c) {
             case ':': {
                 handle_command();
-            }
+            } break;
             default: {
-                struct frame *frame = frame_get_root();
-                frame_lock(frame);
-                frame_set_char(frame,5,5,c);
-                frame_unlock(frame);
-                display_flush();
-            }
+            } break;
         }
     }
 
