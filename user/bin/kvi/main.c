@@ -13,17 +13,24 @@ int main(int argc, const char **argv)
 {
     int res;
 
-    if(argc != 2) {
-        exit(EXIT_FAILURE);
+
+    const char *path;
+    if(argc > 1) {
+        path = argv[1];
+    } else {
+        path = NULL;
     }
-    const char *path = argv[1];
 
     frame_init();
     display_init();
     input_init();
     add_file_input_source(stdin);
     buffer_init();
-    add_buffer_with_path(path);
+    if(path != NULL) {
+        add_buffer_with_path(path);
+    } else {
+        add_buffer();
+    }
     command_init();
 
     while(kvi.running)
