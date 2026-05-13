@@ -404,7 +404,7 @@ usb_xhci_destroy_device(struct usb_xhci_device *dev)
 
     mbarrier();
 
-    for(size_t i = 0; i < 32; i++)
+    for(size_t i = 0; i < 31; i++)
     {
         struct usb_xhci_endpoint *endp = dev->endpoints[i];
         if(endp != NULL)
