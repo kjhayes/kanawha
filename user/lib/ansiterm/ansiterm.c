@@ -88,7 +88,7 @@ ansiterm_set_cursor(
         unsigned long y)
 {
     printf("\033[%lu;%luH",
-            x, y);
+            y+1, x+1);
     fflush(stdout);
     return 0;
 }
