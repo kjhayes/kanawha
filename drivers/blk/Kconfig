@@ -19,11 +19,12 @@ config NVME
 config IDE
     bool "IDE Driver"
     default y
+    depends on PORT_IO
 
 config LEGACY_IDE
     bool "Legacy IDE Discovery"
     default y
-    depends on IDE && PORT_IO
+    depends on IDE
 
 config PCI_IDE
     bool "PCI IDE Discovery"
