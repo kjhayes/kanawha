@@ -126,7 +126,7 @@ pty_ringbuf_read(
         if(space > len) {
             space = len;
         }
-        memcpy(into, &buf->buffer[buf->tail], space);
+        memcpy(into, &((uint8_t*)buf->buffer)[buf->tail], space);
         into += space;
         len -= space;
         total += space;
