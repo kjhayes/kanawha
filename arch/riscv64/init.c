@@ -1,6 +1,7 @@
 
 #include <arch/riscv64/cpu.h>
 #include <arch/riscv64/mem_flags.h>
+#include <arch/riscv64/fpu.h>
 #include <kanawha/clk.h>
 #include <kanawha/errno.h>
 #include <kanawha/init.h>
@@ -79,6 +80,7 @@ riscv64_boot_bsp_init(void __phys *kernel_phys_base,
     klog_init();
     printk_init();
     panic_printk_init();
+    riscv64_enable_fpu();
 
     res = handle_init_stage__boot();
     if(res)

@@ -2,6 +2,7 @@
 #include <arch/riscv64/mmu.h>
 #include <arch/riscv64/sbi.h>
 #include <arch/riscv64/sbi_hsm.h>
+#include <arch/riscv64/fpu.h>
 #include <kanawha/attribute.h>
 #include <kanawha/cpu.h>
 #include <kanawha/init.h>
@@ -37,6 +38,9 @@ riscv64_boot_ap_init(hartid_t hartid)
     int res;
 
     struct riscv64_ap_trampoline *trampoline = &ap_bringup_trampoline;
+
+    // Turn on the FPU early just in case...
+    riscv64_enable_fpu();
 
     // All we really need to do is move the stack into high-mem
 

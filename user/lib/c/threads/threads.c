@@ -6,6 +6,7 @@
 #include <sys/wait.h>
 #include <threads.h>
 #include <unistd.h>
+#include <stdio.h>
 
 // TODO: We don't clean up old thread's
 // stacks...

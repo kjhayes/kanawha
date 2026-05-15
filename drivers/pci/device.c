@@ -68,3 +68,17 @@ pci_probe_device(struct pci_bus *bus, uint8_t dev_index)
 
     return 0;
 }
+
+struct pci_func *
+pci_device_lookup_func(
+        struct pci_device *device,
+        uint8_t func_id)
+{
+    struct ptree_node *pnode;
+    pnode = ptree_get(&device->function_tree, func_id);
+    if(pnode == NULL) {
+        return NULL;
+    }
+    return container_of(pnode, struct pci_func, device_node);
+}
+

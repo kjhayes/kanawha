@@ -27,6 +27,11 @@
 
 #define PCI_CFG_BAR_BASE 0x10
 
+#define PCI_CFG_IRQ_LINE 0x3C
+#define PCI_CFG_IRQ_PIN 0x3D
+#define PCI_CFG_MIN_GRANT 0x3E
+#define PCI_CFG_MAX_LAT 0x3F
+
 /*
  * "CAM" here refers to any configuration access
  * mechanism (including but not necessarily PCIe ECAM)

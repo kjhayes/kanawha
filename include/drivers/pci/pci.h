@@ -20,6 +20,9 @@
 #define PCI_MAX_FUNC_PER_DEVICE (1ULL << 3)
 
 struct pci_cam;
+struct pci_intx_info;
+struct pci_msi_info;
+struct pci_msix_info;
 
 struct pci_segment
 {
@@ -86,8 +89,11 @@ struct pci_func
         PCI_IRQ_MODE_MSIX,
     } irq_mode;
 
+    struct pci_intx_info *intx_info;
     struct pci_msi_info *msi_info;
     struct pci_msix_info *msix_info;
+
+    irq_t intx_routing[4];
 
     struct irq_domain *irq_domain;
     struct irq_dev *irq_dev;
@@ -199,6 +205,31 @@ pci_bus_for_each_func(struct pci_bus *bus,
 int
 pci_device_for_each_func(struct pci_device *device,
                          int (*callback)(struct pci_func *func));
+
+
+struct pci_func *
+pci_device_lookup_func(
+        struct pci_device *device,
+        uint8_t func);
+struct pci_device *
+pci_bus_lookup_device(
+        struct pci_bus *bus,
+        uint8_t device);
+struct pci_bus *
+pci_segment_lookup_bus(
+        struct pci_segment *segment,
+        uint8_t bus);
+struct pci_segment *
+pci_lookup_segment(
+        uint16_t segment);
+
+struct pci_func *
+pci_lookup_func(
+        uint16_t segment,
+        uint8_t bus,
+        uint8_t device,
+        uint8_t func);
+
 
 #define PCI_MMIO_MEM_MAPPED (1UL << 0)
 #define PCI_MMIO_MEM_32_BIT (1UL << 1)

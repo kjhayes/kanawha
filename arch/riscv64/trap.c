@@ -98,9 +98,12 @@ riscv64_unhandled_trap(struct riscv64_excp_state *state)
 
     printk("==== UNHANDLED \"%s\" TRAP ====\n", excp_desc);
 
-    printk("\tSCAUSE = %p\n", state->scause);
-    printk("\tSTVAL  = %p\n", state->stval);
-    printk("\tSEPC   = %p\n", state->sepc);
+    printk("\tSCAUSE  = %p\n", state->scause);
+    printk("\tSTVAL   = %p\n", state->stval);
+    printk("\tSEPC    = %p\n", state->sepc);
+    printk("\tSSTATUS = %p\n", state->sstatus);
+
+    dump_threads(do_panic_printk);
 
     panic("Unhandled Exception!\n");
 }
@@ -109,7 +112,6 @@ static void
 riscv64_unhandled_interrupt(struct riscv64_excp_state *state)
 {
     unhandled_interrupt((struct excp_state *)state);
-    panic("riscv64_unhandled_interrupt!");
 }
 
 void

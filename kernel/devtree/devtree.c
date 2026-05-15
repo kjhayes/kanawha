@@ -228,6 +228,49 @@ devtree_get_node_by_phandle(struct devtree *dt, fdt_phandle_t phandle)
     return container_of(pnode, struct dt_node, phandle_node);
 }
 
+static inline int
+devtree_check_interrupt_controller(
+        struct dt_node *node)
+{
+    struct fdt *fdt = devtree_get_fdt(node->dt);
+    struct fdt_node *fdt_node = dt_node_get_fdt_node(node);
+
+    struct fdt_property *prop;
+    prop = fdt_find_property_by_name(
+            fdt,
+            fdt_node,
+            "interrupt-controller");
+
+    if(prop == NULL) {
+        return -EINVAL;
+    }
+
+    return 0;
+}
+
+struct dt_node *
+devtree_get_interrupt_parent_by_phandle(
+        struct devtree *dt,
+        fdt_phandle_t phandle)
+{
+    int res;
+
+    struct dt_node *direct =
+        devtree_get_node_by_phandle(dt, phandle);
+    if(direct == NULL) {
+        return NULL;
+    }
+
+    res = devtree_check_interrupt_controller(direct);
+    if(res == 0) {
+        return direct;
+    }
+
+    // TODO: Check for children
+
+    return NULL;
+}
+
 static int
 init_dump_device_trees(void)
 {

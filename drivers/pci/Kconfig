@@ -13,12 +13,22 @@ config PCI_ASSUME_CONTIGUOUS_DEVICES
       Assume PCI devices are contiguous within a bus, this is not required, but may speed up boot times by avoiding enumerating every possible bus:device:func.
 
 config PCI_ALLOC_UNINITIALIZED_MMIO_BARS
-    bool "Map Uninitialized MMIO BAR(s) Onto RAM"
+    bool "Map Uninitialized MMIO BAR(s)"
     depends on PCI
-    default n
+    default y
     help
       If the kernel comes across an uninitialized MMIO BAR (physical address 0)
       then it will attempt to allocate physical memory and re-map the BAR to the memory
+
+config PCI_SET_CACHE_LINE_SIZE
+    bool "Set Cache Line Size"
+    depends on PCI
+    default y
+
+config PCI_CACHE_LINE_SIZE
+    hex "Cache Line Size"
+    depends on PCI && PCI_SET_CACHE_LINE_SIZE
+    default 0x8
 
 config POLLING_PCI_MAILBOX
     bool "Allow Polling for PCI MSI/MSI-X Interrupts"

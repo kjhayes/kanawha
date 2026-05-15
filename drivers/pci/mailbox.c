@@ -251,3 +251,18 @@ pci_mailbox_find_msix(size_t num_req,
 
     return -ENXIO;
 }
+
+int pci_mailbox_available_for_msi(void)
+{
+    spin_lock(&pci_mailbox_list_lock);
+    size_t num_mailboxes = ilist_count(&pci_mailbox_list);
+    spin_unlock(&pci_mailbox_list_lock);
+    return num_mailboxes > 0;
+}
+int pci_mailbox_available_for_msix(void)
+{
+    spin_lock(&pci_mailbox_list_lock);
+    size_t num_mailboxes = ilist_count(&pci_mailbox_list);
+    spin_unlock(&pci_mailbox_list_lock);
+    return num_mailboxes > 0;
+}

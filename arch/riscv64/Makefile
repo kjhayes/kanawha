@@ -20,5 +20,6 @@ obj-y += \
 	hlic.o \
 	smp.o \
 	syscall.o \
+	fpu.o \
 
 obj-$(CONFIG_RISCV64_SBI_DEBUG_CONSOLE) += sbi_console.o

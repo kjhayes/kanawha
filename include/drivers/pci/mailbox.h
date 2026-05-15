@@ -96,4 +96,7 @@ pci_mailbox_find_msix(size_t num_req,
                       uint32_t data[num_req],
                       struct irq_desc *descs[num_req]);
 
+int pci_mailbox_available_for_msi(void);
+int pci_mailbox_available_for_msix(void);
+
 #endif

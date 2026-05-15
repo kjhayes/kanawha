@@ -129,6 +129,7 @@ struct dt_driver_ops dt_8250_driver_ops = {
     .init_node = dt_8250_init_node,
     .deinit_node = dt_8250_deinit_node,
     .xlate_irq = dt_driver_cannot_xlate_irq,
+    .xlate_irq_map = dt_driver_cannot_xlate_irq_map,
 };
 
 struct dt_node_id dt_8250_ids[] = {

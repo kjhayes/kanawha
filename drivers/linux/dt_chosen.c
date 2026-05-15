@@ -161,6 +161,7 @@ static struct dt_driver_ops linux_chosen_dt_driver_ops = {
     .init_node = linux_chosen_dt_init_node,
     .deinit_node = linux_chosen_dt_deinit_node,
     .xlate_irq = dt_driver_cannot_xlate_irq,
+    .xlate_irq_map = dt_driver_cannot_xlate_irq_map,
 };
 
 static struct dt_node_id linux_chosen_dt_driver_ids[] = {

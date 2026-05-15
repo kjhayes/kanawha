@@ -453,3 +453,72 @@ pci_segment_dump_pio_mem_flags(struct pci_segment *segment, printk_f *printer)
 
     return 0;
 }
+
+struct pci_bus *
+pci_segment_lookup_bus(
+        struct pci_segment *segment,
+        uint8_t bus_id)
+{
+    struct ptree_node *pnode = ptree_get(&segment->bus_tree, bus_id);
+    if(pnode == NULL) {
+        return NULL;
+    }
+    struct pci_bus *bus = container_of(pnode, struct pci_bus, segment_node);
+    return bus;
+}
+
+struct pci_segment *
+pci_lookup_segment(
+        uint16_t segment_id)
+{
+    int res;
+
+    struct pci_segment *segment = NULL;
+
+    pci_segment_tree_lock_acquire();
+    struct ptree_node *node;
+    node = ptree_get(&pci_segment_tree, segment_id);
+    if(node != NULL)
+    {
+        segment = container_of(node, struct pci_segment, global_node);
+    }
+    pci_segment_tree_lock_release();
+
+    return segment;
+}
+
+struct pci_func *
+pci_lookup_func(
+        uint16_t segment_id,
+        uint8_t bus_id,
+        uint8_t device_id,
+        uint8_t func_id)
+{
+    struct pci_segment *segment;
+    struct pci_bus *bus;
+    struct pci_device *device;
+    struct pci_func *func;
+
+    segment = pci_lookup_segment(segment_id);
+    if(segment == NULL) {
+        return NULL;
+    }
+
+    bus = pci_segment_lookup_bus(segment, bus_id);
+    if(bus == NULL) {
+        return NULL;
+    }
+
+    device = pci_bus_lookup_device(bus, device_id);
+    if(device == NULL) {
+        return NULL;
+    }
+
+    func = pci_device_lookup_func(device, func_id);
+    if(func == NULL) {
+        return NULL;
+    }
+
+    return func;
+}
+

@@ -27,10 +27,12 @@ pci_setup_bars(struct pci_func *func)
         if(original & 1)
         {
             bar->type = PCI_BAR_PIO;
+            pci_func_raw_enable_pio(func);
         }
         else
         {
             bar->type = PCI_BAR_MMIO;
+            pci_func_raw_enable_mmio(func);
             bar->mmio.type = (original & 0x6ULL) >> 1;
             bar->mmio.prefetch = (original & 0x8ULL) >> 3;
 
@@ -226,6 +228,9 @@ pci_func_init(struct pci_func *func)
 
     if((hdr_type & 0x7F) == PCI_HEADER_TYPE_DEVICE)
     {
+#ifdef  CONFIG_PCI_SET_CACHE_LINE_SIZE
+        pci_func_writeb(func, PCI_CFG_CACHE_LINE, CONFIG_PCI_CACHE_LINE_SIZE);
+#endif /* CONFIG_PCI_SET_CACHE_LINE_SIZE */
         res = pci_setup_bars(func);
         if(res)
         {
@@ -433,7 +438,7 @@ pci_probe_func(struct pci_device *device, uint8_t index)
 
     if(func == NULL)
     {
-        func = kmalloc(sizeof(struct pci_func), KM_KERNEL);
+        func = kzmalloc(sizeof(struct pci_func), KM_KERNEL);
         if(func == NULL)
         {
             eprintk("Failed to allocate PCI device struct!\n");
@@ -449,6 +454,10 @@ pci_probe_func(struct pci_device *device, uint8_t index)
         for(size_t i = 0; i < 6; i++)
         {
             func->bars[i].type = PCI_BAR_UNINIT;
+        }
+
+        for(int i = 0; i < 4; i++) {
+            func->intx_routing[i] = NULL_IRQ;
         }
     }
 

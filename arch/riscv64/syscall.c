@@ -42,7 +42,7 @@ riscv64_syscall_handler(struct excp_state *excp_state,
 
     // reset the kernel stack
     process->thread.arch_state.stack.stack_pointer =
-        process->thread.arch_state.stack.stack_base;
+        (uintptr_t)thread_stack_get_base(&process->thread.arch_state.stack);
 
     // set our return address in userspace (may have been modified)
     state->sepc = (uint64_t)process->user_ip;

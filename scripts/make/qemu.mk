@@ -7,7 +7,7 @@ QEMU_PREFIX :=
 QEMU_DEBUG_LOG ?= qemu.log
 QEMU_FLAGS += -D $(QEMU_DEBUG_LOG) -d guest_errors
 
-QEMU_FLAGS += -trace "usb*" -trace "xhci*"
+QEMU_FLAGS += -trace "usb*" -trace "pci_*"
 
 QEMU_FLAGS += -device virtio-gpu-pci
 
@@ -42,18 +42,18 @@ QEMU_FLAGS += \
 #QEMU_FLAGS += -chardev memory,id=charconsole0,logfile=serial.log
 #QEMU_FLAGS += -device virtconsole,chardev=charconsole0,id=console0
 
-QEMU_FLAGS += -device edu
-QEMU_FLAGS += -device pci-testdev
+# QEMU_FLAGS += -device edu
+# QEMU_FLAGS += -device pci-testdev
 
 #QEMU_FLAGS += -netdev user,id=net0,net=192.168.76.0/24,dhcpstart=192.168.76.9 \
 			  -object filter-dump,id=f1,netdev=net0,file=netdump.dat
 #QEMU_FLAGS += -device virtio-net-pci,netdev=net0,mq=on,vectors=1
 
-QEMU_FLAGS += \
+# QEMU_FLAGS += \
               -device nec-usb-xhci,id=xhci                      \
               -drive if=none,id=stick0,format=raw,file=./usb0.img \
               -device usb-storage,bus=xhci.0,drive=stick0,id=stick0 \
-              #-device usb-kbd,bus=xhci.0
+              -device usb-kbd,bus=xhci.0
 
 #              -drive if=none,id=stick1,format=raw,file=./usb1.img \
 #              -device usb-storage,bus=xhci.0,drive=stick1,id=stick1 \

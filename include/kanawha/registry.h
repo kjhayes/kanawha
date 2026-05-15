@@ -179,18 +179,22 @@ struct registry_node
     {                                                                          \
         int res;                                                               \
         struct registry_node *reg_node = &member->REG_NODE_FIELD;              \
+        \
+        DEBUG_ASSERT(KERNEL_ADDR(member)); \
                                                                                \
         SNAME##_registry_lock_acquire();                                       \
                                                                                \
         if(reg_node->owner != NULL)                                            \
         {                                                                      \
             struct SNAME##_owner *owner = reg_node->owner;                     \
-            res = (*owner->revoke)(member);                                    \
-            if(res)                                                            \
-            {                                                                  \
-                SNAME##_registry_lock_release();                               \
-                return res;                                                    \
-            }                                                                  \
+            if(owner->revoke) { \
+                res = (*owner->revoke)(member);                                    \
+                if(res)                                                            \
+                {                                                                  \
+                    SNAME##_registry_lock_release();                               \
+                    return res;                                                    \
+                }                                                                  \
+            } \
             ilist_remove(&owner->owned_list, &reg_node->owner_node);           \
         }                                                                      \
         else                                                                   \
@@ -209,7 +213,7 @@ struct registry_node
                                                                                \
         struct stree_node *removed;                                            \
         removed = stree_remove(&(SNAME##_registry_tree), reg_node->snode.key); \
-        DEBUG_ASSERT(removed != &reg_node->snode);                             \
+        DEBUG_ASSERT(removed == &reg_node->snode);                             \
                                                                                \
         SNAME##_registry_lock_release();                                       \
                                                                                \

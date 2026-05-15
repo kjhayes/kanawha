@@ -8,8 +8,6 @@
 static int
 virtio_pci_reset(struct virtio_device *dev)
 {
-    dprintk("virtio_pci_reset\n");
-
     struct virtio_pci_device *vdev =
         container_of(dev, struct virtio_pci_device, virtio_dev);
 

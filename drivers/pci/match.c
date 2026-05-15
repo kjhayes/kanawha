@@ -211,3 +211,4 @@ register_all_pci_funcs(void)
     return 0;
 }
 declare_init(device, register_all_pci_funcs);
+

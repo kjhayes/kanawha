@@ -78,4 +78,18 @@ dt_node_irq_count(struct dt_node *node, size_t *size_out);
 int
 dt_node_read_irq(struct dt_node *node, size_t index, irq_t *irq_out);
 
+int
+dt_node_for_each_irq_mapping(
+        struct dt_node *node,
+        void *state,
+        int(*callback)(
+            struct dt_node *node,
+            void *state,
+            const fdt32_t *child_addr_cells,
+            size_t child_addr_cell_count,
+            const fdt32_t *child_irq_cells,
+            size_t child_irq_cell_count,
+            irq_t parent_irq)
+        );
+
 #endif

@@ -15,10 +15,10 @@
 #include "log.h"
 #include "root.h"
 
-#define TERM_PATH "/dev/term/COM1"
+#define TERM_PATH "/dev/term/serial"
 
-#define WINDD_FB_PATH_STR "/dev/fb/vga"
-#define WINDD_FB_MODE_STR "1"
+// #define WINDD_FB_PATH_STR "/dev/fb/vga"
+// #define WINDD_FB_MODE_STR "1"
 
 int
 setstdin(const char *path)
@@ -52,23 +52,23 @@ static struct daemon randd = {
     .sockets = randd_sockets,
 };
 
-static const char *windd_args[] = {
-    "windd",
-    WINDD_FB_PATH_STR,
-    WINDD_FB_MODE_STR,
-    NULL,
-};
-static struct daemon_socket windd_sockets[] = {{
-    .env = "WINDD_SOCKET",
-}};
-static struct daemon windd = {
-    .command = "/sys/initrd/windd",
-    .args = windd_args,
-    .status = DAEMON_UNINIT,
-    .restart_on_exit = 1,
-    .num_sockets = 1,
-    .sockets = windd_sockets,
-};
+//static const char *windd_args[] = {
+//    "windd",
+//    WINDD_FB_PATH_STR,
+//    WINDD_FB_MODE_STR,
+//    NULL,
+//};
+//static struct daemon_socket windd_sockets[] = {{
+//    .env = "WINDD_SOCKET",
+//}};
+//static struct daemon windd = {
+//    .command = "/sys/initrd/windd",
+//    .args = windd_args,
+//    .status = DAEMON_UNINIT,
+//    .restart_on_exit = 1,
+//    .num_sockets = 1,
+//    .sockets = windd_sockets,
+//};
 
 static const char *barkd_args[] = {
     "barkd",

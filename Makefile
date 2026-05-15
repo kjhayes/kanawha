@@ -137,6 +137,7 @@ modules: $(KERNEL_MOD_RULES) FORCE
 -include $(MK_SCRIPTS_DIR)/asm.mk
 -include $(MK_SCRIPTS_DIR)/initrd.mk
 -include $(MK_SCRIPTS_DIR)/isoimage.mk
+-include $(MK_SCRIPTS_DIR)/uImage.mk
 -include $(MK_SCRIPTS_DIR)/qemu.mk
 -include $(MK_SCRIPTS_DIR)/format.mk
 

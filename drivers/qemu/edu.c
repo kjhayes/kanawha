@@ -55,8 +55,6 @@ qemu_edu_init_device(struct pci_driver *driver, struct pci_func *func)
 
     printk("QEMU EDU: init\n");
 
-    pci_func_raw_enable_pio(func);
-
     res = pci_func_start_irqs(func, 0);
     if(res)
     {

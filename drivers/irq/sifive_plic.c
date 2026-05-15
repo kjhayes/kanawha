@@ -144,6 +144,9 @@ sifive_plic_unmask_irq(struct irq_dev *irq_dev, hwirq_t hwirq)
 {
     int res;
 
+    dprintk("plic_unmask_irq %d\n",
+            (int)hwirq);
+
     struct sifive_plic *plic =
         container_of(irq_dev, struct sifive_plic, irq_dev);
     if(hwirq >= plic->num_irqs)
@@ -165,9 +168,9 @@ sifive_plic_unmask_irq(struct irq_dev *irq_dev, hwirq_t hwirq)
         {
             size_t offset = hwirq / 32;
             size_t bit = hwirq % 32;
-            uint32_t bits = mmio_readl(ctx->enable_bitmap + offset);
+            uint32_t bits = mmio_readl(((uint32_t*)ctx->enable_bitmap) + offset);
             bits |= (1ULL << bit);
-            mmio_writel(ctx->enable_bitmap + offset, bits);
+            mmio_writel(((uint32_t*)ctx->enable_bitmap) + offset, bits);
         }
     }
     return 0;
@@ -418,6 +421,7 @@ struct dt_driver_ops sifive_plic_dt_driver_ops = {
     .init_node = sifive_plic_dt_init,
     .deinit_node = sifive_plic_dt_deinit,
     .xlate_irq = sifive_plic_dt_xlate_irq,
+    .xlate_irq_map = dt_driver_xlate_irq_map_no_address,
 };
 
 struct dt_node_id sifive_plic_dt_ids[] = {{.compatible = "sifive,plic-1.0.0"}};

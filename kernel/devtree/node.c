@@ -266,7 +266,7 @@ dt_node_get_interrupts_extended_irq_count(struct dt_node *node,
         fdt_phandle_t phandle = cell_ptr[i];
 
         struct dt_node *irq_parent =
-            devtree_get_node_by_phandle(node->dt, phandle);
+            devtree_get_interrupt_parent_by_phandle(node->dt, phandle);
         if(irq_parent == NULL)
         {
             eprintk("Failed to get \"interrupts-extended\" property "
@@ -324,7 +324,7 @@ dt_node_get_interrupts_irq_count(struct dt_node *node, size_t *count_out)
     }
 
     struct dt_node *interrupt_parent =
-        devtree_get_node_by_phandle(node->dt, parent_phandle);
+        devtree_get_interrupt_parent_by_phandle(node->dt, parent_phandle);
     if(interrupt_parent == NULL)
     {
         return -ENXIO;
@@ -406,7 +406,7 @@ dt_node_interrupts_extended_read_irq(struct dt_node *node,
         fdt_phandle_t phandle = cell_ptr[i];
 
         struct dt_node *irq_parent =
-            devtree_get_node_by_phandle(node->dt, phandle);
+            devtree_get_interrupt_parent_by_phandle(node->dt, phandle);
         if(irq_parent == NULL)
         {
             eprintk("Failed to get \"interrupts-extended\" property "
@@ -473,7 +473,7 @@ dt_node_interrupts_read_irq(struct dt_node *node, size_t index, irq_t *irq_out)
     }
 
     struct dt_node *interrupt_parent =
-        devtree_get_node_by_phandle(node->dt, parent_phandle);
+        devtree_get_interrupt_parent_by_phandle(node->dt, parent_phandle);
     if(interrupt_parent == NULL)
     {
         return -ENXIO;
@@ -546,3 +546,165 @@ dt_node_read_irq(struct dt_node *node, size_t index, irq_t *irq_out)
     }
     return 0;
 }
+
+int
+dt_node_for_each_irq_mapping(
+        struct dt_node *node,
+        void *state,
+        int(*callback)(
+            struct dt_node *node,
+            void *state,
+            const fdt32_t *child_addr_cells,
+            size_t child_addr_cell_count,
+            const fdt32_t *child_irq_cells,
+            size_t child_irq_cell_count,
+            irq_t parent_irq)
+        )
+{
+    int res;
+
+    struct fdt *fdt = devtree_get_fdt(node->dt);
+    struct fdt_node *fdt_node = dt_node_get_fdt_node(node);
+    
+    uint32_t interrupt_cells;
+    res = dt_node_read_property_u32(node,
+                                    "#interrupt-cells",
+                                    &interrupt_cells);
+    if(res) {
+        return res;
+    }
+
+    uint32_t address_cells;
+    res = dt_node_read_property_u32(node,"#address-cells",&address_cells);
+    if(res) {
+        return res;
+    }
+
+    uint32_t specifier_cells = interrupt_cells + address_cells;
+
+    fdt32_t mask[specifier_cells];
+    memset(mask, 0xFF, sizeof(mask));
+
+    struct fdt_property *interrupt_mask_prop =
+        fdt_find_property_by_name(fdt, fdt_node, "interrupt-map-mask");
+    if(interrupt_mask_prop) {
+        size_t datalen = fdt_property_size(fdt, interrupt_mask_prop);
+        fdt32_t *data = fdt_property_data(fdt, interrupt_mask_prop);
+        size_t maxdatalen = sizeof(mask);
+        if(datalen > maxdatalen) {
+            datalen = maxdatalen;
+        }
+        memcpy(mask,data,datalen);
+    }
+
+    struct fdt_property *interrupt_map_prop =
+        fdt_find_property_by_name(fdt, fdt_node, "interrupt-map");
+    if(interrupt_map_prop == NULL) {
+        wprintk("devtree: failed to get \"interrupt-map\" property!\n");
+        return 0;
+    }
+
+    fdt32_t *iter = fdt_property_data(fdt, interrupt_map_prop);
+    size_t datalen = fdt_property_size(fdt, interrupt_map_prop);
+    size_t cells_remaining = datalen / 4;
+
+    while(cells_remaining) {
+        // Copy the current specifier
+        fdt32_t specifier[specifier_cells];
+        if(cells_remaining < specifier_cells) {
+            wprintk("devtree: \"interrupt-map\" property contains trailing cells!\n");
+            break;
+        }
+        memcpy(specifier, iter, 4 * specifier_cells);
+        iter += specifier_cells;
+        cells_remaining -= specifier_cells;
+        // Apply the mask
+        for(size_t i = 0; i < specifier_cells; i++) {
+            specifier[i] &= mask[i];
+        }
+        // Translate our parent IRQ
+        fdt_phandle_t parent_phandle;
+        if(cells_remaining < 1) {
+            wprintk("devtree: \"interrupt-map\" property contains trailing cells!\n");
+            break;
+        }
+        parent_phandle = iter[0];
+        iter++;
+        cells_remaining -= 1;
+
+        struct dt_node *parent =
+            devtree_get_interrupt_parent_by_phandle(
+                node->dt,
+                parent_phandle);
+        if(parent == NULL) {
+            wprintk("devtree: \"interrupt-map\" property contains invalid phandle!\n");
+            break;
+        }
+
+        struct fdt *parent_fdt = devtree_get_fdt(parent->dt);
+        struct fdt_node *parent_fdt_node = dt_node_get_fdt_node(parent);
+    
+        uint32_t parent_address_cells;
+        res = dt_node_read_property_u32(
+                parent,
+                "#address-cells",
+                &parent_address_cells);
+        if(res) {
+            break;
+        }
+        if(cells_remaining < parent_address_cells) {
+            wprintk("devtree: \"interrupt-map\" property contains trailing cells!\n");
+            break;
+        }
+        fdt32_t *parent_address = iter;
+        cells_remaining -= parent_address_cells;
+        iter += parent_address_cells;
+
+        uint32_t parent_interrupt_cells;
+        res = dt_node_read_property_u32(parent,
+                                        "#interrupt-cells",
+                                        &parent_interrupt_cells);
+        if(res) {
+            wprintk("devtree: \"interrupt-map\" property failed to get \"#interrupt-cells\" of parent node \"%s\"!\n",
+                    dt_node_get_name(parent));
+            break;
+        }
+        if(cells_remaining < parent_interrupt_cells) {
+            wprintk("devtree: \"interrupt-map\" property contains trailing cells!\n");
+            break;
+        }
+        fdt32_t *parent_interrupt = iter;
+        cells_remaining -= parent_interrupt_cells;
+        iter += parent_interrupt_cells;
+
+        if(parent->driver == NULL) {
+            continue;
+        }
+
+        irq_t parent_irq
+            = dt_driver_xlate_irq_map(
+                    parent->driver,
+                    parent,
+                    parent_address,
+                    parent_address_cells,
+                    parent_interrupt,
+                    parent_interrupt_cells);
+
+        if(callback) {
+            res = (*callback)(
+                    node,
+                    state,
+                    specifier,
+                    address_cells,
+                    specifier + address_cells,
+                    interrupt_cells,
+                    parent_irq);
+            if(res) {
+                continue;
+            }
+        }
+    }
+
+    return 0;
+}
+

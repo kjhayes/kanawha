@@ -43,4 +43,11 @@ devtree_get_fdt(struct devtree *dt);
 struct dt_node *
 devtree_get_node_by_phandle(struct devtree *dt, fdt_phandle_t phandle);
 
+// Returns NULL if no "interrupt-parent" node can be found
+// Checks basic properties such as "interrupt-controller"
+struct dt_node *
+devtree_get_interrupt_parent_by_phandle(
+        struct devtree *dt,
+        fdt_phandle_t phandle);
+
 #endif

@@ -56,7 +56,7 @@ arch_init_thread_state(struct thread_state *state)
     caller_regs[RISCV64_PUSHED_CALLER_REGS_INDEX_A1] = (uint64_t)state->func;
 
     uint64_t sepc = 0x0;
-    uint64_t sstatus = 0x0;
+    uint64_t sstatus = read_csr(sstatus);
 
     thread_stack_push(stack, (uint64_t)sepc);    // sepc
     thread_stack_push(stack, (uint64_t)sstatus); // sstatus

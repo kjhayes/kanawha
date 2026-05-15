@@ -13,7 +13,7 @@ irq_dev_init(struct irq_dev *dev)
 static int
 irq_dev_deinit(struct irq_dev *dev)
 {
-    printk("irq_dev unregistered: %s\n", irq_dev_get_name(dev));
+    // printk("irq_dev unregistered: %s\n", irq_dev_get_name(dev));
     return 0;
 }
 

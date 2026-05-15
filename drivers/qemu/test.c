@@ -1,5 +1,6 @@
 
 #include <drivers/pci/pci.h>
+#include <drivers/pci/cfg.h>
 #include <kanawha/init.h>
 
 struct pci_test_dev_hdr
@@ -25,14 +26,14 @@ qemu_test_probe(struct pci_driver *driver, struct pci_func *dev)
 }
 
 static int
-qemu_test_init_device(struct pci_driver *driver, struct pci_func *dev)
+qemu_test_init_device(struct pci_driver *driver, struct pci_func *func)
 {
     printk("QEMU PCI Test: init\n");
 
     for(int bar_index = 0; bar_index < 6; bar_index++)
     {
 
-        struct pci_bar *bar = &dev->bars[bar_index];
+        struct pci_bar *bar = &func->bars[bar_index];
         if(bar->type == PCI_BAR_NONE)
         {
             printk("BAR(%ld) -> NONE\n", bar_index);
@@ -70,7 +71,7 @@ qemu_test_init_device(struct pci_driver *driver, struct pci_func *dev)
 }
 
 static int
-qemu_test_deinit_device(struct pci_driver *driver, struct pci_func *dev)
+qemu_test_deinit_device(struct pci_driver *driver, struct pci_func *func)
 {
     printk("QEMU PCI Test: deinit\n");
     return 0;

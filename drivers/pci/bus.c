@@ -5,6 +5,23 @@
 #include <kanawha/spinlock.h>
 #include <kanawha/stddef.h>
 
+static struct pci_bus *
+pci_bus_create(struct pci_segment *segment, uint8_t bus_index)
+{
+    struct pci_bus *bus;
+    bus = kmalloc(sizeof(struct pci_bus), KM_KERNEL);
+    if(bus == NULL)
+    {
+        return NULL;
+    }
+    bus->bus_index = bus_index;
+    bus->segment = segment;
+
+    ptree_init(&bus->device_tree);
+    ptree_insert(&segment->bus_tree, &bus->segment_node, bus_index);
+    return bus;
+}
+
 int
 pci_probe_bus(struct pci_segment *segment, uint8_t bus_index)
 {
@@ -35,17 +52,10 @@ pci_probe_bus(struct pci_segment *segment, uint8_t bus_index)
     }
     else
     {
-
-        bus = kmalloc(sizeof(struct pci_bus), KM_KERNEL);
-        if(bus == NULL)
-        {
+        bus = pci_bus_create(segment, bus_index);
+        if(bus == NULL) {
             return -ENOMEM;
         }
-        bus->bus_index = bus_index;
-        bus->segment = segment;
-
-        ptree_init(&bus->device_tree);
-        ptree_insert(&segment->bus_tree, &bus->segment_node, bus_index);
     }
 
     // Do the enumeration
@@ -70,3 +80,17 @@ pci_probe_bus(struct pci_segment *segment, uint8_t bus_index)
 
     return 0;
 }
+
+struct pci_device *
+pci_bus_lookup_device(
+        struct pci_bus *bus,
+        uint8_t device_id)
+{
+    struct ptree_node *pnode;
+    pnode = ptree_get(&bus->device_tree, device_id);
+    if(pnode == NULL) {
+        return NULL;
+    }
+    return container_of(pnode, struct pci_device, bus_node);
+}
+

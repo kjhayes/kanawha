@@ -10,6 +10,7 @@ pci-y += \
 	device.o \
 	func.o \
 	irq.o \
+	intx.o \
 	msi.o \
 	msix.o \
 	mailbox.o
