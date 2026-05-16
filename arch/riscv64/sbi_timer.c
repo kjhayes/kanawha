@@ -73,12 +73,6 @@ sbi_timer_handler(struct excp_state *excp_state, struct irq_action *action)
         {
             panic("Failed to set SBI periodic timer!\n");
         }
-
-        res = unmask_irq(timer->irq);
-        if(res)
-        {
-            panic("Failed to unmask SBI periodic timer IRQ!\n");
-        }
     }
     else
     {

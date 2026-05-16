@@ -47,6 +47,7 @@ sifive_plic_context_complete(struct sifive_plic_context *ctx, hwirq_t hwirq)
 {
     mmio_writel(ctx->reg_block + 4, (uint32_t)hwirq);
 }
+
 static int
 sifive_plic_ctx_irq_handler(struct excp_state *excp_state,
                             struct irq_action *action)
@@ -69,12 +70,14 @@ sifive_plic_ctx_irq_handler(struct excp_state *excp_state,
     irq = irq_domain_revmap(plic->irq_domain, hwirq);
     if(irq == IRQ_NONE)
     {
+        sifive_plic_context_complete(ctx, hwirq);
         return IRQ_UNHANDLED;
     }
 
     struct irq_desc *desc = irq_to_desc(irq);
     if(desc == NULL)
     {
+        sifive_plic_context_complete(ctx, hwirq);
         return IRQ_UNHANDLED;
     }
 
@@ -201,6 +204,19 @@ sifive_plic_trigger_irq(struct irq_dev *irq_dev, hwirq_t hwirq)
     return -EUNIMPL;
 }
 
+static int
+sifive_plic_describe_irq(
+        struct irq_dev *irq_dev,
+        hwirq_t hwirq,
+        char *buffer,
+        size_t buflen)
+{
+    snprintk(buffer, buflen,
+            "plic-%lu",
+            (ul_t)hwirq);
+    return 0;
+}
+
 static struct irq_driver sifive_plic_irq_driver = {
     .ack_irq = sifive_plic_ack_irq,
     .eoi_irq = sifive_plic_eoi_irq,
@@ -208,7 +224,7 @@ static struct irq_driver sifive_plic_irq_driver = {
     .unmask_irq = sifive_plic_unmask_irq,
     .irq_status = sifive_plic_irq_status,
     .trigger_irq = sifive_plic_trigger_irq,
-    .describe_irq = irq_dev_default_describe_irq,
+    .describe_irq = sifive_plic_describe_irq,
 };
 
 static int

@@ -140,7 +140,7 @@ virtio_request_set_completion_callback(struct virtio_request *req,
                                        virtio_request_callback_f *callback,
                                        void *state)
 {
-    if(req->complete_callback != NULL)
+    if(req->complete_callback == NULL)
     {
         req->complete_callback_state = state;
         req->complete_callback = callback;

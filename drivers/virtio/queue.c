@@ -30,7 +30,6 @@ virtio_queue_init_struct(struct virtio_queue *queue,
     spinlock_init(&queue->used_lock);
     ilist_init(&queue->unlaunched_reqs);
     ilist_init(&queue->launched_reqs);
-    ilist_init(&queue->complete_reqs);
 
     // Every Descriptor Starts as Zero (Free)
     queue->desc_bitmap = kzmalloc(BITMAP_SIZE(queue_size), KM_KERNEL);
@@ -278,7 +277,7 @@ virtio_queue_launch_request(struct virtio_queue *queue,
     int res;
     int irq_flags = spin_lock_irq_save(&queue->req_lock);
 
-    if(req->state != VIRTIO_REQUEST_UNLAUNCHED)
+    if(!(req->state == VIRTIO_REQUEST_UNLAUNCHED || req->state == VIRTIO_REQUEST_COMPLETED))
     {
         spin_unlock_irq_restore(&queue->req_lock, irq_flags);
         return -EINVAL;
@@ -341,13 +340,13 @@ virtio_queue_find_launched_req_by_desc(struct virtio_queue *queue,
         }
     }
 
-    printk("Failed to find launched request from descriptor ID (0x%x)\n",
+    wprintk("Failed to find launched request from descriptor ID (0x%x)\n",
            desc_id);
     ilist_for_each(node, &queue->launched_reqs)
     {
         struct virtio_request *req =
             container_of(node, struct virtio_request, queue_node);
-        printk("Launched Request: 0x%x\n", req->root_descriptor);
+        wprintk("Launched Request: 0x%x\n", req->root_descriptor);
     }
 
     return NULL;
@@ -376,7 +375,8 @@ virtio_queue_handle_used_notification(struct virtio_queue *queue)
     {
         num_new_elem = ((1ULL << 16) - last_idx) + idx;
     }
-    dprintk("virtio_queue_handle_used_notification (num_new_elem = 0x%lx)\n",
+    dprintk("virtio_queue_handle_used_notification: queue=%p (num_new_elem = 0x%lx)\n",
+            queue,
             num_new_elem);
 
     for(size_t i = 0; i < num_new_elem; i++)
@@ -387,6 +387,7 @@ virtio_queue_handle_used_notification(struct virtio_queue *queue)
         le32_t id = elem->id;
         le32_t len = elem->len;
 
+        spin_lock(&queue->req_lock);
         struct virtio_request *req =
             virtio_queue_find_launched_req_by_desc(queue, id);
         if(req == NULL)
@@ -401,11 +402,10 @@ virtio_queue_handle_used_notification(struct virtio_queue *queue)
 
         size_t avail_slot = req->avail_slot;
 
-        spin_lock(&queue->req_lock);
-        ilist_remove(&req->queue_node, &queue->launched_reqs);
+        ilist_remove(&queue->launched_reqs, &req->queue_node);
         req->len_written = len;
         req->state = VIRTIO_REQUEST_COMPLETED;
-        ilist_push_tail(&req->queue_node, &queue->complete_reqs);
+        ilist_push_tail(&queue->unlaunched_reqs, &req->queue_node);
         spin_unlock(&queue->req_lock);
 
         spin_lock(&queue->avail_lock);

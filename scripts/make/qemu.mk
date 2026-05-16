@@ -2,12 +2,12 @@
 DTC ?= $(shell command -v dtc 2> /dev/null)
 
 QEMU_PREFIX :=
-#QEMU_PREFIX := ~/qemu/build/
+# QEMU_PREFIX := ~/qemu/qemu/build/
 
 QEMU_DEBUG_LOG ?= qemu.log
 QEMU_FLAGS += -D $(QEMU_DEBUG_LOG) -d guest_errors
 
-QEMU_FLAGS += -trace "usb*" -trace "pci_*"
+QEMU_FLAGS += -trace "usb*" -trace "*plic*"
 
 QEMU_FLAGS += -device virtio-gpu-pci
 
@@ -25,6 +25,7 @@ QEMU_FLAGS += -device virtio-gpu-pci
 # QEMU_FLAGS += -display gtk
 
 QEMU_FLAGS += -device virtio-rng
+QEMU_FLAGS += -device virtio-keyboard-pci
 
 QEMU_FLAGS += \
   -drive file=scsi.img,format=raw,if=none,id=hdscsi \

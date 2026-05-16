@@ -31,6 +31,7 @@ int main(int argc, const char **argv)
 
     // add_input("/dev/input/ps2-kbd-0");
     // add_input("/dev/input/ps2-mouse-0");
+    add_input("/dev/input/virtio-input-0");
 
     while(lensd_running) {
         ctx_loop_iter();

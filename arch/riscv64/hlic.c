@@ -62,14 +62,12 @@ static struct dt_driver riscv64_dt_hlic_driver = {
 static int
 riscv64_hlic_irq_dev_ack_irq(struct irq_dev *dev, hwirq_t hwirq)
 {
-    dprintk("riscv64_hlic_irq_dev_ack_irq\n");
     return 0;
 }
 
 static int
 riscv64_hlic_irq_dev_eoi_irq(struct irq_dev *dev, hwirq_t hwirq)
 {
-    dprintk("riscv64_hlic_irq_dev_eoi_irq\n");
     return 0;
 }
 
@@ -150,6 +148,19 @@ riscv64_hlic_irq_dev_trigger_irq(struct irq_dev *dev, hwirq_t hwirq)
     return sbi_send_ipi(hartid);
 }
 
+static int
+riscv64_hlic_irq_dev_describe_irq(
+        struct irq_dev *dev,
+        hwirq_t hwirq,
+        char *buffer,
+        size_t buflen)
+{
+    snprintk(buffer, buflen,
+            "hlic-%lu",
+            (ul_t)hwirq);
+    return 0;
+}
+
 static struct irq_driver riscv64_hlic_irq_driver = {
     .ack_irq = riscv64_hlic_irq_dev_ack_irq,
     .eoi_irq = riscv64_hlic_irq_dev_eoi_irq,
@@ -157,7 +168,7 @@ static struct irq_driver riscv64_hlic_irq_driver = {
     .unmask_irq = riscv64_hlic_irq_dev_unmask_irq,
     .irq_status = riscv64_hlic_irq_dev_irq_status,
     .trigger_irq = riscv64_hlic_irq_dev_trigger_irq,
-    .describe_irq = irq_dev_default_describe_irq,
+    .describe_irq = riscv64_hlic_irq_dev_describe_irq,
 };
 
 int

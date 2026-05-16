@@ -14,3 +14,8 @@ config PS2_MOUSE
     depends on PS2
     default y
 
+config VIRTIO_INPUT
+    tristate "Virtio Input Driver"
+    depends on VIRTIO
+    default y
+

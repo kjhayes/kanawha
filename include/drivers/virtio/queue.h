@@ -108,7 +108,6 @@ struct virtio_queue
     spinlock_t req_lock;
     ilist_t unlaunched_reqs;
     ilist_t launched_reqs;
-    ilist_t complete_reqs;
 };
 
 int

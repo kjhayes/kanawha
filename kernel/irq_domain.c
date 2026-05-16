@@ -11,6 +11,7 @@
 #include <kanawha/ptree.h>
 #include <kanawha/stddef.h>
 #include <kanawha/string.h>
+#include <kanawha/printk.h>
 
 static DECLARE_RLOCK(irq_domain_map_lock);
 static DECLARE_PTREE(irq_domain_map);
@@ -360,6 +361,12 @@ int
 unmask_irq_desc_single(struct irq_desc *desc)
 {
     int res;
+
+    printk("unmasking IRQ %ld \"",
+            desc->irq);
+    describe_irq(do_printk, desc->irq);
+    do_printk("\"\n");
+
     if(desc->dev != NULL)
     {
         res = irq_dev_unmask_irq(desc->dev, desc->hwirq);
@@ -600,6 +607,8 @@ describe_irq_desc(printk_f *printer, struct irq_desc *desc)
         irq_dev_describe_irq(desc->dev, desc->hwirq, buffer, BUFLEN);
         buffer[BUFLEN - 1] = '\0';
         (*printer)(buffer);
+    } else {
+        (*printer)("irq-%ld", desc->irq);
     }
 #undef BUFLEN
     return 0;

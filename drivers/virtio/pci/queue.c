@@ -17,6 +17,15 @@ virtio_pci_queue_used_notification_irq_handler(struct excp_state *excp_state,
     int res;
 
     struct virtio_pci_queue *queue = action->handler_data.priv_data;
+    struct virtio_pci_device *device =
+        container_of(
+            queue->queue.device,
+            struct virtio_pci_device,
+            virtio_dev);
+
+    if(device->func->irq_mode == PCI_IRQ_MODE_INTX) {
+        // TODO need to read/clear the ISR
+    }
 
     dprintk("virtio_pci_queue: queue=%p, Queue(0x%lx) IRQ Handler!\n",
             &queue->queue,
@@ -116,6 +125,7 @@ virtio_pci_create_queue(struct virtio_pci_device *device, uint16_t queue_no)
         return NULL;
     }
 
+    printk("unmasking virtio queue IRQ...\n");
     unmask_irq(irq);
 
     return queue;
