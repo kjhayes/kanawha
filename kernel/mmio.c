@@ -160,7 +160,7 @@ mmio_map(void __phys *paddr, size_t size)
                                 page_base,
                                 total_size,
                                 VMEM_REGION_WRITE | VMEM_REGION_READ |
-                                    VMEM_REGION_NOCACHE);
+                                VMEM_REGION_NOCACHE);
 
     if(res)
     {
@@ -175,7 +175,26 @@ mmio_map(void __phys *paddr, size_t size)
 
     void *addr = (void *)(mmio_region_base + region_offset);
 
-    dprintk("mmio_map(%p, 0x%lx) -> %p\n", page_base, total_size, addr);
+
+#ifdef CONFIG_DEBUGGING
+    {
+        printk("mmio_map(%p, 0x%lx) -> %p\n", page_base, total_size, addr);
+        void __phys *mapped;
+        res = vmem_map_translate(
+                vmem_map_get_current(),
+                addr,
+                &mapped);
+        if(res) {
+            panic("failed to translate MMIO region virtual -> physical mapping after mmio_map!");
+        }
+
+        if(mapped != paddr) {
+            panic("failed to map MMIO region expected paddr=%p, got paddr=%p!",
+                    paddr,
+                    mapped);
+        }
+    }
+#endif
 
     return (void __mmio *)addr + pad_below;
 }
