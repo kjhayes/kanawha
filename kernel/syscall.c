@@ -336,7 +336,7 @@ handle_syscall(syscall_id_t id, struct syscall_args *args, uint64_t *ret_out)
 
 #ifdef CONFIG_STRACE_TIME_SYSCALLS
     time_t __end_time = current_timestamp();
-    duration_t __handler_duration = __end_time - __start_time;
+    duration_t __handler_duration = duration_between(__start_time, __end_time);
 
     switch(id)
     {
