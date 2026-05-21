@@ -178,8 +178,7 @@ riscv64_smp_bringup_aps(void)
         trampoline->stack = ((void *)ap_bringup_virtual_stack) +
                             (1ULL << AP_BRINGUP_STACK_ORDER);
 
-        uint64_t satp = riscv64_format_satp(map->arch_state.root_table,
-                                            map->arch_state.root_level);
+        uint64_t satp = riscv64_vmem_map_get_satp(map);
 
         int status = sbi_hart_get_status(hartid);
         if(status == SBI_HART_STATE_STOPPED)

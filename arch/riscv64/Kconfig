@@ -49,6 +49,14 @@ config RISCV64_SV57
   bool "Assume Sv57 Paging Support"
   default n
 
+config RISCV64_IMPLEMENT_VMEM_DIRECTLY
+  bool "Implement vmem Directly"
+  default y
+  select IMPLEMENT_VMEM_DIRECTLY
+  help
+    Provide implementation of vmem subsystem directly
+    instead of using the paging subsystem.
+
 config RISCV64_SBI_DEBUG_CONSOLE
   bool "Use SBI Debug Console"
   default y

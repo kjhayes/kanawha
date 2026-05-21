@@ -104,7 +104,7 @@ x64_paging_get_entry_flags(int level,
     }
     else
     {
-        flags |= PAGING_ENTRY_IS_TABLE;
+        flags &= ~PAGING_ENTRY_IS_LEAF;
     }
 
     switch(level)
@@ -204,7 +204,7 @@ x64_paging_modify_entry_flags(int level,
     switch(level)
     {
     case 0:
-        disallowed_set = 0 | PAGING_ENTRY_IS_TABLE | PAGING_ENTRY_SHARED;
+        disallowed_set = 0 | PAGING_ENTRY_SHARED;
         disallowed_clear = 0 | PAGING_ENTRY_IS_LEAF;
         break;
     case 1:
@@ -213,11 +213,11 @@ x64_paging_modify_entry_flags(int level,
         break;
     case 3:
         disallowed_set = 0 | PAGING_ENTRY_IS_LEAF;
-        disallowed_clear = 0 | PAGING_ENTRY_IS_TABLE;
+        disallowed_clear = 0;
         break;
     case 4:
         disallowed_set = 0 | PAGING_ENTRY_IS_LEAF;
-        disallowed_clear = 0 | PAGING_ENTRY_IS_TABLE;
+        disallowed_clear = 0;
         break;
     }
 

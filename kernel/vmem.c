@@ -343,10 +343,12 @@ vmem_map_map_region(struct vmem_map *map,
             ptree_get_max_less_or_eq(&map->mapping_root, (uintptr_t)end - 1);
         if(overlap_check_node != NULL)
         {
+            DEBUG_ASSERT(KERNEL_ADDR(overlap_check_node));
             struct vmem_region_ref *overlap_check_region =
                 container_of(overlap_check_node,
                              struct vmem_region_ref,
                              map_node);
+            DEBUG_ASSERT(KERNEL_ADDR(overlap_check_region));
             void *overlap_end = overlap_check_region->virt_addr +
                                 overlap_check_region->region->size;
             if(overlap_end > base)
@@ -888,6 +890,7 @@ vmem_percpu_init(void)
     {
         return -EDEFER;
     }
+    arch_dump_vmem_map(do_printk, default_map);
     return vmem_map_activate(default_map);
 }
 declare_init_desc(enable_vmem,
@@ -913,3 +916,47 @@ vmem_verify_access(void *loc, size_t size, unsigned long flags)
 
     return 0;
 }
+
+int
+vmem_map_address_is_mapped(
+        struct vmem_map *map,
+        void *vaddr)
+{
+    int res;
+    unsigned long flags;
+    res = arch_vmem_map_walk(
+            map,
+            vaddr,
+            NULL,
+            &flags);
+    if(res < 0) {
+        return res;
+    }
+    if(flags & VMEM_ACCESS_PRESENT) {
+        return 1;
+    }
+    return 0;
+}
+
+int
+vmem_map_translate(
+        struct vmem_map *map,
+        void *vaddr,
+        void __phys **phys_out)
+{
+    int res;
+    unsigned long flags;
+    res = arch_vmem_map_walk(
+            map,
+            vaddr,
+            phys_out,
+            &flags);
+    if(res) {
+        return res;
+    }
+    if(!(flags & VMEM_ACCESS_PRESENT)) {
+        return -ENXIO;
+    }
+    return 0;
+}
+

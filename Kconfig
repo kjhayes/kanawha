@@ -13,10 +13,12 @@ choice
     bool "RISCV64"
     select DEVICETREE
     select DEVICETREE_REQUIRED
+    select PAGING
   config ARM64
     bool "ARM64"
     select DEVICETREE
     select DEVICETREE_REQUIRED
+    select PAGING
 endchoice
 
 choice

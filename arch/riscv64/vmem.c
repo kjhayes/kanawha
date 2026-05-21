@@ -395,8 +395,6 @@ create_sv_table_entry(uint64_t *entry,
 
     *entry = value;
     return 0;
-
-    return 0;
 }
 static int
 create_sv_shared_table_entry(uint64_t *entry,
@@ -415,8 +413,6 @@ create_sv_shared_table_entry(uint64_t *entry,
     }
 
     *entry = value;
-    return 0;
-
     return 0;
 }
 
@@ -1052,8 +1048,7 @@ arch_vmem_map_unmap_region(struct vmem_map *map, struct vmem_region_ref *ref)
 int
 arch_vmem_map_activate(struct vmem_map *map)
 {
-    uint64_t satp_value = riscv64_format_satp(map->arch_state.root_table,
-                                              map->arch_state.root_level);
+    uint64_t satp_value = riscv64_vmem_map_get_satp(map);
 
     write_csr(satp, satp_value);
 
@@ -1290,83 +1285,3 @@ arch_dump_vmem_map(printk_f *printer, struct vmem_map *map)
                             map->arch_state.root_level);
 }
 
-static struct vmem_region *kernel_map_region = NULL;
-
-static int
-riscv64_map_identity_map_region(void)
-{
-    int res;
-
-    size_t map_size = (arch_kernel_phys_size() + 0xFFF) & ~0xFFF;
-    kernel_map_region = vmem_region_create_direct(
-        arch_kernel_phys_start(),
-        map_size,
-        VMEM_REGION_EXEC | VMEM_REGION_WRITE | VMEM_REGION_READ);
-
-    if(kernel_map_region == NULL)
-    {
-        eprintk("OOM Error when initializing default kernel vmem_region!\n");
-        return -ENOMEM;
-    }
-
-    res = vmem_force_mapping(kernel_map_region,
-                             (void *)CONFIG_RISCV64_KERNEL_VIRTUAL_BASE);
-    if(res)
-    {
-        eprintk("Failed to map kernel vmem_region into default vmem_map! "
-                "(err=%s)\n",
-                errnostr(res));
-        return res;
-    }
-
-    return 0;
-}
-
-declare_init_desc(vmem,
-                  riscv64_map_identity_map_region,
-                  "Creating Kernel Virtual Memory Region");
-
-// Returns 0 if not-present 1 if present, -ERRNO on error
-int
-riscv64_vmem_map_page_is_present(struct vmem_map *map, void *vaddr)
-{
-    int res;
-    int irq_flags = spin_lock_irq_save(&map->lock);
-
-    int level = map->arch_state.root_level;
-    struct riscv64_sv_page_table __phys *phys_table =
-        map->arch_state.root_table;
-
-    while(level >= 0)
-    {
-        size_t index = sv_level_index_of_addr(level, vaddr);
-        struct riscv64_sv_page_table *table = __va(phys_table);
-        uint64_t *entry = &table->entries[index];
-        if(!(*entry & RISCV64_SV_VALID))
-        {
-            // Not-present
-            spin_unlock_irq_restore(&map->lock, irq_flags);
-            return 0;
-        }
-        if(RISCV64_SV_ENTRY_IS_LEAF(*entry))
-        {
-            // It is present
-            spin_unlock_irq_restore(&map->lock, irq_flags);
-            return 1;
-        }
-
-        if(level == 0)
-        {
-            // Invalid page table
-            spin_unlock_irq_restore(&map->lock, irq_flags);
-            return -EINVAL;
-        }
-
-        // It is a table, traverse
-        phys_table = sv_pointer_from_entry(*entry);
-        level--;
-    }
-
-    spin_unlock_irq_restore(&map->lock, irq_flags);
-    return 0;
-}

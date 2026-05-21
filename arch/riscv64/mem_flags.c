@@ -17,6 +17,7 @@ static void __phys *volatile kernel_boot_start =
 static void __phys *volatile kernel_boot_end = (void __phys *)__kernel_boot_end;
 
 size_t __riscv64_identity_map_offset = 0;
+size_t __riscv64_identity_map_size = 0;
 static void __phys *kernel_phys_base = NULL;
 
 int

@@ -5,9 +5,6 @@
 #include <kanawha/pointer.h>
 #include <kanawha/types.h>
 
-struct vmem_map;
-struct vmem_region;
-
 /*
  * This is an abstraction for page tables
  * on most modern architectures
@@ -40,8 +37,7 @@ struct paging_mode
 
 #define PAGING_ENTRY_PRESENT (1ULL << 0)
 #define PAGING_ENTRY_IS_LEAF (1ULL << 1)
-#define PAGING_ENTRY_IS_TABLE (1ULL << 2)
-#define PAGING_ENTRY_SHARED (1ULL << 3)
+#define PAGING_ENTRY_MAP (1ULL << 3)
 #define PAGING_ENTRY_READABLE (1ULL << 4)
 #define PAGING_ENTRY_WRITEABLE (1ULL << 5)
 #define PAGING_ENTRY_EXECUTABLE (1ULL << 6)
@@ -80,14 +76,12 @@ dump_paging_entry_flags(printk_f *printer, unsigned long flags)
     if(flags & PAGING_ENTRY_IS_LEAF)
     {
         (*printer)("[LEAF]");
-    }
-    if(flags & PAGING_ENTRY_IS_TABLE)
-    {
+    } else {
         (*printer)("[TABLE]");
     }
-    if(flags & PAGING_ENTRY_SHARED)
+    if(flags & PAGING_ENTRY_MAP)
     {
-        (*printer)("[SHARED]");
+        (*printer)("[MAP]");
     }
     if(flags & PAGING_ENTRY_READABLE)
     {
@@ -118,42 +112,17 @@ dump_paging_entry_flags(printk_f *printer, unsigned long flags)
 
 #define PAGING_PT_ENTRY_BUFLEN (8)
 
-struct vmem_region_paging_state
-{
-    int pt_level;
-
-    int entry_only;
-    uint8_t pt_entry_buffer[PAGING_PT_ENTRY_BUFLEN];
-
-    int paged_max_entry_level;
-
-    void __phys *pt_table;
-};
-struct vmem_map_paging_state
-{
-    int pt_level;
-    void __phys *pt_root;
-};
-
 // To be implemented by any architecture which
 // makes use of this subsystem.
 
 extern const struct paging_mode *
 arch_paging_mode(void);
 
-#ifdef CONFIG_VMEM_VIA_PAGING
-extern struct vmem_map_paging_state *
-arch_get_vmem_map_paging_state(struct vmem_map *map);
-
-extern struct vmem_region_paging_state *
-arch_get_vmem_region_paging_state(struct vmem_region *map);
-
-extern int
-arch_paging_set_pt_root(void __phys *pt_root, int root_level);
-
-extern int
-arch_paging_flush_tlb(void __phys *cond_pt_root, int force);
-#endif /* CONFIG_VMEM_VIA_PAGING */
+static inline const struct paging_mode *
+current_paging_mode(void)
+{
+    return arch_paging_mode();
+}
 
 // Helper functions
 static inline unsigned int
@@ -165,7 +134,7 @@ paging_mode_num_levels(const struct paging_mode *mode)
 static inline order_t
 paging_level_num_entries_order(const struct paging_mode *mode, int level)
 {
-    DEBUG_ASSERT(level < mode->num_levels);
+    DEBUG_ASSERT_MSG(level < mode->num_levels, "level=%d, mode->num_levels=%d", level, mode->num_levels);
     return mode->level_num_entries_order[level];
 }
 
@@ -178,7 +147,7 @@ paging_level_num_entries(const struct paging_mode *mode, int level)
 static inline order_t
 paging_level_entry_order(const struct paging_mode *mode, int level)
 {
-    DEBUG_ASSERT(level < mode->num_levels);
+    DEBUG_ASSERT_MSG(level < mode->num_levels, "level=%d, mode->num_levels=%d", level, mode->num_levels);
     return mode->level_entry_order[level];
 }
 static inline size_t
@@ -203,7 +172,7 @@ paging_level_table_size(const struct paging_mode *mode, int level)
 static inline order_t
 paging_level_entry_region_order(const struct paging_mode *mode, int level)
 {
-    DEBUG_ASSERT(level < mode->num_levels);
+    DEBUG_ASSERT_MSG(level < mode->num_levels, "level=%d, mode->num_levels=%d", level, mode->num_levels);
     return mode->level_entry_region_order[level];
 }
 
@@ -230,7 +199,7 @@ paging_level_table_region_size(const struct paging_mode *mode, int level)
 static inline int
 paging_level_can_be_leaf(const struct paging_mode *mode, int level)
 {
-    DEBUG_ASSERT(level < mode->num_levels);
+    DEBUG_ASSERT_MSG(level < mode->num_levels, "level=%d, mode->num_levels=%d", level, mode->num_levels);
     return mode->level_flags[level] & PAGING_LEVEL_FLAG_CAN_BE_LEAF;
 }
 

@@ -7,6 +7,7 @@
 #include <kanawha/section.h>
 #include <kanawha/types.h>
 #include <kanawha/vmem.h>
+#include <kanawha/mem_flags.h>
 
 #ifdef CONFIG_RISCV64_SV57
 #define ROOT_PAGE_LEVEL 4
@@ -354,3 +355,40 @@ riscv64_map_identity_map_region(void)
 declare_init_desc(vmem,
                   riscv64_map_identity_map_region,
                   "Creating Identity Map Virtual Memory Region");
+
+static struct vmem_region *kernel_map_region = NULL;
+
+static int
+riscv64_map_kernel_region(void)
+{
+    int res;
+
+    size_t map_size = (arch_kernel_phys_size() + 0xFFF) & ~0xFFF;
+    kernel_map_region = vmem_region_create_direct(
+        arch_kernel_phys_start(),
+        map_size,
+        VMEM_REGION_EXEC | VMEM_REGION_WRITE | VMEM_REGION_READ);
+
+    if(kernel_map_region == NULL)
+    {
+        eprintk("OOM Error when initializing default kernel vmem_region!\n");
+        return -ENOMEM;
+    }
+
+    res = vmem_force_mapping(kernel_map_region,
+                             (void *)CONFIG_RISCV64_KERNEL_VIRTUAL_BASE);
+    if(res)
+    {
+        eprintk("Failed to map kernel vmem_region into default vmem_map! "
+                "(err=%s)\n",
+                errnostr(res));
+        return res;
+    }
+
+    return 0;
+}
+
+declare_init_desc(vmem,
+                  riscv64_map_kernel_region,
+                  "Creating Kernel Virtual Memory Region");
+

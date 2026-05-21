@@ -76,6 +76,7 @@ riscv64_boot_bsp_init(void __phys *kernel_phys_base,
     clear_percpu();
 
     __riscv64_identity_map_offset = (size_t)identity_map_base;
+    __riscv64_identity_map_size = (1ULL << CONFIG_RISCV64_IDENTITY_MAP_ORDER);
 
     klog_init();
     printk_init();

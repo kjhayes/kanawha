@@ -4,7 +4,7 @@
 #include <kanawha/attribute.h>
 #include <kanawha/thread.h>
 
-#define KERNEL_THREAD_STACK_ORDER 16
+#define KERNEL_THREAD_STACK_ORDER 21
 
 extern void
 __riscv64_thread_entry(void);

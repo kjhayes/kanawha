@@ -181,7 +181,6 @@ vmem_map_handle_page_fault(struct excp_state *state,
                            void *faulting_address,
                            unsigned long flags,
                            struct vmem_map *map);
-
 int
 vmem_percpu_init(void);
 
@@ -220,6 +219,20 @@ arch_vmem_paged_region_unmap(struct vmem_region *region,
                              size_t offset,
                              size_t size);
 
+#define VMEM_ACCESS_PRESENT (1UL << 0)
+#define VMEM_ACCESS_READABLE (1UL << 1)
+#define VMEM_ACCESS_WRITEABLE (1UL << 2)
+#define VMEM_ACCESS_EXECUTABLE (1UL << 3)
+#define VMEM_ACCESS_USER (1UL << 4)
+#define VMEM_ACCESS_KERNEL (1UL << 5)
+#define VMEM_ACCESS_NOCACHE (1UL << 6)
+int
+arch_vmem_map_walk(
+        struct vmem_map *map,
+        void *vaddr,
+        void __phys **phys_out,
+        unsigned long *vmem_access_flags);
+
 void
 arch_dump_vmem_map(printk_f *printer, struct vmem_map *map);
 
@@ -229,5 +242,15 @@ arch_dump_vmem_map(printk_f *printer, struct vmem_map *map);
 #define VMEM_VERIFY_ACCESS_EXEC (1ULL << 3)
 int
 vmem_verify_access(void *loc, size_t size, unsigned long flags);
+
+int
+vmem_map_address_is_mapped(
+        struct vmem_map *map,
+        void *vaddr);
+int
+vmem_map_translate(
+        struct vmem_map *map,
+        void *vaddr,
+        void __phys **phys_out);
 
 #endif

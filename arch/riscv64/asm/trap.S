@@ -52,7 +52,13 @@ __riscv64_trap_entry_kernel:
 __riscv64_trap_entry_common:
 
     // We should be running on the kernel stack now
+    csrr t0, stval
+    bne sp, t0, __riscv64_trap_entry_checked_stack
 
+__riscv64_trap_entry_corrupt_stack:
+    j .
+
+__riscv64_trap_entry_checked_stack:
     // Save our stack
     addi sp, sp, -8
     ld t0, 16(tp)
