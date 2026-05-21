@@ -102,6 +102,8 @@ kheap_grow(struct kheap *heap)
     //       (uintptr_t)page_size,
     //       (uintptr_t)heap->mapped);
 
+    DEBUG_ASSERT(KERNEL_ADDR(heap));
+    DEBUG_ASSERT(KERNEL_ADDR(heap->region));
     res = vmem_paged_region_map(heap->region,
                                 heap->mapped,
                                 page_phys,
