@@ -74,11 +74,13 @@ destroy_render_ctx(struct render_ctx *ctx)
 }
 
 int
-render_ctx_begin(struct render_ctx *ctx,
-                 int layer,
-                 struct gfx_layout *gfx,
-                 void **buffer,
-                 size_t *buflen)
+render_ctx_begin(
+        struct terminal_data *tdata,
+        struct render_ctx *ctx,
+        int layer,
+        struct gfx_layout *gfx,
+        void **buffer,
+        size_t *buflen)
 {
     switch(ctx->type)
     {
@@ -120,7 +122,7 @@ render_ctx_begin(struct render_ctx *ctx,
 }
 
 int
-render_ctx_end(struct render_ctx *ctx, int layer, int flush)
+render_ctx_end(struct terminal_data *tdata, struct render_ctx *ctx, int layer, int flush)
 {
     switch(ctx->type)
     {

@@ -448,7 +448,6 @@ input_poll(struct input_ctx *ctx)
         res = poll(pollfd, 1, 0);
         return (res > 0 && (pollfd[0].revents & (POLLIN | POLLPRI)));
     }
-    break;
     default:
         return 0;
     }

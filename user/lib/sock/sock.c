@@ -25,6 +25,9 @@ sock_create_socket(const char *name)
     char SOCK_NUM_BUFFER[64];
     snprintf(SOCK_NUM_BUFFER, 64, "%d", socket_fd);
     SOCK_NUM_BUFFER[64 - 1] = '\0';
+
+    printf("Created socket \"%s\" -> %d\n",
+            name, (int)socket_fd);
     setenv(name, SOCK_NUM_BUFFER, 1);
 
     return 0;

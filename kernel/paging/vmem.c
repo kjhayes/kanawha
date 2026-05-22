@@ -144,6 +144,9 @@ arch_vmem_region_init_paged(struct vmem_region *region)
     if(root_level > 2) {
         max_leaf_level = 1;
     }
+    if(root_level > 3) {
+        max_leaf_level = 2;
+    }
 
     res = pagetable_init(
             &state->pagetable,

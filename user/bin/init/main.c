@@ -15,7 +15,13 @@
 #include "log.h"
 #include "root.h"
 
+#ifdef __x86_64__
+#define TERM_PATH "/dev/term/COM1"
+#else
+#ifdef __riscv64__
 #define TERM_PATH "/dev/term/serial"
+#endif
+#endif
 
 // #define WINDD_FB_PATH_STR "/dev/fb/vga"
 // #define WINDD_FB_MODE_STR "1"

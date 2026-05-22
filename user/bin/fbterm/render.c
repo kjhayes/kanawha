@@ -291,7 +291,7 @@ render_update(struct terminal_data *tdata,
 
     while(1)
     {
-        res = render_ctx_begin(ctx, layer_i, &layout, &buffer, &buflen);
+        res = render_ctx_begin(tdata, ctx, layer_i, &layout, &buffer, &buflen);
         if(res)
         {
             break;
@@ -323,7 +323,7 @@ render_update(struct terminal_data *tdata,
                    buflen,
                    &render_changed);
 
-        render_ctx_end(ctx, layer_i, render_changed || force);
+        render_ctx_end(tdata, ctx, layer_i, render_changed || force);
 
         layer_i++;
     }
