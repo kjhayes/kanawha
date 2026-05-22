@@ -135,6 +135,8 @@ sock_connection_write_thread(void *_conn)
         if(res) {
             // Weird but we will ignore it...
         }
+        // Writes are non-blocking for now...
+        usleep(10000); // 10ms sleep
     }
     return 0;
 }
@@ -146,6 +148,14 @@ sock_connection_init(
 {
     int res;
 
+    res = kanawha_sys_faccess(
+            conn->conn_fd,
+            FACCESS_NON_BLOCKING,
+            FACCESS_MODE_CLEAR);
+    if(res) {
+        return res;
+    }
+            
     res = sem_init(&conn->read_lock, 1, 1);
     if(res) {
         return res;
