@@ -58,9 +58,7 @@ riscv64_vmem_page_fault_handler(struct excp_state *gen_excp_state,
     void *faulting_addr = (void *)state->stval;
 
     // We need to walk the page table to determine if the page is present
-    printk("walking page table! (stval=%p) (pf_flags=0x%lx)\n", faulting_addr, flags);
     int present = vmem_map_address_is_mapped(cur_map, faulting_addr);
-    printk("walked page table!\n");
     if(present < 0)
     {
         panic("Invalid page table found on page fault table walk! "

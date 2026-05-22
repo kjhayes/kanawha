@@ -30,6 +30,7 @@ kmalloc_kheap_init(void)
     int res;
 
     uintptr_t vbase;
+    virt_mem_flags_dump();
     res = mem_flags_find_and_reserve(get_virt_mem_flags(),
                                      (1ULL << CONFIG_HEAP_SIZE_ORDER),
                                      CONFIG_HEAP_ALIGN_ORDER,
@@ -39,6 +40,7 @@ kmalloc_kheap_init(void)
                                      VIRT_MEM_FLAGS_HEAP,
                                      VIRT_MEM_FLAGS_AVAIL,
                                      &vbase);
+    virt_mem_flags_dump();
     if(res)
     {
         eprintk("Failed to find virtual memory region to put kernel heap!\n");

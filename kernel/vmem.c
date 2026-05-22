@@ -366,9 +366,12 @@ vmem_map_map_region(struct vmem_map *map,
             if(overlap_end > base)
             {
                 // We overlap with this region in virtual memory
-                eprintk("Found overlapping region when trying to map "
-                        "vmem_region "
-                        "into vmem_map!\n");
+                eprintk("Found overlapping region [%p-%p) when trying to map "
+                        "vmem_region [%p-%p) into vmem_map!\n",
+                        overlap_check_region->virt_addr,
+                        overlap_end,
+                        base,
+                        end);
                 res = -EEXIST;
                 goto err0;
             }

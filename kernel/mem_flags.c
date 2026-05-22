@@ -462,6 +462,9 @@ mem_flags_find_and_reserve(struct mem_flags *map,
         uintptr_t align_offset =
             (align_size - (entry->base & align_mask)) & align_mask;
 
+        if(align_offset > entry->size) {
+            continue;
+        }
         if(entry->size - align_offset < size)
         {
             continue;

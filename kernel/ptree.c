@@ -8,6 +8,8 @@
 static inline int
 ptree_insert_bst(struct ptree *tree, struct ptree_node *node)
 {
+    DEBUG_ASSERT(KERNEL_ADDR(tree));
+    DEBUG_ASSERT(KERNEL_ADDR(node));
     if(tree->root == NULL)
     {
         tree->root = node;
@@ -19,6 +21,7 @@ ptree_insert_bst(struct ptree *tree, struct ptree_node *node)
         struct ptree_node *potential_parent = tree->root;
         while(1)
         {
+            DEBUG_ASSERT(KERNEL_ADDR(potential_parent));
             if(potential_parent->key > node->key)
             {
                 if(potential_parent->left == NULL)
