@@ -37,6 +37,18 @@ DECLARE_LOCAL_PERF_TIMER(vmem_map_create_perf_timer)
 #define TIMER_START(_TIMER) perf_timer_start(&_TIMER)
 #define TIMER_STOP(_TIMER) perf_timer_stop(&_TIMER)
 
+static inline void
+dump_pf_flags(printk_f *printer, unsigned long flags)
+{
+    (*printer)("%s%s%s%s%s",
+            (flags & PF_FLAG_NOT_PRESENT) ? "[NOT-PRESENT]" : "",
+            (flags & PF_FLAG_READ) ? "[READ]" : "",
+            (flags & PF_FLAG_WRITE) ? "[WRITE]" : "",
+            (flags & PF_FLAG_EXEC) ? "[EXEC]" : "",
+            (flags & PF_FLAG_USERMODE) ? "[USER]" : ""
+            );
+}
+
 static int
 init_vmem_mapping_allocators(void)
 {
@@ -721,50 +733,6 @@ vmem_map_unhandled_user_page_fault(struct excp_state *state,
     }
 
     // We need to terminate the process
-
-    // #ifdef CONFIG_DEBUG_TRACK_PROCESS_EXEC
-    //     eprintk("Terminating PID(%ld) [EXEC(%s)] for Invalid Memory Access "
-    //             "(user_ip=%p) (addr=%p)!\n"
-    //             "\tattempted_access_flags={%s%s%s%s%s}\n",
-    //             (sl_t)process->id,
-    //             process->tracked_exec == NULL ? "???" :
-    //             process->tracked_exec, process->user_ip, faulting_address,
-    //             access_flags & PF_FLAG_READ ? "[READ]" : "",
-    //             access_flags & PF_FLAG_WRITE ? "[WRITE]" : "",
-    //             access_flags & PF_FLAG_EXEC ? "[EXEC]" : "",
-    //             access_flags & PF_FLAG_USERMODE ? "[USERMODE]" : "",
-    //             access_flags & PF_FLAG_NOT_PRESENT ? "" : "[PRESENT]");
-    //     uint8_t inst_bytes[16];
-    //     void __user *line_start =
-    //         (void __user *)((uintptr_t)process->user_ip & ~0xF);
-    //     size_t line_offset = (size_t)((uintptr_t)process->user_ip & 0xF);
-    //     res = process_read_usermem(process, inst_bytes, line_start, 16);
-    //     if(res)
-    //     {
-    //         eprintk("Failed to read instruction bytes: %s!\n",
-    //         errnostr(res));
-    //     }
-    //     else
-    //     {
-    //         eprintk("Instruction Bytes: \n");
-    //         for(size_t i = 0; i < 16; i++)
-    //         {
-    //             uint8_t b = inst_bytes[i];
-    //             eprintk("%s 0x%x\n", i == line_offset ? ">" : " ", b);
-    //         }
-    //     }
-    //     arch_excp_dump_state(state, do_printk);
-    //     mmap_dump(do_printk, process->mmap);
-    // #else
-    //     eprintk("Terminating PID(%ld) for Invalid Memory Access
-    //     (user_ip=%p)!\n",
-    //             (sl_t)process->id,
-    //             process->user_ip);
-    // #endif
-    //     printk("Sending MEMFAULT to process %ld for unhandled page fault!\n",
-    //            (sl_t)process->id);
-    //     arch_excp_dump_state(state, do_printk);
-
     res = signal_deliver(process, SIGNAL_ID_MEMFAULT, 0);
     if(res)
     {
@@ -773,23 +741,18 @@ vmem_map_unhandled_user_page_fault(struct excp_state *state,
         res = process_terminate(-EFAULT);
         if(res)
         {
-            panic("Failed to terminate process which could not be "
-                  "delivered "
-                  "MEMFAULT (err=%s)\n",
-                  errnostr(res));
+            do_panic_printk("Failed to signal process MEMFAULT (err=%s) (faulting-address=%p) (flags=",
+                    errnostr(res),
+                    faulting_address);
+            dump_pf_flags(do_panic_printk, access_flags);
+            do_panic_printk(")\n");
+            arch_dump_vmem_map(do_panic_printk, vmem_map_get_current());
+            panic("Failed to terminate process!\n");
         }
         thread_abandon();
     }
 
     return 0;
-
-    // #ifdef CONFIG_DEBUGGING
-    //     panic("Panicking on process termination because signals are not
-    //     implemented yet!\n");
-    // #endif
-    //
-    //     thread_abandon();
-    //     return 0;
 }
 
 int
@@ -890,7 +853,7 @@ vmem_percpu_init(void)
     {
         return -EDEFER;
     }
-    arch_dump_vmem_map(do_printk, default_map);
+    // arch_dump_vmem_map(do_printk, default_map);
     return vmem_map_activate(default_map);
 }
 declare_init_desc(enable_vmem,

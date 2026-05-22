@@ -139,9 +139,10 @@
 
 // Kanawha Custom Fields
 
-// Uses the available bit 9 to keep track if this page table
-// is owned by a vmem_map or a vmem_region (1=map, 0=region)
+#define X64_PT_LEAF_VMEM_SHARED_MAP (1ULL << 9)
+#define X64_PD_LEAF_VMEM_SHARED_MAP (1ULL << 9)
 #define X64_PD_ENTRY_VMEM_SHARED_MAP (1ULL << 9)
+#define X64_PDPT_LEAF_VMEM_SHARED_MAP (1ULL << 9)
 #define X64_PDPT_ENTRY_VMEM_SHARED_MAP (1ULL << 9)
 #define X64_PML4_ENTRY_VMEM_SHARED_MAP (1ULL << 9)
 #define X64_PML5_ENTRY_VMEM_SHARED_MAP (1ULL << 9)

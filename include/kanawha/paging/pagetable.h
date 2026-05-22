@@ -9,7 +9,6 @@ struct pagetable
     int root_level;
     int max_leaf_level;
     int min_map_level;
-    int max_map_level;
 
     order_t root_table_order;
     void __phys *root_table;
@@ -21,7 +20,6 @@ pagetable_init(
         int root_level,
         int max_leaf_level,
         int min_map_level,
-        int max_map_level,
         unsigned long flags);
 int
 pagetable_deinit(

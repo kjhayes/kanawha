@@ -59,6 +59,12 @@ paging_free_raw_table(const struct paging_mode *mode, void __phys *table, int le
             continue;
         }
 
+        // Don't free mapped in entries
+        if(entry_flags & PAGING_ENTRY_MAP)
+        {
+            continue;
+        }
+
         // This must be a present table
         void __phys *subtable;
         res = paging_entry_read_addr(mode, level, entry, &subtable);
@@ -92,7 +98,6 @@ pagetable_init(
         int root_level,
         int max_leaf_level,
         int min_map_level,
-        int max_map_level,
         unsigned long flags)
 {
     int res;
@@ -100,7 +105,6 @@ pagetable_init(
     pt->root_level = root_level;
     pt->max_leaf_level = max_leaf_level;
     pt->min_map_level = min_map_level;
-    pt->max_map_level = max_map_level;
 
     const struct paging_mode *mode = current_paging_mode();
     res = paging_alloc_raw_empty_table(mode, &pt->root_table, pt->root_level);
@@ -229,6 +233,20 @@ pagetable_drill_page(
 {
     int res;
 
+    dprintk("pagetable_drill: v=%p, p=%p, flags=(%s%s%s%s%s%s%s%s%s)\n",
+            vaddr,
+            phys,
+            drilled_entry_flags & PAGING_ENTRY_PRESENT ? "[PRESENT]" : "",
+            drilled_entry_flags & PAGING_ENTRY_MAP ? "[MAP]" : "",
+            drilled_entry_flags & PAGING_ENTRY_IS_LEAF ? "[LEAF]" : "",
+            drilled_entry_flags & PAGING_ENTRY_READABLE ? "[READ]" : "",
+            drilled_entry_flags & PAGING_ENTRY_WRITEABLE ? "[WRITE]" : "",
+            drilled_entry_flags & PAGING_ENTRY_EXECUTABLE ? "[EXEC]" : "",
+            drilled_entry_flags & PAGING_ENTRY_USER_ACCESS ? "[USER]" : "",
+            drilled_entry_flags & PAGING_ENTRY_KERNEL_ACCESS ? "[KERNEL]" : "",
+            drilled_entry_flags & PAGING_ENTRY_CACHE_DISABLE ? "[NOCACHE]" : ""
+            );
+
     const struct paging_mode *mode = current_paging_mode();
 
     int cur_table_level = pt->root_level;
@@ -313,6 +331,49 @@ pagetable_drill_page(
 
     void *drill_table_virt = __va(drill_table_phys);
     void *drill_entry = drill_table_virt + (drill_vindex * entry_size);
+
+    do { // See what we are overwriting
+        unsigned long overwritten_flags;
+        res = paging_entry_get_flags(
+                mode,
+                drill_table_level,
+                drill_entry,
+                &overwritten_flags);
+        if(res) {
+            return res;
+        }
+        if(overwritten_flags & PAGING_ENTRY_MAP) {
+            break;
+        }
+        if(!(overwritten_flags & PAGING_ENTRY_PRESENT)) {
+            break;
+        }
+        if(overwritten_flags & PAGING_ENTRY_IS_LEAF) {
+            break;
+        }
+
+        // This a present (non-mapped) table,
+        // get it's physical address and free the tables
+
+        void __phys *overwritten_phys;
+        res = paging_entry_read_addr(
+                mode,
+                drill_table_level,
+                drill_entry,
+                &overwritten_phys);
+        if(res) {
+            return res;
+        }
+
+        res = paging_free_raw_table(
+                mode,
+                overwritten_phys,
+                drill_table_level-1);
+        if(res) {
+            return res;
+        }
+
+    } while(0);
 
     res = paging_create_pt_entry(
             mode,
@@ -481,8 +542,8 @@ pagetable_walk_drill_page(
     return 0;
 }
 
-int
-pagetable_drill(
+static int
+pagetable_drill_direct(
         struct pagetable *pt,
         void *vaddr,
         void __phys *phys,
@@ -544,7 +605,7 @@ pagetable_drill(
                 viter,
                 piter,
                 drill_level,
-                entry_flags | PAGING_ENTRY_IS_LEAF | PAGING_ENTRY_PRESENT);
+                entry_flags);
         if(res) {
             return res;
         }
@@ -558,17 +619,33 @@ pagetable_drill(
 }
 
 int
+pagetable_drill(
+        struct pagetable *pt,
+        void *vaddr,
+        void __phys *phys,
+        size_t size,
+        unsigned long entry_flags)
+{
+    return pagetable_drill_direct(
+            pt,
+            vaddr,
+            phys,
+            size,
+            entry_flags | PAGING_ENTRY_IS_LEAF | PAGING_ENTRY_PRESENT);
+}
+
+int
 pagetable_undrill(
         struct pagetable *pt,
         void *vaddr,
         size_t size)
 {
-    return pagetable_drill(
+    return pagetable_drill_direct(
             pt,
             vaddr,
             (void __phys *)0,
             size,
-            0);
+            PAGING_ENTRY_IS_LEAF);
 }
 
 // Map
@@ -592,16 +669,13 @@ pagetable_map(
     }
 
     // minimum of two maximums
-    int max_level = child->max_map_level < parent->max_leaf_level
-                  ? child->max_map_level : parent->max_leaf_level;
-
     void *viter = vaddr;
     void *child_viter = NULL;
     size_t remaining = size;
     while(remaining) {
         order_t page_order;
         int drill_level;
-        for(drill_level = max_level; drill_level >= child->min_map_level; drill_level--)
+        for(drill_level = parent->max_leaf_level; drill_level >= child->min_map_level; drill_level--)
         {
             page_order = paging_level_entry_region_order(mode, drill_level);
             if(ptr_orderof(viter) < page_order) {

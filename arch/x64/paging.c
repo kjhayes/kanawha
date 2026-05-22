@@ -113,8 +113,8 @@ x64_paging_get_entry_flags(int level,
         flags |= entry & X64_PT_LEAF_PRESENT ? PAGING_ENTRY_PRESENT : 0;
         flags |= entry & X64_PT_LEAF_WRITE ? PAGING_ENTRY_WRITEABLE : 0;
         flags |= entry & X64_PT_LEAF_USER ? PAGING_ENTRY_USER_ACCESS : 0;
-        flags |=
-            entry & X64_PT_LEAF_CACHE_DISABLE ? PAGING_ENTRY_CACHE_DISABLE : 0;
+        flags |= entry & X64_PT_LEAF_CACHE_DISABLE ? PAGING_ENTRY_CACHE_DISABLE : 0;
+        flags |= entry & X64_PT_LEAF_VMEM_SHARED_MAP ? PAGING_ENTRY_MAP : 0;
         break;
     case 1:
         if(is_leaf)
@@ -122,17 +122,15 @@ x64_paging_get_entry_flags(int level,
             flags |= entry & X64_PD_LEAF_PRESENT ? PAGING_ENTRY_PRESENT : 0;
             flags |= entry & X64_PD_LEAF_WRITE ? PAGING_ENTRY_WRITEABLE : 0;
             flags |= entry & X64_PD_LEAF_USER ? PAGING_ENTRY_USER_ACCESS : 0;
-            flags |= entry & X64_PD_LEAF_CACHE_DISABLE
-                         ? PAGING_ENTRY_CACHE_DISABLE
-                         : 0;
+            flags |= entry & X64_PD_LEAF_CACHE_DISABLE ? PAGING_ENTRY_CACHE_DISABLE : 0;
+            flags |= entry & X64_PD_LEAF_VMEM_SHARED_MAP ? PAGING_ENTRY_MAP : 0;
         }
         else
         {
             flags |= entry & X64_PD_ENTRY_PRESENT ? PAGING_ENTRY_PRESENT : 0;
             flags |= entry & X64_PD_ENTRY_WRITE ? PAGING_ENTRY_WRITEABLE : 0;
             flags |= entry & X64_PD_ENTRY_USER ? PAGING_ENTRY_USER_ACCESS : 0;
-            flags |=
-                entry & X64_PD_ENTRY_VMEM_SHARED_MAP ? PAGING_ENTRY_SHARED : 0;
+            flags |= entry & X64_PD_ENTRY_VMEM_SHARED_MAP ? PAGING_ENTRY_MAP : 0;
         }
         break;
     case 2:
@@ -141,33 +139,28 @@ x64_paging_get_entry_flags(int level,
             flags |= entry & X64_PDPT_LEAF_PRESENT ? PAGING_ENTRY_PRESENT : 0;
             flags |= entry & X64_PDPT_LEAF_WRITE ? PAGING_ENTRY_WRITEABLE : 0;
             flags |= entry & X64_PDPT_LEAF_USER ? PAGING_ENTRY_USER_ACCESS : 0;
-            flags |= entry & X64_PDPT_LEAF_CACHE_DISABLE
-                         ? PAGING_ENTRY_CACHE_DISABLE
-                         : 0;
+            flags |= entry & X64_PDPT_LEAF_CACHE_DISABLE ? PAGING_ENTRY_CACHE_DISABLE : 0;
+            flags |= entry & X64_PDPT_LEAF_VMEM_SHARED_MAP ? PAGING_ENTRY_MAP : 0;
         }
         else
         {
             flags |= entry & X64_PDPT_ENTRY_PRESENT ? PAGING_ENTRY_PRESENT : 0;
             flags |= entry & X64_PDPT_ENTRY_WRITE ? PAGING_ENTRY_WRITEABLE : 0;
             flags |= entry & X64_PDPT_ENTRY_USER ? PAGING_ENTRY_USER_ACCESS : 0;
-            flags |= entry & X64_PDPT_ENTRY_VMEM_SHARED_MAP
-                         ? PAGING_ENTRY_SHARED
-                         : 0;
+            flags |= entry & X64_PDPT_ENTRY_VMEM_SHARED_MAP ? PAGING_ENTRY_MAP : 0;
         }
         break;
     case 3:
         flags |= entry & X64_PML4_ENTRY_PRESENT ? PAGING_ENTRY_PRESENT : 0;
         flags |= entry & X64_PML4_ENTRY_WRITE ? PAGING_ENTRY_WRITEABLE : 0;
         flags |= entry & X64_PML4_ENTRY_USER ? PAGING_ENTRY_USER_ACCESS : 0;
-        flags |=
-            entry & X64_PML4_ENTRY_VMEM_SHARED_MAP ? PAGING_ENTRY_SHARED : 0;
+        flags |= entry & X64_PML4_ENTRY_VMEM_SHARED_MAP ? PAGING_ENTRY_MAP : 0;
         break;
     case 4:
         flags |= entry & X64_PML5_ENTRY_PRESENT ? PAGING_ENTRY_PRESENT : 0;
         flags |= entry & X64_PML5_ENTRY_WRITE ? PAGING_ENTRY_WRITEABLE : 0;
         flags |= entry & X64_PML5_ENTRY_USER ? PAGING_ENTRY_USER_ACCESS : 0;
-        flags |=
-            entry & X64_PML5_ENTRY_VMEM_SHARED_MAP ? PAGING_ENTRY_SHARED : 0;
+        flags |= entry & X64_PML5_ENTRY_VMEM_SHARED_MAP ? PAGING_ENTRY_MAP : 0;
         break;
     default:
         return -EINVAL;
@@ -204,7 +197,7 @@ x64_paging_modify_entry_flags(int level,
     switch(level)
     {
     case 0:
-        disallowed_set = 0 | PAGING_ENTRY_SHARED;
+        disallowed_set = 0 | PAGING_ENTRY_MAP;
         disallowed_clear = 0 | PAGING_ENTRY_IS_LEAF;
         break;
     case 1:
@@ -249,6 +242,7 @@ x64_paging_modify_entry_flags(int level,
         mask |= PAGING_ENTRY_USER_ACCESS & flags ? X64_PT_LEAF_USER : 0;
         mask |=
             PAGING_ENTRY_CACHE_DISABLE & flags ? X64_PT_LEAF_CACHE_DISABLE : 0;
+        mask |= PAGING_ENTRY_MAP & flags ? X64_PT_LEAF_VMEM_SHARED_MAP : 0;
         break;
     case 1:
         if(is_leaf)
@@ -260,14 +254,14 @@ x64_paging_modify_entry_flags(int level,
             mask |= PAGING_ENTRY_CACHE_DISABLE & flags
                         ? X64_PD_LEAF_CACHE_DISABLE
                         : 0;
+            mask |= PAGING_ENTRY_MAP & flags ? X64_PD_LEAF_VMEM_SHARED_MAP : 0;
         }
         else
         {
             mask |= PAGING_ENTRY_PRESENT & flags ? X64_PD_ENTRY_PRESENT : 0;
             mask |= PAGING_ENTRY_WRITEABLE & flags ? X64_PD_ENTRY_WRITE : 0;
             mask |= PAGING_ENTRY_USER_ACCESS & flags ? X64_PD_ENTRY_USER : 0;
-            mask |=
-                PAGING_ENTRY_SHARED & flags ? X64_PD_ENTRY_VMEM_SHARED_MAP : 0;
+            mask |= PAGING_ENTRY_MAP & flags ? X64_PD_ENTRY_VMEM_SHARED_MAP : 0;
         }
         break;
     case 2:
@@ -280,13 +274,15 @@ x64_paging_modify_entry_flags(int level,
             mask |= PAGING_ENTRY_CACHE_DISABLE & flags
                         ? X64_PDPT_LEAF_CACHE_DISABLE
                         : 0;
+            mask |= PAGING_ENTRY_MAP & flags ? X64_PDPT_LEAF_VMEM_SHARED_MAP
+                                                : 0;
         }
         else
         {
             mask |= PAGING_ENTRY_PRESENT & flags ? X64_PDPT_ENTRY_PRESENT : 0;
             mask |= PAGING_ENTRY_WRITEABLE & flags ? X64_PDPT_ENTRY_WRITE : 0;
             mask |= PAGING_ENTRY_USER_ACCESS & flags ? X64_PDPT_ENTRY_USER : 0;
-            mask |= PAGING_ENTRY_SHARED & flags ? X64_PDPT_ENTRY_VMEM_SHARED_MAP
+            mask |= PAGING_ENTRY_MAP & flags ? X64_PDPT_ENTRY_VMEM_SHARED_MAP
                                                 : 0;
         }
         break;
@@ -295,14 +291,14 @@ x64_paging_modify_entry_flags(int level,
         mask |= PAGING_ENTRY_WRITEABLE & flags ? X64_PML4_ENTRY_WRITE : 0;
         mask |= PAGING_ENTRY_USER_ACCESS & flags ? X64_PML4_ENTRY_USER : 0;
         mask |=
-            PAGING_ENTRY_SHARED & flags ? X64_PML4_ENTRY_VMEM_SHARED_MAP : 0;
+            PAGING_ENTRY_MAP & flags ? X64_PML4_ENTRY_VMEM_SHARED_MAP : 0;
         break;
     case 4:
         mask |= PAGING_ENTRY_PRESENT & flags ? X64_PML5_ENTRY_PRESENT : 0;
         mask |= PAGING_ENTRY_WRITEABLE & flags ? X64_PML5_ENTRY_WRITE : 0;
         mask |= PAGING_ENTRY_USER_ACCESS & flags ? X64_PML5_ENTRY_USER : 0;
         mask |=
-            PAGING_ENTRY_SHARED & flags ? X64_PML5_ENTRY_VMEM_SHARED_MAP : 0;
+            PAGING_ENTRY_MAP & flags ? X64_PML5_ENTRY_VMEM_SHARED_MAP : 0;
         break;
     }
 

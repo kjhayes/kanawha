@@ -84,6 +84,7 @@ paging_vmem_access_flags_from_entry_flags(
     if(entry_flags & PAGING_ENTRY_KERNEL_ACCESS) {
         vmem_flags |= VMEM_ACCESS_KERNEL;
     }
+
     return vmem_flags;
 }
 
@@ -106,7 +107,6 @@ arch_vmem_region_init_direct(struct vmem_region *region)
             root_level,
             root_level,
             0,
-            root_level,
             flags);
     if(res) {
         return res;
@@ -141,12 +141,14 @@ arch_vmem_region_init_paged(struct vmem_region *region)
     unsigned long flags = 0;
 
     int max_leaf_level = 0;
+    if(root_level > 2) {
+        max_leaf_level = 1;
+    }
 
     res = pagetable_init(
             &state->pagetable,
             root_level,
             max_leaf_level,
-            max_leaf_level + 1,
             max_leaf_level + 1,
             flags);
     if(res) {
@@ -180,11 +182,11 @@ arch_vmem_region_alignment(struct vmem_region *region)
 
     if(region->type == VMEM_REGION_TYPE_DIRECT)
     {
-        order = paging_level_entry_region_order(mode, state->pagetable.max_map_level);
+        order = paging_level_entry_region_order(mode, state->pagetable.max_leaf_level);
     }
     else
     {
-        order = paging_level_entry_region_order(mode, state->pagetable.max_map_level);
+        order = paging_level_entry_region_order(mode, state->pagetable.min_map_level);
     }
     return order;
 }
@@ -387,7 +389,6 @@ arch_vmem_map_init(struct vmem_map *map)
             root_level,
             root_level,
             0,
-            root_level,
             flags);
     if(res) {
         return res;
@@ -434,12 +435,19 @@ arch_vmem_map_walk(
     }
 
     size_t offset = ((uintptr_t)vaddr) & ((1UL<<page_order)-1);
+
+    void __phys *phys = page + offset;
+    unsigned long flags = paging_vmem_access_flags_from_entry_flags(entry_flags);
     if(phys_out) {
-        *phys_out = page + offset;
+        *phys_out = phys;
     }
     if(flags_out) {
-        *flags_out = paging_vmem_access_flags_from_entry_flags(entry_flags);
+        *flags_out = flags;
     }
+    dprintk("arch_vmem_map_walk: got virt=%p, phys=%p, flags=0x%lx\n",
+            vaddr,
+            phys,
+            flags);
     return 0;
 }
 
