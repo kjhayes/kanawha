@@ -1,6 +1,7 @@
 
 #include <kanawha/init.h>
 #include <kanawha/mem_flags.h>
+#include <arch/x64/mmu.h>
 
 extern int __kernel_phys_start[];
 extern int __kernel_phys_end[];
@@ -18,15 +19,41 @@ arch_kernel_phys_size(void)
 }
 
 static int
-virt_mem_flags_reserve_ident_map(void)
+x64_virt_flags_static_init(void)
 {
     int res;
 
-    res = mem_flags_clear_flags(get_virt_mem_flags(),
-                                CONFIG_IDMAP_VIRTUAL_BASE,
-                                (1ULL << CONFIG_IDMAP_SIZE_ORDER),
-                                VIRT_MEM_FLAGS_AVAIL);
+    struct mem_flags *vflags = get_virt_mem_flags();
+    printk("Setting Region [%p - %p) as Canonical Low Memory\n",
+           0x0,
+           X64_PML4_LOWMEM_SIZE);
 
+    res = mem_flags_clear_flags(vflags,
+                                0x0,
+                                X64_PML4_LOWMEM_SIZE,
+                                VIRT_MEM_FLAGS_NONCANON);
+    if(res)
+    {
+        return res;
+    }
+
+    printk("Setting Region [%p - %p) as Canonical High Memory\n",
+           X64_PML4_HIGHMEM_BASE,
+           X64_PML4_HIGHMEM_BASE + (X64_PML4_HIGHMEM_SIZE - 1));
+
+    res = mem_flags_clear_flags(vflags,
+                                X64_PML4_HIGHMEM_BASE,
+                                X64_PML4_HIGHMEM_SIZE - 1,
+                                VIRT_MEM_FLAGS_NONCANON);
+    if(res)
+    {
+        return res;
+    }
+
+    res = mem_flags_set_flags(vflags,
+                              X64_PML4_HIGHMEM_BASE,
+                              X64_PML4_HIGHMEM_SIZE - 1,
+                              VIRT_MEM_FLAGS_HIGHMEM);
     if(res)
     {
         return res;
@@ -35,5 +62,5 @@ virt_mem_flags_reserve_ident_map(void)
     return 0;
 }
 declare_init_desc(mem_flags,
-                  virt_mem_flags_reserve_ident_map,
-                  "Reserving the Kernel Identity Map in Virtual Memory");
+                  x64_virt_flags_static_init,
+                  "Setting x64 Virtual Memory Types");

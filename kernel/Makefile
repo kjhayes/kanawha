@@ -60,6 +60,7 @@ obj-y += sysfs/
 obj-y += gfx/
 obj-y += panic/
 obj-$(CONFIG_PAGING) += paging/
+obj-$(CONFIG_IDMAP) += idmap.o
 
 obj-y += memdump.o
 

@@ -27,8 +27,7 @@ obj-y += \
 	lapic/ \
 	cpuid.o \
 	process.o \
-	prinfo.o \
-	idmap.o
+	prinfo.o
 
 obj-$(CONFIG_X64_MULTIBOOT2_BOOT) += mb2_boot.o
 
