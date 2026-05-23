@@ -55,4 +55,6 @@ riscv64_shared_interrupt_domain(void);
 struct irq_domain *
 riscv64_shared_exception_domain(void);
 
+int riscv64_boot_setup_stvec();
+
 #endif
