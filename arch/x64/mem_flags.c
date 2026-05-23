@@ -23,8 +23,8 @@ virt_mem_flags_reserve_ident_map(void)
     int res;
 
     res = mem_flags_clear_flags(get_virt_mem_flags(),
-                                CONFIG_X64_VIRTUAL_BASE,
-                                (1ULL << CONFIG_X64_IDENTITY_MAP_ORDER),
+                                CONFIG_IDMAP_VIRTUAL_BASE,
+                                (1ULL << CONFIG_IDMAP_SIZE_ORDER),
                                 VIRT_MEM_FLAGS_AVAIL);
 
     if(res)

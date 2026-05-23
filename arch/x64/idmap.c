@@ -11,7 +11,7 @@ x64_map_identity_map_region(void)
 {
     int res;
 
-    size_t phys_mem_mapping_size = (1ULL << CONFIG_X64_IDENTITY_MAP_ORDER);
+    size_t phys_mem_mapping_size = (1ULL << CONFIG_IDMAP_SIZE_ORDER);
     identity_map_region = vmem_region_create_direct(
         0x0,
         phys_mem_mapping_size,
@@ -24,7 +24,7 @@ x64_map_identity_map_region(void)
     }
 
     res = vmem_force_mapping(identity_map_region,
-                             (void *)CONFIG_X64_VIRTUAL_BASE);
+                             (void *)CONFIG_IDMAP_VIRTUAL_BASE);
     if(res)
     {
         eprintk("Failed to map identity map vmem_region into default "

@@ -7,6 +7,7 @@ choice
     select PORT_IO
     select ACPI
     select PAGING
+    select IDMAP
     select ACPI_REQUIRED
     select BUILD_GRUB_ISOIMAGE
   config RISCV64
@@ -57,6 +58,16 @@ choice
 endchoice
 
 menu "Kernel Memory Layout"
+
+config IDMAP_VIRTUAL_BASE
+  hex "Identity Map Virtual Base"
+  default 0xffff800000000000
+  depends on IDMAP
+
+config IDMAP_SIZE_ORDER
+  int "Identity Map Size Order"
+  default 36
+  depends on IDMAP
 
 config HEAP_ALIGN_ORDER
   int "Heap Alignment Order"
@@ -174,6 +185,8 @@ config VMEM_VIA_PAGING
 config SMP
     def_bool y
     depends on MAX_CPUS > 1
+config IDMAP
+    def_bool n
 
 # Toolchain Support
 config TOOLCHAIN_SUPPORTS_BITWISE_ATTRIBUTE
