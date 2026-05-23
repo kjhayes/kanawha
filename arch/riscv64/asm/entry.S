@@ -65,9 +65,7 @@ riscv64_kernel_boot:
 
     // Create and enable our boot page tables
     jal riscv64_boot_setup_paging
-
-    // Our identity map base
-    mv a3, a0
+    // TODO: check for errors
 
     // Get the kernel loaded address 
 .option push

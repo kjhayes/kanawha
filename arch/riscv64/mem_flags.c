@@ -16,8 +16,6 @@ static void __phys *volatile kernel_boot_start =
     (void __phys *)__kernel_boot_start;
 static void __phys *volatile kernel_boot_end = (void __phys *)__kernel_boot_end;
 
-size_t __riscv64_identity_map_offset = 0;
-size_t __riscv64_identity_map_size = 0;
 static void __phys *kernel_phys_base = NULL;
 
 int
@@ -124,31 +122,9 @@ riscv64_virt_flags_static_init(void)
                                 (uintptr_t)__kernel_virt_start,
                                 (__kernel_virt_end - __kernel_virt_start),
                                 VIRT_MEM_FLAGS_AVAIL);
-
-    // Reserve the high-mem identity map
-    printk("Reserving the Kernel Identity Map [%p - %p)",
-           __riscv64_identity_map_offset,
-           __riscv64_identity_map_offset +
-               (1ULL << CONFIG_RISCV64_IDENTITY_MAP_ORDER));
-
-    res = mem_flags_check_region(vflags,
-                                 __riscv64_identity_map_offset,
-                                 (1ULL << CONFIG_RISCV64_IDENTITY_MAP_ORDER),
-                                 VIRT_MEM_FLAGS_AVAIL | VIRT_MEM_FLAGS_HIGHMEM,
-                                 0);
-    if(res)
-    {
-        eprintk("Failed to reserve high-mem identity map! (err=%s)\n",
-                errnostr(res));
-        virt_mem_flags_dump();
+    if(res) {
         return res;
     }
-
-    res = mem_flags_clear_flags(vflags,
-                                __riscv64_identity_map_offset,
-                                (1ULL << CONFIG_RISCV64_IDENTITY_MAP_ORDER),
-                                VIRT_MEM_FLAGS_AVAIL);
-
     return 0;
 }
 declare_init_desc(mem_flags,

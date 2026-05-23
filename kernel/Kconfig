@@ -138,7 +138,7 @@ config DISABLE_NORETURN_ATTRIBUTE
 menu "Kernel Address Checking"
 config DEBUG_HIGHER_HALF_KERNEL_ADDRESSES
     bool "Higher Half Addresses"
-    depends on DEBUGGING
+    depends on DEBUGGING && !RISCV64
     default y
     help
       Check that pointers are in the higher half of memory during KERNEL_ADDR checks

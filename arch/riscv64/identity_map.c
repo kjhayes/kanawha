@@ -247,7 +247,7 @@ riscv64_boot_drill_mapping(struct riscv64_sv_page_table *pt,
                                       may_overmap);
 }
 
-void *__boot_text
+int __boot_text
 riscv64_boot_setup_paging(void __phys *kernel_phys_base)
 {
     { // Clear every page in the page table cache
@@ -315,46 +315,46 @@ riscv64_boot_setup_paging(void __phys *kernel_phys_base)
     // sections in highmem (must use indirection carefully though due to
     // relocations)
 
-    return (void *)highmem_identity_map_base;
+    return 0;
 }
 
 static struct vmem_region *identity_map_region = NULL;
 
-static int
-riscv64_map_identity_map_region(void)
-{
-    int res;
-
-    size_t phys_mem_mapping_size = (1ULL << CONFIG_RISCV64_IDENTITY_MAP_ORDER);
-    identity_map_region = vmem_region_create_direct(
-        0x0,
-        phys_mem_mapping_size,
-        VMEM_REGION_EXEC | VMEM_REGION_WRITE | VMEM_REGION_READ);
-
-    if(identity_map_region == NULL)
-    {
-        eprintk("OOM Error when initializing kernel identity map "
-                "vmem_region!\n");
-        return -ENOMEM;
-    }
-
-    res = vmem_force_mapping(identity_map_region,
-                             (void *)__riscv64_identity_map_offset);
-    if(res)
-    {
-        eprintk("Failed to map identity map vmem_region into default "
-                "vmem_map! "
-                "(err=%s)\n",
-                errnostr(res));
-        return res;
-    }
-
-    return 0;
-}
-
-declare_init_desc(vmem,
-                  riscv64_map_identity_map_region,
-                  "Creating Identity Map Virtual Memory Region");
+//static int
+//riscv64_map_identity_map_region(void)
+//{
+//    int res;
+//
+//    size_t phys_mem_mapping_size = (1ULL << CONFIG_RISCV64_IDENTITY_MAP_ORDER);
+//    identity_map_region = vmem_region_create_direct(
+//        0x0,
+//        phys_mem_mapping_size,
+//        VMEM_REGION_EXEC | VMEM_REGION_WRITE | VMEM_REGION_READ);
+//
+//    if(identity_map_region == NULL)
+//    {
+//        eprintk("OOM Error when initializing kernel identity map "
+//                "vmem_region!\n");
+//        return -ENOMEM;
+//    }
+//
+//    res = vmem_force_mapping(identity_map_region,
+//                             (void *)__riscv64_identity_map_offset);
+//    if(res)
+//    {
+//        eprintk("Failed to map identity map vmem_region into default "
+//                "vmem_map! "
+//                "(err=%s)\n",
+//                errnostr(res));
+//        return res;
+//    }
+//
+//    return 0;
+//}
+//
+//declare_init_desc(vmem,
+//                  riscv64_map_identity_map_region,
+//                  "Creating Identity Map Virtual Memory Region");
 
 static struct vmem_region *kernel_map_region = NULL;
 
