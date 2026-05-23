@@ -9,9 +9,10 @@
 
 .section .boot.text, "ax"
 
-#define VBASE_PT_OFFSET CONFIG_IDMAP_VIRTUAL_BASE & (X64_PT_ENTRY_REGION_SIZE-1)
-#define VBASE_PD_OFFSET CONFIG_IDMAP_VIRTUAL_BASE & (X64_PD_ENTRY_REGION_SIZE-1)
-#define VBASE_PDPT_OFFSET CONFIG_IDMAP_VIRTUAL_BASE & (X64_PDPT_ENTRY_REGION_SIZE-1)
+
+#define VBASE_PT_OFFSET CONFIG_IDMAP_STATIC_VIRTUAL_BASE & (X64_PT_ENTRY_REGION_SIZE-1)
+#define VBASE_PD_OFFSET CONFIG_IDMAP_STATIC_VIRTUAL_BASE & (X64_PD_ENTRY_REGION_SIZE-1)
+#define VBASE_PDPT_OFFSET CONFIG_IDMAP_STATIC_VIRTUAL_BASE & (X64_PDPT_ENTRY_REGION_SIZE-1)
 
 #if CONFIG_IDMAP_SIZE_ORDER >= 21
     #define IDENT_MAP_PT_TABLES_ORDER   (CONFIG_IDMAP_SIZE_ORDER - 21)
@@ -74,7 +75,7 @@ __x64_prot_to_long_page_table_setup:
     orl $X64_PML4_ENTRY_PRESENT, %esi
     orl $X64_PML4_ENTRY_WRITE, %esi
 
-    movl $(X64_PML4_INDEX_OF_ADDR(CONFIG_IDMAP_VIRTUAL_BASE)), %edi
+    movl $(X64_PML4_INDEX_OF_ADDR(CONFIG_IDMAP_STATIC_VIRTUAL_BASE)), %edi
     movl %esi, 0(%eax,%edi,8)
 
 #ifdef CONFIG_X64_ASSUME_1GB_PAGES
@@ -225,7 +226,7 @@ __x64_prot_to_long_paging_enable:
 __x64_prot_to_long_tss_setup:
     // Point %esi at our TSS segment descriptor
     // Skip over the first three descriptors (CHANGE THIS IF THE STATIC GDT LAYOUT CHANGES)
-    movl $((x64_bsp_gdt64 - CONFIG_IDMAP_VIRTUAL_BASE)), %esi
+    movl $((x64_bsp_gdt64 - CONFIG_IDMAP_STATIC_VIRTUAL_BASE)), %esi
     addl $24, %esi
 
     movl $x64_prot_to_long_tss_data_ptr, %edi
@@ -293,7 +294,7 @@ x64_prot_to_long_first_addr_high:
 
 x64_prot_to_long_gdtr64:
 .short ((X64_GDT64_SIZE) - 1)
-.quad (x64_bsp_gdt64 - CONFIG_IDMAP_VIRTUAL_BASE)
+.quad (x64_bsp_gdt64 - CONFIG_IDMAP_STATIC_VIRTUAL_BASE)
 
 x64_prot_to_long_tss_data_ptr:
 .quad x64_bsp_tss_data 
@@ -319,21 +320,21 @@ x64_prot_to_long_pt_array:
 
 .if VBASE_PDPT_OFFSET == 0
 .else
-.err "CONFIG_IDMAP_VIRTUAL_BASE="CONFIG_IDMAP_VIRTUAL_BASE" is not aligned to the same position in the a PDPT Page as physical address 0 (VBASE_PDPT_OFFSET="VBASE_PDPT_OFFSET")!"
+.err "CONFIG_IDMAP_STATIC_VIRTUAL_BASE="CONFIG_IDMAP_STATIC_VIRTUAL_BASE" is not aligned to the same position in the a PDPT Page as physical address 0 (VBASE_PDPT_OFFSET="VBASE_PDPT_OFFSET")!"
 .endif
 
 .if VBASE_PD_OFFSET == 0
 .else
-.err "CONFIG_IDMAP_VIRTUAL_BASE="CONFIG_IDMAP_VIRTUAL_BASE" is not aligned to the same position in the a PD Page as physical address 0 (VBASE_PD_OFFSET="VBASE_PD_OFFSET")!"
+.err "CONFIG_IDMAP_STATIC_VIRTUAL_BASE="CONFIG_IDMAP_STATIC_VIRTUAL_BASE" is not aligned to the same position in the a PD Page as physical address 0 (VBASE_PD_OFFSET="VBASE_PD_OFFSET")!"
 .endif
 
 .if VBASE_PT_OFFSET == 0
 .else
-.err "CONFIG_IDMAP_VIRTUAL_BASE="CONFIG_IDMAP_VIRTUAL_BASE" is not aligned to the same position in the a PT Page as physical address 0 (VBASE_PT_OFFSET="VBASE_PD_OFFSET")!"
+.err "CONFIG_IDMAP_STATIC_VIRTUAL_BASE="CONFIG_IDMAP_STATIC_VIRTUAL_BASE" is not aligned to the same position in the a PT Page as physical address 0 (VBASE_PT_OFFSET="VBASE_PD_OFFSET")!"
 .endif
 
-.if X64_PML4_ADDR_IS_CANONICAL(CONFIG_IDMAP_VIRTUAL_BASE)
+.if X64_PML4_ADDR_IS_CANONICAL(CONFIG_IDMAP_STATIC_VIRTUAL_BASE)
 .else
-.err "CONFIG_IDMAP_VIRTUAL_BASE="CONFIG_IDMAP_VIRTUAL_BASE" is non-canonical for 4-level paging!"
+.err "CONFIG_IDMAP_STATIC_VIRTUAL_BASE="CONFIG_IDMAP_STATIC_VIRTUAL_BASE" is non-canonical for 4-level paging!"
 .endif
 

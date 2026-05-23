@@ -8,6 +8,7 @@ choice
     select ACPI
     select PAGING
     select IDMAP
+    select IDMAP_MUST_BE_STATIC
     select ACPI_REQUIRED
     select BUILD_GRUB_ISOIMAGE
   config RISCV64
@@ -59,15 +60,38 @@ endchoice
 
 menu "Kernel Memory Layout"
 
-config IDMAP_VIRTUAL_BASE
-  hex "Identity Map Virtual Base"
-  default 0xffff800000000000
-  depends on IDMAP
+choice 
+  prompt "Identity Map Virtual Base Selection"
+  default IDMAP_SELECT_VIRTUAL_BASE_DYNAMIC
+  config IDMAP_SELECT_VIRTUAL_BASE_STATIC
+    bool "Static"
+  config IDMAP_SELECT_VIRTUAL_BASE_DYNAMIC
+    bool "Dynamic"
+    depends on !IDMAP_MUST_BE_STATIC
+endchoice
 
 config IDMAP_SIZE_ORDER
   int "Identity Map Size Order"
   default 36
   depends on IDMAP
+
+config IDMAP_VIRTUAL_BASE_AT_BOOT
+  hex "Identity Map Virtual Base at Boot"
+  default 0x0
+  depends on IDMAP
+
+config IDMAP_MUST_BE_STATIC
+  def_bool n
+
+config IDMAP_STATIC_VIRTUAL_BASE
+  hex "Identity Map Static Virtual Base"
+  default 0xffff800000000000
+  depends on IDMAP && IDMAP_SELECT_VIRTUAL_BASE_STATIC
+
+config IDMAP_DYNAMIC_ALIGN_ORDER
+  int "Identity Map Alignment Order"
+  default 30
+  depends on IDMAP && IDMAP_SELECT_VIRTUAL_BASE_DYNAMIC
 
 config HEAP_ALIGN_ORDER
   int "Heap Alignment Order"

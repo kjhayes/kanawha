@@ -34,6 +34,8 @@ x64_boot_bsp_init(void)
 {
     int res;
 
+    idmap_virtual_base = CONFIG_IDMAP_STATIC_VIRTUAL_BASE;
+
     x64_fpu_init_bsp();
     x64_init_gdt_bsp();
     x64_init_idt_bsp();
