@@ -16,6 +16,7 @@ choice
     select DEVICETREE
     select DEVICETREE_REQUIRED
     select PAGING
+    select IDMAP
   config ARM64
     bool "ARM64"
     select DEVICETREE

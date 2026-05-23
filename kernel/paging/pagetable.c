@@ -662,9 +662,15 @@ pagetable_map(
     order_t min_page_order = paging_level_entry_region_order(mode, child->min_map_level);
 
     if(ptr_orderof(vaddr) < min_page_order) {
+        eprintk("pagetable_map: vaddr=%p is not aligned to the minimum order of %d!\n",
+                vaddr,
+                min_page_order);
         return -EINVAL;
     }
     if(ptr_orderof(size) < min_page_order) {
+        eprintk("pagetable_map: size=0x%lx is not aligned to the minimum order of %d!\n",
+                (ul_t)size,
+                min_page_order);
         return -EINVAL;
     }
 

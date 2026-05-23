@@ -254,9 +254,10 @@ vmem_map_translate(
         void __phys **phys_out);
 
 #ifdef CONFIG_IDMAP
-extern size_t idmap_virtual_base;
+extern uintptr_t idmap_virtual_base;
+
 static inline void *
-__va(void __phys *paddr)
+__idmap_va(void __phys *paddr)
 {
     DEBUG_ASSERT((uintptr_t)paddr < (uintptr_t)1ULL
                                         << CONFIG_IDMAP_SIZE_ORDER);
@@ -264,13 +265,21 @@ __va(void __phys *paddr)
 }
 
 static inline void __phys *
-__pa(void *vaddr)
+__idmap_pa(void *vaddr)
 {
     void __phys *paddr = (void __phys *)(vaddr - idmap_virtual_base);
     DEBUG_ASSERT((uintptr_t)paddr < (uintptr_t)1ULL
                                         << CONFIG_IDMAP_SIZE_ORDER);
     return paddr;
 }
+
+#ifndef __va
+#define __va __idmap_va
+#endif
+#ifndef __pa
+#define __pa __idmap_pa
+#endif
+
 #endif
 
 #endif

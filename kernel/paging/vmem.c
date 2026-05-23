@@ -229,6 +229,10 @@ arch_vmem_map_map_region(struct vmem_map *map, struct vmem_region_ref *ref)
             vaddr,
             size);
     if(res) {
+        eprintk("arch_vmem_map_map_region: pagetable_map returned %s! (vaddr=%p, size=0x%lx)\n",
+                errnostr(res),
+                vaddr,
+                (ul_t)size);
         return res;
     }
 

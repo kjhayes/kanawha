@@ -37,20 +37,23 @@ extern size_t __riscv64_identity_map_offset; // Assume low mem is identity
 extern size_t __riscv64_identity_map_size;
 
 static inline void *
-__va(void __phys *paddr)
+__riscv64_va(void __phys *paddr)
 {
     DEBUG_ASSERT((uintptr_t)paddr < (uintptr_t)__riscv64_identity_map_size);
     return (void *)paddr + __riscv64_identity_map_offset;
 }
 
 static inline void __phys *
-__pa(void *vaddr)
+__riscv64_pa(void *vaddr)
 {
     DEBUG_ASSERT((uintptr_t)vaddr >= (uintptr_t)__riscv64_identity_map_offset);
     void __phys *paddr = (void __phys *)(vaddr - __riscv64_identity_map_offset);
     DEBUG_ASSERT((uintptr_t)paddr < (uintptr_t)__riscv64_identity_map_size);
     return paddr;
 }
+
+#define __va __riscv64_va
+#define __pa __riscv64_pa
 
 uint64_t
 riscv64_vmem_map_get_satp(

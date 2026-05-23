@@ -345,6 +345,9 @@ vmem_map_map_region(struct vmem_map *map,
     order_t region_align_order = vmem_region_alignment(region);
     if(ptr_orderof(base) < region_align_order)
     {
+        eprintk("vmem_map_map_region: vaddr=%p is not aligned to the region's required alignment order (%d)!\n",
+                (void*)base,
+                (int)region_align_order);
         spin_unlock(&map->lock);
         spin_unlock(&region->lock);
         return -EINVAL;
