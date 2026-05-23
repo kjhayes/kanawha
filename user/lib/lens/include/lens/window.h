@@ -27,6 +27,13 @@ lens_window_get_input(
         struct lens_window *window,
         struct input_event *evt);
 
+// 0 -> no event
+// 1 -> could read an event without blocking
+// <0 -> errno
+int
+lens_window_peek_input(
+        struct lens_window *window);
+
 int
 lens_window_lock_gfx(
         struct lens_window *window);

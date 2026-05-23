@@ -26,4 +26,8 @@ lens_input_buffer_pop(
         struct lens_input_buffer *buffer,
         struct input_event *evt);
 
+int
+lens_input_buffer_peek(
+        struct lens_input_buffer *buffer);
+
 #endif

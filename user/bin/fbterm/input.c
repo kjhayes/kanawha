@@ -448,6 +448,15 @@ input_poll(struct input_ctx *ctx)
         res = poll(pollfd, 1, 0);
         return (res > 0 && (pollfd[0].revents & (POLLIN | POLLPRI)));
     }
+    case INPUT_CTX_TYPE_LENS:
+    {
+        int avail = lens_window_peek_input(ctx->lens.window);
+        if(avail) {
+            return 1;
+        } else {
+            return 0;
+        }
+    }
     default:
         return 0;
     }

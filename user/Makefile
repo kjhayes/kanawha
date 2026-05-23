@@ -55,4 +55,5 @@ bins += \
 	lterm \
 	tinfo \
 	kvi \
+	doomgeneric \
 

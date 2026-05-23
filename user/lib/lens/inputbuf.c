@@ -101,3 +101,18 @@ lens_input_buffer_pop(
     return 1;
 }
 
+int
+lens_input_buffer_peek(
+        struct lens_input_buffer *buffer)
+{
+    int res;
+    while(sem_wait(&buffer->lock)) {}
+
+    if(buffer->head == buffer->tail) {
+        sem_post(&buffer->lock);
+        return 0;
+    }
+
+    sem_post(&buffer->lock);
+    return 1;
+}
