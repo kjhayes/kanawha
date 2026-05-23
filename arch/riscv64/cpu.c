@@ -105,7 +105,7 @@ riscv64_dt_cpu_init(struct dt_driver *driver, struct dt_node *node)
         return res;
     }
     hartid_t hartid = (hartid_t)(uintptr_t)reg_addr_hartid;
-    dprintk("Found HARTID(0x%lx)\n", (ul_t)hartid);
+    printk("Found HARTID(0x%lx)\n", (ul_t)hartid);
 
     struct riscv64_cpu *cpu = kmalloc(sizeof(struct riscv64_cpu), KM_KERNEL);
     if(cpu == NULL)
@@ -117,7 +117,7 @@ riscv64_dt_cpu_init(struct dt_driver *driver, struct dt_node *node)
 
     {
         char namebuf[32];
-        snprintk(namebuf, 32, "hart%ld", current_hartid());
+        snprintk(namebuf, 32, "hart%ld", hartid);
         namebuf[32 - 1] = '\0';
         cpu->name = kstrdup(namebuf);
         if(cpu->name == NULL)
@@ -128,7 +128,7 @@ riscv64_dt_cpu_init(struct dt_driver *driver, struct dt_node *node)
 
     int is_bsp = (hartid == current_hartid());
 
-    dprintk("hartid=0x%lx, is_bsp = %d\n", (ul_t)hartid, is_bsp);
+    printk("found CPU \"%s\" is_bsp=%d\n", cpu->name, is_bsp);
     if(is_bsp)
     {
         cpu->cpu.flags |= CPU_FLAG_IS_BSP;
@@ -140,7 +140,9 @@ riscv64_dt_cpu_init(struct dt_driver *driver, struct dt_node *node)
     res = register_cpu(&cpu->cpu, cpu->name);
     if(res)
     {
-        eprintk("Failed to register CPU for HartID(%lu)\n", hartid);
+        eprintk("Failed to register CPU for HartID(%lu) (err=%s)\n",
+                hartid,
+                errnostr(res));
         kfree(cpu);
         return res;
     }

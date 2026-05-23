@@ -47,7 +47,7 @@ riscv64_scause_desc(uint64_t scause)
 #define STVEC_DIRECT 0b00
 #define STVEC_VECTORED 0b01
 
-static int
+int
 riscv64_boot_setup_stvec(void)
 {
 
