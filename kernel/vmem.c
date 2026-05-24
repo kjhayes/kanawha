@@ -97,6 +97,7 @@ alloc_vmem_region_ref(void)
     vmem_region_ref_slab_lock_acquire();
     if(vmem_region_ref_slab_allocator == NULL)
     {
+        vmem_region_ref_slab_lock_release();
         return NULL;
     }
 
@@ -130,6 +131,7 @@ vmem_map_create(void)
         eprintk("Called vmem_map_create before vmem_map_slab_allocator has "
                 "been initialized!\n");
         TIMER_STOP(vmem_map_create_perf_timer);
+        vmem_map_slab_lock_release();
         return NULL;
     }
     struct vmem_map *map = slab_alloc(vmem_map_slab_allocator);
