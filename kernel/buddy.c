@@ -146,6 +146,10 @@ buddy_order_push_page(
     page->order = order;
 
     // Push the page onto the front of the list
+    if(buddy_order->num_pages > 0) {
+        struct buddy_page *old_front = __va(buddy_order->page_list);
+        old_front->prev = page_phys;
+    }
     page->prev = NULL;
     page->next = buddy_order->page_list;
     buddy_order->page_list = page_phys;
@@ -215,7 +219,7 @@ buddy_order_remove_page(
             } else {
                 // "page->prev" is valid
                 struct buddy_page *prev = __va(page->prev);
-                page->prev->next = page->next;
+                prev->next = page->next;
                 if(i < buddy_order->num_pages-1) {
                     // "page->next" is valid
                     struct buddy_page *next = __va(page->next);

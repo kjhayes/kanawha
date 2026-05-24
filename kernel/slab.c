@@ -2,16 +2,14 @@
 #include <kanawha/bitmap.h>
 #include <kanawha/errno.h>
 #include <kanawha/mem_flags.h>
-#include <kanawha/page_alloc.h>
+#include <kanawha/kmalloc.h>
 #include <kanawha/slab.h>
 #include <kanawha/stddef.h>
 #include <kanawha/string.h>
 #include <kanawha/types.h>
 #include <kanawha/vmem.h>
 
-#define SLAB_ALLOC_BLOCK_PAGE_ORDER                                            \
-    (PAGE_ALLOC_MIN_ORDER >= VMEM_MIN_PAGE_ORDER ? PAGE_ALLOC_MIN_ORDER        \
-                                                 : VMEM_MIN_PAGE_ORDER)
+#define SLAB_ALLOC_BLOCK_PAGE_ORDER VMEM_MIN_PAGE_ORDER
 
 static void
 init_slab_allocator(struct slab_allocator *alloc,
@@ -150,7 +148,7 @@ create_static_slab_allocator(void *buffer,
         {
             // Sad there's not enough room left,
             // but technically we have a valid slab_allocator
-            // (it'll just fail if page_alloc isn't up yet)
+            // (it'll just fail if kmalloc isn't up yet)
         }
     }
 
@@ -164,17 +162,13 @@ struct slab_allocator *
 create_dynamic_slab_allocator(size_t obj_size, order_t obj_align)
 {
     int res;
-    // Just allocate a page "buffer" and initialize it as if
-    // the page was statically allocated
-    void __phys *page_paddr;
+    // Just allocate a buffer and initialize it as if
+    // it was statically allocated
 
-    res = page_alloc(SLAB_ALLOC_BLOCK_PAGE_ORDER, &page_paddr, 0x0);
-    if(res)
-    {
+    void *buffer = kmalloc(1ULL<<SLAB_ALLOC_BLOCK_PAGE_ORDER, KM_KERNEL);
+    if(buffer == NULL) {
         return NULL;
     }
-
-    void *buffer = (void *)__va(page_paddr);
     size_t buffer_size = (1ULL << SLAB_ALLOC_BLOCK_PAGE_ORDER);
 
     struct slab_allocator *alloc;
@@ -183,7 +177,7 @@ create_dynamic_slab_allocator(size_t obj_size, order_t obj_align)
 
     if(alloc == NULL)
     {
-        page_free(SLAB_ALLOC_BLOCK_PAGE_ORDER, page_paddr);
+        kfree(buffer);
         return NULL;
     }
 
@@ -245,20 +239,20 @@ recurse:
         return block->objects + (first_free * alloc->obj_size);
     }
 
-    void __phys *new_block;
-    res = page_alloc(SLAB_ALLOC_BLOCK_PAGE_ORDER, &new_block, 0);
-    if(res)
+    void *new_block;
+    new_block = kmalloc(1ULL<<SLAB_ALLOC_BLOCK_PAGE_ORDER, KM_KERNEL);
+    if(new_block == NULL)
     {
         return NULL;
     }
 
     res = slab_allocator_add_block(alloc,
-                                   (void *)__va(new_block),
+                                   new_block,
                                    1ULL << SLAB_ALLOC_BLOCK_PAGE_ORDER,
                                    0);
     if(res)
     {
-        page_free(SLAB_ALLOC_BLOCK_PAGE_ORDER, new_block);
+        kfree(new_block);
         return NULL;
     }
 
@@ -345,7 +339,7 @@ slab_free(struct slab_allocator *alloc, void *obj)
             struct ptree_node *rem =
                 ptree_remove(&alloc->block_tree, block->pnode.key);
             DEBUG_ASSERT(rem == &block->pnode);
-            page_free(SLAB_ALLOC_BLOCK_PAGE_ORDER, __pa(block));
+            kfree(block);
         }
     }
 

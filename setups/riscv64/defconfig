@@ -90,7 +90,6 @@ CONFIG_DISABLE_NORETURN_ATTRIBUTE=y
 #
 # Kernel Address Checking
 #
-CONFIG_DEBUG_HIGHER_HALF_KERNEL_ADDRESSES=y
 # end of Kernel Address Checking
 
 # CONFIG_DEBUG_BUDDY_ALLOC is not set
