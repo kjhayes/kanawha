@@ -14,10 +14,13 @@
 #include <kanawha/string.h>
 #include <kanawha/types.h>
 #include <kanawha/vmem.h>
+#include <kanawha/slab.h>
+#include <kanawha/init.h>
 
 struct buddy_page
 {
-    ilist_node_t list_node;
+    struct buddy_page __phys *next;
+    struct buddy_page __phys *prev;
 
     // Is this free page the base of the region (making "order" valid)?
     order_t order;
@@ -28,25 +31,54 @@ struct buddy_order
     order_t order;
     size_t num_pages;
 
-    ilist_t page_list;
+    struct buddy_page __phys *page_list;
 };
 
 struct buddy_region
 {
-    void *region_base;
+    void __phys *region_base;
     size_t region_size;
 
     order_t min_order;
     order_t max_order;
 
-    unsigned long *bitmap;
+    size_t order_lists_offset;
+    size_t order_lists_bytes;
+
+    size_t bitmap_offset;
     size_t bitmap_bytes;
 
-    void *pages_start;
-    size_t page_bytes;
-
-    struct buddy_order order_lists[];
+    size_t pages_offset;
+    size_t pages_bytes;
 };
+
+static inline void
+buddy_bitmap_set(
+        struct buddy_region *region,
+        size_t bit)
+{
+    unsigned long __phys *bitmap_phys = region->region_base + region->bitmap_offset;
+    unsigned long *bitmap = __va(bitmap_phys);
+    bitmap_set(bitmap, bit);
+}
+static inline void
+buddy_bitmap_clear(
+        struct buddy_region *region,
+        size_t bit)
+{
+    unsigned long __phys *bitmap_phys = region->region_base + region->bitmap_offset;
+    unsigned long *bitmap = __va(bitmap_phys);
+    bitmap_clear(bitmap, bit);
+}
+static inline int
+buddy_bitmap_check(
+        struct buddy_region *region,
+        size_t bit)
+{
+    unsigned long __phys *bitmap_phys = region->region_base + region->bitmap_offset;
+    unsigned long *bitmap = __va(bitmap_phys);
+    return bitmap_check(bitmap, bit);
+}
 
 static inline size_t
 buddy_region_num_orders(struct buddy_region *region)
@@ -60,33 +92,35 @@ buddy_order_total_free(struct buddy_order *order)
     return (1ULL << order->order) * order->num_pages;
 }
 
-#ifdef CONFIG_DEBUG_BUDDY_ALLOC
-static inline void
-buddy_region_dump_orders(struct buddy_region *region, printk_f *printer)
-{
-    size_t num_orders = buddy_region_num_orders(region);
-    for(size_t i = 0; i < num_orders; i++)
-    {
-        struct buddy_order *order = &region->order_lists[i];
-        size_t total_free = buddy_order_total_free(order);
-
-        (*printer)("order[%d] -> num_pages=0x%lx, page_size=0x%lx, "
-                   "total_free=0x%lx\n",
-                   order->order,
-                   (unsigned long)order->num_pages,
-                   (1UL << (order->order)),
-                   (unsigned long)total_free);
-    }
-}
-#endif
+// #ifdef CONFIG_DEBUG_BUDDY_ALLOC
+// static inline void
+// buddy_region_dump_orders(struct buddy_region *region, printk_f *printer)
+// {
+//     size_t num_orders = buddy_region_num_orders(region);
+//     for(size_t i = 0; i < num_orders; i++)
+//     {
+//         struct buddy_order *order = &region->order_lists[i];
+//         size_t total_free = buddy_order_total_free(order);
+// 
+//         (*printer)("order[%d] -> num_pages=0x%lx, page_size=0x%lx, "
+//                    "total_free=0x%lx\n",
+//                    order->order,
+//                    (unsigned long)order->num_pages,
+//                    (1UL << (order->order)),
+//                    (unsigned long)total_free);
+//     }
+// }
+// #endif
 
 size_t
 buddy_region_total_free(struct buddy_region *region)
 {
     size_t size = 0;
+    struct buddy_order __phys *orders_phys = region->region_base + region->order_lists_offset;
     for(order_t i = 0; i < buddy_region_num_orders(region); i++)
     {
-        size += buddy_order_total_free(&region->order_lists[i]);
+        struct buddy_order *buddy_order = __va(&orders_phys[i]);
+        size += buddy_order_total_free(buddy_order);
     }
     return size;
 }
@@ -98,211 +132,230 @@ buddy_region_total_owned(struct buddy_region *region)
 }
 
 static inline int
-buddy_order_push_page(struct buddy_order *order, struct buddy_page *page)
+buddy_order_push_page(
+        struct buddy_region *region,
+        order_t order,
+        struct buddy_page __phys *page_phys)
 {
-    page->order = order->order;
-    ilist_push_head(&order->page_list, &page->list_node);
-    order->num_pages++;
-    /*
-    if(order->num_pages == 0) {
-        order->list_start = page;
-        order->list_end = page;
-        order->num_pages = 1;
-    } else {
-        page->next = order->list_start;
-        page->next->prev = page;
-        order->list_start = page;
-        order->num_pages++;
-    }
-    */
+    size_t index = order - region->min_order;
+    struct buddy_order __phys *order_phys = region->region_base + region->order_lists_offset + (sizeof(struct buddy_order) * index);
+    struct buddy_order *buddy_order = __va(order_phys);
+
+    struct buddy_page *page = __va(page_phys);
+
+    page->order = order;
+
+    // Push the page onto the front of the list
+    page->prev = NULL;
+    page->next = buddy_order->page_list;
+    buddy_order->page_list = page_phys;
+
+    buddy_order->num_pages++;
     return 0;
 }
 
 static inline int
-buddy_order_pop_page(struct buddy_order *order, struct buddy_page **page)
+buddy_order_pop_page(
+        struct buddy_region *region,
+        order_t order,
+        struct buddy_page __phys **page_out)
 {
-    if(order->num_pages <= 0)
+    size_t index = order - region->min_order;
+    struct buddy_order __phys *order_phys = region->region_base + region->order_lists_offset + (sizeof(struct buddy_order) * index);
+    struct buddy_order *buddy_order = __va(order_phys);
+
+    if(buddy_order->num_pages <= 0)
     {
-        return -EINVAL;
+        return -ENOMEM;
     }
 
-    //    struct buddy_page *end = order->list_end;
-    //    order->list_end = order->list_end->prev;
+    // Pop from the front of the list
+    struct buddy_page __phys *page_phys = buddy_order->page_list;
+    struct buddy_page *page = __va(page_phys);
+    buddy_order->page_list = page->next;
+    if(buddy_order->num_pages > 1) {
+        struct buddy_page *new_front_page = __va(buddy_order->page_list);
+        new_front_page->prev = NULL;
+    }
 
-    //    *page = end;
+    *page_out = page_phys;
 
-    ilist_node_t *node = ilist_pop_head(&order->page_list);
-    *page = container_of(node, struct buddy_page, list_node);
-
-    order->num_pages--;
+    buddy_order->num_pages--;
     return 0;
 }
 
 static inline int
-buddy_order_remove_page(struct buddy_order *order, struct buddy_page *page)
+buddy_order_remove_page(
+        struct buddy_region *region,
+        order_t order,
+        struct buddy_page __phys *page_phys)
 {
-    if(order->num_pages <= 0)
+    size_t index = order - region->min_order;
+    struct buddy_order __phys *order_phys = region->region_base + region->order_lists_offset + (sizeof(struct buddy_order) * index);
+    struct buddy_order *buddy_order = __va(order_phys);
+
+    if(buddy_order->num_pages <= 0)
     {
-        return -EINVAL;
+        return -ENOMEM;
     }
 
-    /*
-    if(page == order->list_start) {
-        order->list_start = page->next;
-    }
-    else if(page == order->list_end) {
-        order->list_end = page->prev;
-    } else {
-        page->prev->next = page->next;
-        page->next->prev = page->prev;
-    }
-    */
+    struct buddy_page *page = __va(page_phys);
 
-    ilist_remove(&order->page_list, &page->list_node);
-
-    order->num_pages--;
+    struct buddy_page __phys *iter_phys = buddy_order->page_list;
+    for(size_t i = 0; i < buddy_order->num_pages; i++) {
+        struct buddy_page *iter = __va(iter_phys);
+        if(iter_phys == page_phys) {
+            if(i == 0) {
+                // This is the first entry
+                buddy_order->page_list = page->next;
+                if(buddy_order->num_pages > 1) {
+                    struct buddy_page *new_front_page = __va(buddy_order->page_list);
+                    new_front_page->prev = NULL;
+                }
+            } else {
+                // "page->prev" is valid
+                struct buddy_page *prev = __va(page->prev);
+                page->prev->next = page->next;
+                if(i < buddy_order->num_pages-1) {
+                    // "page->next" is valid
+                    struct buddy_page *next = __va(page->next);
+                    next->prev = page->prev;
+                }
+            }
+            page->next = NULL;
+            page->prev = NULL;
+            break;
+        } else {
+            iter_phys = iter->next;
+        }
+    }
+    
+    buddy_order->num_pages--;
     return 0;
 }
 
 int
-buddy_region_free(struct buddy_region *region, order_t order, void *page_addr)
+buddy_region_free(
+        struct buddy_region *region,
+        order_t order,
+        void __phys *page_phys)
 {
     dprintk("Freeing page: %p of order %d\n", page_addr, order);
-    struct buddy_page *page = (struct buddy_page *)page_addr;
+    struct buddy_page *page = __va(page_phys);
     page->order = order;
+    page->next = NULL;
+    page->prev = NULL;
 
-    order_t order_index = order - region->min_order;
+    uintptr_t region_offset;
+    uintptr_t pages_offset;
+    DEBUG_ASSERT(page_phys >= region->region_base);
+    region_offset = (uintptr_t)page_phys - (uintptr_t)region->region_base;
+    DEBUG_ASSERT(region_offset < region->region_size);
+    DEBUG_ASSERT(region_offset >= region->pages_offset);
+    pages_offset = region_offset - region->pages_offset;
+    DEBUG_ASSERT_MSG(pages_offset < region->pages_bytes,
+            "buddy_region_free: page=%p, pages_offset=0x%lx, pages_base_offset=0x%lx, pages_bytes=0x%lx",
+            page_phys,
+            (ul_t)pages_offset,
+            (ul_t)region->pages_offset,
+            (ul_t)region->pages_bytes
+            );
 
-    uintptr_t rel_page_addr = (uintptr_t)page - (uintptr_t)region->pages_start;
     // Note: We aren't necessarily a min_order page but we still care about
-    // this index
-    //       to access the bitmap
-    size_t min_page_index = rel_page_addr >> region->min_order;
+    // this index to access the bitmap
+    size_t min_page_index = pages_offset >> region->min_order;
 
-    struct buddy_page *buddy_page =
-        (struct buddy_page *)((uintptr_t)page_addr ^ (1ULL << order));
+    // Try to find a buddy page to go with this one
 
-    if((uintptr_t)buddy_page < (uintptr_t)region->pages_start)
-    {
+    if(order + 1 > region->max_order) {
         goto no_buddy;
     }
 
-    uintptr_t rel_buddy_page_addr =
-        (uintptr_t)buddy_page - (uintptr_t)region->pages_start;
-    size_t buddy_min_page_index = rel_buddy_page_addr >> region->min_order;
+    struct buddy_page __phys *buddy_phys =
+        (struct buddy_page __phys *)((uintptr_t)page_phys ^ (1ULL << order));
 
-    dprintk("page_addr=%p, buddy_page_addr=%p\n", page, buddy_page);
+    uintptr_t buddy_region_offset;
+    uintptr_t buddy_pages_offset;
 
-    dprintk("rel_page_addr=%p, rel_buddy_page_addr=%p\n",
-            rel_page_addr,
-            rel_buddy_page_addr);
+    if((void __phys *)buddy_phys < region->region_base) {
+        goto no_buddy;
+    }
+    buddy_region_offset = (uintptr_t)buddy_phys - (uintptr_t)region->region_base;
+    if(buddy_region_offset >= region->region_size) {
+        goto no_buddy;
+    }
+    buddy_pages_offset = buddy_region_offset - region->pages_offset;
+    if(buddy_pages_offset >= region->pages_bytes) {
+        goto no_buddy;
+    }
+
+    size_t buddy_min_page_index = buddy_pages_offset >> region->min_order;
+
     dprintk("min_page_index=0x%llx, buddy_min_page_index=0x%llx\n",
             (unsigned long long)min_page_index,
             (unsigned long long)buddy_min_page_index);
 
-    void *buddy_page_addr = (void *)buddy_page;
+    if(!buddy_bitmap_check(region, buddy_min_page_index)) {
+        dprintk("buddy is not free (index=%lu, buddy-index=%lu)!\n",
+                (ul_t)min_page_index,
+                (ul_t)buddy_min_page_index);
 
-    int can_coalesce = 0;
+        goto no_buddy;
+    }
 
-    if(order + 1 <= region->max_order)
+    struct buddy_page *buddy_page = __va(buddy_phys);
+    if(buddy_page->order != order)
     {
-        if((uintptr_t)buddy_page_addr >= (uintptr_t)region->pages_start &&
-           (uintptr_t)buddy_page_addr + (1ULL << order) <=
-               ((uintptr_t)region->pages_start + region->page_bytes))
-        {
-            if(bitmap_check(region->bitmap, buddy_min_page_index))
-            {
-                if(buddy_page->order == order)
-                {
-                    can_coalesce = 1;
-                }
-                else
-                {
-#ifdef CONFIG_DEBUG_BUDDY_ALLOC
-                    dprintk("bitmap_bytes = 0x%0xlx\n", region->bitmap_bytes);
-                    dprintk("bitmap[0] = 0x%0lx\n", region->bitmap[0]);
-                    dprintk("bitmap[1] = 0x%0lx\n", region->bitmap[1]);
-                    if(buddy_page->order < region->min_order ||
-                       buddy_page->order > region->max_order)
-                    {
-                        panic("Found free buddy page "
-                              "with invalid order: %p "
-                              "(order=%d)\n",
-                              buddy_page,
-                              buddy_page->order);
-                    }
-#endif
-                    dprintk("Failed to coalesce becuase "
-                            "buddy page is of a "
-                            "different order (%d)\n",
-                            buddy_page->order);
-                }
-            }
-            else
-            {
-                dprintk("Failed to coalesce buddy page because "
-                        "buddy is "
-                        "allocated!\n");
-            }
-        }
-        else
-        {
-            dprintk("Failed to coalesce buddy page because buddy is "
-                    "outside of "
-                    "the region!\n");
-        }
+        dprintk("buddy has wrong order (order=%d, buddy-order=%d)!\n",
+                (int)order,
+                (int)buddy_page->order);
+        goto no_buddy;
+    }
+
+    // Our buddy exists and is valid!
+    dprintk("coalescing buddy!\n");
+   
+    // Remove our buddy from the order's free list
+    buddy_order_remove_page(region, order, buddy_phys);
+
+    // Figure out which page is the start of the coalesced page (lower)
+    size_t lower_min_page_index, higher_min_page_index;
+    struct buddy_page __phys *lower_phys;
+
+    if((void __phys *)page_phys < (void __phys *)buddy_phys)
+    {
+        lower_min_page_index = min_page_index;
+        higher_min_page_index = buddy_min_page_index;
+        lower_phys = page_phys;
     }
     else
     {
-        dprintk("Failed to coalesce buddy page becuase it is the maximum page "
-                "size\n");
+        lower_min_page_index = buddy_min_page_index;
+        higher_min_page_index = min_page_index;
+        lower_phys = buddy_phys;
     }
 
-    if(can_coalesce)
-    {
+    // Mark the upper page as free
+    buddy_bitmap_set(region, higher_min_page_index);
+    DEBUG_ASSERT(buddy_bitmap_check(region,higher_min_page_index));
+    // Mark the lower page as allocated
+    buddy_bitmap_clear(region, lower_min_page_index);
+    DEBUG_ASSERT(!buddy_bitmap_check(region,lower_min_page_index));
 
-        // Remove our buddy from the order's free list
-        buddy_order_remove_page(&region->order_lists[order_index], buddy_page);
-
-        // Figure out which page is the start of the coalesced page (lower)
-        size_t lower_min_page_index, higher_min_page_index;
-        struct buddy_page *lower_page;
-        // struct buddy_page *higher_page;
-
-        if((uintptr_t)page < (uintptr_t)buddy_page)
-        {
-            lower_min_page_index = min_page_index;
-            higher_min_page_index = buddy_min_page_index;
-            lower_page = page;
-            // higher_page = buddy_page;
-        }
-        else
-        {
-            lower_min_page_index = buddy_min_page_index;
-            higher_min_page_index = min_page_index;
-            lower_page = buddy_page;
-            // higher_page = page;
-        }
-
-        // Mark the upper page as free
-        bitmap_set(region->bitmap, higher_min_page_index);
-        // Mark the lower page as allocated
-        bitmap_clear(region->bitmap, lower_min_page_index);
-
-        // Free the pair of buddies as one larger page
-        return buddy_region_free(region, order + 1, (void *)lower_page);
-    }
+    // Free the pair of buddies as one larger page
+    return buddy_region_free(region, order + 1, lower_phys);
 
 no_buddy:
     // Mark the page as free
-    bitmap_set(region->bitmap, min_page_index);
+    buddy_bitmap_set(region, min_page_index);
+    DEBUG_ASSERT(buddy_bitmap_check(region,min_page_index));
 
     // Add it to the free list for the current order
-    return buddy_order_push_page(&region->order_lists[order_index], page);
+    return buddy_order_push_page(region, order, page_phys);
 }
 
 int
-buddy_region_alloc(struct buddy_region *region, order_t order, void **out)
+buddy_region_alloc(struct buddy_region *region, order_t order, void __phys **out)
 {
     int res;
 
@@ -310,7 +363,7 @@ buddy_region_alloc(struct buddy_region *region, order_t order, void **out)
 
     if(order > region->max_order || order < region->min_order)
     {
-        dprintk("buddy_region_alloc: order (%d) is out of range [%d - %d]!\n",
+        printk("buddy_region_alloc: order (%d) is out of range [%d - %d]!\n",
                 order,
                 region->min_order,
                 region->max_order);
@@ -318,8 +371,8 @@ buddy_region_alloc(struct buddy_region *region, order_t order, void **out)
     }
 
     size_t order_index = order - region->min_order;
-    struct buddy_page *page;
-    res = buddy_order_pop_page(&region->order_lists[order_index], &page);
+    struct buddy_page __phys *buddy_page_phys;
+    res = buddy_order_pop_page(region, order, &buddy_page_phys);
     if(res)
     {
         // No pages of this size
@@ -334,7 +387,7 @@ buddy_region_alloc(struct buddy_region *region, order_t order, void **out)
             dprintk("buddy_region: amount_free = 0x%llx, "
                     "amount_total = 0x%llx\n",
                     buddy_region_total_free(region),
-                    region->page_bytes);
+                    region->pages_bytes);
 
 #ifdef CONFIG_DEBUG_BUDDY_ALLOC
             buddy_region_dump_orders(region, do_printk);
@@ -343,7 +396,7 @@ buddy_region_alloc(struct buddy_region *region, order_t order, void **out)
             return -ENOMEM;
         }
 
-        void *next_order_page_paddr;
+        void __phys *next_order_page_paddr;
         // TODO: Recursion is really dangerous,
         // this can easily cause a stack overflow especially on -O0,
         // rework this.
@@ -354,55 +407,54 @@ buddy_region_alloc(struct buddy_region *region, order_t order, void **out)
             return res;
         }
 
-        struct buddy_page *lower_page =
-            (void *)((uintptr_t)next_order_page_paddr);
-        struct buddy_page *higher_page =
-            (void *)((uintptr_t)next_order_page_paddr + (1ULL << order));
-
         // Free the higher half of the larger page, and return the lower
         // half
-        res = buddy_region_free(region, order, (void *)higher_page);
+
+        struct buddy_page __phys *higher_page_phys = next_order_page_paddr + (1ULL << order);
+        res = buddy_region_free(region, order, higher_page_phys);
         if(res)
         {
             // We failed to free?
             // (Continue but weird)
         }
 
-        *out = (void *)lower_page;
-
+        *out = next_order_page_paddr;
         return 0;
     }
 
     // We have a page of the right size!
-    DEBUG_ASSERT(((uintptr_t)page >= (uintptr_t)region->pages_start) &&
-                 ((uintptr_t)page <=
-                  (uintptr_t)region->pages_start + region->region_size));
-    uintptr_t rel_page_addr = (uintptr_t)page - (uintptr_t)region->pages_start;
-    size_t min_page_index = rel_page_addr >> region->min_order;
 
-    *out = (void *)page;
+    void __phys *page_phys = buddy_page_phys;
+    DEBUG_ASSERT(page_phys > region->region_base);
+    uintptr_t region_offset = page_phys - region->region_base;
+    DEBUG_ASSERT(region_offset < region->region_size);
+
+    uintptr_t pages_offset = region_offset - region->pages_offset;
+    size_t min_page_index = pages_offset >> region->min_order;
+
+    *out = page_phys;
 
     // Mark it as allocated
-    DEBUG_ASSERT(min_page_index < (region->region_size >> region->min_order));
-    bitmap_clear(region->bitmap, min_page_index);
+    DEBUG_ASSERT(min_page_index < (region->pages_bytes >> region->min_order));
+    buddy_bitmap_clear(region, min_page_index);
 
     return 0;
 }
 
 int
-buddy_region_init(void *region_base,
+buddy_region_init(struct buddy_region *region,
+                  void __phys *region_base,
                   size_t region_size,
                   order_t min_order,
-                  order_t max_order,
-                  struct buddy_region **out)
+                  order_t max_order)
 {
-    dprintk("Initializing buddy_region at %p of size %lu\n",
+    dprintk("Initializing buddy_region [%p-%p)\n",
             region_base,
-            region_size);
-    order_t num_orders = (max_order - min_order) + 1;
-    void *region_end = region_base + region_size;
+            region_base + region_size);
 
-    if((1ULL << min_order) < sizeof(struct buddy_page))
+    const size_t min_page_size = (1ULL << min_order);
+
+    if(min_page_size < sizeof(struct buddy_page))
     {
         // We can't allocate pages this small
         eprintk("Tried to initialize a buddy region with minimum page size "
@@ -410,213 +462,148 @@ buddy_region_init(void *region_base,
         return -EINVAL;
     }
 
-    size_t region_struct_misalignment =
-        __alignof__(struct buddy_region) -
-        ((uintptr_t)region_base % __alignof__(struct buddy_region));
-    if(region_struct_misalignment == __alignof__(struct buddy_region))
-    {
-        region_struct_misalignment = 0;
+    region->region_base = region_base;
+    region->region_size = region_size;
+    region->min_order = min_order;
+    region->max_order = max_order;
+
+    uintptr_t iter_offset = 0;
+    void __phys *iter_phys = region->region_base;
+    size_t iter_remaining = region->region_size;
+#define ADVANCE_ITER(__amt) \
+    do { \
+        iter_offset += (__amt);\
+        iter_phys += (__amt);\
+        if(iter_remaining < (__amt)) {\
+            return -ENOMEM; \
+        }\
+        iter_remaining -= (__amt);\
+    } while(0)
+#define ALIGN_ITER(__order) \
+    do { \
+        void __phys *aligned = (void __phys *)(((uintptr_t)iter_phys + ((1ULL<<__order)-1))&~((1ULL<<__order)-1));\
+        uintptr_t step = (uintptr_t)aligned - (uintptr_t)iter_phys;\
+        if(step > 0) {\
+            ADVANCE_ITER(step);\
+        }\
+    } while(0)
+
+    { // Allocate root for the order lists
+        ALIGN_ITER(orderof(struct buddy_order));
+        region->order_lists_offset = iter_offset;
+        region->order_lists_bytes = sizeof(struct buddy_order) * ((region->max_order-region->min_order)+1);
+        if(region->order_lists_bytes > region->region_size) {
+            return -EINVAL;
+        }
+        ADVANCE_ITER(region->order_lists_bytes);
     }
 
-    struct buddy_region *region =
-        (void *)(region_base + region_struct_misalignment);
+    { // Allocate room for the bitmap
+        ALIGN_ITER(orderof(unsigned long));
+        region->bitmap_offset = iter_offset;
+        
+        size_t total_bits = iter_remaining * 8;
 
-    // Doesn't account for where we place the bitmap
-    void *region_struct_end = (void *)region + sizeof(struct buddy_region) +
-                              (sizeof(struct buddy_order) * num_orders);
+        // Figure out how many bits we'll need in the bitmap
+        size_t bits_per_page_and_bitmap = (min_page_size * 8) + 1;
+        size_t num_bitmap_bits = total_bits / bits_per_page_and_bitmap;
 
-    if(region_struct_end > region_end)
-    {
-        eprintk("Tried to initialize buddy region which is smaller than "
-                "sizeof(struct buddy_page)!\n");
-        return -EINVAL;
+        // Figure out how many bytes our bitmap needs to be
+        // (We prioritize the bitmap because if a bit doesn't have a page, that's
+        // fine, but if a page doesn't have a bit, we have big problems)
+        region->bitmap_bytes = BITMAP_SIZE(num_bitmap_bits);
+
+        ADVANCE_ITER(region->bitmap_bytes);
     }
-    else
-    {
-        // We have enough room so initialize the region header
-        // and the order page lists
-        region->region_base = region_base;
-        region->region_size = region_size;
-        region->min_order = min_order;
-        region->max_order = max_order;
-        for(order_t order = region->min_order; order <= region->max_order;
+
+    { // Allocate the "pages" region of actual data to be allocated
+        ALIGN_ITER(region->min_order);
+        region->pages_offset = iter_offset;
+        region->pages_bytes = iter_remaining;
+        ADVANCE_ITER(region->pages_bytes);
+    }
+
+    // Everything should now be allocated
+    DEBUG_ASSERT(iter_remaining == 0);
+
+    // Check for overlap
+    DEBUG_ASSERT(region->order_lists_offset + region->order_lists_bytes <= region->bitmap_offset);
+    DEBUG_ASSERT(region->bitmap_offset + region->bitmap_bytes <= region->pages_offset);
+    DEBUG_ASSERT(region->pages_offset + region->pages_bytes <= region->region_size);
+
+    // Check that everything is aligned
+    DEBUG_ASSERT(ptr_orderof(region->region_base + region->order_lists_offset) >= orderof(struct buddy_order));
+    DEBUG_ASSERT(ptr_orderof(region->region_base + region->bitmap_offset) >= orderof(unsigned long));
+    DEBUG_ASSERT(ptr_orderof(region->region_base + region->pages_offset) >= min_order);
+
+    { // Init all of the buddy lists
+        struct buddy_order __phys *order_lists = region->region_base + region->order_lists_offset;
+        for(order_t order = region->min_order;
+            order <= region->max_order;
             order++)
         {
             size_t index = order - region->min_order;
-            region->order_lists[index].order = order;
-            region->order_lists[index].num_pages = 0;
-            ilist_init(&region->order_lists[index].page_list);
+            struct buddy_order *buddy_order = __va(&order_lists[index]);
+            buddy_order->order = order;
+            buddy_order->num_pages = 0;
+            buddy_order->page_list = 0;
         }
-        *out = region;
+    }
+    { // Init the bitmap
+        // This is a "free" bitmap, so a zero means everything is allocated currently
+        memset_p(region->region_base + region->bitmap_offset, 0, region->bitmap_bytes);
     }
 
-    // We technically can succeed no matter what from here on
-    // (But we could have a region with zero useful memory)
+    { // Free all pages
+        size_t total_num_pages = region->pages_bytes / min_page_size;
 
-    uintptr_t useful_memory_bottom = (uintptr_t)region_struct_end;
-    uintptr_t useful_memory_top = (uintptr_t)region_end;
-
-    // We need to split this memory into two parts, a bitmap, and pages to be
-    // allocated
-
-    // We could put the bitmap either before or after the pages, so put the
-    // bitmap on whichever side has more wasted memory from being misaligned to
-    // the minimum page size
-
-    size_t min_page_size = (1ULL << min_order);
-
-    // How much memory is lost if we align the bottom of the region to the page
-    // size?
-    size_t bottom_loss = min_page_size - (useful_memory_bottom % min_page_size);
-    if(bottom_loss == min_page_size)
-    {
-        // We were already aligned to the page size (no loss)
-        bottom_loss = 0;
-    }
-
-    // How much memory is lost if we align the top of the region to the page
-    // size?
-    size_t top_loss = useful_memory_top % min_page_size;
-
-    int bitmap_at_bottom = bottom_loss > top_loss;
-
-    // Align our useful memory region
-    size_t bottom_alignment;
-    size_t top_alignment;
-
-    if(bitmap_at_bottom)
-    {
-        bottom_alignment = sizeof(unsigned long);
-        top_alignment = min_page_size;
-    }
-    else
-    {
-        bottom_alignment = min_page_size;
-        top_alignment = sizeof(unsigned long);
-    }
-
-    if(useful_memory_bottom % bottom_alignment)
-    {
-        useful_memory_bottom +=
-            bottom_alignment - (useful_memory_bottom % bottom_alignment);
-    }
-    if(useful_memory_top % top_alignment)
-    {
-        useful_memory_top -= useful_memory_top % top_alignment;
-    }
-
-    // The actual amount of memory we can use
-    if(useful_memory_top <= useful_memory_bottom)
-    {
-        // We would have underflowed, this region is too small
-        return -ENOMEM;
-    }
-    size_t useful_memory = useful_memory_top - useful_memory_bottom;
-
-    dprintk("Useful region memory [%p - %p) size=%lu\n",
-            useful_memory_bottom,
-            useful_memory_top,
-            useful_memory);
-
-    size_t total_bits = useful_memory * 8;
-
-    // Figure out how many bits we'll need in the bitmap
-    size_t bits_per_page_and_bitmap = (min_page_size * 8) + 1;
-    size_t num_bitmap_bits = total_bits / bits_per_page_and_bitmap;
-
-    // Figure out how many bytes our bitmap needs to be
-    // (We prioritize the bitmap because if a bit doesn't have a page, that's
-    // fine,
-    //  but if a page doesn't have a bit, we have big problems)
-    region->bitmap_bytes = BITMAP_SIZE(num_bitmap_bits);
-
-    region->page_bytes = useful_memory - region->bitmap_bytes;
-    size_t num_pages = region->page_bytes / min_page_size;
-    region->page_bytes = num_pages * min_page_size;
-
-    // Finally assign our bitmap and pages regions accordingly
-    if(bitmap_at_bottom)
-    {
-        region->bitmap = (unsigned long *)useful_memory_bottom;
-        region->pages_start = (void *)(useful_memory_top - region->page_bytes);
-    }
-    else
-    {
-        region->pages_start = (void *)useful_memory_bottom;
-        region->bitmap =
-            (unsigned long *)(useful_memory_top - region->bitmap_bytes);
-    }
-
-    dprintk("pages_start = %p, region = %p, region->bitmap = %p, bitmap_bytes "
-            "= 0x%llx, num_pages = %lu\n",
-            region->pages_start,
-            region,
-            (void *)region->bitmap,
-            (ull_t)region->bitmap_bytes,
-            (ul_t)num_pages);
-
-    // This is a "free" bitmap, so a zero means everything is allocated
-    // currently We also assume that the region will be mapped in with an
-    // identity mapping for now
-
-    dprintk("Clearing bitmap %p of size 0x%lx\n",
-            region->bitmap,
-            region->bitmap_bytes);
-    memset((void *)region->bitmap, 0, region->bitmap_bytes);
-    dprintk("Cleared bitmap\n");
-
-    // All that's left now is to free all of the pages and let them coalesce
-    // together
-
-    void *pages_end = region->pages_start + (num_pages * min_page_size);
-    for(void *cur_page = region->pages_start; cur_page < pages_end;)
-    {
-        uintptr_t addr = (uintptr_t)cur_page;
-        if(addr & ((1ULL << max_order) - 1) ||
-           ((cur_page + (1ULL << max_order)) > pages_end))
+        size_t pages_end_offset = region->pages_offset + (total_num_pages * min_page_size);
+        DEBUG_ASSERT(pages_end_offset <= region->region_size);
+        for(size_t cur_page_offset = region->pages_offset; cur_page_offset < pages_end_offset;)
         {
-            dprintk("freeing page: %p\n", cur_page);
-            buddy_region_free(region, min_order, cur_page);
-            cur_page += (1ULL << min_order);
-        }
-        else
-        {
-            dprintk("freeing page: %p\n", cur_page);
-            buddy_region_free(region, max_order, cur_page);
-            cur_page += (1ULL << max_order);
+            void __phys *addr = region->region_base + cur_page_offset;
+            if((uintptr_t)addr & ((1ULL << max_order) - 1) ||
+               ((cur_page_offset + (1ULL << max_order)) > pages_end_offset))
+            {
+                dprintk("freeing page: [%p-%p)\n", addr, addr+min_page_size);
+                buddy_region_free(region, min_order, addr);
+                cur_page_offset += (1ULL << min_order);
+            }
+            else
+            {
+                dprintk("freeing page: [%p-%p)\n", addr, addr+min_page_size);
+                buddy_region_free(region, max_order, addr);
+                cur_page_offset += (1ULL << max_order);
+            }
         }
     }
+
+    dprintk("Finished setting up buddy region (amt-free=0x%lx)\n",
+            buddy_region_total_free(region));
 
     return 0;
 }
 
 // page_alloc interface
-/*
- * The buddy allocator itself will be operating on virtual addresses,
- * but the page_alloc framework expects physical addresses,
- * these functions handle the conversions
- */
 
 static int
 buddy_page_allocator_alloc(void *state, order_t order, void __phys **addr)
 {
+    int res;
     struct buddy_region *region = (struct buddy_region *)state;
-    void *vaddr = NULL;
-    int res = buddy_region_alloc(region, order, &vaddr);
+    res = buddy_region_alloc(region, order, addr);
     if(res)
     {
         return res;
     }
-    DEBUG_ASSERT_MSG(KERNEL_ADDR(vaddr), "vaddr=%p", vaddr);
-    *addr = __pa((void *)vaddr);
-    return res;
+    return 0;
 }
 
 static int
 buddy_page_allocator_free(void *state, order_t order, void __phys *addr)
 {
     struct buddy_region *region = (struct buddy_region *)state;
-    return buddy_region_free(region, order, (void *)__va(addr));
+    return buddy_region_free(region, order, addr);
 }
 
 static size_t
@@ -643,15 +630,15 @@ buddy_page_allocator_debug_dump(void *state, printk_f *printer)
                (uintptr_t)(region->region_base + region->region_size),
                (int)region->min_order,
                (int)region->max_order);
-    for(size_t index = 0; index < (region->max_order - region->min_order) + 1;
-        index++)
-    {
-        struct buddy_order *order = &region->order_lists[index];
-        (*printer)("\tOrder[%d] (num-pages=%lu)\n",
-                   (int)order->order,
-                   (ul_t)order->num_pages);
-        DEBUG_ASSERT(ilist_count(&order->page_list) == order->num_pages);
-    }
+//    for(size_t index = 0; index < (region->max_order - region->min_order) + 1;
+//        index++)
+//    {
+//        struct buddy_order *order = &region->order_lists[index];
+//        (*printer)("\tOrder[%d] (num-pages=%lu)\n",
+//                   (int)order->order,
+//                   (ul_t)order->num_pages);
+//        DEBUG_ASSERT(ilist_count(&order->page_list) == order->num_pages);
+//    }
 
     return 0;
 }
@@ -661,21 +648,21 @@ buddy_page_allocator_verify(void *state)
 {
     struct buddy_region *region = (struct buddy_region *)state;
 
-    for(size_t index = 0; index < (region->max_order - region->min_order) + 1;
-        index++)
-    {
-        struct buddy_order *order = &region->order_lists[index];
-        ilist_node_t *page_node;
-        ilist_for_each(page_node, &order->page_list)
-        {
-            struct buddy_page *page =
-                container_of(page_node, struct buddy_page, list_node);
-            ASSERT(page->order == order->order);
-            ASSERT((void *)page >= region->region_base);
-            ASSERT(((void *)page + (1ULL << order->order)) <=
-                   (region->region_base + region->region_size));
-        }
-    }
+//    for(size_t index = 0; index < (region->max_order - region->min_order) + 1;
+//        index++)
+//    {
+//        struct buddy_order *order = &region->order_lists[index];
+//        ilist_node_t *page_node;
+//        ilist_for_each(page_node, &order->page_list)
+//        {
+//            struct buddy_page *page =
+//                container_of(page_node, struct buddy_page, list_node);
+//            ASSERT(page->order == order->order);
+//            ASSERT((void *)page >= region->region_base);
+//            ASSERT(((void *)page + (1ULL << order->order)) <=
+//                   (region->region_base + region->region_size));
+//        }
+//    }
 
     return 0;
 }
@@ -685,10 +672,53 @@ static struct page_allocator_ops buddy_page_allocator_ops = {
     .free = buddy_page_allocator_free,
     .amount_total = buddy_page_allocator_amount_total,
     .amount_free = buddy_page_allocator_amount_free,
-
     .debug_dump = buddy_page_allocator_debug_dump,
     .verify = buddy_page_allocator_verify,
 };
+
+#define BUDDY_REGION_SLAB_BUFFER_SIZE 0x1000
+static uint8_t buddy_region_slab_buffer[BUDDY_REGION_SLAB_BUFFER_SIZE];
+static struct slab_allocator *buddy_region_slab_allocator = NULL;
+DEFINE_LOCAL_THREAD_LOCK(buddy_region_slab_lock);
+
+static int
+init_buddy_region_slab_allocator(void)
+{
+    buddy_region_slab_allocator =
+        create_static_slab_allocator(buddy_region_slab_buffer,
+                                     BUDDY_REGION_SLAB_BUFFER_SIZE,
+                                     sizeof(struct buddy_region),
+                                     orderof(struct buddy_region));
+
+    if(buddy_region_slab_allocator == NULL)
+    {
+        return -ENOMEM;
+    }
+
+    return 0;
+}
+declare_init_desc(static,
+                  init_buddy_region_slab_allocator,
+                  "Initializing Buddy Region Slab Allocator(s)");
+
+static inline struct buddy_region *
+alloc_buddy_region(void)
+{
+    struct buddy_region *region;
+    buddy_region_slab_lock_acquire();
+    region = slab_alloc(buddy_region_slab_allocator);
+    buddy_region_slab_lock_release();
+    return region;
+}
+
+__maybe_unused
+static inline void
+free_buddy_region(struct buddy_region *region)
+{
+    buddy_region_slab_lock_acquire();
+    slab_free(buddy_region_slab_allocator, region);
+    buddy_region_slab_lock_release();
+}
 
 int
 register_buddy_page_allocator(void __phys *phys_base,
@@ -696,17 +726,21 @@ register_buddy_page_allocator(void __phys *phys_base,
                               unsigned long flags)
 {
     int res;
-    dprintk("Registering Buddy Page Allocator VA: %p PA: %p size=0x%lx\n",
-            __va(phys_base),
+    printk("Registering Buddy Page Allocator [%p-%p)\n",
             phys_base,
-            (unsigned long)size);
+            phys_base + size);
 
-    struct buddy_region *region;
-    res = buddy_region_init((void *)__va(phys_base),
+    struct buddy_region *region = alloc_buddy_region();
+    if(region == NULL) {
+        wprintk("buddy_region_slab_allocator: out of memory!\n");
+        return -ENOMEM;
+    }
+
+    res = buddy_region_init(region,
+                            phys_base,
                             size,
                             PAGE_ALLOC_MIN_ORDER,
-                            PAGE_ALLOC_MAX_ORDER,
-                            &region);
+                            PAGE_ALLOC_MAX_ORDER);
     if(res)
     {
         return res;

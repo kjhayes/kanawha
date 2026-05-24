@@ -11,29 +11,28 @@ struct buddy_region;
  * Buddy Region Allocator
  *
  * (Not currently thread safe)
- * (The region needs to stay identity mapped while it is being used)
  *
  */
 
 // Initialize a region of usable memory as a buddy allocator
 int
-buddy_region_init(void *start,
+buddy_region_init(struct buddy_region *region,
+                  void __phys *start,
                   size_t size,
                   unsigned int min_order,
-                  unsigned int max_order,
-                  struct buddy_region **region);
+                  unsigned int max_order);
 
 // Allocate a page of size (1<<order) from the buddy region
 int
 buddy_region_alloc(struct buddy_region *region,
                    unsigned int order,
-                   void **page_addr);
+                   void __phys **page_addr);
 
 // Free a page of size (1<<order) previously allocated from the buddy region
 int
 buddy_region_free(struct buddy_region *region,
                   unsigned int order,
-                  void *page_addr);
+                  void __phys *page_addr);
 
 // Get the total amount of free memory in the buddy region
 size_t
