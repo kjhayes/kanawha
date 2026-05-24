@@ -67,6 +67,10 @@ kmalloc(size_t size, unsigned long flags)
         return NULL;
     }
 
+    if(!completed_init_stage_kmalloc()) {
+        return NULL;
+    }
+
     size_t req_size = sizeof(struct kmallocation) + size;
 
     // kmalloc_lock_acquire();
@@ -157,6 +161,8 @@ kmalloc(size_t size, unsigned long flags)
 void
 kfree(void *addr)
 {
+    DEBUG_ASSERT(completed_init_stage_kmalloc());
+
     if(addr == NULL)
     {
         // Free is allowed to ignore NULL pointers
