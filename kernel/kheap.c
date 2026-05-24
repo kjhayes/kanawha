@@ -5,6 +5,8 @@
 // This assertion enforces that we stay aligned virtually
 _Static_assert(CONFIG_HEAP_GROWTH_ORDER <= CONFIG_HEAP_ALIGN_ORDER,
                "CONFIG_HEAP_GROWTH_ORDER > CONFIG_HEAP_ALIGN_ORDER!");
+_Static_assert(CONFIG_HEAP_GROWTH_ORDER <= PAGE_ALLOC_MAX_ORDER,
+               "CONFIG_HEAP_GROWTH_ORDER > PAGE_ALLOC_MAX_ORDER");
 
 const size_t kheap_slab_sizes[KHEAP_NUM_SLABS] = {
 #define KHEAP_SLAB_XLIST_DECL(__NUM, __ALIGN, ...)                             \
