@@ -5,7 +5,7 @@
 
 A simple hobby kernel I'm ([Kevin](https://kjhayes.github.io)) writing in my free time.
 
-This kernel is not *efficient*. There are many many levels of indirection do not have a fantastic reason
+This kernel is not *efficient*. There are many many levels of indirection which do not have a fantastic reason
 for existing. For example, there is an interface to allow multiple "page_allocator's" to exist in the 
 system at once (this is pretty useless and slows down the entire system). But it means that you can play
 around with different schemes for how to allocate physical pages. If you have some bug, and you suspect it's
