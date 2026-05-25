@@ -3,7 +3,7 @@ obj-y += asm/
 
 obj-y += \
 	init.o \
-	identity_map.o \
+	boot_paging.o \
 	irq.o \
 	common.o \
 	thread.o \
