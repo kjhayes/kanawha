@@ -23,5 +23,4 @@ obj-y += \
 
 obj-$(CONFIG_RISCV64_SBI_DEBUG_CONSOLE) += sbi_console.o
 
-obj-$(CONFIG_RISCV64_IMPLEMENT_VMEM_DIRECTLY) += vmem.o
 obj-$(CONFIG_PAGING) += paging.o
