@@ -14,6 +14,7 @@ static struct vmem_region *identity_map_region = NULL;
 #ifdef CONFIG_IDMAP_SELECT_VIRTUAL_BASE_DYNAMIC
 static uintptr_t idmap_dynamic_virtual_base = 0;
 #endif
+uintptr_t idmap_mapped_virtual_base = CONFIG_IDMAP_VIRTUAL_BASE_AT_BOOT;
 uintptr_t idmap_virtual_base = CONFIG_IDMAP_VIRTUAL_BASE_AT_BOOT;
 
 static int
@@ -44,7 +45,10 @@ idmap_map_into_vmem(void *virtual_base)
         return res;
     }
 
-    idmap_virtual_base = (uintptr_t)virtual_base;
+    // Don't immediately set the idmap_virtual_base because
+    // we may not be the last init handler to run before
+    // actually turning on the default memory map
+    idmap_mapped_virtual_base = (uintptr_t)virtual_base;
 
     return 0;
 }
@@ -68,6 +72,14 @@ idmap_init_vmem(void)
 declare_init_desc(vmem,
                   idmap_init_vmem,
                   "Creating Identity Map Virtual Memory Region");
+
+static int
+idmap_init_enable_vmem(void)
+{
+    idmap_virtual_base = idmap_mapped_virtual_base;
+    return 0;
+}
+declare_init(enable_vmem, idmap_init_enable_vmem);
 
 static int
 idmap_reserve_virt_mem(void)

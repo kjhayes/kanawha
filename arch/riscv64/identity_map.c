@@ -290,22 +290,6 @@ riscv64_boot_setup_paging(void __phys *kernel_phys_base)
         PANIC("Failed to map kernel into high-mem!");
     }
 
-    // High-mem identity map
-    uintptr_t highmem_identity_map_base =
-        (((uintptr_t)kernel_end + ((1ULL << ROOT_PAGE_ORDER) - 1)) &
-         ~((1ULL << ROOT_PAGE_ORDER) - 1));
-    mapping_size = (1ULL << CONFIG_RISCV64_IDENTITY_MAP_ORDER);
-    riscv64_boot_drill_mapping(root_pt,
-                               ROOT_PAGE_LEVEL,
-                               (void __phys *)0x0,
-                               (void *)highmem_identity_map_base,
-                               &mapping_size,
-                               1);
-    if(mapping_size > 0)
-    {
-        PANIC("Failed to map high-mem identity map!");
-    }
-
     // Enable Paging
     uint64_t satp_value = SATP_MODE | (((uint64_t)root_pt) >> 12);
 
@@ -317,44 +301,6 @@ riscv64_boot_setup_paging(void __phys *kernel_phys_base)
 
     return 0;
 }
-
-static struct vmem_region *identity_map_region = NULL;
-
-//static int
-//riscv64_map_identity_map_region(void)
-//{
-//    int res;
-//
-//    size_t phys_mem_mapping_size = (1ULL << CONFIG_RISCV64_IDENTITY_MAP_ORDER);
-//    identity_map_region = vmem_region_create_direct(
-//        0x0,
-//        phys_mem_mapping_size,
-//        VMEM_REGION_EXEC | VMEM_REGION_WRITE | VMEM_REGION_READ);
-//
-//    if(identity_map_region == NULL)
-//    {
-//        eprintk("OOM Error when initializing kernel identity map "
-//                "vmem_region!\n");
-//        return -ENOMEM;
-//    }
-//
-//    res = vmem_force_mapping(identity_map_region,
-//                             (void *)__riscv64_identity_map_offset);
-//    if(res)
-//    {
-//        eprintk("Failed to map identity map vmem_region into default "
-//                "vmem_map! "
-//                "(err=%s)\n",
-//                errnostr(res));
-//        return res;
-//    }
-//
-//    return 0;
-//}
-//
-//declare_init_desc(vmem,
-//                  riscv64_map_identity_map_region,
-//                  "Creating Identity Map Virtual Memory Region");
 
 static struct vmem_region *kernel_map_region = NULL;
 

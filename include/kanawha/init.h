@@ -33,27 +33,51 @@
  */
 
 // boot - extremely early, architecture specific what can go here
-// static - static data structure initialization, basic string functions should
-// work mem_flags - memory discovery / mem_flags population post_mem_flags -
-// memory reservation page_alloc - page allocator initialization dynamic_page -
-// page allocator initialized/available vmem - virtual memory map
-// initialization (Essential regions must be added here) enable_vmem - virtual
-// memory map start enabling post_vmem - virtual memory map enabled
-// (Non-essential regions can be added here) kmalloc - dynamic memory allocator
-// initialization dynamic - first stage with kmalloc/kfree family of functions
+//
+// static - static data structure initialization, basic string functions should work
+//
+// mem_flags - memory discovery / mem_flags population
+//
+// post_mem_flags - memory reservation
+//
+// page_alloc - page allocator initialization
+//
+// dynamic_page - page allocator initialized/available
+//
+// vmem - virtual memory map initialization (Essential regions must be added here)
+// 
+// enable_vmem - virtual memory map start enabling
+//
+// post_vmem - virtual memory map enabled (Non-essential regions can be added here)
+//
+// kmalloc - dynamic memory allocator initialization
+//
+// dynamic - first stage with kmalloc/kfree family of functions
+//
 // threaded - current_thread() is valid and threads can be created
+//
 // topo - system topology discovery
+//
 // post_topo - total_num_cpus and percpu_ptr_specific working on BSP
+//
 // smp_bringup - bringing up the AP's
+//
 // smp - first smp phase (xcalls should work)
+//
 // sched - "default" scheduler exists and is running
+//
 // fs - filesystem registration
+//
 // platform - non-bus based devices
+//
 // bus - bus discovery/probing
+//
 // early_device - early device driver initialization
+//
 // device - device drivers
+//
 // late - generic "late" init functions, currently just for loading the initrd
-// and additional modules found there launch - launching the root process
+//        and additional modules found there launch - launching the root process
 
 #ifndef __LINKER__
 
