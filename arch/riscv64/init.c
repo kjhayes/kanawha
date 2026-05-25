@@ -64,7 +64,7 @@ riscv64_reserve_dtb(struct fdt __phys *dtb)
     return 0;
 }
 
-void *
+void
 riscv64_boot_bsp_init(void __phys *kernel_phys_base,
                       struct fdt __phys *dtb,
                       hartid_t hartid)
@@ -98,7 +98,7 @@ riscv64_boot_bsp_init(void __phys *kernel_phys_base,
     }
     printk("Provided Kernel Physical Base = %p\n", kernel_phys_base);
 
-    res = devtree_provide_fdt(__va(dtb));
+    res = devtree_provide_physical_fdt(dtb);
     if(res)
     {
         panic("Kernel rejected provided device tree!\n");
@@ -132,9 +132,6 @@ riscv64_boot_bsp_init(void __phys *kernel_phys_base,
         panic("Failed to handle init stage \"post_mem_flags\"! err=%s",
               errnostr(res));
     }
-
-    // At this point both __va and __pa should be stable
-    return __va(0);
 }
 
 // Here we should be running fully virtually

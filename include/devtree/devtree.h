@@ -11,14 +11,17 @@
 struct devtree;
 struct dt_driver;
 
-#define DEVTREE_FLAG_UNFLATTENED (1ULL << 0)
-#define DEVTREE_FLAG_PHYS_RESERVED (1ULL << 1)
+#define DEVTREE_FLAG_PHYSICAL    (1UL << 0)
+#define DEVTREE_FLAG_UNFLATTENED (1UL << 1)
 
 struct devtree
 {
     unsigned long flags;
 
-    struct fdt *backing_data;
+    union {
+        struct fdt __phys *physical;
+        struct fdt *virtual;
+    } backing;
     size_t backing_size;
 
     ilist_node_t list_node;
@@ -29,7 +32,7 @@ struct devtree
 };
 
 int
-devtree_provide_fdt(struct fdt *fdt);
+devtree_provide_physical_fdt(struct fdt __phys *fdt);
 
 // Returns the first provided device tree
 struct devtree *

@@ -23,9 +23,12 @@ unflatten_device_tree(struct devtree *tree);
 //
 
 int
-devtree_provide_fdt(struct fdt *fdt)
+devtree_provide_physical_fdt(
+        struct fdt __phys *phys_fdt)
 {
     int res;
+
+    struct fdt *fdt = __va(phys_fdt);
 
     // Check the DTB
     res = fdt_check_header(fdt);
@@ -57,9 +60,9 @@ devtree_provide_fdt(struct fdt *fdt)
     }
 
     memset(tree, 0, sizeof(struct devtree));
-    tree->flags = 0x0;
+    tree->flags = DEVTREE_FLAG_PHYSICAL;
+    tree->backing.physical = phys_fdt;
     tree->root_node = NULL;
-    tree->backing_data = fdt;
     tree->backing_size = fdt_size;
     ptree_init(&tree->phandle_tree);
 
@@ -97,7 +100,10 @@ devtree_get(void)
 struct fdt *
 devtree_get_fdt(struct devtree *dt)
 {
-    return dt->backing_data;
+    if(dt->flags & DEVTREE_FLAG_PHYSICAL) {
+        return __va(dt->backing.physical);
+    }
+    return dt->backing.virtual;
 }
 
 static inline struct dt_node *
@@ -132,6 +138,8 @@ static struct dt_node *
 unflatten_dt_node(struct devtree *dt, struct fdt_node *fdt_node)
 {
     struct fdt *fdt = devtree_get_fdt(dt);
+
+    DEBUG_ASSERT(!(dt->flags & DEVTREE_FLAG_PHYSICAL));
 
     struct dt_node *node = alloc_dt_node_struct();
     if(node == NULL)
@@ -181,9 +189,36 @@ unflatten_dt_node(struct devtree *dt, struct fdt_node *fdt_node)
 }
 
 static int
+device_tree_ensure_virtual(
+        struct devtree *tree)
+{
+    if(tree->flags & DEVTREE_FLAG_PHYSICAL) {
+        struct fdt *fdt = devtree_get_fdt(tree);
+        DEBUG_ASSERT(tree->backing_size == fdt_size(fdt));
+        void *buffer = kmalloc(tree->backing_size, KM_KERNEL);
+        if(buffer == NULL) {
+            return -ENOMEM;
+        }
+        memcpy(buffer, fdt, tree->backing_size);
+        tree->backing.virtual = buffer;
+        tree->flags &= ~DEVTREE_FLAG_PHYSICAL;
+    }
+    return 0;
+}
+
+static int
 unflatten_device_tree(struct devtree *tree)
 {
     int res;
+
+    if(tree->flags & DEVTREE_FLAG_UNFLATTENED) {
+        return 0;
+    }
+
+    res = device_tree_ensure_virtual(tree);
+    if(res) {
+        return res;
+    }
 
     struct fdt *fdt = devtree_get_fdt(tree);
     struct fdt_node *root = fdt_first_node(fdt);

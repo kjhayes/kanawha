@@ -79,8 +79,7 @@ riscv64_kernel_boot:
     jalr s0
 
     // Virtualize the stack
-    la s1, riscv64_boot_stack_base
-    add sp, a0, s1
+    ld sp, riscv64_virtual_boot_stack_base_ptr
 
     ld s0, riscv64_virtual_bsp_init_ptr
     jalr s0
@@ -141,9 +140,18 @@ riscv64_boot_ap_init_ptr:
 riscv64_virtual_ap_init_ptr:
 .quad riscv64_virtual_ap_init
 
+.align 3
+riscv64_virtual_boot_stack_base_ptr:
+.quad riscv64_virtual_boot_stack_base
+
 // Boot Stack
 .section .boot.data, "aw"
 riscv64_boot_stack_top:
 .fill CONFIG_RISCV64_BOOT_STACK_SIZE,1,0
 riscv64_boot_stack_base:
+
+.section .data, "aw"
+riscv64_virtual_boot_stack_top:
+.fill CONFIG_RISCV64_BOOT_STACK_SIZE,1,0
+riscv64_virtual_boot_stack_base:
 
