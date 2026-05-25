@@ -5,17 +5,41 @@
 
 A simple hobby kernel I'm ([Kevin](https://kjhayes.github.io)) writing in my free time.
 
-This kernel is not *efficient*. There are many many levels of indirection which do not have a fantastic reason
-for existing. For example, there is an interface to allow multiple "page_allocator's" to exist in the 
-system at once (this is pretty useless and slows down the entire system). But it means that you can play
-around with different schemes for how to allocate physical pages. If you have some bug, and you suspect it's
-the page allocator, you can just swap out the complicated buddy allocator for a dead simple slab allocator
-and see if the bug is still there. You can run two completely different allocators for different regions of
-memory, and the rest of the kernel will take advantage of both because they get presented through a single API.
-And most of all it just makes the process of toying with the kernel and trying out dumb ideas a bit easier, which
-is really what this hobby project is all about.
+## Running the Kernel
 
-- Documentation (https://kjhayes.github.io/kanawha)
-- Elk (C Library) (https://github.com/kjhayes/elk)
-- Cabin (init And Other Utilities) (https://github.com/kjhayes/cabin)
+On most x86_64 linux distributions
+```
+make x64/defconfig
+make
+```
+will build the kernel as `build/kanawha.o`.
+Then running
+```
+make isoimage
+```
+will generate `build/kanawha.iso` which can be
+installed onto a USB drive to boot the kernel on
+an x64 machine.
+
+For testing the kernel (assuming QEMU is installed)
+```
+make qemu
+```
+will run `qemu-system-x86_64` with a fairly standard
+configuration (the specifics of which can be found
+in the file `scripts/make/qemu.mk`).
+
+More kernel default configurations can be found in
+`setups/*/defconfig` or loaded by running `make */defconfig`
+(notably `make riscv64/defconfig` for testing the RISC-V support
+in Kanawha).
+
+To configure a custom kernel run
+```
+make menuconfig
+```
+to change any number of settings.
+
+## Documentation
+(Incomplete) Documentation for the kernel can be found at (https://kjhayes.github.io/kanawha)
 
