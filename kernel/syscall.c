@@ -324,6 +324,14 @@ handle_syscall(syscall_id_t id, struct syscall_args *args, uint64_t *ret_out)
                                                 (unsigned long)args->args[1],
                                                 (fd_t __user *)args->args[2]);
         break;
+    case SYSCALL_ID_MWAIT:
+        ret_val = (uint64_t)(int)syscall_mwait((void __user *)args->args[0],
+                                               (unsigned long)args->args[1]);
+        break;
+    case SYSCALL_ID_MWAKE:
+        ret_val = (uint64_t)(int)syscall_mwake((void __user *)args->args[0],
+                                               (unsigned long)args->args[1]);
+        break;
     default:
         syscall_unknown(id);
         ret_val = -ENOSYS;

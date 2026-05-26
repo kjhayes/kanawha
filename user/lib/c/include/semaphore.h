@@ -8,7 +8,10 @@
 
 typedef struct
 {
+    int lock;
     long value;
+    long waiting;
+    long waiting_seq;
 } sem_t;
 
 int
@@ -29,5 +32,16 @@ int
 sem_unlink(const char *);
 int
 sem_wait(sem_t *);
+
+static inline void
+__elk_libc_sem_lock(sem_t *sem)
+{
+    while(__atomic_test_and_set(&sem->lock, __ATOMIC_ACQUIRE)) {}
+}
+static inline void
+__elk_libc_sem_unlock(sem_t *sem)
+{
+    __atomic_clear(&sem->lock, __ATOMIC_RELEASE);
+}
 
 #endif

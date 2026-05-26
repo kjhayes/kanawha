@@ -49,6 +49,8 @@
 #define KANAWHA_SYSCALL_ID_CONNECT   46
 #define KANAWHA_SYSCALL_ID_ACCEPT    47
 #define KANAWHA_SYSCALL_ID_SOCKET    48
+#define KANAWHA_SYSCALL_ID_MWAIT     49
+#define KANAWHA_SYSCALL_ID_MWAKE     50
 
 .global kanawha_sys_exit
 .type kanawha_sys_exit,@function
@@ -506,6 +508,24 @@ kanawha_sys_socket:
     // rdi -> unsigned long flags
     // rsi -> unsigned long mode_flags
     // rdx -> fd_t *out
+    syscall
+    retq
+
+.global kanawha_sys_mwait
+.type kanawha_sys_mwait,@function
+kanawha_sys_mwait:
+    movq $KANAWHA_SYSCALL_ID_MWAIT, %rax
+    // rdi -> void *addr
+    // rsi -> unsigned long flags
+    syscall
+    retq
+
+.global kanawha_sys_mwake
+.type kanawha_sys_mwake,@function
+kanawha_sys_mwake:
+    movq $KANAWHA_SYSCALL_ID_MWAKE, %rax
+    // rdi -> void *addr
+    // rsi -> unsigned long flags
     syscall
     retq
 

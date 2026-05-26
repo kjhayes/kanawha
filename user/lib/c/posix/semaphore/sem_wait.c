@@ -3,6 +3,8 @@
 #include <semaphore.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <kanawha/sys-wrappers.h>
+#include <kanawha/mwait.h>
 
 int
 sem_wait(sem_t *sem)
@@ -14,18 +16,21 @@ sem_wait(sem_t *sem)
         {
         }
     }
+
+    __elk_libc_sem_lock(sem);
     while(1)
     {
-        typeof(sem->value) value;
-        value = __atomic_fetch_sub(&sem->value, 1, __ATOMIC_SEQ_CST);
-        if(value <= 0)
-        {
-            __atomic_fetch_add(&sem->value, 1, __ATOMIC_SEQ_CST);
-            // TODO: yield() of some sort
-        }
-        else
-        {
+        if(sem->value > 0) {
+            sem->value--;
+            __elk_libc_sem_unlock(sem);
             return 0;
+        } else {
+            sem->waiting++;
+            sem->waiting_seq++;
+            __elk_libc_sem_unlock(sem);
+            kanawha_sys_mwait(&sem->value, 0);
+            __elk_libc_sem_lock(sem);
+            sem->waiting--;
         }
     }
 }

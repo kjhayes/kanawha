@@ -37,7 +37,8 @@ struct mmap_page
 };
 
 struct mmap_region_waitqueue {
-    struct ptree_node node;
+    struct mmap_region *region;
+    struct ptree_node ptree_node;
     struct waitqueue waitqueue;
     atomic_t refs;
 };
@@ -53,10 +54,10 @@ struct mmap_region
 
     unsigned long mmap_flags;
 
-    spinlock_t page_tree_lock;
+    irq_lock_t page_tree_lock;
     struct ptree page_tree;
 
-    spinlock_t waitqueue_tree_lock;
+    irq_lock_t waitqueue_tree_lock;
     struct ptree waitqueue_tree;
 
     struct ptree_node tree_node;
@@ -67,7 +68,7 @@ struct mmap_region
 
 struct mmap
 {
-    spinlock_t lock;
+    irq_lock_t lock;
 
     struct ptree region_tree;
     struct vmem_region *vmem_region;

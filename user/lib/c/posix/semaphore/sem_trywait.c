@@ -5,12 +5,13 @@
 int
 sem_trywait(sem_t *sem)
 {
-    typeof(sem->value) value;
-    value = __atomic_fetch_sub(&sem->value, 1, __ATOMIC_SEQ_CST);
-    if(value <= 0)
+    __elk_libc_sem_lock(sem);
+    if(sem->value <= 0)
     {
-        __atomic_fetch_add(&sem->value, 1, __ATOMIC_SEQ_CST);
+        __elk_libc_sem_unlock(sem);
         return -EAGAIN;
     }
+    sem->value--;
+    __elk_libc_sem_unlock(sem);
     return 0;
 }

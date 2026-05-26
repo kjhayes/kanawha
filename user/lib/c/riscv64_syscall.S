@@ -57,4 +57,6 @@ SYSCALL prset     , 45
 SYSCALL connect   , 46
 SYSCALL accept    , 47
 SYSCALL socket    , 48
+SYSCALL mwait     , 49
+SYSCALL mwake     , 50
 

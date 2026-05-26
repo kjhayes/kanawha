@@ -4,7 +4,8 @@
 int
 sem_getvalue(sem_t *sem, int *out)
 {
-    // TODO: This should probably be an atomic load of some sort
+    __elk_libc_sem_lock(sem);
     *out = sem->value;
+    __elk_libc_sem_unlock(sem);
     return 0;
 }

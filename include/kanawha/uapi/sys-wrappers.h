@@ -171,6 +171,12 @@ kanawha_sys_accept(fd_t file, fd_t *conn, unsigned long flags);
 __syscall int
 kanawha_sys_socket(unsigned long flags, unsigned long mode_flags, fd_t *out);
 
+__syscall int
+kanawha_sys_mwait(void *addr, unsigned long flags);
+
+__syscall int
+kanawha_sys_mwake(void *addr, unsigned long flags);
+
 #endif /* KANAWHA_BUILDING_KERNEL */
 
 #endif

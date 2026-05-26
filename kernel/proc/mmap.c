@@ -15,6 +15,56 @@
 #include <kanawha/types.h>
 #include <kanawha/vmem.h>
 
+static inline void
+mmap_lock_init(struct mmap *mmap)
+{
+    irq_lock_init(&mmap->lock);
+}
+static inline void
+mmap_lock_acquire(struct mmap *mmap)
+{
+    irq_lock_acquire(&mmap->lock);
+}
+static inline void
+mmap_lock_release(struct mmap *mmap)
+{
+    irq_lock_release(&mmap->lock);
+}
+
+static inline void
+mmap_region_page_tree_lock_init(struct mmap_region *region)
+{
+    irq_lock_init(&region->page_tree_lock);
+}
+static inline void
+mmap_region_page_tree_lock_acquire(struct mmap_region *region)
+{
+    irq_lock_acquire(&region->page_tree_lock);
+}
+static inline void
+mmap_region_page_tree_lock_release(struct mmap_region *region)
+{
+    irq_lock_release(&region->page_tree_lock);
+}
+
+static inline void
+mmap_region_waitqueue_tree_lock_init(struct mmap_region *region)
+{
+    irq_lock_init(&region->waitqueue_tree_lock);
+}
+__maybe_unused
+static inline void
+mmap_region_waitqueue_tree_lock_acquire(struct mmap_region *region)
+{
+    irq_lock_acquire(&region->waitqueue_tree_lock);
+}
+__maybe_unused
+static inline void
+mmap_region_waitqueue_tree_lock_release(struct mmap_region *region)
+{
+    irq_lock_release(&region->waitqueue_tree_lock);
+}
+
 static int
 mmap_unmap_region_lockless(struct mmap *mmap, struct mmap_region *region);
 
@@ -29,7 +79,7 @@ mmap_create(size_t size, struct process *initial_process)
         return -ENOMEM;
     }
 
-    spinlock_init(&mmap->lock);
+    mmap_lock_init(mmap);
     ptree_init(&mmap->region_tree);
     ilist_init(&mmap->process_list);
 
@@ -58,7 +108,7 @@ mmap_attach(struct mmap *mmap, struct process *process)
 {
     int res;
 
-    int irq_flags = spin_lock_irq_save(&mmap->lock);
+    mmap_lock_acquire(mmap);
 
     process->mmap = mmap;
     ilist_push_tail(&mmap->process_list, &process->mmap_list_node);
@@ -68,14 +118,14 @@ mmap_attach(struct mmap *mmap, struct process *process)
     {
         ilist_remove(&mmap->process_list, &process->mmap_list_node);
         process->mmap = NULL;
-        spin_unlock_irq_restore(&mmap->lock, irq_flags);
+        mmap_lock_release(mmap);
         return res;
     }
 
     process->mmap_ref = vmem_map_get_region(process->thread.mem_map, 0x0);
     DEBUG_ASSERT(KERNEL_ADDR(process->mmap_ref));
 
-    spin_unlock_irq_restore(&mmap->lock, irq_flags);
+    mmap_lock_release(mmap);
     dprintk("Attached MMAP %p to Process %p\n", mmap, process);
     return 0;
 }
@@ -85,12 +135,12 @@ mmap_deattach(struct mmap *mmap, struct process *process)
 {
     int res;
 
-    int irq_flags = spin_lock_irq_save(&mmap->lock);
+    mmap_lock_acquire(mmap);
 
     res = vmem_map_unmap_region(process->thread.mem_map, process->mmap_ref);
     if(res)
     {
-        spin_unlock_irq_restore(&mmap->lock, irq_flags);
+        mmap_lock_release(mmap);
         return res;
     }
 
@@ -129,15 +179,13 @@ mmap_deattach(struct mmap *mmap, struct process *process)
                     errnostr(res));
         }
 
+        // We need to release the lock to restore IRQ state
+        mmap_lock_release(mmap);
         kfree(mmap);
-
-        // Don't unlock the lock just to be extra safe,
-        // we'd rather deadlock than use an invalid vmem_region
-        enable_restore_irqs(irq_flags);
         return 0;
     }
 
-    spin_unlock_irq_restore(&mmap->lock, irq_flags);
+    mmap_lock_release(mmap);
     return 0;
 }
 
@@ -558,13 +606,13 @@ mmap_map_region(struct process *process,
     region->size = size;
     region->file_offset = file_offset;
 
-    spinlock_init(&region->page_tree_lock);
+    mmap_region_page_tree_lock_init(region);
     ptree_init(&region->page_tree);
 
-    spinlock_init(&region->waitqueue_tree_lock);
+    mmap_region_waitqueue_tree_lock_init(region);
     ptree_init(&region->waitqueue_tree);
 
-    spin_lock(&mmap->lock);
+    mmap_lock_acquire(mmap);
 
     // This will find us a valid offset
     res = __mmap_locked_hint_offset(process, mmap, hint_offset, size);
@@ -591,11 +639,11 @@ mmap_map_region(struct process *process,
             region->tree_node.key,
             region->tree_node.key + region->size);
 
-    spin_unlock(&mmap->lock);
+    mmap_lock_release(mmap);
     return 0;
 
 err3:
-    spin_unlock(&mmap->lock);
+    mmap_lock_release(mmap);
     // err2:
     if(region->has_name)
     {
@@ -683,19 +731,19 @@ mmap_map_region_exact(struct process *process,
     region->file_offset = file_offset;
     region->tree_node.key = mmap_offset;
 
-    spinlock_init(&region->page_tree_lock);
+    mmap_region_page_tree_lock_init(region);
     dprintk("mmap_region page_tree_init region=%p [%p-%p)\n",
             region,
             region->tree_node.key,
             region->tree_node.key + region->size);
     ptree_init(&region->page_tree);
 
-    spinlock_init(&region->waitqueue_tree_lock);
+    mmap_region_waitqueue_tree_lock_init(region);
     ptree_init(&region->waitqueue_tree);
 
     uintptr_t end_offset = mmap_offset + size;
 
-    spin_lock(&mmap->lock);
+    mmap_lock_acquire(mmap);
 
     // We need to check that this mapping doesn't conflict
     struct ptree_node *before =
@@ -729,11 +777,11 @@ mmap_map_region_exact(struct process *process,
         goto err3;
     }
 
-    spin_unlock(&mmap->lock);
+    mmap_lock_release(mmap);
     return 0;
 
 err3:
-    spin_unlock(&mmap->lock);
+    mmap_lock_release(mmap);
     // err2:
     kfree(region);
 err1:
@@ -762,7 +810,7 @@ mmap_find_free_region(struct process *process,
     struct mmap *mmap = process->mmap;
     DEBUG_ASSERT(KERNEL_ADDR(mmap));
 
-    spin_lock(&mmap->lock);
+    mmap_lock_acquire(mmap);
 
     // This will find us a valid offset
     res = __mmap_locked_hint_offset(process, mmap, hint_offset, size);
@@ -771,11 +819,11 @@ mmap_find_free_region(struct process *process,
         goto err;
     }
 
-    spin_unlock(&mmap->lock);
+    mmap_lock_release(mmap);
     return 0;
 
 err:
-    spin_unlock(&mmap->lock);
+    mmap_lock_release(mmap);
     return res;
 }
 static int
@@ -793,7 +841,7 @@ mmap_unmap_region_lockless(struct mmap *mmap, struct mmap_region *region)
         ptree_remove(&mmap->region_tree, region->tree_node.key);
     DEBUG_ASSERT(removed == &region->tree_node);
 
-    spin_lock(&region->page_tree_lock);
+    mmap_region_page_tree_lock_acquire(region);
 
     __maybe_unused size_t num_reclaimed = 0;
 
@@ -806,7 +854,7 @@ mmap_unmap_region_lockless(struct mmap *mmap, struct mmap_region *region)
         res = mmap_region_reclaim_page(region, page);
         if(res)
         {
-            spin_unlock(&region->page_tree_lock);
+            mmap_region_page_tree_lock_release(region);
             eprintk("mmap_unmap_region: mmap_region_reclaim_page "
                     "returned %s\n",
                     errnostr(res));
@@ -816,7 +864,7 @@ mmap_unmap_region_lockless(struct mmap *mmap, struct mmap_region *region)
         struct ptree_node *next = ptree_get_first(&region->page_tree);
         if(next == page_node)
         {
-            spin_unlock(&region->page_tree_lock);
+            mmap_region_page_tree_lock_release(region);
             eprintk("mmap_unmap_region: Failed to reclaim mmap page\n");
             return -EINVAL;
         }
@@ -836,7 +884,18 @@ mmap_unmap_region_lockless(struct mmap *mmap, struct mmap_region *region)
         kfree(region->name);
     }
 
-    spin_unlock(&region->page_tree_lock);
+    mmap_region_page_tree_lock_release(region);
+
+    mmap_region_waitqueue_tree_lock_acquire(region);
+    struct ptree_node *waitqueue_node = ptree_get_first(&region->waitqueue_tree);
+    while(waitqueue_node != NULL) {
+        struct mmap_region_waitqueue *wq = container_of(waitqueue_node, struct mmap_region_waitqueue, ptree_node);
+        wq->region = NULL;
+        struct ptree_node *rem = ptree_remove(&region->waitqueue_tree, wq->ptree_node.key);
+        DEBUG_ASSERT(rem == &wq->ptree_node);
+        waitqueue_node = ptree_get_first(&region->waitqueue_tree);
+    }
+    mmap_region_waitqueue_tree_lock_release(region);
 
     kfree(region);
 
@@ -851,11 +910,13 @@ mmap_unmap_region(struct process *process, uintptr_t mmap_offset)
     struct mmap *mmap = process->mmap;
     DEBUG_ASSERT(KERNEL_ADDR(mmap));
 
+    mmap_lock_acquire(mmap);
+
     struct ptree_node *pnode =
         ptree_get_max_less_or_eq(&mmap->region_tree, mmap_offset);
     if(pnode == NULL)
     {
-        spin_unlock(&mmap->lock);
+        mmap_lock_release(mmap);
         return -ENXIO;
     }
 
@@ -864,7 +925,7 @@ mmap_unmap_region(struct process *process, uintptr_t mmap_offset)
 
     if(mmap_offset >= (region->tree_node.key + region->size))
     {
-        spin_unlock(&mmap->lock);
+        mmap_lock_release(mmap);
         return -ENXIO;
     }
 
@@ -872,12 +933,12 @@ mmap_unmap_region(struct process *process, uintptr_t mmap_offset)
           ((uintptr_t)region->tree_node.key + region->size <=
            (uintptr_t)process->user_ip))))
     {
+        mmap_lock_release(mmap);
         return -EINVAL;
     }
 
-    spin_lock(&mmap->lock);
     res = mmap_unmap_region_lockless(mmap, region);
-    spin_unlock(&mmap->lock);
+    mmap_lock_release(mmap);
     return res;
 }
 
@@ -1187,11 +1248,11 @@ mmap_read(struct process *process, uintptr_t offset, void *dst, size_t length)
         return -EINVAL;
     }
 
-    int irq_flags = spin_lock_irq_save(&mmap->lock);
+    mmap_lock_acquire(mmap);
 
     if(offset + length > mmap->vmem_region->size)
     {
-        spin_unlock_irq_restore(&mmap->lock, irq_flags);
+        mmap_lock_release(mmap);
         return -EINVAL;
     }
 
@@ -1206,19 +1267,19 @@ mmap_read(struct process *process, uintptr_t offset, void *dst, size_t length)
 
         if((pnode == NULL) || (offset >= region->size + pnode->key))
         {
-            spin_unlock_irq_restore(&mmap->lock, irq_flags);
+            mmap_lock_release(mmap);
             return -EINVAL;
         }
 
-        spin_lock(&region->page_tree_lock);
+        mmap_lock_release(mmap);
 
         uintptr_t region_offset = offset - region->tree_node.key;
 
         if((region->mmap_flags & MMAP_PROT_READ) == 0)
         {
             // The process is not allowed to read this page
-            spin_unlock(&region->page_tree_lock);
-            spin_unlock_irq_restore(&mmap->lock, irq_flags);
+            mmap_region_page_tree_lock_release(region);
+            mmap_lock_release(mmap);
             eprintk("mmap_read(process=%ld,offset=0x%llx,len=0x%llx)"
                     " Page is not Mapped as Readable!\n",
                     (sl_t)process->id,
@@ -1237,16 +1298,16 @@ mmap_read(struct process *process, uintptr_t offset, void *dst, size_t length)
             res = mmap_region_load_page(region, region_offset, &page);
             if(res)
             {
-                spin_unlock(&region->page_tree_lock);
-                spin_unlock_irq_restore(&mmap->lock, irq_flags);
+                mmap_region_page_tree_lock_release(region);
+                mmap_lock_release(mmap);
                 return res;
             }
         }
 
         if(page == NULL)
         {
-            spin_unlock(&region->page_tree_lock);
-            spin_unlock_irq_restore(&mmap->lock, irq_flags);
+            mmap_region_page_tree_lock_release(region);
+            mmap_lock_release(mmap);
             return -EINVAL;
         }
 
@@ -1270,10 +1331,10 @@ mmap_read(struct process *process, uintptr_t offset, void *dst, size_t length)
             offset += room_avail;
         }
 
-        spin_unlock(&region->page_tree_lock);
+        mmap_region_page_tree_lock_release(region);
     }
 
-    spin_unlock_irq_restore(&mmap->lock, irq_flags);
+    mmap_lock_release(mmap);
     return 0;
 }
 
@@ -1291,11 +1352,11 @@ mmap_write(struct process *process, uintptr_t offset, void *src, size_t length)
         return -EINVAL;
     }
 
-    int irq_flags = spin_lock_irq_save(&mmap->lock);
+    mmap_lock_acquire(mmap);
 
     if(offset + length > mmap->vmem_region->size)
     {
-        spin_unlock_irq_restore(&mmap->lock, irq_flags);
+        mmap_lock_release(mmap);
         return -EINVAL;
     }
 
@@ -1310,19 +1371,19 @@ mmap_write(struct process *process, uintptr_t offset, void *src, size_t length)
 
         if((pnode == NULL) || (offset >= region->size + pnode->key))
         {
-            spin_unlock_irq_restore(&mmap->lock, irq_flags);
+            mmap_lock_release(mmap);
             return -EINVAL;
         }
 
-        spin_lock(&region->page_tree_lock);
+        mmap_lock_release(mmap);
 
         uintptr_t region_offset = offset - region->tree_node.key;
 
         if((region->mmap_flags & MMAP_PROT_WRITE) == 0)
         {
             // The process is not allowed to write this page
-            spin_unlock(&region->page_tree_lock);
-            spin_unlock_irq_restore(&mmap->lock, irq_flags);
+            mmap_region_page_tree_lock_release(region);
+            mmap_lock_release(mmap);
             eprintk("mmap_write(process=%ld,offset=0x%llx,len=0x%llx)"
                     " Page is not Mapped as Writable!\n",
                     (sl_t)process->id,
@@ -1341,16 +1402,16 @@ mmap_write(struct process *process, uintptr_t offset, void *src, size_t length)
             res = mmap_region_load_page(region, region_offset, &page);
             if(res)
             {
-                spin_unlock(&region->page_tree_lock);
-                spin_unlock_irq_restore(&mmap->lock, irq_flags);
+                mmap_region_page_tree_lock_release(region);
+                mmap_lock_release(mmap);
                 return res;
             }
         }
 
         if(page == NULL)
         {
-            spin_unlock(&region->page_tree_lock);
-            spin_unlock_irq_restore(&mmap->lock, irq_flags);
+            mmap_region_page_tree_lock_release(region);
+            mmap_lock_release(mmap);
             return -EINVAL;
         }
 
@@ -1361,16 +1422,16 @@ mmap_write(struct process *process, uintptr_t offset, void *src, size_t length)
             res = mmap_page_do_copy_on_write(region, page);
             if(res)
             {
-                spin_unlock(&region->page_tree_lock);
-                spin_unlock_irq_restore(&mmap->lock, irq_flags);
+                mmap_region_page_tree_lock_release(region);
+                mmap_lock_release(mmap);
                 return res;
             }
         }
 
         if(page->flags & MMAP_PAGE_COPY_ON_WRITE)
         {
-            spin_unlock(&region->page_tree_lock);
-            spin_unlock_irq_restore(&mmap->lock, irq_flags);
+            mmap_region_page_tree_lock_release(region);
+            mmap_lock_release(mmap);
             return -EINVAL;
         }
 
@@ -1394,10 +1455,10 @@ mmap_write(struct process *process, uintptr_t offset, void *src, size_t length)
             offset += room_avail;
         }
 
-        spin_unlock(&region->page_tree_lock);
+        mmap_region_page_tree_lock_release(region);
     }
 
-    spin_unlock_irq_restore(&mmap->lock, irq_flags);
+    mmap_lock_release(mmap);
     return 0;
 }
 
@@ -1448,7 +1509,7 @@ mmap_user_strlen(struct process *process,
             offset,
             max_strlen);
 
-    int irq_flags = spin_lock_irq_save(&mmap->lock);
+    mmap_lock_acquire(mmap);
 
     size_t len = 0;
 
@@ -1464,7 +1525,7 @@ mmap_user_strlen(struct process *process,
 
         if((pnode == NULL) || (offset >= region->size + pnode->key))
         {
-            spin_unlock_irq_restore(&mmap->lock, irq_flags);
+            mmap_lock_release(mmap);
             return -EINVAL;
         }
 
@@ -1477,15 +1538,15 @@ mmap_user_strlen(struct process *process,
                 region->tree_node.key,
                 region->tree_node.key + region->size);
 
-        spin_lock(&region->page_tree_lock);
+        mmap_region_page_tree_lock_acquire(region);
 
         size_t region_offset = offset - region->tree_node.key;
 
         if((region->mmap_flags & MMAP_PROT_READ) == 0)
         {
             // The process is not allowed to read this page
-            spin_unlock(&region->page_tree_lock);
-            spin_unlock_irq_restore(&mmap->lock, irq_flags);
+            mmap_region_page_tree_lock_release(region);
+            mmap_lock_release(mmap);
             return -EINVAL;
         }
 
@@ -1500,8 +1561,8 @@ mmap_user_strlen(struct process *process,
             res = mmap_region_load_page(region, region_offset, &page);
             if(res)
             {
-                spin_unlock(&region->page_tree_lock);
-                spin_unlock_irq_restore(&mmap->lock, irq_flags);
+                mmap_region_page_tree_lock_release(region);
+                mmap_lock_release(mmap);
                 return res;
             }
         }
@@ -1524,8 +1585,8 @@ mmap_user_strlen(struct process *process,
 
         if(page == NULL)
         {
-            spin_unlock(&region->page_tree_lock);
-            spin_unlock_irq_restore(&mmap->lock, irq_flags);
+            mmap_region_page_tree_lock_release(region);
+            mmap_lock_release(mmap);
             return -EINVAL;
         }
 
@@ -1561,10 +1622,10 @@ mmap_user_strlen(struct process *process,
             offset++;
         }
 
-        spin_unlock(&region->page_tree_lock);
+        mmap_region_page_tree_lock_release(region);
     }
 
-    spin_unlock_irq_restore(&mmap->lock, irq_flags);
+    mmap_lock_release(mmap);
 
     *out_len = len;
     return 0;
@@ -1647,20 +1708,20 @@ mmap_page_fault_handler(struct excp_state *state,
     }
 
     int res;
-    int irq_flags = spin_lock_irq_save(&mmap->lock);
+    mmap_lock_acquire(mmap);
 
     struct ptree_node *pnode;
     pnode = ptree_get_max_less_or_eq(&mmap->region_tree, offset);
     if(pnode == NULL)
     {
-        spin_unlock_irq_restore(&mmap->lock, irq_flags);
+        mmap_lock_release(mmap);
         return PAGE_FAULT_UNHANDLED;
     }
 
     struct mmap_region *region =
         container_of(pnode, struct mmap_region, tree_node);
 
-    spin_lock(&region->page_tree_lock);
+    mmap_region_page_tree_lock_acquire(region);
 
     uintptr_t region_offset = offset - region->tree_node.key;
 
@@ -1668,8 +1729,8 @@ mmap_page_fault_handler(struct excp_state *state,
     {
         res = mmap_not_present_page_fault_handler(mmap, region, region_offset);
 
-        spin_unlock(&region->page_tree_lock);
-        spin_unlock_irq_restore(&mmap->lock, irq_flags);
+        mmap_region_page_tree_lock_release(region);
+        mmap_lock_release(mmap);
         return res;
     }
 
@@ -1683,43 +1744,151 @@ mmap_page_fault_handler(struct excp_state *state,
         res = mmap_page_do_copy_on_write(region, page);
         if(res)
         {
-            spin_unlock(&region->page_tree_lock);
-            spin_unlock_irq_restore(&mmap->lock, irq_flags);
+            mmap_region_page_tree_lock_release(region);
+            mmap_lock_release(mmap);
             return PAGE_FAULT_UNHANDLED;
         }
 
-        spin_unlock(&region->page_tree_lock);
-        spin_unlock_irq_restore(&mmap->lock, irq_flags);
+        mmap_region_page_tree_lock_release(region);
+        mmap_lock_release(mmap);
         return PAGE_FAULT_HANDLED;
     }
 
-    spin_unlock(&region->page_tree_lock);
-    spin_unlock_irq_restore(&mmap->lock, irq_flags);
+    mmap_region_page_tree_lock_release(region);
+    mmap_lock_release(mmap);
     return PAGE_FAULT_UNHANDLED;
 }
 
 // Waiting
+
+static inline struct mmap_region_waitqueue *
+mmap_region_get_waitqueue(
+        struct mmap_region *region,
+        uintptr_t offset)
+{
+    int res;
+    mmap_region_waitqueue_tree_lock_acquire(region);
+
+    struct mmap_region_waitqueue *wq = NULL;
+
+    {
+        struct ptree_node *pnode = ptree_get(&region->waitqueue_tree, offset);
+        if(pnode == NULL) {
+            wq = kzmalloc(sizeof(*wq), KM_KERNEL);
+            if(wq == NULL) {
+                mmap_region_waitqueue_tree_lock_release(region);
+                return NULL;
+            }
+            wq->refs = 0;
+            res = waitqueue_init(&wq->waitqueue);
+            if(res) {
+                kfree(wq);
+                mmap_region_waitqueue_tree_lock_release(region);
+                return NULL;
+            }
+            wq->region = region;
+            ptree_insert(&region->waitqueue_tree, &wq->ptree_node, offset);
+        } else {
+            wq = container_of(pnode, struct mmap_region_waitqueue, ptree_node);
+        }
+    }
+
+    // We only increment while holding the waitqueue_tree lock,
+    // but we might decrement without the lock, so make it atomic.
+    atomic_val_t old = atomic_fetch_inc(&wq->refs);
+    DEBUG_ASSERT(old > 0);
+
+    mmap_region_waitqueue_tree_lock_release(region);
+    return wq;
+}
+
+static inline int
+mmap_region_put_waitqueue(
+        struct mmap_region_waitqueue *wq)
+{
+    atomic_val_t old = atomic_fetch_dec(&wq->refs);
+    if(old == 1) {
+        // This is the final reference to the waitqueue
+        struct mmap_region *region = wq->region;
+        if(region) {
+            mmap_region_waitqueue_tree_lock_acquire(region);
+            if(wq->region) {
+                struct ptree_node *rem = ptree_remove(&region->waitqueue_tree, wq->ptree_node.key);
+                DEBUG_ASSERT(rem == &wq->ptree_node);
+                wq->region = NULL;
+            }
+            mmap_region_waitqueue_tree_lock_release(region);
+        }
+        waitqueue_deinit(&wq->waitqueue);
+        kfree(wq);
+    }
+    return 0;
+}
 
 int
 mmap_region_wait_on(
         struct mmap_region *region,
         uintptr_t offset)
 {
-    return -EUNIMPL;
+    int res, waiting_res;
+    struct mmap_region_waitqueue *wq;
+    wq = mmap_region_get_waitqueue(region, offset);
+    if(wq == NULL) {
+        return -ENOMEM;
+    }
+
+    waiting_res = wait_on(&wq->waitqueue);
+
+    res = mmap_region_put_waitqueue(wq);
+    if(res) {
+        return res;
+    }
+
+    return waiting_res;
 }
 int
 mmap_region_wake_single(
         struct mmap_region *region,
         uintptr_t offset)
 {
-    return -EUNIMPL;
+    int res, wake_res;
+
+    struct mmap_region_waitqueue *wq;
+    wq = mmap_region_get_waitqueue(region, offset);
+    if(wq == NULL) {
+        return -ENOMEM;
+    }
+
+    wake_res = wake_single(&wq->waitqueue);
+
+    res = mmap_region_put_waitqueue(wq);
+    if(res) {
+        return res;
+    }
+
+    return wake_res;
 }
 int
 mmap_region_wake_all(
         struct mmap_region *region,
         uintptr_t offset)
 {
-    return -EUNIMPL;
+    int res, wake_res;
+
+    struct mmap_region_waitqueue *wq;
+    wq = mmap_region_get_waitqueue(region, offset);
+    if(wq == NULL) {
+        return -ENOMEM;
+    }
+
+    wake_res = wake_all(&wq->waitqueue);
+
+    res = mmap_region_put_waitqueue(wq);
+    if(res) {
+        return res;
+    }
+
+    return wake_res;
 }
 
 // Cloning
@@ -1855,7 +2024,7 @@ mmap_region_clone(struct mmap_region *from, struct mmap *to)
 
     region->mmap = to;
 
-    int irq_flags = spin_lock_irq_save(&from->page_tree_lock);
+    mmap_region_page_tree_lock_acquire(region);
 
     region->size = from->size;
     region->file_offset = from->file_offset;
@@ -1865,10 +2034,10 @@ mmap_region_clone(struct mmap_region *from, struct mmap *to)
     {
         fs_node_get(region->fs_node);
     }
-    spinlock_init(&region->page_tree_lock);
+    mmap_region_page_tree_lock_init(region);
     ptree_init(&region->page_tree);
 
-    spinlock_init(&region->waitqueue_tree_lock);
+    mmap_region_waitqueue_tree_lock_init(region);
     ptree_init(&region->waitqueue_tree);
 
     size_t region_offset = from->tree_node.key;
@@ -1876,7 +2045,7 @@ mmap_region_clone(struct mmap_region *from, struct mmap *to)
     res = ptree_insert(&to->region_tree, &region->tree_node, region_offset);
     if(res)
     {
-        spin_unlock_irq_restore(&from->page_tree_lock, irq_flags);
+        mmap_region_page_tree_lock_release(region);
         if(region->fs_node)
         {
             fs_node_put(region->fs_node);
@@ -1895,14 +2064,14 @@ mmap_region_clone(struct mmap_region *from, struct mmap *to)
         if(res)
         {
             eprintk("Failed to clone mmap page! err=%s\n", errnostr(res));
-            spin_unlock_irq_restore(&from->page_tree_lock, irq_flags);
+            mmap_region_page_tree_lock_release(region);
             // Our region will still be in the mmap just incomplete
             // (It should be freed on mmap destruction)
             return res;
         }
     }
 
-    spin_unlock_irq_restore(&from->page_tree_lock, irq_flags);
+    mmap_region_page_tree_lock_release(region);
     return 0;
 }
 
@@ -1922,9 +2091,9 @@ mmap_clone(struct mmap *from, struct process *onto)
 
     // No one should be able to access "onto->mmap" yet but just to be extra
     // safe...
-    spin_lock(&mmap->lock);
+    mmap_lock_acquire(mmap);
+    mmap_lock_acquire(from);
 
-    int irq_flags = spin_lock_irq_save(&from->lock);
     struct ptree_node *pnode;
     for(pnode = ptree_get_first(&from->region_tree); pnode != NULL;
         pnode = ptree_get_next(pnode))
@@ -1934,8 +2103,8 @@ mmap_clone(struct mmap *from, struct process *onto)
         res = mmap_region_clone(region, mmap);
         if(res)
         {
-            spin_unlock_irq_restore(&from->lock, irq_flags);
-            spin_unlock(&mmap->lock);
+            mmap_lock_release(mmap);
+            mmap_lock_release(from);
             return res;
         }
     }
@@ -1957,8 +2126,8 @@ mmap_clone(struct mmap *from, struct process *onto)
         }
     }
 
-    spin_unlock_irq_restore(&from->lock, irq_flags);
-    spin_unlock(&mmap->lock);
+    mmap_lock_release(mmap);
+    mmap_lock_release(from);
 
     // mmap_dump(do_printk, from);
     // mmap_dump(do_printk, onto->mmap);
@@ -1988,7 +2157,7 @@ dump_mmap_region(printk_f *printer, struct mmap_region *region)
 {
     int res;
 
-    spin_lock(&region->page_tree_lock);
+    mmap_region_page_tree_lock_acquire(region);
 
     (*printer)("\tRegion [%p-%p] %s%s%s %s%s%s %s\n",
                (uintptr_t)region->tree_node.key,
@@ -2010,12 +2179,12 @@ dump_mmap_region(printk_f *printer, struct mmap_region *region)
         res = dump_mmap_page(printer, region, page);
         if(res)
         {
-            spin_unlock(&region->page_tree_lock);
+            mmap_region_page_tree_lock_release(region);
             return res;
         }
     }
 
-    spin_unlock(&region->page_tree_lock);
+    mmap_region_page_tree_lock_release(region);
     return 0;
 }
 
@@ -2023,7 +2192,7 @@ int
 mmap_dump(printk_f *printer, struct mmap *mmap)
 {
     int res;
-    int irq_flags = spin_lock_irq_save(&mmap->lock);
+    mmap_lock_acquire(mmap);
 
     (*printer)("MMAP\n");
 
@@ -2033,14 +2202,16 @@ mmap_dump(printk_f *printer, struct mmap *mmap)
     {
         struct mmap_region *region =
             container_of(pnode, struct mmap_region, tree_node);
+        mmap_region_page_tree_lock_acquire(region);
         res = dump_mmap_region(printer, region);
         if(res)
         {
-            spin_unlock_irq_restore(&mmap->lock, irq_flags);
+            mmap_region_page_tree_lock_release(region);
             return res;
         }
+        mmap_region_page_tree_lock_release(region);
     }
 
-    spin_unlock_irq_restore(&mmap->lock, irq_flags);
+    mmap_lock_release(mmap);
     return 0;
 }

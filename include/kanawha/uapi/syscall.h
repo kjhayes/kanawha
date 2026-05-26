@@ -282,6 +282,16 @@ typedef int syscall_id_t;
     ARG(unsigned long, mode_flags)                                             \
     ARG(fd_t __user *, out)
 
+#define SYSCALL_SIG_MWAIT(RET, ARG, ...) \
+    RET(int) \
+    ARG(void __user *, addr) \
+    ARG(unsigned long, flags)
+
+#define SYSCALL_SIG_MWAKE(RET, ARG, ...) \
+    RET(int) \
+    ARG(void __user *, addr) \
+    ARG(unsigned long, flags)
+
 #define SYSCALL_XLIST(X)                                                       \
     X(exit, 0, EXIT, SYSCALL_SIG_EXIT)                                         \
     X(open, 1, OPEN, SYSCALL_SIG_OPEN)                                         \
@@ -329,7 +339,9 @@ typedef int syscall_id_t;
     X(prset, 45, PRSET, SYSCALL_SIG_PRSET)                                     \
     X(connect, 46, CONNECT, SYSCALL_SIG_CONNECT)                               \
     X(accept, 47, ACCEPT, SYSCALL_SIG_ACCEPT)                                  \
-    X(socket, 48, SOCKET, SYSCALL_SIG_SOCKET)
+    X(socket, 48, SOCKET, SYSCALL_SIG_SOCKET)                                  \
+    X(mwait, 49, MWAIT, SYSCALL_SIG_MWAIT)                                     \
+    X(mwake, 50, MWAKE, SYSCALL_SIG_MWAKE)
 
 #ifdef KANAWHA_BUILDING_KERNEL
 

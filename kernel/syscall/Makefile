@@ -45,4 +45,6 @@ obj-y += \
 	connect.o \
 	accept.o \
 	socket.o \
+	mwait.o \
+	mwake.o \
 
