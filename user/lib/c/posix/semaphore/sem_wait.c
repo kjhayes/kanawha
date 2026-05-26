@@ -26,10 +26,10 @@ sem_wait(sem_t *sem)
             return 0;
         } else {
             sem->waiting++;
-            sem->waiting_seq++;
             __elk_libc_sem_unlock(sem);
             kanawha_sys_mwait(&sem->value, 0);
             __elk_libc_sem_lock(sem);
+            sem->waiting_seq++;
             sem->waiting--;
         }
     }

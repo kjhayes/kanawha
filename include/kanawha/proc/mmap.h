@@ -36,8 +36,7 @@ struct mmap_page
     struct ptree_node tree_node;
 };
 
-struct mmap_region_waitqueue {
-    struct mmap_region *region;
+struct mmap_waitqueue {
     struct ptree_node ptree_node;
     struct waitqueue waitqueue;
     atomic_t refs;
@@ -156,16 +155,16 @@ mmap_page_fault_handler(struct excp_state *state,
 // Waiting
 
 int
-mmap_region_wait_on(
-        struct mmap_region *region,
+mmap_wait_on(
+        struct mmap *mmap,
         uintptr_t offset);
 int
-mmap_region_wake_single(
-        struct mmap_region *region,
+mmap_wake_single(
+        struct mmap *mmap,
         uintptr_t offset);
 int
-mmap_region_wake_all(
-        struct mmap_region *region,
+mmap_wake_all(
+        struct mmap *mmap,
         uintptr_t offset);
 
 // Cloning

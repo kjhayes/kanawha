@@ -27,6 +27,7 @@ sock_buffered_msg_alloc(
 
 struct sock_msg_buffer {
     sem_t lock;
+    sem_t enqueued_count;
     struct sock_buffered_msg *head;
     struct sock_buffered_msg *tail;
 };
@@ -44,6 +45,7 @@ sock_msg_buffer_pop_head(
         struct sock_msg_buffer *buf)
 {
     struct sock_buffered_msg *msg;
+    while(sem_wait(&buf->enqueued_count));
     sem_wait(&buf->lock);
     msg = buf->head;
     if(msg != NULL) {
@@ -51,6 +53,33 @@ sock_msg_buffer_pop_head(
         if(buf->head == NULL) {
             buf->tail = NULL;
         }
+    }
+    sem_post(&buf->lock);
+    return msg;
+}
+
+static inline struct sock_buffered_msg *
+sock_msg_buffer_try_pop_head(
+        struct sock_msg_buffer *buf)
+{
+    int res;
+    struct sock_buffered_msg *msg;
+    res = sem_trywait(&buf->enqueued_count);
+    if(res) {
+        return NULL;
+    }
+    // We have claimed an entry
+    sem_wait(&buf->lock);
+    msg = buf->head;
+    if(msg != NULL) {
+        // This should not block
+        buf->head = msg->next;
+        if(buf->head == NULL) {
+            buf->tail = NULL;
+        }
+    } else {
+        // This shouldn't be possible...
+        fprintf(stderr, "sock: failed to get claimed socket msg! (shouldn't be possible!)\n");
     }
     sem_post(&buf->lock);
     return msg;
@@ -69,6 +98,7 @@ sock_msg_buffer_push_tail(
         buf->tail->next = msg;
     }
     buf->tail = msg;
+    sem_post(&buf->enqueued_count);
     sem_post(&buf->lock);
     return 0;
 }
@@ -83,6 +113,12 @@ sock_msg_buffer_create(void)
     }
     res = sem_init(&buf->lock, 1, 1);
     if(res) {
+        free(buf);
+        return NULL;
+    }
+    res = sem_init(&buf->enqueued_count, 1, 0);
+    if(res) {
+        sem_destroy(&buf->lock);
         free(buf);
         return NULL;
     }
@@ -104,6 +140,7 @@ sock_msg_buffer_destroy(
         sock_buffered_msg_free(msg);
     }
 
+    sem_destroy(&buf->enqueued_count);
     sem_destroy(&buf->lock);
     free(buf);
     return 0;
@@ -280,7 +317,7 @@ sock_connection_poll(
     int res;
 
     struct sock_buffered_msg *msg;
-    msg = sock_msg_buffer_pop_head(
+    msg = sock_msg_buffer_try_pop_head(
             conn->recv_buffer);
     if(msg == NULL) {
         return 0;
