@@ -343,7 +343,8 @@ handle_syscall(syscall_id_t id, struct syscall_args *args, uint64_t *ret_out)
     case SYSCALL_ID_SLEEP:
         break;
     default:
-        printk("syscall [%s] took %lld ms\n",
+        printk("PID(%ld) syscall [%s] took %lld ms\n",
+               (sl_t)process->id,
                syscall_id_string(id),
                duration_to_msec(__handler_duration));
         break;

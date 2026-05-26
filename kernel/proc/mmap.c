@@ -561,6 +561,9 @@ mmap_map_region(struct process *process,
     spinlock_init(&region->page_tree_lock);
     ptree_init(&region->page_tree);
 
+    spinlock_init(&region->waitqueue_tree_lock);
+    ptree_init(&region->waitqueue_tree);
+
     spin_lock(&mmap->lock);
 
     // This will find us a valid offset
@@ -686,6 +689,9 @@ mmap_map_region_exact(struct process *process,
             region->tree_node.key,
             region->tree_node.key + region->size);
     ptree_init(&region->page_tree);
+
+    spinlock_init(&region->waitqueue_tree_lock);
+    ptree_init(&region->waitqueue_tree);
 
     uintptr_t end_offset = mmap_offset + size;
 
@@ -1692,6 +1698,30 @@ mmap_page_fault_handler(struct excp_state *state,
     return PAGE_FAULT_UNHANDLED;
 }
 
+// Waiting
+
+int
+mmap_region_wait_on(
+        struct mmap_region *region,
+        uintptr_t offset)
+{
+    return -EUNIMPL;
+}
+int
+mmap_region_wake_single(
+        struct mmap_region *region,
+        uintptr_t offset)
+{
+    return -EUNIMPL;
+}
+int
+mmap_region_wake_all(
+        struct mmap_region *region,
+        uintptr_t offset)
+{
+    return -EUNIMPL;
+}
+
 // Cloning
 
 // Should be called holding the region lock of "from"
@@ -1837,6 +1867,9 @@ mmap_region_clone(struct mmap_region *from, struct mmap *to)
     }
     spinlock_init(&region->page_tree_lock);
     ptree_init(&region->page_tree);
+
+    spinlock_init(&region->waitqueue_tree_lock);
+    ptree_init(&region->waitqueue_tree);
 
     size_t region_offset = from->tree_node.key;
 
