@@ -37,21 +37,7 @@ do_panic(void)
     do_panic_printk(" CPU(%ld) Stopped All Other CPU(s)\n", (long)current);
 #endif
 
-    do_panic_printk(" THREAD(");
-    if(current_thread())
-    {
-        do_panic_printk("%lld", (ull_t)current_thread()->id);
-    }
-    else
-    {
-        do_panic_printk("NULL");
-    }
-    do_panic_printk(")");
-    if(current_process())
-    {
-        do_panic_printk(" PROCESS(%lld)", (ull_t)current_process()->id);
-    }
-    do_panic_printk("\n");
+    do_panic_printk(" THREAD(%T) PROCESS(%P)\n");
 
     // dump_threads(do_panic_printk);
 

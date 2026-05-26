@@ -479,6 +479,39 @@ vprintk_print_errno(struct vprintk_state *state)
 }
 
 static int
+vprintk_print_thread_id(struct vprintk_state *state)
+{
+    int res;
+    struct thread_state *thread = current_thread();
+    if(thread == NULL) {
+        vprintk_puts(state, "none");
+        return 0;
+    }
+    thread_id_t tid = thread->id;
+    res = __vprintk_print_decimal(state, (int)tid, 0);
+    if(res) {
+        return res;
+    }
+    return 0;
+}
+
+static int
+vprintk_print_process_id(struct vprintk_state *state)
+{
+    int res;
+    struct process *process = current_process();
+    if(process == NULL) {
+        vprintk_puts(state, "none");
+        return 0;
+    }
+    res = __vprintk_print_decimal(state, (int)process->id, 0);
+    if(res) {
+        return res;
+    }
+    return 0; 
+}
+
+static int
 vprintk_handle_escaped(struct vprintk_state *state)
 {
     int res = -1;
@@ -586,6 +619,22 @@ vprintk_handle_escaped(struct vprintk_state *state)
 
         case 'e':
            res = vprintk_print_errno(state);
+           if(res) {
+               return res;
+           }
+           state->escaped = 0;
+           return 0;
+
+        case 'T':
+           res = vprintk_print_thread_id(state);
+           if(res) {
+               return res;
+           }
+           state->escaped = 0;
+           return 0;
+
+        case 'P':
+           res = vprintk_print_process_id(state);
            if(res) {
                return res;
            }
