@@ -454,6 +454,31 @@ vprintk_print_unsigned_hexadecimal(struct vprintk_state *state)
 }
 
 static int
+vprintk_print_errno(struct vprintk_state *state)
+{
+    int res;
+    unsigned long long val;
+    int is_neg;
+
+    res = __vprintk_get_signed_number(state, &val, &is_neg);
+    if(res)
+    {
+        return res;
+    }
+
+    int errno = (is_neg ? -1 : 1) * (int)val;
+
+
+    res = vprintk_puts(state, (char*)errnostr(errno));
+    if(res)
+    {
+        return res;
+    }
+
+    return 0;
+}
+
+static int
 vprintk_handle_escaped(struct vprintk_state *state)
 {
     int res = -1;
@@ -558,6 +583,15 @@ vprintk_handle_escaped(struct vprintk_state *state)
             }
             state->escaped = 0;
             return 0;
+
+        case 'e':
+           res = vprintk_print_errno(state);
+           if(res) {
+               return res;
+           }
+           state->escaped = 0;
+           return 0;
+
         default:
             res = -1;
             return res;
