@@ -7,6 +7,7 @@ void
 flockfile(FILE *filehandle)
 {
     int res;
+    int self = getpid();
 
     while(1)
     {
@@ -18,7 +19,6 @@ flockfile(FILE *filehandle)
                 break;
             }
         }
-        int self = getpid();
         if(filehandle->owner_pid == self || filehandle->owner_pid == -1)
         {
             filehandle->owner_pid = self;
