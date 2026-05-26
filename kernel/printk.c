@@ -512,6 +512,46 @@ vprintk_print_process_id(struct vprintk_state *state)
 }
 
 static int
+vprintk_print_timestamp(struct vprintk_state *state)
+{
+    int res;
+    time_t time = va_arg(*state->args_ptr, time_t);
+
+    unsigned long seconds = time_to_sec(time);
+    unsigned long nsec = time_to_nsec(time);
+    nsec -= (seconds * 1000000000UL);
+
+    res = __vprintk_print_decimal(state, seconds, 0);
+    if(res)
+    {
+        return res;
+    }
+
+    res = vprintk_putc(state, '.');
+    if(res) {
+        return res;
+    }
+    char buffer[10];
+    buffer[9] = '\0';
+    int seen_non_zero = 0;
+    for(int i = 8; i >= 0; i--) {
+        int digit = '0' + (nsec % 10);
+        nsec /= 10;
+        if(digit == '0' && !seen_non_zero && i > 0) {
+            buffer[i] = '\0';
+        } else {
+            buffer[i] = digit;
+            seen_non_zero = 1;
+        }
+    }
+    res = vprintk_puts(state, buffer);
+    if(res) {
+        return res;
+    }
+
+    return 0;
+}
+static int
 vprintk_handle_escaped(struct vprintk_state *state)
 {
     int res = -1;
@@ -635,6 +675,14 @@ vprintk_handle_escaped(struct vprintk_state *state)
 
         case 'P':
            res = vprintk_print_process_id(state);
+           if(res) {
+               return res;
+           }
+           state->escaped = 0;
+           return 0;
+
+        case 't':
+           res = vprintk_print_timestamp(state);
            if(res) {
                return res;
            }
