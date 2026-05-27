@@ -35,6 +35,4 @@ obj-$(CONFIG_X64_BOOT_VGA) += boot_vga.o
 obj-$(CONFIG_X64_BOOT_SERIAL) += boot_serial.o
 
 obj-$(CONFIG_X64_TEST_VOLATILITY_THREAD) += volatile_thread.o
-
-obj-$(CONFIG_X64_IMPLEMENT_VMEM_DIRECTLY) += vmem.o
 obj-$(CONFIG_PAGING) += paging.o
