@@ -8,41 +8,43 @@ _Static_assert(CONFIG_HEAP_GROWTH_ORDER <= CONFIG_HEAP_ALIGN_ORDER,
 _Static_assert(CONFIG_HEAP_GROWTH_ORDER <= PAGE_ALLOC_MAX_ORDER,
                "CONFIG_HEAP_GROWTH_ORDER > PAGE_ALLOC_MAX_ORDER");
 
-//const size_t kheap_slab_sizes[KHEAP_NUM_SLABS] = {
-//#define KHEAP_SLAB_XLIST_DECL(__NUM, __ALIGN, ...)                             \
-//    [KHEAP_SLAB_INDEX_##__NUM##_##__ALIGN] = __NUM,
-//    KHEAP_SLAB_XLIST(KHEAP_SLAB_XLIST_DECL)
-//#undef KHEAP_SLAB_XLIST_DECL
-//};
-//
-//const order_t kheap_slab_alignments[KHEAP_NUM_SLABS] = {
-//#define KHEAP_SLAB_XLIST_DECL(__NUM, __ALIGN, ...)                             \
-//    [KHEAP_SLAB_INDEX_##__NUM##_##__ALIGN] = __ALIGN,
-//    KHEAP_SLAB_XLIST(KHEAP_SLAB_XLIST_DECL)
-//#undef KHEAP_SLAB_XLIST_DECL
-//};
-//
-//static inline int
-//kheap_slab_alloc_index(size_t *size, order_t align)
-//{
-//    int index = -1;
-//    if(0)
-//    {
-//    }
-//#define KHEAP_SLAB_XLIST_DECL(__NUM, __ALIGN, ...)                             \
-//    else if((*size <= (__NUM)) && (align == (__ALIGN)))                        \
-//    {                                                                          \
-//        *size = (__NUM);                                                       \
-//        index = (KHEAP_SLAB_INDEX_##__NUM##_##__ALIGN);                        \
-//    }
-//    KHEAP_SLAB_XLIST(KHEAP_SLAB_XLIST_DECL)
-//#undef KHEAP_SLAB_XLIST_DECL
-//    dprintk("kheap_slab_alloc_index: size=0x%lx, align=%d -> %d\n",
-//            (ul_t)size,
-//            (int)align,
-//            index);
-//    return index;
-//}
+/*
+const size_t kheap_slab_sizes[KHEAP_NUM_SLABS] = {
+#define KHEAP_SLAB_XLIST_DECL(__NUM, __ALIGN, ...)                             \
+    [KHEAP_SLAB_INDEX_##__NUM##_##__ALIGN] = __NUM,
+    KHEAP_SLAB_XLIST(KHEAP_SLAB_XLIST_DECL)
+#undef KHEAP_SLAB_XLIST_DECL
+};
+
+const order_t kheap_slab_alignments[KHEAP_NUM_SLABS] = {
+#define KHEAP_SLAB_XLIST_DECL(__NUM, __ALIGN, ...)                             \
+    [KHEAP_SLAB_INDEX_##__NUM##_##__ALIGN] = __ALIGN,
+    KHEAP_SLAB_XLIST(KHEAP_SLAB_XLIST_DECL)
+#undef KHEAP_SLAB_XLIST_DECL
+};
+
+static inline int
+kheap_slab_alloc_index(size_t *size, order_t align)
+{
+    int index = -1;
+    if(0)
+    {
+    }
+#define KHEAP_SLAB_XLIST_DECL(__NUM, __ALIGN, ...)                             \
+    else if((*size <= (__NUM)) && (align == (__ALIGN)))                        \
+    {                                                                          \
+        *size = (__NUM);                                                       \
+        index = (KHEAP_SLAB_INDEX_##__NUM##_##__ALIGN);                        \
+    }
+    KHEAP_SLAB_XLIST(KHEAP_SLAB_XLIST_DECL)
+#undef KHEAP_SLAB_XLIST_DECL
+    dprintk("kheap_slab_alloc_index: size=0x%lx, align=%d -> %d\n",
+            (ul_t)size,
+            (int)align,
+            index);
+    return index;
+}
+*/
 
 struct kheap_free_region
 {

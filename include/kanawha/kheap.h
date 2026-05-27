@@ -11,32 +11,34 @@
 #include <kanawha/string.h>
 #include <kanawha/vmem.h>
 
-// #define KHEAP_SLAB_XLIST(X, ...)                                               \
-//     X(1, 0)                                                                    \
-//     X(2, 1)                                                                    \
-//     X(4, 2)                                                                    \
-//     X(8, 2)                                                                    \
-//     X(8, 3)                                                                    \
-//     X(12, 2)                                                                   \
-//     X(16, 4)                                                                   \
-//     X(24, 3)                                                                   \
-//     X(32, 4)                                                                   \
-//     X(48, 4)                                                                   \
-//     X(64, 4)                                                                   \
-//     X(96, 4)                                                                   \
-//     X(128, 4)
-// 
-// enum
-// {
-//     __KHEAP_SLAB_INDEX_BASE = -1,
-// 
-// #define KHEAP_SLAB_XLIST_DECL_ENUM(__NUM, __ALIGN, ...)                        \
-//     KHEAP_SLAB_INDEX_##__NUM##_##__ALIGN,
-//     KHEAP_SLAB_XLIST(KHEAP_SLAB_XLIST_DECL_ENUM)
-// #undef KHEAP_SLAB_XLIST_DECL_ENUM
-// 
-//         KHEAP_NUM_SLABS
-// };
+/*
+#define KHEAP_SLAB_XLIST(X, ...)                                               \
+    X(1, 0)                                                                    \
+    X(2, 1)                                                                    \
+    X(4, 2)                                                                    \
+    X(8, 2)                                                                    \
+    X(8, 3)                                                                    \
+    X(12, 2)                                                                   \
+    X(16, 4)                                                                   \
+    X(24, 3)                                                                   \
+    X(32, 4)                                                                   \
+    X(48, 4)                                                                   \
+    X(64, 4)                                                                   \
+    X(96, 4)                                                                   \
+    X(128, 4)
+
+enum
+{
+    __KHEAP_SLAB_INDEX_BASE = -1,
+
+#define KHEAP_SLAB_XLIST_DECL_ENUM(__NUM, __ALIGN, ...)                        \
+    KHEAP_SLAB_INDEX_##__NUM##_##__ALIGN,
+    KHEAP_SLAB_XLIST(KHEAP_SLAB_XLIST_DECL_ENUM)
+#undef KHEAP_SLAB_XLIST_DECL_ENUM
+
+        KHEAP_NUM_SLABS
+};
+*/
 
 struct kheap
 {
