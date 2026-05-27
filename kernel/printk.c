@@ -531,10 +531,9 @@ vprintk_print_timestamp(struct vprintk_state *state)
     if(res) {
         return res;
     }
-    char buffer[10];
-    buffer[9] = '\0';
+    char buffer[9];
     int seen_non_zero = 0;
-    for(int i = 8; i >= 0; i--) {
+    for(int i = sizeof(buffer)-1; i >= 0; i--) {
         int digit = '0' + (nsec % 10);
         nsec /= 10;
         if(digit == '0' && !seen_non_zero && i > 0) {
@@ -544,11 +543,15 @@ vprintk_print_timestamp(struct vprintk_state *state)
             seen_non_zero = 1;
         }
     }
-    res = vprintk_puts(state, buffer);
-    if(res) {
-        return res;
+    for(int i = 0; i <= sizeof(buffer); i++) {
+        if(buffer[i] == '\0') {
+            break;
+        }
+        res = vprintk_putc(state, buffer[i]);
+        if(res) {
+            return res;
+        }
     }
-
     return 0;
 }
 static int
