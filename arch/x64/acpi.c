@@ -24,17 +24,17 @@ parse_madt_lapic(struct acpi_madt *madt, struct acpi_madt_entry_hdr *hdr)
     printk("MADT APIC: id=0x%lx", (apic_id_t)entry->apic_id);
     if(entry->flags & 0b01)
     {
-        printk(" [ENABLED]");
+        do_printk(" [ENABLED]");
     }
     else
     {
-        printk(" [DISABLED]");
+        do_printk(" [DISABLED]");
     }
     if(entry->flags & 0b10)
     {
-        printk("[ONLINE-CAPABLE]");
+        do_printk("[ONLINE-CAPABLE]");
     }
-    printk("\n");
+    do_printk("\n");
 
     if((entry->flags & 0b1) == 0)
     {
