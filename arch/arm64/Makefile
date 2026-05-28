@@ -6,9 +6,10 @@ obj-y += \
 	irq.o \
 	common.o \
 	mem_flags.o \
-	vmem.o \
 	excp.o \
 	thread.o \
 	usermode.o \
 	percpu.o \
+
+obj-$(CONFIG_PAGING) += paging.o
 

@@ -1,6 +1,18 @@
 menu "ARM64 Options"
     depends on ARM64
 
+choice
+  prompt "Boot Protocol"
+  default ARM64_BAREMETAL_BOOT
+  config ARM64_BAREMETAL_BOOT
+      bool "Baremetal"
+endchoice
+
+config ARM64_BAREMETAL_BOOT_DEVICE_TREE_PHYS_ADDR
+  hex "Baremetal Device Tree Physical Address"
+  depends on ARM64_BAREMETAL_BOOT
+  default 0x0
+
 config ARM64_LINKED_PHYS_BASE
   hex "Physical Base to Use When Linking"
   default 0x10000
@@ -11,7 +23,7 @@ config ARM64_LINKED_PHYS_BASE
 
 config ARM64_KERNEL_VIRTUAL_BASE
   hex "Virtual Address of the Kernel"
-  default 0xFFFFFFC000000000
+  default 0xFFFFFFC000010000
   help
     What virtual address to link the kernel at
 
@@ -21,5 +33,13 @@ config ARM64_BOOT_STACK_SIZE
   help
     How big should the statically allocated
     kernel boot stack be?
+
+config ARM64_BOOT_LOWMEM_IDENTITY_MAP_ORDER
+  int "Boot Low Memory Identity Map Order"
+  default 36
+
+config ARM64_BOOT_HIGHMEM_KERNEL_MAP_ORDER
+  int "Boot High Memory Kernel Map Order"
+  default 36
 
 endmenu

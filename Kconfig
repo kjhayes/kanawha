@@ -7,6 +7,7 @@ choice
     select PORT_IO
     select ACPI
     select PAGING
+    select VMEM_VIA_PAGING
     select IDMAP
     select IDMAP_MUST_BE_STATIC
     select ACPI_REQUIRED
@@ -16,12 +17,15 @@ choice
     select DEVICETREE
     select DEVICETREE_REQUIRED
     select PAGING
+    select VMEM_VIA_PAGING
     select IDMAP
   config ARM64
     bool "ARM64"
     select DEVICETREE
     select DEVICETREE_REQUIRED
     select PAGING
+    select VMEM_VIA_PAGING
+    select IDMAP
 endchoice
 
 choice

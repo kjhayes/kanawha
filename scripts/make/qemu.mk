@@ -5,6 +5,7 @@ QEMU_PREFIX :=
 # QEMU_PREFIX := ~/qemu/qemu/build/
 
 QEMU_DEBUG_LOG ?= qemu.log
+QEMU_FLAGS += -d int,cpu_reset
 QEMU_FLAGS += -D $(QEMU_DEBUG_LOG) -d guest_errors
 
 QEMU_FLAGS += -trace "usb*" -trace "*plic*"
@@ -85,7 +86,6 @@ endif
 ifdef CONFIG_RISCV64
 QEMU := $(QEMU_PREFIX)qemu-system-riscv64
 QEMU_FLAGS += -kernel $(OUTPUT_DIR)/kanawha.bin
-QEMU_FLAGS += -bios default
 QEMU_FLAGS += -serial stdio
 QEMU_FLAGS += -M virt
 QEMU_FLAGS += -m 2G

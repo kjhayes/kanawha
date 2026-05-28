@@ -1,5 +1,6 @@
 
-KERNEL_COMMON_FLAGS += -mno-outline-atomics
+KERNEL_COMMON_FLAGS += -mno-outline-atomics \
+					   -mgeneral-regs-only
 
 DEFAULT_BUILD_RULE ?= $(OUTPUT_DIR)/kanawha.o
 

@@ -572,8 +572,8 @@ pagetable_drill_direct(
     void __phys *piter = phys;
     size_t remaining = size;
     while(remaining) {
-        order_t page_order;
-        int drill_level;
+        order_t page_order = 0;
+        int drill_level = 0;
         for(drill_level = pt->max_leaf_level; drill_level > 0; drill_level--)
         {
             page_order = paging_level_entry_region_order(mode, drill_level);
@@ -679,7 +679,7 @@ pagetable_map(
     void *child_viter = NULL;
     size_t remaining = size;
     while(remaining) {
-        order_t page_order;
+        order_t page_order = 0;
         int drill_level;
         for(drill_level = parent->max_leaf_level; drill_level >= child->min_map_level; drill_level--)
         {

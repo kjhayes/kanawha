@@ -103,7 +103,7 @@ arch_get_vmem_region_paging_state(struct vmem_region *region)
 }
 
 int
-arch_paging_set_pt_root(void __phys *pt_root)
+arch_paging_set_pt_root(void __phys *pt_root, int level)
 {
     return -EUNIMPL;
 }
@@ -113,5 +113,4 @@ arch_paging_flush_tlb(void __phys *cond_pt_root, int force)
 {
     return -EUNIMPL;
 }
-
 #endif

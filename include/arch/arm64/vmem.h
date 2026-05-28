@@ -6,7 +6,7 @@
 #include <kanawha/types.h>
 
 #ifdef CONFIG_VMEM_VIA_PAGING
-#include <kanawha/paging.h>
+#include <kanawha/paging/vmem.h>
 #endif
 
 #define VMEM_MIN_PAGE_ORDER 12
