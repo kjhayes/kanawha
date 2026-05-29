@@ -84,7 +84,7 @@ arm64_boot_bsp_init(struct fdt __phys *dtb)
     res = devtree_provide_physical_fdt(dtb);
     if(res)
     {
-        panic("Kernel rejected provided device tree!\n");
+        panic("Kernel rejected provided device tree! (paddr=%p)\n", dtb);
     }
     printk("Provided Device Tree: (paddr=%p, vaddr=%p)\n", dtb, __va(dtb));
 

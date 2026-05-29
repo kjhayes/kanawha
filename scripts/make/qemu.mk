@@ -8,7 +8,7 @@ QEMU_DEBUG_LOG ?= qemu.log
 QEMU_FLAGS += -d int,cpu_reset
 QEMU_FLAGS += -D $(QEMU_DEBUG_LOG) -d guest_errors
 
-QEMU_FLAGS += -trace "usb*" -trace "*plic*"
+QEMU_FLAGS += -trace "*pl011*"
 
 QEMU_FLAGS += -device virtio-gpu-pci
 
@@ -101,7 +101,10 @@ ifdef CONFIG_ARM64
 QEMU := $(QEMU_PREFIX)qemu-system-aarch64
 QEMU_FLAGS += -kernel $(OUTPUT_DIR)/kanawha.o
 QEMU_FLAGS += -machine virt
+QEMU_FLAGS += -smp 1
 QEMU_FLAGS += -cpu cortex-a57 
+QEMU_FLAGS += -serial stdio
+QEMU_FLAGS += -m 2G
 endif
 
 ifdef QEMU

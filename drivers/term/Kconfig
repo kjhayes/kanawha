@@ -17,3 +17,17 @@ config QEMU_SERIAL
 
 source "drivers/term/8250/Kconfig"
 
+config PL011_SERIAL
+    bool "PL011 Serial"
+    default n
+    depends on DEVICETREE
+
+config PL011_SERIAL_AT_BOOT
+    bool "Use PL011 Serial at Boot"
+    default n
+    depends on PL011_SERIAL
+
+config PL011_SERIAL_AT_BOOT_ADDR
+    hex "PL011 Serial Boot Register Base"
+    default 0x0
+    depends on PL011_SERIAL_AT_BOOT

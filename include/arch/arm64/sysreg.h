@@ -6,13 +6,13 @@
 #define arm64_sysreg_readq(__name)\
     ({\
      uint64_t value;\
-     asm volatile ("msr " #__name ", %0" : "=r"(value));\
+     asm volatile ("mrs %0, " #__name "" : "=r"(value));\
      value;\
      })
 
 #define arm64_sysreg_writeq(__name, __value)\
     ({\
-     asm volatile ("mrs %0, " #__name :: "r"(__value));\
+     asm volatile ("msr " #__name ", %0" :: "r"(__value));\
      })
 
 #endif

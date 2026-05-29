@@ -102,13 +102,7 @@ static int
 vprintk_puts(struct vprintk_state *state, char *str)
 {
     int res;
-    if(!KERNEL_ADDR(str))
-    {
-        vprintk_puts(state, "<ERROR-NON-KERNEL-STRING(");
-        vprintk_print_pointer(state, str);
-        vprintk_puts(state, ")>");
-        return 0;
-    }
+    
     while(*str)
     {
         res = vprintk_putc(state, *str);

@@ -844,7 +844,7 @@ vmem_create_default_kernel_map(void)
     default_map = vmem_map_create();
     if(default_map == NULL)
     {
-        eprintk("OOM Error when initializing default kernel vmem_map!\n");
+        eprintk("Error when creating default kernel vmem_map!\n");
         return -ENOMEM;
     }
 

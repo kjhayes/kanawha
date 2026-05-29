@@ -7,6 +7,11 @@
 #include <kanawha/stddef.h>
 
 static int
+pagetable_entry_pushdown(
+        void *entry,
+        int entry_level);
+
+static int
 paging_alloc_raw_empty_table(
         const struct paging_mode *mode,
         void __phys **table_ptr,
@@ -17,10 +22,13 @@ paging_alloc_raw_empty_table(
     order_t table_order;
     table_order = paging_level_table_order(mode, table_level);
 
+    if(table_order < PAGE_ALLOC_MIN_ORDER) {
+        table_order = PAGE_ALLOC_MIN_ORDER;
+    }
     res = page_alloc(table_order, table_ptr, 0);
     if(res)
     {
-        return -ENOMEM;
+        return res;
     }
     memset((void *)__va(*table_ptr), 0, 1UL<<table_order);
 
@@ -83,6 +91,9 @@ paging_free_raw_table(const struct paging_mode *mode, void __phys *table, int le
     }
 
     order_t table_order = paging_level_table_order(mode, level);
+    if(table_order < PAGE_ALLOC_MIN_ORDER) {
+        table_order = PAGE_ALLOC_MIN_ORDER;
+    }
     res = page_free(table_order, table);
     if(res)
     {
@@ -102,11 +113,20 @@ pagetable_init(
 {
     int res;
 
+    const struct paging_mode *mode = current_paging_mode();
+
+    pt->flags = flags;
+
     pt->root_level = root_level;
-    pt->max_leaf_level = max_leaf_level;
+    pt->max_leaf_level = 0;
+    for(int i = max_leaf_level; i > 0; i--) {
+        if(paging_level_can_be_leaf(mode, i)) {
+            pt->max_leaf_level = i;
+            break;
+        }
+    }
     pt->min_map_level = min_map_level;
 
-    const struct paging_mode *mode = current_paging_mode();
     res = paging_alloc_raw_empty_table(mode, &pt->root_table, pt->root_level);
     if(res) {
         return res;
@@ -427,7 +447,24 @@ pagetable_walk_drill_page(
         void __phys *next_table;
         if(entry_flags & PAGING_ENTRY_PRESENT) {
             if(entry_flags & PAGING_ENTRY_IS_LEAF) {
-                return -EINVAL;
+                if(!(pt->flags & PAGETABLE_FLAG_CONSTANT_MAP)) {
+                    return -EINVAL;
+                }
+
+                res = pagetable_entry_pushdown(
+                        cur_entry,
+                        cur_table_level);
+                if(res) {
+                    return res;
+                }
+                res = paging_entry_get_flags(
+                        mode,
+                        cur_table_level,
+                        cur_entry,
+                        &entry_flags);
+                if(res) {
+                    return res;
+                }
             }
 
             if(entry_flags & PAGING_ENTRY_MAP) {
@@ -586,6 +623,9 @@ pagetable_drill_direct(
             if(ptr_orderof(remaining) < page_order) {
                 continue;
             }
+            if(!paging_level_can_be_leaf(mode,drill_level)) {
+                continue;
+            }
             break;
         }
         if(drill_level == 0) {
@@ -648,6 +688,222 @@ pagetable_undrill(
             PAGING_ENTRY_IS_LEAF);
 }
 
+// Pushdown
+
+static int
+pagetable_entry_pushdown(
+        void *entry,
+        int entry_level)
+{
+    int res;
+    const struct paging_mode *mode = current_paging_mode();
+    unsigned long flags;
+    res = paging_entry_get_flags(
+            mode,
+            entry_level,
+            entry,
+            &flags);
+    if(res) {
+        return res;
+    }
+
+    if(flags & PAGING_ENTRY_PRESENT) {
+        if(flags & PAGING_ENTRY_MAP) {
+            return -EINVAL;
+        }
+        if(flags & PAGING_ENTRY_IS_LEAF) {
+            void __phys *current_mapping;
+            res = paging_entry_read_addr(
+                    mode,
+                    entry_level,
+                    entry,
+                    &current_mapping);
+            size_t current_mapping_size =
+                paging_level_entry_region_size(mode, entry_level);
+
+            int new_level = entry_level-1;
+            void __phys *new_table;
+            res = paging_alloc_raw_empty_table(
+                    mode,
+                    &new_table,
+                    new_level);
+            if(res) {
+                return res;
+            }
+            void *new_table_virt = __va(new_table);
+            size_t new_num_entries =
+                paging_level_num_entries(
+                        mode,
+                        new_level);
+            size_t new_entry_size =
+                paging_level_entry_size(
+                        mode,
+                        new_level);
+            size_t new_mapping_size =
+                paging_level_entry_region_size(
+                        mode,
+                        entry_level);
+            DEBUG_ASSERT(new_mapping_size * new_num_entries <= current_mapping_size);
+            void __phys *new_addr = current_mapping;
+            for(size_t new_i = 0; new_i < new_num_entries; new_i++) {
+                size_t new_offset = new_entry_size * new_i;
+                void *new_entry = new_table_virt + new_offset;
+                res = paging_entry_set_flags(
+                        mode,
+                        new_level,
+                        new_entry,
+                        flags);
+                if(res) {
+                    paging_free_raw_table(mode, new_table, new_level);
+                    return res;
+                }
+                res = paging_entry_write_addr(
+                        mode,
+                        new_level,
+                        new_entry,
+                        new_addr);
+                if(res) {
+                    paging_free_raw_table(mode, new_table, new_level);
+                    return res;
+                }
+                new_addr += new_mapping_size;
+            }
+            res = paging_create_permissive_pt_table_entry(
+                    mode,
+                    entry,
+                    entry_level,
+                    new_table);
+            if(res) {
+                paging_free_raw_table(mode, new_table, new_level);
+                return res;
+            }
+
+        }
+    }
+
+    return 0;
+}
+
+static int
+pagetable_pushdown(
+        void __phys *table_phys,
+        int table_level,
+        int target_level)
+{
+    int res;
+
+    if(table_level <= target_level) {
+        return 0;
+    }
+
+    const struct paging_mode *mode = current_paging_mode();
+
+    void *table_virt = __va(table_phys);
+
+    size_t entry_size =
+        paging_level_entry_size(
+                mode,
+                table_level);
+    size_t num_entries =
+        paging_level_num_entries(
+                mode,
+                table_level);
+    for(size_t i = 0; i < num_entries; i++) {
+        size_t offset = i*entry_size;
+        void *entry = table_virt + offset;
+
+        res = pagetable_entry_pushdown(
+                entry,
+                table_level);
+        if(res) {
+            return res;
+        }
+
+        unsigned long entry_flags;
+        res = paging_entry_get_flags(
+                mode,
+                table_level,
+                entry,
+                &entry_flags);
+        if(res) {
+            return res;
+        }
+
+        if(!(entry_flags & PAGING_ENTRY_PRESENT)) {
+            continue;
+        }
+
+        if(entry_flags & PAGING_ENTRY_IS_LEAF) {
+            // pagetable_entry_pushdown should have made this
+            // into a table...
+            return -EINVAL;
+        }
+
+        if(entry_flags & PAGING_ENTRY_MAP) {
+            // We cannot pushdown when we have another table
+            // mapped onto us... (should also be caught by pagtable_entry_pushdown)
+            return -EINVAL;
+        }
+
+        void __phys *current_mapping;
+        res = paging_entry_read_addr(
+                mode,
+                table_level,
+                entry,
+                &current_mapping);
+        if(res) {
+            return res;
+        }
+
+        size_t current_mapping_size =
+            paging_level_entry_region_size(
+                    mode,
+                    table_level);
+
+        // This is a table (or we just turned it into one)
+        if(table_level-1 <= target_level) {
+            continue;
+        } else {
+            // We need to recurse
+            res = pagetable_pushdown(
+                    current_mapping,
+                    table_level-1,
+                    target_level);
+            if(res) {
+                return res;
+            }
+        }
+    }
+
+    return 0;
+}
+
+int
+pagetable_set_max_leaf(
+        struct pagetable *pt,
+        int new_max_leaf)
+{
+    int res;
+
+    if(new_max_leaf >= pt->max_leaf_level) {
+        pt->max_leaf_level = new_max_leaf;
+        return 0;
+    }
+
+    // We need to push every every down to
+    // the new max leaf level...
+    res = pagetable_pushdown(
+            pt->root_table,
+            pt->root_level,
+            new_max_leaf);
+    if(res) {
+        return res;
+    }
+    pt->max_leaf_level = new_max_leaf;
+
+    return res;
+}
+
 // Map
 int
 pagetable_map(
@@ -662,15 +918,17 @@ pagetable_map(
     order_t min_page_order = paging_level_entry_region_order(mode, child->min_map_level);
 
     if(ptr_orderof(vaddr) < min_page_order) {
-        eprintk("pagetable_map: vaddr=%p is not aligned to the minimum order of %d!\n",
+        eprintk("pagetable_map: vaddr=%p is not aligned to the minimum order of %d! (min_map_level=%d)\n",
                 vaddr,
-                min_page_order);
+                min_page_order,
+                child->min_map_level);
         return -EINVAL;
     }
     if(ptr_orderof(size) < min_page_order) {
-        eprintk("pagetable_map: size=0x%lx is not aligned to the minimum order of %d!\n",
+        eprintk("pagetable_map: size=0x%lx is not aligned to the minimum order of %d! (min_map_level=%d)\n",
                 (ul_t)size,
-                min_page_order);
+                min_page_order,
+                child->min_map_level);
         return -EINVAL;
     }
 

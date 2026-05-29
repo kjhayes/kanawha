@@ -30,7 +30,7 @@ idmap_map_into_vmem(void *virtual_base)
 
     if(identity_map_region == NULL)
     {
-        eprintk("OOM Error when initializing default kernel vmem_region!\n");
+        eprintk("Error when initializing default kernel identity map vmem_region!\n");
         return -ENOMEM;
     }
 

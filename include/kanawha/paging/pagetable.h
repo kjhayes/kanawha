@@ -4,11 +4,18 @@
 #include <kanawha/paging/paging.h>
 #include <kanawha/pointer.h>
 
+// When a region is mapped, modifications
+// to the child table do not need to appear
+// in the parent
+#define PAGETABLE_FLAG_CONSTANT_MAP (1ULL<<0)
+
 struct pagetable
 {
     int root_level;
     int max_leaf_level;
     int min_map_level;
+
+    unsigned long flags;
 
     order_t root_table_order;
     void __phys *root_table;
@@ -43,6 +50,11 @@ pagetable_walk_leaf(
         void __phys **page_out,
         order_t *page_order_out,
         unsigned long *entry_flags_out);
+
+int
+pagetable_set_max_leaf(
+        struct pagetable *pt,
+        int new_max_leaf);
 
 // Drill a mapping from this page table to physical memory
 int

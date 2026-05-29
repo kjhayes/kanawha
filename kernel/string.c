@@ -102,7 +102,6 @@ size_t
 strlen(const char *str)
 {
     const char *term = str;
-    DEBUG_ASSERT(KERNEL_ADDR(str));
     while(*term != '\0')
     {
         term++;

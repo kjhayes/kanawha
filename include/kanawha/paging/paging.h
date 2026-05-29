@@ -30,6 +30,7 @@ struct paging_mode
 
     // Assorted single bit flags about this level
 #define PAGING_LEVEL_FLAG_CAN_BE_LEAF (1ULL << 0)
+#define PAGING_LEVEL_FLAG_SPECIAL (1ULL << 1)
     const unsigned long *level_flags;
 
     // Functional fields
