@@ -8,6 +8,8 @@
 // to the child table do not need to appear
 // in the parent
 #define PAGETABLE_FLAG_CONSTANT_MAP (1ULL<<0)
+#define PAGETABLE_FLAG_ROOT         (1ULL<<1)
+#define PAGETABLE_FLAG_SUBTABLE     (1ULL<<2)
 
 struct pagetable
 {

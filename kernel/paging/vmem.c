@@ -100,14 +100,14 @@ arch_vmem_region_init_direct(struct vmem_region *region)
         vmem_region_get_paging_state(region);
 
     int root_level = paging_mode_num_levels(mode)-1;
-    unsigned long flags = PAGETABLE_FLAG_CONSTANT_MAP;
 
     res = pagetable_init(
             &state->pagetable,
             root_level,
             root_level,
             0,
-            flags);
+            PAGETABLE_FLAG_SUBTABLE
+           |PAGETABLE_FLAG_CONSTANT_MAP);
     if(res) {
         return res;
     }
@@ -138,7 +138,6 @@ arch_vmem_region_init_paged(struct vmem_region *region)
         vmem_region_get_paging_state(region);
 
     int root_level = paging_mode_num_levels(mode)-1;
-    unsigned long flags = 0;
 
     int max_leaf_level = 0;
     if(root_level > 2) {
@@ -150,7 +149,7 @@ arch_vmem_region_init_paged(struct vmem_region *region)
             root_level,
             max_leaf_level,
             max_leaf_level + 1,
-            flags);
+            PAGETABLE_FLAG_SUBTABLE);
     if(res) {
         return res;
     }
@@ -312,7 +311,7 @@ arch_vmem_map_activate(struct vmem_map *map)
     struct vmem_map_paging_state *state;
     state = vmem_map_get_paging_state(map);
 
-    arch_dump_vmem_map(do_printk, map);
+    // arch_dump_vmem_map(do_printk, map);
 
     void __phys *root = pagetable_root(&state->pagetable);
     int root_level = pagetable_root_level(&state->pagetable);
@@ -388,14 +387,15 @@ arch_vmem_map_init(struct vmem_map *map)
 
     struct vmem_map_paging_state *state = vmem_map_get_paging_state(map);
 
-    unsigned long flags = 0;
+    dprintk("arch_vmem_map_init: root=%d, max_leaf=%d\n",
+            root_level, root_level);
 
     res = pagetable_init(
             &state->pagetable,
             root_level,
             root_level,
             0,
-            flags);
+            PAGETABLE_FLAG_ROOT);
     if(res) {
         return res;
     }

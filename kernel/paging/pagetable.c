@@ -118,13 +118,7 @@ pagetable_init(
     pt->flags = flags;
 
     pt->root_level = root_level;
-    pt->max_leaf_level = 0;
-    for(int i = max_leaf_level; i > 0; i--) {
-        if(paging_level_can_be_leaf(mode, i)) {
-            pt->max_leaf_level = i;
-            break;
-        }
-    }
+    pt->max_leaf_level = max_leaf_level;
     pt->min_map_level = min_map_level;
 
     res = paging_alloc_raw_empty_table(mode, &pt->root_table, pt->root_level);
@@ -938,7 +932,13 @@ pagetable_map(
     size_t remaining = size;
     while(remaining) {
         order_t page_order = 0;
-        int drill_level;
+        int drill_level = 0;
+        DEBUG_ASSERT_MSG(parent->max_leaf_level >= child->min_map_level,
+                "parent->max_leaf=%d >= child->min_map=%d (parent_flags=0x%lx, child_flags=0x%lx)",
+                parent->max_leaf_level,
+                child->min_map_level,
+                parent->flags,
+                child->flags);
         for(drill_level = parent->max_leaf_level; drill_level >= child->min_map_level; drill_level--)
         {
             page_order = paging_level_entry_region_order(mode, drill_level);
