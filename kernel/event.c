@@ -17,6 +17,8 @@ DEFINE_LOCAL_IRQ_LOCK(periodic_event_list_lock);
 
 static duration_t tick_length;
 
+static int periodic_timer_started = 0;
+
 struct periodic_event
 {
     duration_t period;
@@ -57,6 +59,9 @@ static int
 periodic_kickstart_lockless(void)
 {
     int res;
+    if(periodic_timer_started) {
+        return 0;
+    }
 
     if(periodic_timer == NULL)
     {
@@ -74,6 +79,7 @@ periodic_kickstart_lockless(void)
         return res;
     }
 
+    periodic_timer_started = 1;
     return 0;
 }
 
@@ -83,6 +89,18 @@ periodic_stop_lockless(void)
     return -EUNIMPL;
 }
 
+static int
+periodic_kickstart(void)
+{
+    int res = 0;
+    periodic_event_list_lock_acquire();
+    if(num_enabled_periodic_events > 0) {
+        res = periodic_kickstart_lockless();
+    }
+    periodic_event_list_lock_release();
+    return res;
+}
+
 static inline int
 enable_periodic_event(struct periodic_event *event)
 {
@@ -90,16 +108,21 @@ enable_periodic_event(struct periodic_event *event)
     periodic_event_list_lock_acquire();
     ilist_push_tail(&periodic_event_list, &event->list_node);
     num_enabled_periodic_events++;
-    if(num_enabled_periodic_events == 1)
+
+    // kickstart the periodic timer
+    res = periodic_kickstart_lockless();
+    if(res)
     {
-        // We need to kickstart the periodic timer
-        res = periodic_kickstart_lockless();
-        if(res)
-        {
-            periodic_event_list_lock_release();
+        periodic_event_list_lock_release();
+        if(started_init_stage_launch()) {
             return res;
+        } else {
+            // If we are still initializing this might just fail,
+            // we will try to kickstart periodic events again at launch
+            return 0;
         }
     }
+
     periodic_event_list_lock_release();
     return 0;
 }
@@ -228,3 +251,12 @@ register_periodic_timer_owner(void)
     return register_timer_dev_owner(&timer_owner);
 }
 declare_init(dynamic, register_periodic_timer_owner);
+
+// Extra kickstart in-case 
+static int
+periodic_event_kickstart_at_launch(void)
+{
+    return periodic_kickstart();
+}
+declare_init(launch, periodic_event_kickstart_at_launch);
+
