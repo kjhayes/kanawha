@@ -12,6 +12,7 @@ struct mmio_pci_ecam
     uint16_t segment_id;
     void __phys *base_addr;
     size_t size;
+    void __mmio *mmio_base;
 };
 
 int

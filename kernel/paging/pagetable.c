@@ -1211,13 +1211,14 @@ pagetable_dump_subtable(
                    pending_vaddr,                                              \
                    pending_paddr,                                              \
                    (ull_t)pending_size);                                       \
-        (*printer)("%s%s%s%s%s%s%s", \
+        (*printer)("%s%s%s%s%s%s%s%s", \
                 pending_flags & PAGING_ENTRY_PRESENT ? "[PRESENT]" : "", \
                 pending_flags & PAGING_ENTRY_READABLE ? "[READ]" : "", \
                 pending_flags & PAGING_ENTRY_WRITEABLE ? "[WRITE]" : "", \
                 pending_flags & PAGING_ENTRY_EXECUTABLE ? "[EXEC]" : "", \
                 pending_flags & PAGING_ENTRY_USER_ACCESS ? "[USER]" : "", \
                 pending_flags & PAGING_ENTRY_KERNEL_ACCESS ? "[KERNEL]" : "", \
+                pending_flags & PAGING_ENTRY_CACHE_DISABLE ? "[NOCACHE]" : "", \
                 "");\
         (*printer)("\n"); \
     } while(0)

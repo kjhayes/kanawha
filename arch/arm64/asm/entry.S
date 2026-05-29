@@ -1,6 +1,7 @@
 
 .extern arm64_boot_bsp_init
 .extern arm64_virtual_bsp_init
+.extern arm64_excp_vector_table
 
 .section .boot.text, "ax"
 
@@ -28,6 +29,10 @@ arm64_kernel_entry:
     mov x0, x20
     ldr x1, =arm64_boot_bsp_init
     blr x1 
+
+    // Setup virtual exception vectors
+    ldr x0, =arm64_excp_vector_table
+    msr VBAR_EL1,x0
 
     // Switch to the virtual stack
     ldr x0, =arm64_virt_boot_stack_base

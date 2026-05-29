@@ -196,6 +196,8 @@ mmio_map(void __phys *paddr, size_t size)
     }
 #endif
 
+    // arch_dump_vmem_map(do_printk, vmem_map_get_current());
+
     return (void __mmio *)addr + pad_below;
 }
 

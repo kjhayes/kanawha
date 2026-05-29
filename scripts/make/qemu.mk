@@ -8,7 +8,7 @@ QEMU_DEBUG_LOG ?= qemu.log
 QEMU_FLAGS += -d int,cpu_reset
 QEMU_FLAGS += -D $(QEMU_DEBUG_LOG) -d guest_errors
 
-QEMU_FLAGS += -trace "*pl011*"
+QEMU_FLAGS += -trace "pci_cfg_*"
 
 QEMU_FLAGS += -device virtio-gpu-pci
 

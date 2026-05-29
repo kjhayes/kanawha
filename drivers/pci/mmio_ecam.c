@@ -12,7 +12,7 @@ mmio_ecam_compute_pointer(struct pci_cam *cam,
                           uint8_t device,
                           uint8_t func,
                           uint16_t offset,
-                          void **out)
+                          void __mmio **out)
 {
     size_t base =
         ((size_t)bus) << 20 | ((size_t)device) << 15 | ((size_t)func) << 12;
@@ -34,7 +34,7 @@ mmio_ecam_compute_pointer(struct pci_cam *cam,
     dprintk("mmio_ecam_offset = %p\n", final_offset);
     dprintk("mmio_pointer = %p\n", ecam->base_addr + final_offset);
 
-    *out = __va(ecam->base_addr + final_offset);
+    *out = ecam->mmio_base + final_offset;
 
     return 0;
 }
@@ -49,13 +49,13 @@ mmio_ecam_pci_readb(struct pci_cam *cam,
                     uint8_t *out)
 {
     int res;
-    void *ptr;
+    void __mmio *ptr;
     res = mmio_ecam_compute_pointer(cam, seg, bus, device, func, offset, &ptr);
     if(res)
     {
         return res;
     }
-    *out = *(volatile uint8_t *)ptr;
+    *out = mmio_readb(ptr);
     return 0;
 }
 
@@ -69,13 +69,13 @@ mmio_ecam_pci_readw(struct pci_cam *cam,
                     uint16_t *out)
 {
     int res;
-    void *ptr;
+    void __mmio *ptr;
     res = mmio_ecam_compute_pointer(cam, seg, bus, device, func, offset, &ptr);
     if(res)
     {
         return res;
     }
-    *out = *(volatile uint16_t *)ptr;
+    *out = mmio_readw(ptr);
     return 0;
 }
 
@@ -89,13 +89,13 @@ mmio_ecam_pci_readl(struct pci_cam *cam,
                     uint32_t *out)
 {
     int res;
-    void *ptr;
+    void __mmio *ptr;
     res = mmio_ecam_compute_pointer(cam, seg, bus, device, func, offset, &ptr);
     if(res)
     {
         return res;
     }
-    *out = *(volatile uint32_t *)ptr;
+    *out = mmio_readl(ptr);
     return 0;
 }
 
@@ -109,13 +109,13 @@ mmio_ecam_pci_writeb(struct pci_cam *cam,
                      uint8_t in)
 {
     int res;
-    void *ptr;
+    void __mmio *ptr;
     res = mmio_ecam_compute_pointer(cam, seg, bus, device, func, offset, &ptr);
     if(res)
     {
         return res;
     }
-    *(volatile uint8_t *)ptr = in;
+    mmio_writeb(ptr, in);
     return 0;
 }
 
@@ -129,13 +129,13 @@ mmio_ecam_pci_writew(struct pci_cam *cam,
                      uint16_t in)
 {
     int res;
-    void *ptr;
+    void __mmio *ptr;
     res = mmio_ecam_compute_pointer(cam, seg, bus, device, func, offset, &ptr);
     if(res)
     {
         return res;
     }
-    *(volatile uint16_t *)ptr = in;
+    mmio_writew(ptr, in);
     return 0;
 }
 
@@ -149,13 +149,13 @@ mmio_ecam_pci_writel(struct pci_cam *cam,
                      uint32_t in)
 {
     int res;
-    void *ptr;
+    void __mmio *ptr;
     res = mmio_ecam_compute_pointer(cam, seg, bus, device, func, offset, &ptr);
     if(res)
     {
         return res;
     }
-    *(volatile uint32_t *)ptr = in;
+    mmio_writel(ptr, in);
     return 0;
 }
 
@@ -177,6 +177,10 @@ register_mmio_pci_ecam(struct mmio_pci_ecam *cam,
     int res;
 
     cam->base_addr = base_addr;
+    cam->mmio_base = mmio_map(base_addr, size);
+    if(cam->mmio_base == NULL) {
+        return -ENOMEM;
+    }
     cam->size = size;
     cam->segment_id = segment_id;
     cam->cam = mmio_ecam_pci_cam;

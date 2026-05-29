@@ -311,6 +311,9 @@ arm64_boot_setup_paging:
     // orr x0, x0, (0<<14) // Use 4KB granule in low memory
     orr x0, x0, ((64-48)<<16) // Set high memory to use 48-bit virtual addresses
     orr x0, x0, (2<<30) // Use 4KB granule in high memory
+
+    orr x0, x0, (1<<32) // Use 48-bit physical addresses
+    orr x0, x0, (1<<34) 
     msr TCR_EL1, x0
 
     // Enable Paging

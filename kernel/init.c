@@ -69,7 +69,6 @@ handle_init_stage_generic(const char *stage_name,
                     break;
                 default:
                     num_failed++;
-                    event->func = NULL;
                     if(event->desc_name)
                     {
                         LOG("%s [FAILED]\n", event->desc_name);
@@ -78,6 +77,7 @@ handle_init_stage_generic(const char *stage_name,
                     {
                         LOG("init %p [FAILED]\n", event->func);
                     }
+                    event->func = NULL;
                     break;
                 }
             }

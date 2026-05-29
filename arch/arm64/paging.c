@@ -117,6 +117,15 @@ arm64_paging_get_entry_flags(int level,
             if(entry & (1ULL<<55)) {
                 flags |= PAGING_ENTRY_MAP;
             }
+            uint8_t mair_index = (entry >> 2) & 0b111;
+            switch(mair_index) {
+                case ARM64_MAIR_INDEX_NORMAL_CACHEABLE:
+                    break;
+                case ARM64_MAIR_INDEX_DEVICE_UNCACHEABLE:
+                default:
+                    flags |= PAGING_ENTRY_CACHE_DISABLE;
+                    break;
+            }
         } else {
             // Table
             flags |= PAGING_ENTRY_PRESENT;
@@ -153,6 +162,15 @@ arm64_paging_get_entry_flags(int level,
             }
             if(entry & (1ULL<<55)) {
                 flags |= PAGING_ENTRY_MAP;
+            }
+            uint8_t mair_index = (entry >> 2) & 0b111;
+            switch(mair_index) {
+                case ARM64_MAIR_INDEX_NORMAL_CACHEABLE:
+                    break;
+                case ARM64_MAIR_INDEX_DEVICE_UNCACHEABLE:
+                default:
+                    flags |= PAGING_ENTRY_CACHE_DISABLE;
+                    break;
             }
         } else {
             // Invalid (Block at L3)
@@ -204,6 +222,7 @@ arm64_paging_set_entry_flags(int level, void *entry_data, unsigned long flags)
             if(flags & PAGING_ENTRY_PRESENT) {
                 entry |= (1ULL<<0); // Present
                 entry |= (1ULL<<10); // Access
+                entry |= (1ULL<<9); // Outer Shareable
             }
             if(flags & PAGING_ENTRY_MAP) {
                 entry |= (1ULL<<55);
@@ -217,6 +236,10 @@ arm64_paging_set_entry_flags(int level, void *entry_data, unsigned long flags)
             if(flags & PAGING_ENTRY_EXECUTABLE) {
                 entry &= ~(1ULL<<53);
                 entry &= ~(1ULL<<54);
+            }
+            if(flags & PAGING_ENTRY_CACHE_DISABLE) {
+                entry &= ~(0x7UL<<2);
+                entry |= (ARM64_MAIR_INDEX_DEVICE_UNCACHEABLE)<<2;
             }
         } else {
             // Block
@@ -224,6 +247,7 @@ arm64_paging_set_entry_flags(int level, void *entry_data, unsigned long flags)
             if(flags & PAGING_ENTRY_PRESENT) {
                 entry |= (1ULL<<0); // Present 
                 entry |= (1ULL<<10); // Access
+                entry |= (1ULL<<9); // Outer Shareable
             }
             if(flags & PAGING_ENTRY_MAP) {
                 entry |= (1ULL<<55);
@@ -237,6 +261,10 @@ arm64_paging_set_entry_flags(int level, void *entry_data, unsigned long flags)
             if(flags & PAGING_ENTRY_EXECUTABLE) {
                 entry &= ~(1ULL<<53);
                 entry &= ~(1ULL<<54);
+            }
+            if(flags & PAGING_ENTRY_CACHE_DISABLE) {
+                entry &= ~(0x7UL<<2);
+                entry |= (ARM64_MAIR_INDEX_DEVICE_UNCACHEABLE)<<2;
             }
         }
     } else {
@@ -313,6 +341,10 @@ arm64_paging_clear_entry_flags(int level, void *entry_data, unsigned long flags)
                 entry |= (1ULL<<53);
                 entry |= (1ULL<<54);
             }
+            if(flags & PAGING_ENTRY_CACHE_DISABLE) {
+                flags &= ~(0x7UL<<2);
+                flags |= (ARM64_MAIR_INDEX_NORMAL_CACHEABLE)<<2;
+            }
         } else {
             // Block
             if(flags & PAGING_ENTRY_PRESENT) {
@@ -330,6 +362,10 @@ arm64_paging_clear_entry_flags(int level, void *entry_data, unsigned long flags)
             if(flags & PAGING_ENTRY_EXECUTABLE) {
                 entry |= (1ULL<<53);
                 entry |= (1ULL<<54);
+            }
+            if(flags & PAGING_ENTRY_CACHE_DISABLE) {
+                flags &= ~(0x7UL<<2);
+                flags |= (ARM64_MAIR_INDEX_NORMAL_CACHEABLE)<<2;
             }
         }
     } else {
@@ -459,6 +495,9 @@ arm64_init_paging_configuration(void) {
     uint64_t sctlr_el1 = arm64_sysreg_readq(SCTLR_EL1);
     sctlr_el1 &= ~(1ULL<<19); // Disable "Write Execute Never (WXN)" bit
     arm64_sysreg_writeq(SCTLR_EL1, sctlr_el1);
+    uint64_t mair_el1 = arm64_sysreg_readq(MAIR_EL1);
+    mair_el1 = ARM64_MAIR_DEFAULT_VALUE;
+    arm64_sysreg_writeq(MAIR_EL1, mair_el1);
     return 0;
 }
 declare_init(vmem, arm64_init_paging_configuration);
