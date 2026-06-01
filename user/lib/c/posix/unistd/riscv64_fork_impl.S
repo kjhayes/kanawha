@@ -34,7 +34,7 @@ __elk_posix__do_fork:
 
     call kanawha_sys_spawn
 
-    // This should set %rax for us
+    // This should set x0 for us
 
 __elk_posix__fork_parent_exit:
     ld s0,   0(sp)

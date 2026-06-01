@@ -19,6 +19,10 @@ arm64_kernel_entry:
     // Save the device tree pointer
     mov x20, x0
 
+    // Set SPSel to always use the EL1 stack
+    mov x0, 1
+    msr SPSel, x0
+
     // Load the boot stack
     ldr x0, =arm64_boot_stack_base
     mov sp, x0

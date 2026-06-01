@@ -8,6 +8,8 @@ LDFLAGS += $(USER_LDFLAGS)
 
 LDFLAGS += -z noexecstack
 
+COMMON_FLAGS += -include $(USER_DIR)/kanawha-user.h
+
 CUR_SOURCE_DIR := $(shell pwd)/
 CUR_REL_DIR := $(call rel-dir, $(CUR_SOURCE_DIR), $(ROOT_DIR))
 CUR_OBJ_OUTPUT_DIR := $(OUTPUT_DIR)/$(CUR_REL_DIR)/

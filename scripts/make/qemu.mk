@@ -8,12 +8,10 @@ QEMU_DEBUG_LOG ?= qemu.log
 QEMU_FLAGS += -d int,cpu_reset
 QEMU_FLAGS += -D $(QEMU_DEBUG_LOG) -d guest_errors
 
-QEMU_FLAGS += -trace "pci_cfg_*"
+QEMU_FLAGS += -trace "*gic*"
+QEMU_FLAGS += -trace "*virtio*"
 
-QEMU_FLAGS += -device virtio-gpu-pci
-
-# QEMU_FLAGS += -drive file=$(ROOT_DIR)/root.ext2,if=none,id=virtio-disk-root,format=raw \
-# 			  -device virtio-blk-pci,drive=virtio-disk-root,id=root-disk
+QEMU_FLAGS += -device virtio-gpu-pci,disable-legacy=on,disable-modern=off
 
 # QEMU_FLAGS += -drive id=ahcidisk,file=ahci.img,if=none \
 #              -device ahci,id=ahci \
@@ -25,12 +23,12 @@ QEMU_FLAGS += -device virtio-gpu-pci
 
 # QEMU_FLAGS += -display gtk
 
-QEMU_FLAGS += -device virtio-rng
-QEMU_FLAGS += -device virtio-keyboard-pci
+QEMU_FLAGS += -device virtio-rng,disable-legacy=on,disable-modern=off
+QEMU_FLAGS += -device virtio-keyboard-pci,disable-legacy=on
 
 QEMU_FLAGS += \
   -drive file=scsi.img,format=raw,if=none,id=hdscsi \
-  -device virtio-scsi-pci,id=scsi0 \
+  -device virtio-scsi-pci,disable-legacy=on,disable-modern=off,id=scsi0 \
   -device scsi-hd,bus=scsi0.0,drive=hdscsi
 
 # QEMU_FLAGS += -audio driver=pa,model=virtio
@@ -100,11 +98,18 @@ endif
 ifdef CONFIG_ARM64
 QEMU := $(QEMU_PREFIX)qemu-system-aarch64
 QEMU_FLAGS += -kernel $(OUTPUT_DIR)/kanawha.o
+# QEMU_FLAGS += -initrd $(OUTPUT_DIR)/initrd
 QEMU_FLAGS += -machine virt
 QEMU_FLAGS += -smp 1
 QEMU_FLAGS += -cpu cortex-a57 
 QEMU_FLAGS += -serial stdio
 QEMU_FLAGS += -m 2G
+
+QEMU_FLAGS += -drive file=$(OUTPUT_DIR)/initrd,if=none,id=virtio-disk-root,format=raw \
+			  -device virtio-blk-pci,disable-legacy=on,disable-modern=off,drive=virtio-disk-root,id=root-disk
+
+QEMU_DEPS += $(OUTPUT_DIR)/initrd
+QEMU_DEPS += $(OUTPUT_DIR)/kanawha.bin
 endif
 
 ifdef QEMU

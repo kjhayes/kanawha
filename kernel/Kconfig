@@ -74,6 +74,9 @@ config LOG_BLKDEV_REGISTRY_ON_LAUNCH
 config LOG_CLKDEV_REGISTRY_ON_LAUNCH
     bool "Log clkdev Registry"
     default n
+config LOG_TIMERDEV_REGISTRY_ON_LAUNCH
+    bool "Log timerdev Registry"
+    default n
 config LOG_FBDEV_REGISTRY_ON_LAUNCH
     bool "Log fbdev Registry"
     default n

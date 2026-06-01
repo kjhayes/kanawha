@@ -132,6 +132,12 @@ irq_install_direct_link(struct irq_desc *from, struct irq_desc *to)
     ilist_push_tail(&to->direct_links, &action->direct_link_data.incoming_node);
     spin_unlock(&to->direct_links_lock);
 
+    printk("Installed IRQ Direct Link ");
+    describe_irq_desc(do_printk, from);
+    do_printk(" -> ");
+    describe_irq_desc(do_printk, to);
+    do_printk("\n");
+
     enable_restore_irqs(irq_state);
 
     return action;

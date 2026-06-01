@@ -10,3 +10,7 @@ obj-$(CONFIG_RISCV64) += \
 	riscv64_setjmp.o \
 	riscv64_longjmp.o \
 
+obj-$(CONFIG_ARM64) += \
+	arm64_setjmp.o \
+	arm64_longjmp.o \
+

@@ -4,4 +4,5 @@ obj-y += \
 	paging.o \
 	thread.o \
 	excp.o \
+	usermode.o \
 

@@ -1,5 +1,6 @@
 
 #include <kanawha/init.h>
+#include <kanawha/irq.h>
 
 #ifdef CONFIG_DEBUG_INIT_STAGES
 #define DEBUG
@@ -23,6 +24,8 @@ handle_init_stage_generic(const char *stage_name,
                           size_t num_events,
                           struct init_stage_event events[num_events])
 {
+    int irqs_on_entry = irqs_enabled();
+
     dprintk("Running Init Stage \"%s\" with %d init events...\n",
             stage_name,
             (int)num_events);
@@ -50,6 +53,15 @@ handle_init_stage_generic(const char *stage_name,
                     LOG("%s...\n", event->desc_name);
                 }
                 int res = (*func)();
+                int irqs_now = irqs_enabled();
+                if(irqs_on_entry != irqs_now) { 
+                    if(event->desc_name) {
+                        LOG("%s [%s IRQS]\n", event->desc_name, irqs_on_entry ? "DISABLED" : "ENABLED");
+                    } else {
+                        LOG("%p [%s IRQS]\n", event->func, irqs_on_entry ? "DISABLED" : "ENABLED");
+                    }
+                    irqs_on_entry = irqs_now;
+                }
                 switch(res)
                 {
                 case -EDEFER:

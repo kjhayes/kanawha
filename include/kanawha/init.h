@@ -17,6 +17,7 @@
     X(threaded)                                                                \
     X(topo)                                                                    \
     X(post_topo)                                                               \
+    X(xcall)                                                                   \
     X(smp_bringup)                                                             \
     X(smp)                                                                     \
     X(sched)                                                                   \
@@ -60,9 +61,12 @@
 //
 // post_topo - total_num_cpus and percpu_ptr_specific working on BSP
 //
+// xcall - xcalls can be queued/local xcalls should work, remote xcalls
+//         may not work until "smp"
+//
 // smp_bringup - bringing up the AP's
 //
-// smp - first smp phase (xcalls should work)
+// smp - first smp phase (remote xcalls should work)
 //
 // sched - "default" scheduler exists and is running
 //

@@ -1,10 +1,12 @@
 
 #include <kanawha/excp.h>
+#include <kanawha/irq_domain.h>
 
 void
 unhandled_interrupt(struct excp_state *state)
 {
 #if defined(CONFIG_UNHANDLED_IRQ_PANIC)
+    dump_irq_descs(do_panic_printk);
     arch_excp_dump_state(state, do_panic_printk);
     panic("Unhandled Interrupt!");
 #elif defined(CONFIG_UNHANDLED_IRQ_IGNORE)

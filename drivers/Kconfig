@@ -15,6 +15,10 @@ menu "Clock Devices"
 source "drivers/clk/Kconfig"
 endmenu
 
+menu "Timer Devices"
+source "drivers/timer/Kconfig"
+endmenu
+
 menu "IRQ Devices"
 source "drivers/irq/Kconfig"
 endmenu

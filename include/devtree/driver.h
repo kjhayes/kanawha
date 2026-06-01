@@ -112,4 +112,13 @@ dt_driver_xlate_irq_map_no_address(
         const fdt32_t *irq_cells,
         size_t irq_cell_count);
 
+irq_t
+dt_driver_xlate_irq_map_ignore_address(
+        struct dt_driver *driver,
+        struct dt_node *node,
+        const fdt32_t *addr_cells,
+        size_t addr_cell_count,
+        const fdt32_t *irq_cells,
+        size_t irq_cell_count);
+
 #endif

@@ -215,6 +215,13 @@ riscv64_init(void *in)
               errnostr(res));
     }
 
+    res = handle_init_stage__xcall();
+    if(res)
+    {
+        panic("Failed to handle init stage \"xcall\"! err=%s",
+              errnostr(res));
+    }
+
     res = handle_init_stage__smp_bringup();
     if(res)
     {

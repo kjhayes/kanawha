@@ -5,6 +5,7 @@ obj-y += \
 	rand/ \
 	net/ \
 	clk/ \
+	timer/ \
 	qemu/ \
 	fb/ \
 	irq/ \

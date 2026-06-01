@@ -10,6 +10,7 @@ endif
 ifdef CONFIG_ARM64
 KERNEL_CROSS_COMPILE_PREFIX ?= aarch64-linux-gnu-
 USER_CROSS_COMPILE_PREFIX ?= aarch64-linux-gnu-
+USER_COMMON_FLAGS += -ffreestanding
 endif
 
 

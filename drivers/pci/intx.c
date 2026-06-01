@@ -6,6 +6,76 @@
 #include <kanawha/irq_domain.h>
 
 static inline int
+pci_intx_ack_irq(struct irq_dev *dev, hwirq_t hwirq)
+{
+    return 0;
+}
+static inline int
+pci_intx_eoi_irq(struct irq_dev *dev, hwirq_t hwirq)
+{
+    return 0;
+}
+static inline int
+pci_intx_mask_irq(struct irq_dev *dev, hwirq_t hwirq)
+{
+    return 0;
+}
+static inline int
+pci_intx_unmask_irq(struct irq_dev *dev, hwirq_t hwirq)
+{
+    return 0;
+}
+static inline unsigned long
+pci_intx_irq_status(struct irq_dev *dev, hwirq_t hwirq)
+{
+    return IRQ_STATUS_UNKNOWN;
+}
+static inline int
+pci_intx_trigger_irq(struct irq_dev *dev, hwirq_t hwirq)
+{
+    return 0;
+}
+static inline int
+pci_intx_describe_irq(
+        struct irq_dev *dev,
+        hwirq_t hwirq,
+        char *buffer,
+        size_t buflen)
+{
+    struct pci_intx_info *info = container_of(dev, struct pci_intx_info, irq_dev);
+    if(hwirq >= 1 && hwirq <= 4) {
+        snprintk(
+                buffer,
+                buflen,
+                "%s-int-%c",
+                info->func->namebuf,
+                hwirq == 1 ? 'A' :
+                hwirq == 2 ? 'B' :
+                hwirq == 3 ? 'C' :
+                hwirq == 4 ? 'D' :
+                '?');
+    } else {
+        snprintk(
+                buffer,
+                buflen,
+                "%s-int-x",
+                info->func->namebuf
+                ); 
+    }
+    return 0;
+}
+static struct irq_driver
+pci_intx_irq_driver = {
+    .ack_irq = pci_intx_ack_irq,
+    .eoi_irq = pci_intx_eoi_irq,
+    .mask_irq = pci_intx_mask_irq,
+    .unmask_irq = pci_intx_unmask_irq,
+    .irq_status = pci_intx_irq_status,
+    .trigger_irq = pci_intx_trigger_irq,
+    .describe_irq = pci_intx_describe_irq,
+};
+
+static inline int
 pci_func_link_intx(
         struct pci_func *func,
         pci_intx_pin_t pin,
@@ -24,20 +94,20 @@ pci_func_link_intx(
 
     hwirq_t hwirq;
     switch(pin) {
-        case PCI_INTX_INTA: hwirq = 0; break;
-        case PCI_INTX_INTB: hwirq = 1; break;
-        case PCI_INTX_INTC: hwirq = 2; break;
-        case PCI_INTX_INTD: hwirq = 3; break;
+        case PCI_INTX_INTA: hwirq = 1; break;
+        case PCI_INTX_INTB: hwirq = 2; break;
+        case PCI_INTX_INTC: hwirq = 3; break;
+        case PCI_INTX_INTD: hwirq = 4; break;
         default:
             wprintk("pci_func_route_intx: cannot route invalid INT-X pin (%s)\n",
                     pci_intx_pin_to_string(pin));
             return -EINVAL;
     }
 
-    if(info->pin_links[hwirq]) {
+    if(info->pin_links[hwirq-1]) {
         // Remove the old link
-        irq_uninstall_action(info->pin_links[hwirq]);
-        info->pin_links[hwirq] = NULL;
+        irq_uninstall_action(info->pin_links[hwirq-1]);
+        info->pin_links[hwirq-1] = NULL;
     }
 
     irq_t pin_irq = irq_domain_revmap(domain, hwirq);
@@ -64,7 +134,7 @@ pci_func_link_intx(
         return -EINVAL;
     }
 
-    info->pin_links[hwirq] = link;
+    info->pin_links[hwirq-1] = link;
     return 0;
 }
 
@@ -80,6 +150,7 @@ pci_func_init_intx_info(struct pci_func *func)
     if(info == NULL) {
         return -ENOMEM;
     }
+    info->func = func;
 
     for(int i = 0; i < 4; i++) {
         info->pin_links[i] = NULL;
@@ -106,10 +177,34 @@ pci_func_init_intx_info(struct pci_func *func)
     printk("PCI Function Setup INT-X (%s)\n",
             pci_intx_pin_to_string(info->pin));
 
-    info->irq_domain = alloc_irq_domain_linear(0, 4);
+    info->irq_domain = alloc_irq_domain_linear(0, 5);
     if(info->irq_domain == NULL) {
         kfree(info);
         return -ENOMEM;
+    }
+
+    if(info->pin != PCI_INTX_NONE) {
+        irq_t active_irq = irq_domain_revmap(info->irq_domain, 0);
+        irq_t pin_irq = irq_domain_revmap(info->irq_domain, info->pin);
+        info->active_link = irq_install_direct_link(irq_to_desc(pin_irq), irq_to_desc(active_irq));
+    }
+
+    info->irq_dev.driver = &pci_intx_irq_driver;
+    res = register_irq_dev(
+            &info->irq_dev,
+            func->namebuf);
+    if(res) {
+        free_irq_domain_linear(info->irq_domain);
+        kfree(info);
+        return res;
+    }
+
+    res = irq_domain_set_all_irq_dev(info->irq_domain, &info->irq_dev);
+    if(res) {
+        unregister_irq_dev(&info->irq_dev);
+        free_irq_domain_linear(info->irq_domain);
+        kfree(info);
+        return res;
     }
 
     func->intx_info = info;
@@ -125,12 +220,16 @@ pci_func_deinit_intx_info(struct pci_func *func)
     }
     func->intx_info = NULL;
 
+    if(info->active_link != NULL) {
+        irq_uninstall_action(info->active_link);
+    }
     for(int i = 0; i < 4; i++) {
         if(info->pin_links[i] != NULL) {
             irq_uninstall_action(info->pin_links[i]);
         }
     }
 
+    unregister_irq_dev(&info->irq_dev);
     free_irq_domain_linear(info->irq_domain);
     kfree(info);
     return 0;

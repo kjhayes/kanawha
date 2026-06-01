@@ -44,11 +44,30 @@ xcall_broadcast(xcall_f *func, void *arg)
     return res;
 }
 
+static inline int
+xcall_broadcast_queue(xcall_f *func, void *arg)
+{
+    int res = 0;
+    for(cpu_id_t cpu = 0; cpu < total_num_cpus(); cpu++)
+    {
+        res = xcall_queue(cpu, func, arg);
+        if(res)
+        {
+            eprintk("xcall_broadcast_queue: failed to queue on CPU %ld\n", (sl_t)cpu);
+            continue;
+        }
+    }
+    return res;
+}
+
 // Give the X-Call Subsystem a specific IPI which can be
 // used for a CPU's xcall handler
 // (This does not mean that the xcall subsystem will use
 //  this specific handler)
 int
 xcall_provide_ipi_irq(cpu_id_t cpu, irq_t ipi_irq);
+
+// Handle all pending xcall(s) on the current CPU
+int xcall_handle_pending(void);
 
 #endif

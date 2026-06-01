@@ -563,8 +563,6 @@ vmem_map_activate(struct vmem_map *map)
         return res;
     }
 
-    dprintk("returned from arch_vmem_map_activate\n");
-
     map->active_on++;
     if(*current_map)
     {
@@ -857,12 +855,27 @@ declare_init_desc(dynamic_page,
 int
 vmem_percpu_init(void)
 {
+    int res;
     if(default_map == NULL)
     {
         return -EDEFER;
     }
     // arch_dump_vmem_map(do_printk, default_map);
-    return vmem_map_activate(default_map);
+    res = vmem_map_activate(default_map);
+    if(res) {
+        return res;
+    }
+#ifdef CONFIG_IDMAP
+    // I'd like to have another "enable_vmem" function
+    // inside idmap.c to do this, however if our printing
+    // routines depend on __va/__pa, any priting done by
+    // the init system itself will cause a fault...
+    extern uintptr_t idmap_virtual_base;
+    extern uintptr_t idmap_mapped_virtual_base;
+    idmap_virtual_base = idmap_mapped_virtual_base;
+#endif
+
+    return 0;
 }
 declare_init_desc(enable_vmem,
                   vmem_percpu_init,

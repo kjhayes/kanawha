@@ -1,0 +1,6 @@
+
+config ARM_CP15_TIMER
+    tristate "ARM CP15 Local Timer"
+    default y
+    depends on ARM64 && DEVICETREE
+

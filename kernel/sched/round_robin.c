@@ -79,9 +79,9 @@ rr_sched_alloc_instance(struct scheduler_type *type)
     if(event == NULL)
     {
         eprintk("Failed to set rr_sched periodic kick!\n");
-        percpu_free(sched->current_rr_thread, sizeof(struct rr_thread *));
-        kfree(sched);
-        return NULL;
+        // percpu_free(sched->current_rr_thread, sizeof(struct rr_thread *));
+        // kfree(sched);
+        // return NULL;
     }
 
     return &sched->sched;

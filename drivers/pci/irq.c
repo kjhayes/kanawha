@@ -111,6 +111,9 @@ pci_func_num_irqs(struct pci_func *func)
     {
         return 0;
     }
+    if(func->irq_mode == PCI_IRQ_MODE_INTX) {
+        return 1;
+    }
     return irq_domain_num_irqs(func->irq_domain);
 }
 

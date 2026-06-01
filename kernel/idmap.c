@@ -74,14 +74,6 @@ declare_init_desc(vmem,
                   "Creating Identity Map Virtual Memory Region");
 
 static int
-idmap_init_enable_vmem(void)
-{
-    idmap_virtual_base = idmap_mapped_virtual_base;
-    return 0;
-}
-declare_init(enable_vmem, idmap_init_enable_vmem);
-
-static int
 idmap_reserve_virt_mem(void)
 {
     int res;

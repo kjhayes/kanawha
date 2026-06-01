@@ -58,6 +58,18 @@ xcall_handle_current(void)
     return res;
 }
 
+// Handle all pending xcall(s) on the current CPU
+int xcall_handle_pending(void)
+{
+    int res;
+    struct thread_state *cur_thread = current_thread();
+    DEBUG_ASSERT(cur_thread);
+    pin_thread(cur_thread);
+    res = xcall_handle_current();
+    unpin_thread(cur_thread);
+    return res;
+}
+
 static int
 xcall_ipi_handler(struct excp_state *excp_state, struct irq_action *action)
 {
@@ -111,7 +123,12 @@ xcall_notify(cpu_id_t cpu)
         unpin_thread(cur_thread);
         struct xcall_state *state;
         state = percpu_ptr_specific(percpu_addr(xcall_state), cpu);
-        return trigger_irq(state->ipi);
+        if(state->ipi != NULL_IRQ) {
+            return trigger_irq(state->ipi);
+        } else {
+            wprintk("xcall_notify: cannot notify remote xcall without an IPI!\n");
+            return -EINVAL;
+        }
     }
 }
 
@@ -171,3 +188,4 @@ bsp_init_xcalls(void)
     return 0;
 }
 declare_init_desc(post_topo, bsp_init_xcalls, "Initializing XCall Queues");
+

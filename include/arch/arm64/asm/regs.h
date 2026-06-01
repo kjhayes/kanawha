@@ -3,8 +3,8 @@
 
 #define ARM64_REG_SIZE (8)
 
-#define ARM64_THREAD_NUM_CALLER_REGS (19)
-#define ARM64_THREAD_NUM_CALLEE_REGS (12)
+#define ARM64_THREAD_NUM_CALLER_REGS (18)
+#define ARM64_THREAD_NUM_CALLEE_REGS (13)
 
 #define ARM64_THREAD_CALLER_PUSH_SIZE (8*((ARM64_THREAD_NUM_CALLER_REGS+1)&~1))
 #define ARM64_THREAD_CALLEE_PUSH_SIZE (8*((ARM64_THREAD_NUM_CALLEE_REGS+1)&~1))
@@ -27,7 +27,6 @@
 #define ARM64_PUSHED_CALLER_REG_INDEX_X15 (15)
 #define ARM64_PUSHED_CALLER_REG_INDEX_X16 (16)
 #define ARM64_PUSHED_CALLER_REG_INDEX_X17 (17)
-#define ARM64_PUSHED_CALLER_REG_INDEX_X30 (18)
 
 #define ARM64_PUSHED_CALLEE_REG_INDEX_X18 (0)
 #define ARM64_PUSHED_CALLEE_REG_INDEX_X19 (1)
@@ -41,6 +40,7 @@
 #define ARM64_PUSHED_CALLEE_REG_INDEX_X27 (9)
 #define ARM64_PUSHED_CALLEE_REG_INDEX_X28 (10)
 #define ARM64_PUSHED_CALLEE_REG_INDEX_X29 (11)
+#define ARM64_PUSHED_CALLEE_REG_INDEX_X30 (12)
 
 #ifdef __ASSEMBLER__
 
@@ -54,7 +54,6 @@ stp x10, x11, [GPR_PTR, 0x50]; \
 stp x12, x13, [GPR_PTR, 0x60]; \
 stp x14, x15, [GPR_PTR, 0x70]; \
 stp x16, x17, [GPR_PTR, 0x80]; \
-stp x30, xzr, [GPR_PTR, 0x90];
 
 #define SAVE_CALLEE_REGS(GPR_PTR)\
 stp x18, x19, [GPR_PTR, 0x00]; \
@@ -62,7 +61,8 @@ stp x20, x21, [GPR_PTR, 0x10]; \
 stp x22, x23, [GPR_PTR, 0x20]; \
 stp x24, x25, [GPR_PTR, 0x30]; \
 stp x26, x27, [GPR_PTR, 0x40]; \
-stp x28, x29, [GPR_PTR, 0x50];
+stp x28, x29, [GPR_PTR, 0x50]; \
+stp x30, xzr, [GPR_PTR, 0x60];
 
 #define RESTORE_CALLER_REGS(GPR_PTR)\
 ldp x0, x1,   [GPR_PTR, 0x00]; \
@@ -74,7 +74,6 @@ ldp x10, x11, [GPR_PTR, 0x50]; \
 ldp x12, x13, [GPR_PTR, 0x60]; \
 ldp x14, x15, [GPR_PTR, 0x70]; \
 ldp x16, x17, [GPR_PTR, 0x80]; \
-ldp x30, xzr, [GPR_PTR, 0x90];
 
 #define RESTORE_CALLEE_REGS(GPR_PTR)\
 ldp x18, x19, [GPR_PTR, 0x00]; \
@@ -82,7 +81,8 @@ ldp x20, x21, [GPR_PTR, 0x10]; \
 ldp x22, x23, [GPR_PTR, 0x20]; \
 ldp x24, x25, [GPR_PTR, 0x30]; \
 ldp x26, x27, [GPR_PTR, 0x40]; \
-ldp x28, x29, [GPR_PTR, 0x50];
+ldp x28, x29, [GPR_PTR, 0x50]; \
+ldp x30, xzr, [GPR_PTR, 0x60];
 
 #define PUSH_CALLER_REGS()\
 sub sp, sp, ARM64_THREAD_CALLER_PUSH_SIZE;\

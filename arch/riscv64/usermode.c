@@ -22,4 +22,6 @@ arch_enter_usermode(void __user *starting_address, void *arg)
         (uintptr_t)(void *)thread_stack_get_base(&state->arch_state.stack);
 
     __riscv64_enter_usermode(starting_address, arg);
+
+    panic("Returned from __riscv64_enter_usermode!\n");
 }

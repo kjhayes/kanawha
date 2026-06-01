@@ -59,11 +59,15 @@ struct pci_device
     uint8_t index;
 };
 
+#define PCI_FUNC_NAMEBUFLEN (32)
+
 struct pci_func
 {
     struct pci_segment *segment;
     struct pci_device *device;
     struct pci_driver *driver;
+
+    char namebuf[PCI_FUNC_NAMEBUFLEN];
 
     void *driver_priv_state;
 

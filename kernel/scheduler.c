@@ -143,6 +143,9 @@ init_cpu_scheds(void)
                     CONFIG_DEFAULT_SCHEDULER);
             return -EINVAL;
         }
+        printk("Assigning scheduler \"%s\" to %lu CPU(s)\n",
+                CONFIG_DEFAULT_SCHEDULER,
+                total_num_cpus());
         for(cpu_id_t cpu = 0; cpu < total_num_cpus(); cpu++)
         {
             int res = assign_cpu_scheduler(def_sched, cpu);

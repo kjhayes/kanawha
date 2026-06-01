@@ -732,4 +732,4 @@ init_periodic_flush_term_dev(void)
     }
     return 0;
 }
-declare_init(launch, init_periodic_flush_term_dev);
+declare_init_desc(launch, init_periodic_flush_term_dev, "Starting Periodic Flush Of All termdev");

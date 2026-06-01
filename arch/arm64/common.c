@@ -1,6 +1,7 @@
 
 #include <kanawha/common.h>
 #include <kanawha/export.h>
+#include <kanawha/irq.h>
 
 void
 arch_halt(void)

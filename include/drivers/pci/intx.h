@@ -4,11 +4,11 @@
 #include <drivers/pci/pci.h>
 
 typedef enum {
-    PCI_INTX_NONE = 0,
-    PCI_INTX_INTA,
-    PCI_INTX_INTB,
-    PCI_INTX_INTC,
-    PCI_INTX_INTD,
+    PCI_INTX_NONE = -1,
+    PCI_INTX_INTA =  1,
+    PCI_INTX_INTB =  2,
+    PCI_INTX_INTC =  3,
+    PCI_INTX_INTD =  4,
 } pci_intx_pin_t;
 
 static inline const char *
@@ -27,8 +27,11 @@ pci_intx_pin_to_string(
 
 struct pci_intx_info
 {
+    struct pci_func *func;
     pci_intx_pin_t pin;
+    struct irq_dev irq_dev;
     struct irq_domain *irq_domain;
+    struct irq_action *active_link;
     struct irq_action *pin_links[4];
 };
 

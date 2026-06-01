@@ -104,6 +104,7 @@ thread_set_status(struct thread_state *thread, thread_status_t status)
     DEBUG_ASSERT(thread->status == THREAD_STATUS_PREPARING ||
                  spin_try_lock(&thread->lock) != 0);
     DEBUG_ASSERT(thread->status != THREAD_STATUS_ABANDONED);
+
 #ifdef CONFIG_DEBUG_LOG_THREAD_STATE_CHANGES
     printk("thread(%ld) %s -> %s\n",
            (sl_t)thread->id,
@@ -528,7 +529,9 @@ __thread_switch_threadless(void *in)
     }
 
     // SCHEDULED -> RUNNING transition
-    DEBUG_ASSERT(switching_to->status == THREAD_STATUS_SCHEDULED);
+    DEBUG_ASSERT_MSG(switching_to->status == THREAD_STATUS_SCHEDULED,
+            "switching_to=%ld",
+            (sl_t)switching_to->id);
     thread_set_status(switching_to, THREAD_STATUS_RUNNING);
 
     switching_from->running_on = NULL_CPU_ID;
@@ -1128,7 +1131,7 @@ init_sample_thread_running_percentage(void)
     }
     return 0;
 }
-declare_init(launch, init_sample_thread_running_percentage);
+declare_init_desc(launch, init_sample_thread_running_percentage, "Starting Thread Idle/Running Percentage Sampler");
 
 ssize_t
 thread_running_percentage(struct thread_state *thread)

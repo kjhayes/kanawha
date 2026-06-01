@@ -1,4 +1,9 @@
 
+config GICV2
+    tristate "GICv2"
+    default y
+    depends on DEVICETREE && ARM64
+
 config SIFIVE_PLIC
     tristate "SiFive PLIC"
     default y

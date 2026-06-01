@@ -48,7 +48,7 @@ arch_init_thread_state(struct thread_state *state)
     uint64_t *callee_regs = regs;
     uint64_t *caller_regs = regs + ARM64_THREAD_CALLEE_PUSH_SIZE;
 
-    caller_regs[ARM64_PUSHED_CALLER_REG_INDEX_X30] = (uint64_t)__arm64_thread_entry;
+    callee_regs[ARM64_PUSHED_CALLEE_REG_INDEX_X30] = (uint64_t)__arm64_thread_entry;
     caller_regs[ARM64_PUSHED_CALLER_REG_INDEX_X0] = (uint64_t)state->in;
     caller_regs[ARM64_PUSHED_CALLER_REG_INDEX_X1] = (uint64_t)state->func;
 

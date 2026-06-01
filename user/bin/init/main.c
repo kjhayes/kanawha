@@ -21,6 +21,10 @@
 #ifdef __riscv64__
 #define TERM_PATH "/dev/term/serial"
 #endif
+#ifdef __aarch64__
+#define TERM_PATH "/dev/term/serial"
+#endif
+
 #endif
 
 // #define WINDD_FB_PATH_STR "/dev/fb/vga"

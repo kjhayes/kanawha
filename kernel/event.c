@@ -113,14 +113,14 @@ enable_periodic_event(struct periodic_event *event)
     res = periodic_kickstart_lockless();
     if(res)
     {
-        periodic_event_list_lock_release();
         if(started_init_stage_launch()) {
+            ilist_remove(&periodic_event_list, &event->list_node);
+            periodic_event_list_lock_release();
             return res;
-        } else {
-            // If we are still initializing this might just fail,
-            // we will try to kickstart periodic events again at launch
-            return 0;
         }
+        // If we are still initializing this might fail because no
+        // timer has been registered yet we will try to kickstart
+        // periodic events again at launch
     }
 
     periodic_event_list_lock_release();
@@ -157,6 +157,8 @@ create_periodic_event(duration_t period,
                       void *state,
                       periodic_callback_f *callback)
 {
+    int res;
+
     struct periodic_event *evt =
         kzmalloc(sizeof(struct periodic_event), KM_KERNEL);
     if(evt == NULL)
@@ -167,10 +169,9 @@ create_periodic_event(duration_t period,
     evt->state = state;
     evt->callback = callback;
     evt->period = period;
-
     evt->current_period = evt->period;
 
-    int res = enable_periodic_event(evt);
+    res = enable_periodic_event(evt);
     if(res)
     {
         kfree(evt);
@@ -199,6 +200,8 @@ destroy_periodic_event(struct periodic_event *event)
 static int
 probe_timer(struct timer_dev *dev)
 {
+    printk("Periodic Event Subsystem Probing \"%s\"\n",
+            timer_dev_get_name(dev));
     if(periodic_timer == NULL)
     {
         return 0;
@@ -209,6 +212,8 @@ probe_timer(struct timer_dev *dev)
 static int
 receive_timer(struct timer_dev *timer)
 {
+    printk("Periodic Event Subsystem Claiming \"%s\"\n",
+            timer_dev_get_name(timer));
     periodic_event_list_lock_acquire();
     if(periodic_timer == NULL)
     {
@@ -258,5 +263,5 @@ periodic_event_kickstart_at_launch(void)
 {
     return periodic_kickstart();
 }
-declare_init(launch, periodic_event_kickstart_at_launch);
+declare_init_desc(launch, periodic_event_kickstart_at_launch, "Kickstart Periodic Event(s)");
 

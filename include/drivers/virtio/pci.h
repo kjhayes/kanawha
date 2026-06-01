@@ -51,6 +51,7 @@ struct virtio_pci_device
 
     struct virtio_pci_cap *common_cfg_cap;
     struct virtio_pci_cap *device_cap;
+    struct virtio_pci_cap *isr_cap;
     struct virtio_pci_cap *notify_cap;
     uint16_t notify_multiplier;
 

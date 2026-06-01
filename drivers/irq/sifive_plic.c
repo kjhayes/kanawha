@@ -459,6 +459,6 @@ register_sifive_plic_driver(void)
     }
     return 0;
 }
-declare_init_desc(post_topo,
+declare_init_desc(xcall,
                   register_sifive_plic_driver,
                   "Registering SiFive PLIC Driver");

@@ -24,7 +24,23 @@ virtio_pci_queue_used_notification_irq_handler(struct excp_state *excp_state,
             virtio_dev);
 
     if(device->func->irq_mode == PCI_IRQ_MODE_INTX) {
-        // TODO need to read/clear the ISR
+        uint8_t isr = 0;
+        isr = virtio_pci_cap_bar_readb(
+                device,
+                device->isr_cap,
+                0x0);
+        if(isr & 0b01) {
+            // Queue Interrupt
+            dprintk("Queue Interrupt\n");
+        }
+        if(isr & 0b10) {
+            // Device Config Interrupt TODO
+            dprintk("Device Config Interrupt\n");
+        }
+        if((isr & 0b11) == 0) {
+            // The handler for another queue may have gone
+            // off before us, so ignore this for now
+        }
     }
 
     dprintk("virtio_pci_queue: queue=%p, Queue(0x%lx) IRQ Handler!\n",

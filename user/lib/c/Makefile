@@ -21,4 +21,5 @@ obj-y += \
 
 obj-$(CONFIG_X64) += x64_syscall.o
 obj-$(CONFIG_RISCV64) += riscv64_syscall.o
+obj-$(CONFIG_ARM64) += arm64_syscall.o
 

@@ -354,6 +354,8 @@ create_ramfile(const char *ramfile_name, void __phys *paddr, size_t size)
 {
     int res;
 
+    printk("Creating ramfile \"%s\"\n", ramfile_name);
+
     if(ramfile_fs_mount == NULL)
     {
         return -EDEFER;

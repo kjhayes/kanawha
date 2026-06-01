@@ -448,6 +448,16 @@ pci_probe_func(struct pci_device *device, uint8_t index)
         func->segment = bus->segment;
         func->index = index;
 
+        snprintk(
+                func->namebuf,
+                PCI_FUNC_NAMEBUFLEN,
+                "pci-%d.%d.%d.%d",
+                (int)func->segment->segment_id,
+                (int)device->bus->bus_index,
+                (int)device->index,
+                (int)index);
+        func->namebuf[PCI_FUNC_NAMEBUFLEN-1] = '\0';
+
         ptree_insert(&device->function_tree, &func->device_node, index);
         func->device = device;
 

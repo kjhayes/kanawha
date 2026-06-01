@@ -219,6 +219,17 @@ virtio_pci_init_device(struct pci_driver *driver, struct pci_func *func)
         return -EINVAL;
     }
 
+    dprintk("virito_pci: finding isr_cap\n");
+    vpci_dev->isr_cap =
+        virtio_pci_find_cap(vpci_dev, VIRTIO_PCI_CAP_ISR_CFG);
+    if(vpci_dev->isr_cap == NULL)
+    {
+        virtio_pci_deinit_capabilities(vpci_dev);
+        kfree(vpci_dev);
+        return -EINVAL;
+    }
+
+
     dprintk("virito_pci: finding notify_cap\n");
     vpci_dev->notify_cap =
         virtio_pci_find_cap(vpci_dev, VIRTIO_PCI_CAP_NOTIFY_CFG);

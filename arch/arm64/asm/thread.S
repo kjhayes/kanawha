@@ -18,8 +18,8 @@ __arm64_thread_run_threadless:
     PUSH_CALLEE_REGS()
 
     // Save the stack
-    mov x0, sp
-    str x0, [x2, 0x0]
+    mov x3, sp
+    str x3, [x2, 0x0]
 
     br x1
    

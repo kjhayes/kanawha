@@ -12,6 +12,7 @@
 #include <kanawha/vmem.h>
 
 #include <arch/arm64/fpu.h>
+#include <arch/arm64/cpu.h>
 
 #include <devtree/devtree.h>
 #include <devtree/flat.h>
@@ -79,7 +80,7 @@ arm64_boot_bsp_init(struct fdt __phys *dtb)
     if(res)
     {
         panic("Failed to handle init stage \"boot\"! err=%s", errnostr(res));
-    } 
+    }
 
     res = devtree_provide_physical_fdt(dtb);
     if(res)
@@ -93,6 +94,8 @@ arm64_boot_bsp_init(struct fdt __phys *dtb)
     {
         panic("Failed to handle init stage \"static\"! err=%s", errnostr(res));
     }
+
+    provide_bsp_mpid(current_mpid_from_mpidr());
 
     printk("Initializing the kernel...\n");
 
@@ -195,6 +198,13 @@ arm64_init(void *in)
     if(res)
     {
         panic("Failed to handle init stage \"post_topo\"! err=%s",
+              errnostr(res));
+    }
+
+    res = handle_init_stage__xcall();
+    if(res)
+    {
+        panic("Failed to handle init stage \"xcall\"! err=%s",
               errnostr(res));
     }
 

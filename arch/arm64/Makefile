@@ -10,6 +10,7 @@ obj-y += \
 	thread.o \
 	usermode.o \
 	percpu.o \
+	cpu.o \
 
 obj-$(CONFIG_PAGING) += paging.o
 
