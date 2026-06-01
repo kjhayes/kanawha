@@ -345,10 +345,12 @@ typedef int syscall_id_t;
 
 #ifdef KANAWHA_BUILDING_KERNEL
 
+enum {
 #define DECLARE_SYSCALL_ID_CONSTANTS(__name, __id, __NAME, ...)                \
-    const static syscall_id_t SYSCALL_ID_##__NAME = __id;
+    SYSCALL_ID_##__NAME = __id,
 SYSCALL_XLIST(DECLARE_SYSCALL_ID_CONSTANTS)
 #undef DECLARE_SYSCALL_ID_CONSTANTS
+};
 
 #else
 

@@ -15,6 +15,19 @@
 #define DECLARE_U32_BIT_MASK_CONSTANTS(NAME, SHIFT, BITS, ...)                 \
     static const uint32_t NAME = ((1ULL << (uint32_t)BITS) - 1) << SHIFT;
 
+#define DECLARE_UCHAR_ENUMS(NAME, VALUE, ...)                              \
+    NAME = (unsigned char)VALUE,
+
+#define DECLARE_U16_ENUMS(NAME, VALUE, ...)                                \
+    NAME = (uint16_t)VALUE,
+
+#define DECLARE_U32_ENUMS(NAME, VALUE, ...)                                \
+    NAME = (uint32_t)VALUE,
+
+#define DECLARE_U32_BIT_MASK_ENUMS(NAME, SHIFT, BITS, ...)                 \
+    NAME = ((1ULL << (uint32_t)BITS) - 1) << SHIFT,
+
+
 typedef uint32_t Elf32_Addr;
 typedef uint32_t Elf32_Off;
 typedef uint16_t Elf32_Section;
@@ -150,18 +163,24 @@ enum
     X(ELFCLASSNONE, 0, "Unknown")                                              \
     X(ELFCLASS32, 1, "Elf32")                                                  \
     X(ELFCLASS64, 2, "Elf64")
-ELFCLASS_XLIST(DECLARE_UCHAR_CONSTANTS)
+enum {
+ELFCLASS_XLIST(DECLARE_UCHAR_ENUMS)
+};
 
 #define ELFDATA_XLIST(X)                                                       \
     X(ELFDATANONE, 0, "None")                                                  \
     X(ELFDATA2LSB, 1, "Little-Endian")                                         \
     X(ELFDATA2MSB, 2, "Big-Endian")
-ELFDATA_XLIST(DECLARE_UCHAR_CONSTANTS)
+enum {
+ELFDATA_XLIST(DECLARE_UCHAR_ENUMS)
+};
 
 #define EV_XLIST(X)                                                            \
     X(EV_NONE, 0, "None")                                                      \
     X(EV_CURRENT, 1, "Current")
-EV_XLIST(DECLARE_U32_CONSTANTS)
+enum {
+EV_XLIST(DECLARE_U32_ENUMS)
+};
 
 #define ELFOSABI_XLIST(X)                                                      \
     X(ELFOSABI_NONE, 0, "None")                                                \
@@ -177,10 +196,14 @@ EV_XLIST(DECLARE_U32_CONSTANTS)
     X(ELFOSABI_OPENBSD, 12, "OpenBSD")                                         \
     X(ELFOSABI_OPENVMS, 13, "OpenVMS")                                         \
     X(ELFOSABI_NSK, 14, "NSK")
-ELFOSABI_XLIST(DECLARE_UCHAR_CONSTANTS)
+enum {
+ELFOSABI_XLIST(DECLARE_UCHAR_ENUMS)
+};
 
 #define ELFABIVERSION_XLIST(X) X(ELFABIVERSION_UNSPEC, 0, "Unspecified")
-ELFABIVERSION_XLIST(DECLARE_UCHAR_CONSTANTS)
+enum {
+ELFABIVERSION_XLIST(DECLARE_UCHAR_ENUMS)
+};
 
 #define ET_XLIST(X)                                                            \
     X(ET_NONE, 0, "None")                                                      \
@@ -188,7 +211,9 @@ ELFABIVERSION_XLIST(DECLARE_UCHAR_CONSTANTS)
     X(ET_EXEC, 2, "Executable")                                                \
     X(ET_DYN, 3, "Dynamic")                                                    \
     X(ET_CORE, 4, "Core")
-ET_XLIST(DECLARE_U16_CONSTANTS)
+enum {
+ET_XLIST(DECLARE_U16_ENUMS)
+};
 
 #define EM_XLIST(X)                                                            \
     X(EM_NONE, 0, "None")                                                      \
@@ -235,7 +260,9 @@ ET_XLIST(DECLARE_U16_CONSTANTS)
     X(EM_CSKY, 252, "CSKY")                                                    \
     X(EM_LOONGARCH, 258, "LOONGARCH")                                          \
     X(EM_FRV, 0x5441, "FRV")
-EM_XLIST(DECLARE_U16_CONSTANTS)
+enum {
+EM_XLIST(DECLARE_U16_ENUMS)
+};
 
 #define SHF_XLIST(X)                                                           \
     X(SHF_WRITE, (1ULL << 0), "SHF_WRITE")                                     \
@@ -243,7 +270,9 @@ EM_XLIST(DECLARE_U16_CONSTANTS)
     X(SHF_EXECINSTR, (1ULL << 2), "SHF_EXECINSTR")                             \
     X(SHF_RELA_LIVEPATCH, (1ULL << 20), "SHF_RELA_LIVEPATCH")                  \
     X(SHF_RO_AFTER_INIT, (1ULL << 21), "SHF_RO_AFTER_INIT")
-SHF_XLIST(DECLARE_U32_CONSTANTS)
+enum {
+SHF_XLIST(DECLARE_U32_ENUMS)
+};
 
 #define SHT_XLIST(X)                                                           \
     X(SHT_NULL, 0x00000000, "SHT_NULL")                                        \
@@ -263,7 +292,9 @@ SHF_XLIST(DECLARE_U32_CONSTANTS)
     X(SHT_HIPROC, 0x7fffffff, "SHT_HIPROC")                                    \
     X(SHT_LOUSER, 0x80000000, "SHT_LOUSER")                                    \
     X(SHT_HIUSER, 0xffffffff, "SHT_HIUSER")
-SHT_XLIST(DECLARE_U32_CONSTANTS)
+enum {
+SHT_XLIST(DECLARE_U32_ENUMS)
+};
 
 #define SHN_XLIST(X)                                                           \
     X(SHN_UNDEF, 0x0000, "SHN_UNDEF")                                          \
@@ -274,7 +305,9 @@ SHT_XLIST(DECLARE_U32_CONSTANTS)
     X(SHN_ABS, 0xFFF1, "SHN_ABS")                                              \
     X(SHN_COMMON, 0xFFF2, "SHN_COMMON")                                        \
     X(SHN_HIRESERVE, 0xFFFF, "SHN_HIRESERVE")
-SHN_XLIST(DECLARE_U16_CONSTANTS)
+enum {
+SHN_XLIST(DECLARE_U16_ENUMS)
+};
 
 // Relocation Entries
 
@@ -330,7 +363,9 @@ typedef struct
     X(STB_LOCAL, (0 << 4), "Local")                                            \
     X(STB_GLOBAL, (1 << 4), "Global")                                          \
     X(STB_WEAK, (2 << 4), "Weak")
-STB_XLIST(DECLARE_UCHAR_CONSTANTS)
+enum {
+STB_XLIST(DECLARE_UCHAR_ENUMS)
+};
 
 #define STT_XLIST(X)                                                           \
     X(STT_NOTYPE, 0, "None")                                                   \
@@ -340,7 +375,9 @@ STB_XLIST(DECLARE_UCHAR_CONSTANTS)
     X(STT_FILE, 4, "File")                                                     \
     X(STT_COMMON, 5, "Common")                                                 \
     X(STT_TLS, 6, "Thread-Local")
-STT_XLIST(DECLARE_UCHAR_CONSTANTS)
+enum {
+STT_XLIST(DECLARE_UCHAR_ENUMS)
+};
 
 #define ELF_ST_BIND(__STB) (__STB & 0xF0)
 #define ELF_ST_TYPE(__STT) (__STT & 0x0F)
@@ -350,7 +387,9 @@ STT_XLIST(DECLARE_UCHAR_CONSTANTS)
     X(STV_INTERNAL, 1, "Internal")                                             \
     X(STV_HIDDEN, 2, "Hidden")                                                 \
     X(STV_PROTECTED, 3, "Protected")
-STV_XLIST(DECLARE_UCHAR_CONSTANTS)
+enum {
+STV_XLIST(DECLARE_UCHAR_ENUMS)
+};
 
 #define ELF64_R_TYPE(reloc_info) (reloc_info & 0xFFFFFFFF)
 #define ELF64_R_SYM(reloc_info) (reloc_info >> 32)
@@ -374,7 +413,9 @@ STV_XLIST(DECLARE_UCHAR_CONSTANTS)
     X(PT_GNU_STACK, 0x6474E551, "GNU_STACK")                                   \
     X(PT_GNU_RELRO, 0x6474E552, "GNU_RELRO")                                   \
     X(PT_RISCV_ATTRIBUTES, 0x70000003, "RISCV_ATTRIBUTES")
-PT_XLIST(DECLARE_U32_CONSTANTS)
+enum {
+PT_XLIST(DECLARE_U32_ENUMS)
+};
 
 #define PF_XLIST(X)                                                            \
     X(PF_X, 0, 1, "Execute")                                                   \
@@ -382,11 +423,17 @@ PT_XLIST(DECLARE_U32_CONSTANTS)
     X(PF_R, 2, 1, "Read")                                                      \
     X(PF_MASKOS, 20, 8, "OS")                                                  \
     X(PF_MASKPROC, 28, 4, "Process")
-PF_XLIST(DECLARE_U32_BIT_MASK_CONSTANTS)
+enum {
+PF_XLIST(DECLARE_U32_BIT_MASK_ENUMS)
+};
 
 #undef DECLARE_U32_BIT_MASK_CONSTANTS
 #undef DECLARE_UCHAR_CONSTANTS
 #undef DECLARE_U16_CONSTANTS
 #undef DECLARE_U32_CONSTANTS
+#undef DECLARE_U32_BIT_MASK_ENUMS
+#undef DECLARE_UCHAR_ENUMS
+#undef DECLARE_U16_ENUMS
+#undef DECLARE_U32_ENUMS
 
 #endif

@@ -86,6 +86,7 @@ KERNEL_COMMON_FLAGS += \
 				-fno-pie \
 				-Wall \
 				-Wno-unused-variable \
+				-Wno-address-of-packed-member \
 				-Werror \
 
 AFLAGS += -D__ASSEMBLER__

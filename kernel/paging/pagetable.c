@@ -674,12 +674,64 @@ pagetable_undrill(
         void *vaddr,
         size_t size)
 {
-    return pagetable_drill_direct(
-            pt,
-            vaddr,
-            (void __phys *)0,
-            size,
-            PAGING_ENTRY_IS_LEAF);
+    int res;
+
+    const struct paging_mode *mode = current_paging_mode();
+    order_t min_page_order = paging_level_entry_region_order(mode, 0);
+
+    if(ptr_orderof(vaddr) < min_page_order) {
+        return -EINVAL;
+    }
+    if(ptr_orderof(size) < min_page_order) {
+        return -EINVAL;
+    }
+    // The requested mapping is aligned to the minimum
+    // page size virtually/physically and is a multiple
+    // of the minimum page size.
+    
+    void *viter = vaddr;
+    size_t remaining = size;
+    while(remaining) {
+        order_t page_order = 0;
+        int drill_level = 0;
+        for(drill_level = pt->max_leaf_level; drill_level > 0; drill_level--)
+        {
+            page_order = paging_level_entry_region_order(mode, drill_level);
+            if(ptr_orderof(viter) < page_order) {
+                continue;
+            }
+            if(ptr_orderof(remaining) < page_order) {
+                continue;
+            }
+            break;
+        }
+        if(drill_level == 0) {
+            page_order = min_page_order;
+        }
+
+        size_t page_size = 1UL<<page_order;
+
+        DEBUG_ASSERT_MSG(
+                page_size <= remaining,
+                "page_size=0x%lx, remaining=0x%lx",
+                (ul_t)page_size,
+                (ul_t)remaining);
+
+        res = pagetable_drill_page(
+                pt,
+                viter,
+                (void __phys *)0x0,
+                drill_level,
+                PAGING_ENTRY_IS_LEAF);
+        if(res) {
+            return res;
+        }
+
+        viter += page_size;
+        remaining -= page_size;
+    }
+
+    return 0; 
 }
 
 // Pushdown

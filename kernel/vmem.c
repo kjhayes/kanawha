@@ -752,7 +752,7 @@ vmem_map_unhandled_user_page_fault(struct excp_state *state,
                     faulting_address);
             dump_pf_flags(do_panic_printk, access_flags);
             do_panic_printk(")\n");
-            arch_dump_vmem_map(do_panic_printk, vmem_map_get_current());
+            //arch_dump_vmem_map(do_panic_printk, vmem_map_get_current());
             panic("Failed to terminate process!\n");
         }
         thread_abandon();

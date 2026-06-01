@@ -4,6 +4,10 @@
 __arm64_enter_usermode:
     // x0 -> void __user *starting_address
     // x1 -> void *arg
+    // x2 -> void *sp_el1
+
+    // Reset the kernel stack
+    mov sp, x2
 
     // Set ELR_EL1 to "return" us to "starting_address"
     msr ELR_EL1, x0
@@ -46,7 +50,6 @@ __arm64_enter_usermode:
     mov x28, 0
     mov x29, 0
     mov x30, 0
-    mov sp, x30
 
     // Return to userspace
     eret

@@ -130,8 +130,11 @@
     X(EDEFER, 515)                                                             \
     X(EIMPREC, 516)
 
-#define DECLARE_ERRNO_CONSTANT(errno, num, ...) const static int errno = num;
-
-XFOR_ERRNO(DECLARE_ERRNO_CONSTANT);
+enum {
+#define DECLARE_ERRNO_CONSTANT(__ERRNO, __VALUE, ...) \
+    __ERRNO = __VALUE,
+XFOR_ERRNO(DECLARE_ERRNO_CONSTANT)
+#undef DECLARE_ERRNO_CONSTANT
+};
 
 #endif

@@ -9,7 +9,7 @@ _start:
     mov x1, 0
     adr x2, __mmap_where
     mov x3, STACK_SIZE
-    mov x4, (0b10 | (1<<3) | (1<<4))
+    mov x4, (0b10 | (1<<3) | (1<<4) | (1<<5))
     mov x8, 7
     svc 0
     cbnz x0, __do_fail_exit

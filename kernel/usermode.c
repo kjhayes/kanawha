@@ -22,5 +22,8 @@ enter_usermode(void *arg)
      * when an interrupt/exception occurs
      */
 
+    dprintk("enter_usermode: ip=%p, arg=%p\n",
+            process->user_ip,
+            arg);
     arch_enter_usermode(process->user_ip, arg);
 }

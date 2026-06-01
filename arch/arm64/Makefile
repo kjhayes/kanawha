@@ -11,6 +11,7 @@ obj-y += \
 	usermode.o \
 	percpu.o \
 	cpu.o \
+	sync.o \
 
 obj-$(CONFIG_PAGING) += paging.o
 

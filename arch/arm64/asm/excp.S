@@ -75,19 +75,47 @@ arm64_excp_el1_serror_end:
 // EL0 64-bit exceptions
 .p2align 7
 arm64_excp_el0_64_sync:
-    b .
+    sub sp, sp, 0x20
+    stp x0, x1, [sp, 0x00]
+    mov x0, ARM64_EXCP_HWIRQ_SYNC
+    mov x1, ARM64_EXCP_FLAG_USER
+    stp x0, x1, [sp, 0x10]
+    ldp x0, x1, [sp, 0x00]
+    add sp, sp, 0x10
+    b arm64_excp_common
 arm64_excp_el0_64_sync_end:
 .p2align 7
 arm64_excp_el0_64_irq:
-    b .
+    sub sp, sp, 0x20
+    stp x0, x1, [sp, 0x00]
+    mov x0, ARM64_EXCP_HWIRQ_IRQ
+    mov x1, ARM64_EXCP_FLAG_USER
+    stp x0, x1, [sp, 0x10]
+    ldp x0, x1, [sp, 0x00]
+    add sp, sp, 0x10
+    b arm64_excp_common
 arm64_excp_el0_64_irq_end:
 .p2align 7
 arm64_excp_el0_64_fiq:
-    b .
+    sub sp, sp, 0x20
+    stp x0, x1, [sp, 0x00]
+    mov x0, ARM64_EXCP_HWIRQ_FIQ
+    mov x1, ARM64_EXCP_FLAG_USER
+    stp x0, x1, [sp, 0x10]
+    ldp x0, x1, [sp, 0x00]
+    add sp, sp, 0x10
+    b arm64_excp_common
 arm64_excp_el0_64_fiq_end:
 .p2align 7
 arm64_excp_el0_64_serror:
-    b .
+    sub sp, sp, 0x20
+    stp x0, x1, [sp, 0x00]
+    mov x0, ARM64_EXCP_HWIRQ_SERROR
+    mov x1, ARM64_EXCP_FLAG_USER
+    stp x0, x1, [sp, 0x10]
+    ldp x0, x1, [sp, 0x00]
+    add sp, sp, 0x10
+    b arm64_excp_common
 arm64_excp_el0_64_serror_end:
 
 // EL0 32-bit exceptions

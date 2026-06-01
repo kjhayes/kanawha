@@ -1,7 +1,8 @@
 
 KERNEL_COMMON_FLAGS += -mno-outline-atomics \
 					   -mgeneral-regs-only
-USER_COMMON_FLAGS += -mno-outline-atomics
+USER_COMMON_FLAGS += -mno-outline-atomics \
+					 -z noexecstack
 
 KERNEL_OBJDUMPFLAGS += \
 	-j .boot.text \

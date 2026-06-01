@@ -8,7 +8,8 @@
 extern __noreturn void
 __arm64_enter_usermode(
         void __user *starting_address,
-        void *arg);
+        void *arg,
+        void *sp_el1);
 
 __noreturn void
 arch_enter_usermode(void __user *starting_address, void *arg)
@@ -22,7 +23,7 @@ arch_enter_usermode(void __user *starting_address, void *arg)
     state->arch_state.stack.stack_pointer =
         (uintptr_t)(void*)thread_stack_get_base(&state->arch_state.stack);
 
-    __arm64_enter_usermode(starting_address, arg);
+    __arm64_enter_usermode(starting_address, arg, (void*)thread_stack_get_base(&state->arch_state.stack));
     
     panic("Returned from __arm64_enter_usermode!\n");
 }

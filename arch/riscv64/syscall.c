@@ -34,11 +34,11 @@ riscv64_syscall_handler(struct excp_state *excp_state,
         state->caller_regs[RISCV64_PUSHED_CALLER_REGS_INDEX_A7],
         &args,
         &state->caller_regs[RISCV64_PUSHED_CALLER_REGS_INDEX_A0]);
+    disable_irqs();
     if(res)
     {
         return IRQ_UNHANDLED;
     }
-    disable_irqs();
 
     // reset the kernel stack
     process->thread.arch_state.stack.stack_pointer =

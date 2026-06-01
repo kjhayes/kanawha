@@ -127,7 +127,11 @@ struct fs_mnt
 
 const static struct fs_mnt sys_base_fs_mnts[] = {
     {
+#ifdef __aarch64__
+        .backing = "/dev/blk/virtio-blk-0",
+#else
         .backing = "/dev/ramfile/initrd",
+#endif
         .fs_type = "cpio",
         .dir = "initrd",
     },

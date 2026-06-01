@@ -4,7 +4,8 @@
 #include <kanawha/attribute.h>
 #include <kanawha/types.h>
 
-#define DECLARE_U8_CONSTANTS(__NAME, __VAL) const static uint8_t __NAME = __VAL;
+#define DECLARE_U8_ENUMS(__NAME, __VAL) \
+    __NAME = (uint8_t)__VAL,
 
 #define ACPI_GAS_ASID_XLIST(X)                                                 \
     X(ACPI_GAS_ASID_MMIO, 0x00)                                                \
@@ -19,14 +20,18 @@
     X(ACPI_GAS_ASID_GENERIC_SERIAL, 0x09)                                      \
     X(ACPI_GAS_ASID_PCC, 0x0A)                                                 \
     X(ACPI_GAS_ASID_PRM, 0x0B)
-ACPI_GAS_ASID_XLIST(DECLARE_U8_CONSTANTS)
+enum {
+ACPI_GAS_ASID_XLIST(DECLARE_U8_ENUMS)
+};
 
 #define ACPI_GAS_ACCESS_SIZE_XLIST(X)                                          \
     X(ACPI_GAS_ACCESS_SIZE_BYTE, 0x1)                                          \
     X(ACPI_GAS_ACCESS_SIZE_WORD, 0x2)                                          \
     X(ACPI_GAS_ACCESS_SIZE_DWORD, 0x3)                                         \
     X(ACPI_GAS_ACCESS_SIZE_QUAD, 0x4)
-ACPI_GAS_ACCESS_SIZE_XLIST(DECLARE_U8_CONSTANTS)
+enum {
+ACPI_GAS_ACCESS_SIZE_XLIST(DECLARE_U8_ENUMS)
+};
 
 struct __packed acpi_gas
 {
@@ -37,6 +42,6 @@ struct __packed acpi_gas
     uint64_t address;
 };
 
-#undef DECLARE_U8_CONSTANTS
+#undef DECLARE_U8_ENUMS
 
 #endif

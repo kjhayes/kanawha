@@ -266,7 +266,7 @@ render_all(int force,
     }
 }
 
-static int first_updates = 100;
+static int first_updates = 3;
 
 int
 render_update(struct terminal_data *tdata,

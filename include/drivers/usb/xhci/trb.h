@@ -43,10 +43,12 @@
     X(SECONDARY_BANDWIDTH_ERROR, (35))                                         \
     X(SPLIT_TRANSACTION_ERROR, (36))
 
+enum {
 #define __DEFINE_CONST(__NAME, __VAL)                                          \
-    const static unsigned int USB_XHCI_TRB_COMPLETION_CODE_##__NAME = __VAL;
+    USB_XHCI_TRB_COMPLETION_CODE_##__NAME = __VAL,
 USB_XHCI_TRB_COMPLETION_CODE_XLIST(__DEFINE_CONST)
 #undef __DEFINE_CONST
+};
 
 #define USB_XHCI_TRB_TYPE_XLIST(X)                                             \
     X(NORMAL, (1))                                                             \
@@ -83,10 +85,12 @@ USB_XHCI_TRB_COMPLETION_CODE_XLIST(__DEFINE_CONST)
     X(DEVICE_NOTIFICATION_EVENT, (38))                                         \
     X(MFINDEX_WRAP_EVENT, (39))
 
+enum {
 #define __DEFINE_CONST(__NAME, __VAL)                                          \
-    const static unsigned int USB_XHCI_TRB_TYPE_##__NAME = __VAL;
+    USB_XHCI_TRB_TYPE_##__NAME = __VAL,
 USB_XHCI_TRB_TYPE_XLIST(__DEFINE_CONST)
 #undef __DEFINE_CONST
+};
 
 struct __packed usb_xhci_trb
 {

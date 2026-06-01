@@ -39,8 +39,15 @@ arm64_handle_excp(
         thread_switch();
     }
 
+    if(state->flags & ARM64_EXCP_FLAG_USER) {
+        struct process *process = current_process();
+        DEBUG_ASSERT(KERNEL_ADDR(process));
+        state->elr = (uintptr_t)process->user_ip;
+    }
+
     return;
 }
+
 
 void
 arch_excp_dump_state(struct excp_state *gen_state, printk_f *printer)

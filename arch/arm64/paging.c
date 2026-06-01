@@ -478,6 +478,8 @@ arch_paging_set_pt_root(void __phys *pt_root, int level)
     arm64_sysreg_writeq(TTBR0_EL1, ttbr0_el1);
     arm64_sysreg_writeq(TTBR1_EL1, ttbr1_el1);
 
+    arch_paging_flush_tlb(pt_root, 1);
+
     return 0;
 }
 
@@ -485,7 +487,7 @@ int
 arch_paging_flush_tlb(void __phys *cond_pt_root, int force)
 {
     // I'm not certain that this is correct -KJH
-    // asm volatile ("TLBI VMALLE1; DSB ISH; ISB");
+    asm volatile ("tlbi VMALLE1; ic iallu; dsb ish; isb");
     return 0;
 }
 #endif

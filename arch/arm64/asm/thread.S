@@ -17,6 +17,11 @@ __arm64_thread_run_threadless:
     PUSH_CALLER_REGS()
     PUSH_CALLEE_REGS()
 
+    // Save our userspace stack
+    sub sp, sp, 0x10
+    mrs x3, SP_EL0
+    stp x3, xzr, [sp, 0x00]
+
     // Save the stack
     mov x3, sp
     str x3, [x2, 0x0]
@@ -31,6 +36,12 @@ __arm64_thread_run_threadless:
 __arm64_thread_run_thread:
     // x0 -> stack pointer
     mov sp, x0
+
+    // Restore our userspace stack
+    ldp x0, xzr, [sp, 0x00]
+    msr SP_EL0, x0
+    add sp, sp, 0x10
+
     POP_CALLEE_REGS()
     POP_CALLER_REGS()
     ret

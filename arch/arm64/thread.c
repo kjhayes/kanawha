@@ -52,6 +52,9 @@ arch_init_thread_state(struct thread_state *state)
     caller_regs[ARM64_PUSHED_CALLER_REG_INDEX_X0] = (uint64_t)state->in;
     caller_regs[ARM64_PUSHED_CALLER_REG_INDEX_X1] = (uint64_t)state->func;
 
+    void *sp_el0 = thread_stack_alloca(stack, 16);
+    memset(sp_el0, 0, 16);
+
     return 0;
 }
 

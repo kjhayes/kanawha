@@ -248,10 +248,6 @@ mmap_region_map_page(struct mmap_region *region, struct mmap_page *page)
         vmem_flags |= VMEM_REGION_EXEC;
     }
 
-    // No writable exec mappings (should be caught earlier than this)
-    DEBUG_ASSERT(
-        !((vmem_flags & VMEM_REGION_EXEC) && (vmem_flags & VMEM_REGION_WRITE)));
-
     DEBUG_ASSERT(KERNEL_ADDR(region));
     DEBUG_ASSERT(KERNEL_ADDR(region->mmap));
     DEBUG_ASSERT(KERNEL_ADDR(region->mmap->vmem_region));
@@ -1121,7 +1117,7 @@ mmap_page_do_copy_on_write(struct mmap_region *region, struct mmap_page *page)
 {
     int res;
 
-    dprintk("mmap_page_do_copy_on_write(region=%p, page=%p, page->offset=%p)\n",
+    dprintk("PID(%P) mmap_page_do_copy_on_write(region=%p, page=%p, page->offset=%p)\n",
             region,
             page,
             page->tree_node.key);
@@ -1648,7 +1644,7 @@ mmap_not_present_page_fault_handler(struct mmap *mmap,
 {
     int res;
 
-    dprintk("mmap_not_present_page_fault_handler: region->base=%p, "
+    dprintk("PID(%P) mmap_not_present_page_fault_handler: region->base=%p, "
             "region_offset=%p, region->file_offset=%p\n",
             region->tree_node.key,
             region_offset,
@@ -1699,7 +1695,7 @@ mmap_page_fault_handler(struct excp_state *state,
                         unsigned long pf_flags,
                         void *priv_state)
 {
-    dprintk("mmap_page_fault_handler offset=%p, pf_flags={%s%s%s%s%s}\n",
+    dprintk("PID(%P) mmap_page_fault_handler offset=%p, pf_flags={%s%s%s%s%s}\n",
             offset,
             pf_flags & PF_FLAG_READ ? "[READ]" : "",
             pf_flags & PF_FLAG_WRITE ? "[WRITE]" : "",
