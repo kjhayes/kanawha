@@ -82,6 +82,10 @@ _start:
     call __elk_crt__init_signal
     bne a0, zero, __do_fail_exit
 
+    call __elk_crt__populate_environ
+    bne a0, zero, __do_fail_exit
+
+
     addi sp, sp, -16
     addi a0, sp, 0 // argc_ptr
     addi a1, sp, 8 // argv_ptr

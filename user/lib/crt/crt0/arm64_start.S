@@ -27,6 +27,8 @@ _start:
     cbnz x0, __do_fail_exit
     bl __elk_crt__init_signal
     cbnz x0, __do_fail_exit
+    bl __elk_crt__populate_environ
+    cbnz x0, __do_fail_exit
 
     sub sp, sp, 16
     mov x0, sp    // argc ptr
