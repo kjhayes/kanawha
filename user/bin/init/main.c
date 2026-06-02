@@ -34,18 +34,36 @@ int
 setstdin(const char *path)
 {
     int file = open(path, O_RDONLY);
+    if(file < 0) {
+        int pipes[2];
+        pipe(pipes);
+        file = pipes[0];
+        close(pipes[1]);
+    }
     dup2(file, 0);
 }
 int
 setstdout(const char *path)
 {
     int file = open(path, O_WRONLY);
+    if(file < 0) {
+        int pipes[2];
+        pipe(pipes);
+        file = pipes[1];
+        close(pipes[0]);
+    }
     dup2(file, 1);
 }
 int
 setstderr(const char *path)
 {
     int file = open(path, O_WRONLY);
+    if(file < 0) {
+        int pipes[2];
+        pipe(pipes);
+        file = pipes[1];
+        close(pipes[0]);
+    }
     dup2(file, 2);
 }
 
