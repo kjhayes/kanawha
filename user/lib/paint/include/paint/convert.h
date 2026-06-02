@@ -1,12 +1,14 @@
+#ifndef __KANAWHA_PAINT_CONVERT_H__
+#define __KANAWHA_PAINT_CONVERT_H__
 
-#include <paint/paint.h>
 #include <kanawha/gfx.h>
+#include <kanawha/types.h>
 #include <errno.h>
+#include <ctype.h>
 #include <stdint.h>
 #include <string.h>
-#include <ctype.h>
 
-ssize_t
+static inline ssize_t
 paint_gfx_format_pixel_size(
         unsigned long format)
 {
@@ -36,7 +38,7 @@ paint_gfx_format_pixel_size(
     }
 }
 
-static int
+static inline int
 paint_convert_pixel_to_rgba(
         unsigned long format,
         void *data,
@@ -132,7 +134,7 @@ paint_convert_pixel_to_rgba(
     return 0;
 }
 
-static int
+static inline int
 paint_convert_pixel_from_rgba(
         uint32_t rgba,
         unsigned long format,
@@ -235,7 +237,7 @@ paint_convert_pixel_from_rgba(
     return -ENXIO;
 }
 
-int
+static inline int
 paint_convert_pixel(
         unsigned long to_format,
         void *to_data,
@@ -303,3 +305,4 @@ paint_convert_pixel(
     return -EINVAL;
 }
 
+#endif
