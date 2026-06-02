@@ -321,6 +321,10 @@ exec_elf64_handle_segment(struct process *process, fd_t file, Elf64_Phdr *phdr)
         // we don't map a stack for userspace
         // so we can ignore it.
         return 0;
+    case PT_GNU_RELRO:
+        // Note requesting a range is made read-only
+        // after dynamic linking, we will ignore it
+        return 0;
     case PT_RISCV_ATTRIBUTES:
         // Don't do anything with this information yet
         return 0;
