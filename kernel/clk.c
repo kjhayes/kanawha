@@ -68,6 +68,7 @@ clk_mono_current(void)
     clk_source_lock_acquire();
     if(clk_source == NULL)
     {
+        clk_source_lock_release();
         return 0;
     }
 
