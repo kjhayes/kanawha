@@ -164,3 +164,15 @@ XFOR_INIT_STAGE(DEFINE_INIT_STAGE_CHECKS)
     }
 
 XFOR_INIT_STAGE(DEFINE_INIT_STAGE_HANDLER)
+
+
+int init_stages_all_complete(void) {
+
+#define CHECK_INIT_STAGE_COMPLETE(STAGE, ...)                                  \
+    if(!completed_init_stage_##STAGE()) {return 0;}
+
+XFOR_INIT_STAGE(DECLARE_INIT_STAGE_CHECKS)
+
+    return 1;
+}
+

@@ -123,5 +123,7 @@ handle_init_stage_generic(const char *stage_name,
                           size_t num_events,
                           struct init_stage_event events[num_events]);
 
+int init_stages_all_complete(void);
+
 #endif // __LINKER__
 #endif

@@ -271,6 +271,10 @@ arm64_init(void *in)
         panic("Failed to handle init stage \"launch\"! err=%s", errnostr(res));
     }
 
+    if(!init_stages_all_complete()) {
+        panic("ARM64 init did not complete all init stages!\n");
+    }
+
     // dump_irq_descs(printk);
     // dump_threads(printk);
 
