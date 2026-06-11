@@ -221,6 +221,12 @@ arm64_init(void *in)
         panic("Failed to handle init stage \"smp\"! err=%s", errnostr(res));
     }
 
+    res = handle_init_stage__sched();
+    if(res)
+    {
+        panic("Failed to handle init stage \"sched\"! err=%s", errnostr(res));
+    }
+
     res = handle_init_stage__fs();
     if(res)
     {
