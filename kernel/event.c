@@ -43,12 +43,18 @@ periodic_callback(void)
             container_of(node, struct periodic_event, list_node);
         if(event->current_period <= tick_length)
         {
+            dprintk("periodic_callback running %p\n", event->callback);
             event->current_period = event->period;
             // Run the event callback
             (*event->callback)(event->state);
         }
         else
         {
+            dprintk("periodic_callback ticking %p [period=%lu ms, tick_length=%lu ms, remaining=%lu ms]\n",
+                    event->callback,
+                    (ul_t)duration_to_msec(event->period),
+                    (ul_t)duration_to_msec(tick_length),
+                    (ul_t)duration_to_msec(event->current_period));
             event->current_period -= tick_length;
         }
     }
@@ -114,6 +120,7 @@ enable_periodic_event(struct periodic_event *event)
     if(res)
     {
         if(started_init_stage_launch()) {
+            num_enabled_periodic_events--;
             ilist_remove(&periodic_event_list, &event->list_node);
             periodic_event_list_lock_release();
             return res;
