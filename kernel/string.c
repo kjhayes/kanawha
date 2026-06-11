@@ -4,36 +4,75 @@
 #include <kanawha/string.h>
 #include <kanawha/vmem.h>
 
-void *
-memset(void *str, int c, size_t n)
+static inline void *
+memset_bytewise(void *str, int c, size_t n)
 {
 
     uint8_t byte = (uint8_t)c;
-    uint8_t *dest = str;
 
-    for(size_t i = 0; i < n; i++)
+    uint8_t *dest = str;
+    uint8_t *end = str + n;
+
+    while(dest != end)
     {
-        dest[i] = byte;
+        *dest++ = byte;
     }
 
-    return dest;
+    return str;
 }
 
 void *
-memcpy(void *dest, const void *src, size_t count)
+memset(void *str, int c, size_t n)
+{
+    uintptr_t alignmask = sizeof(unsigned long)-1;
+    if((n & alignmask) || ((uintptr_t)str & alignmask)) {
+        // We are not aligned enough to use unsigned longs
+        return memset_bytewise(str, c, n);
+    } else {
+        unsigned long *strl = str;
+        unsigned long *strl_end = (unsigned long*)(str + n);
+        unsigned long cl;
+        memset_bytewise(&cl, c, sizeof(unsigned long));
+        while(strl != strl_end) {
+            *strl++ = cl;
+        }
+        return str;
+    }
+}
+
+static inline void *
+memcpy_bytewise(void *restrict dest, const void *restrict src, size_t count)
 {
     void *original_dest = dest;
     if(dest == src || count == 0)
     {
         return dest;
     }
-    for(size_t i = 0; i < count; i++)
+    void *end = dest + count;
+    while(dest != end)
     {
-        *(uint8_t *)dest = *(uint8_t *)src;
-        dest++;
-        src++;
+        *(uint8_t *)dest++ = *(uint8_t *)src++;
     }
     return original_dest;
+}
+
+void *
+memcpy(void *restrict dest, const void *restrict src, size_t count)
+{
+    uintptr_t alignmask = sizeof(unsigned long)-1;
+    if((count & alignmask) || ((uintptr_t)dest & alignmask) || ((uintptr_t)src & alignmask))
+    {
+        // We are not aligned enough to use unsigned longs
+        return memcpy_bytewise(dest, src, count);
+    } else {
+        unsigned long *destl = dest;
+        const unsigned long *srcl = src;
+        const unsigned long *endl = (unsigned long *)(dest + count);
+        while(destl != endl) {
+            *destl++ = *srcl++;
+        }
+        return dest;
+    }
 }
 
 void *

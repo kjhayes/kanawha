@@ -4,9 +4,11 @@
 void *
 memset(void *s, int c, size_t n)
 {
-    for(size_t i = 0; i < n; i++)
+    void *start = s;
+    void *end = s + n;
+    while(s != end)
     {
-        ((char *)s)[i] = c;
+        *(char*)s++ = c;
     }
-    return s;
+    return start;
 }
