@@ -1093,7 +1093,7 @@ tick_thread_running_percent(struct thread_state *state)
     return running;
 }
 
-static struct periodic_tasklet *sample_thread_running_event = NULL;
+static struct periodic_event *sample_thread_running_event = NULL;
 static void
 sample_thread_running_percentage(void *state)
 {
@@ -1121,7 +1121,7 @@ sample_thread_running_percentage(void *state)
 static int
 init_sample_thread_running_percentage(void)
 {
-    sample_thread_running_event = tasklet_create_periodic(
+    sample_thread_running_event = create_periodic_event(
         msec_to_duration(SAMPLE_THREAD_RUNNING_PERIOD_MS),
         NULL,
         sample_thread_running_percentage);

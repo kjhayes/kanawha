@@ -92,16 +92,9 @@ init_proc(char *fname, int procfile)
     p->next = proc_list;
     proc_list = p;
 
-    if(p->id == getpid())
-    {
-        p->exec = "ps (self)";
-    }
-    else
-    {
-        p->exec = read_string_file(procfile, "exec");
-        p->parent = read_int_file(procfile, "parent");
-        p->idle = read_int_file(procfile, "idle");
-    }
+    p->exec = read_string_file(procfile, "exec");
+    p->parent = read_int_file(procfile, "parent");
+    p->idle = read_int_file(procfile, "idle");
 
     return 0;
 }
