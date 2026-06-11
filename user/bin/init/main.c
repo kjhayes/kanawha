@@ -22,7 +22,7 @@
 #define TERM_PATH "/dev/term/serial"
 #endif
 #ifdef __aarch64__
-#define TERM_PATH "/dev/term/serial"
+#define TERM_PATH "/dev/term/pl011-0"
 #endif
 
 #endif
@@ -162,12 +162,24 @@ static struct daemon sysplot = {
     .status = DAEMON_UNINIT,
     .num_sockets = 0,
 };
+
+// Open a shell on the terminal "init" is printing to
+static const char *termsh_args[] = {"sh", NULL};
+static struct daemon termsh = {
+    .command = "/sys/initrd/sh",
+    .args = sysplot_args,
+    .restart_on_exit = 1,
+    .status = DAEMON_UNINIT,
+    .num_sockets = 0,
+};
+
 static struct daemon *daemons[] = {
     &randd,
     // &windd,
     &barkd,
     &lensd,
     &sh,
+    &termsh,
     // &sysplot,
     // &klog,
     NULL,
