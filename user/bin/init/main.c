@@ -223,12 +223,12 @@ main(int argc, const char **argv)
             continue;
         }
         struct daemon **d = daemons;
-        INFO("d = %p\n", d);
-        INFO("*d = %p\n", *d);
+        //INFO("d = %p\n", d);
+        //INFO("*d = %p\n", *d);
         int found = 0;
         while(*d)
         {
-            INFO("Checking Daemon...\n");
+            //INFO("Checking Daemon...\n");
             struct daemon *daemon = *d;
             if(daemon->pid == res)
             {
