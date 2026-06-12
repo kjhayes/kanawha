@@ -11,9 +11,14 @@
 #include <kanawha/vmem.h>
 #include <kanawha/xcall.h>
 
+#define DEFAULT_MIGRATION_THRESHOLD 4
+
 struct rr_thread
 {
     struct thread_state *state;
+
+    cpu_id_t last_run_cpu;
+    unsigned long migration_attempts;
 
     ilist_node_t list_node;
 };
@@ -21,6 +26,8 @@ struct rr_thread
 struct rr_scheduler
 {
     struct scheduler sched;
+
+    unsigned long migration_threshold;
 
     spinlock_t list_lock;
     size_t num_threads;
@@ -68,6 +75,7 @@ rr_sched_alloc_instance(struct scheduler_type *type)
     }
 
     sched->num_threads = 0;
+    sched->migration_threshold = DEFAULT_MIGRATION_THRESHOLD;
     ilist_init(&sched->thread_list);
     spinlock_init(&sched->list_lock);
 
@@ -102,6 +110,8 @@ rr_sched_free_instance(struct scheduler_type *type, struct scheduler *sched)
 static int
 rr_sched_hard_resched(struct scheduler *sched)
 {
+    int res;
+
     struct rr_scheduler *rr_sched =
         container_of(sched, struct rr_scheduler, sched);
 
@@ -152,22 +162,32 @@ rr_sched_hard_resched(struct scheduler *sched)
         DEBUG_ASSERT(KERNEL_ADDR(current));
         DEBUG_ASSERT(KERNEL_ADDR(current->state));
 
-        int res = thread_schedule(current->state);
+        if(current->last_run_cpu != current_cpu_id()) {
+            if(current->migration_attempts < rr_sched->migration_threshold * rr_sched->sched.num_cpus) {
+                current->migration_attempts += 1;
+                continue;
+            } else {
+                current->migration_attempts = 0;
+            }
+        }
+
+        res = thread_schedule(current->state);
         if(res)
         {
             continue;
         }
         else
         {
+            current->migration_attempts = 0;
             break;
         }
     } while(1);
 
     *current_ptr = current;
-
+    current->last_run_cpu = current_cpu_id();
     dprintk("scheduling thread (%lld) on CPU (%ld) # active threads (%ld)\n",
             (ull_t)current->state->id,
-            current_cpu_id(),
+            current->last_run_cpu,
             ilist_count(&rr_sched->thread_list));
 
     spin_unlock_irq_restore(&rr_sched->list_lock, irq_flags);
@@ -213,6 +233,9 @@ rr_sched_add_thread(struct scheduler *sched, struct thread_state *state)
     {
         return -ENOMEM;
     }
+
+    thread->migration_attempts = rr_sched->migration_threshold;
+    thread->last_run_cpu = current_cpu_id();
 
     thread->state = state;
     int irq_flags = spin_lock_irq_save(&rr_sched->list_lock);
