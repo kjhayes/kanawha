@@ -1047,10 +1047,18 @@ process_terminate(int exitcode)
 
     int res;
 
-    LOG("process_terminate(pid=%ld, exitcode=%d (%s))\n",
+    LOG("process_terminate(pid=%ld, exitcode=%d (%s)"
+#ifdef CONFIG_DEBUG_TRACK_PROCESS_EXEC
+        "exec=\"%s\""
+#endif 
+        ")\n",
         process->id,
         exitcode,
-        errnostr(exitcode));
+        errnostr(exitcode)
+#ifdef CONFIG_DEBUG_TRACK_PROCESS_EXEC
+        ,process->tracked_exec ? process-> tracked_exec : "UNKNOWN"
+#endif
+        );
 
     if(process == init_process)
     {
