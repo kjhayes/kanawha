@@ -241,6 +241,12 @@ input_loop_iter(void)
     int res;
     for(size_t i = 0; i < MAX_INPUT_EVENTS_PER_ITER; i++) {
         struct input_event evt;
+        res = lens_input_buffer_peek(input_buffer);
+        if(res == 0) {
+            break;
+        } else if(res < 0) {
+            return res;
+        }
         res = lens_input_buffer_pop(
                 input_buffer,
                 &evt);

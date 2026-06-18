@@ -5,12 +5,15 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <stdio.h>
 
 struct lens_input_buffer
 {
     sem_t lock;
     size_t head;
     size_t tail;
+
+    sem_t num_evts;
 
     size_t buflen;
     struct input_event buffer[];
@@ -40,6 +43,12 @@ lens_create_input_buffer(
         free(buffer);
         return NULL;
     }
+    res = sem_init(&buffer->num_evts, 1, 0);
+    if(res) {
+        sem_destroy(&buffer->lock);
+        free(buffer);
+        return NULL;
+    }
 
     return buffer;
 }
@@ -66,6 +75,9 @@ lens_input_buffer_push(
         if(buffer->tail >= buffer->buflen) {
             buffer->tail = 0;
         }
+    } else {
+        printf("posting input event!\n");
+        sem_post(&buffer->num_evts);
     }
 
     buffer->buffer[buffer->head] = *evt;
@@ -84,10 +96,19 @@ lens_input_buffer_pop(
         struct input_event *evt)
 {
     int res;
+
+    // Wait for an event to show up,
+    // after returning from this we should have
+    // effectively claimed an event.
+    while(sem_wait(&buffer->num_evts)) {}
+
+    // Obtain the lock
     while(sem_wait(&buffer->lock)) {}
 
     if(buffer->head == buffer->tail) {
         sem_post(&buffer->lock);
+        // Huh? We should have blocked until an
+        // event was available
         return 0;
     }
 
