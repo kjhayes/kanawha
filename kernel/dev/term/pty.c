@@ -1,5 +1,7 @@
 
 #include <kanawha/dev/term.h>
+#include <kanawha/uapi/file.h>
+#include <kanawha/fs/file.h>
 #include <kanawha/sysfs/vfs.h>
 #include <kanawha/sysfs/sysfs.h>
 
@@ -26,6 +28,7 @@ struct pty_node
     struct term_dev term_dev;
 
     struct pty_ringbuf read_buffer;
+    struct waitqueue read_wq;
 
     char namebuf[PTY_NAMEBUFLEN];
 };
@@ -163,26 +166,38 @@ pty_file_read(
         ssize_t buflen,
         unsigned long flags)
 {
+    int res;
+
     struct fs_node *fs_node = fs_path_get_fs_node(file->path);
     struct vfs_node *vfs_node = fs_node->backing.priv_state;
     struct pty_node *pty_node = container_of(vfs_node, struct pty_node, vfs_node);
 
-    pty_ringbuf_lock(&pty_node->read_buffer);
-    ssize_t amt_read = pty_ringbuf_read(
-            &pty_node->read_buffer,
-            buf,
-            buflen);
-    pty_ringbuf_unlock(&pty_node->read_buffer);
+    ssize_t total_read = 0;
 
-    if(amt_read == 0) {
-        // TODO: We should be blocking here if we can...
-        return -EWOULDBLOCK;
-    } else if(amt_read < 0) {
-        return amt_read;
+    while(total_read == 0) {
+        pty_ringbuf_lock(&pty_node->read_buffer);
+        ssize_t amt_read = pty_ringbuf_read(
+                &pty_node->read_buffer,
+                buf,
+                buflen);
+        pty_ringbuf_unlock(&pty_node->read_buffer);
+
+        if(amt_read == 0) {
+            if(flags & FS_FILE_READ_NON_BLOCKING) {
+                return -EWOULDBLOCK;
+            }
+            res = wait_on(&pty_node->read_wq);
+            if(res) {
+                return res;
+            }
+        } else if(amt_read < 0) {
+            return amt_read;
+        }
+        total_read = amt_read;
     }
 
     term_driver_poke_output(&pty_node->term_dev);
-    return amt_read;
+    return total_read;
 }
 
 static ssize_t
@@ -209,6 +224,9 @@ pty_file_write(
         total++;
         buf++;
         buflen--;
+    }
+    if(total > 0) {
+        wake_single(&pty_node->read_wq);
     }
     return total;
 }
@@ -292,6 +310,8 @@ pty_mount_create_pty(struct pty_mount *mnt, size_t *inode_out)
     snprintk(node->namebuf, PTY_NAMEBUFLEN,
              "pty%lu", (ul_t)inode);
     node->namebuf[PTY_NAMEBUFLEN-1] = '\0';
+    waitqueue_init(&node->read_wq);
+    waitqueue_name(&node->read_wq, node->namebuf);
 
     node->term_dev.driver = &pty_term_driver;
 
