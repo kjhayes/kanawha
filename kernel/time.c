@@ -12,6 +12,9 @@ time_t
 current_timestamp(void)
 {
     duration_t clk = 0;
+    if(clk_mono_valid()) {
+        clk = clk_mono_current();
+    }
     time_t time = {
         .clk_mono = clk,
         .tick = system_timestamp,
