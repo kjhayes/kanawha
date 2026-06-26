@@ -120,11 +120,13 @@ riscv64_route_trap(struct riscv64_excp_state *state)
     struct thread_state *cur_thread = current_thread();
     struct thread_state *new_thread;
 
+    int from_user = 0;
     if((state->sstatus & SSTATUS_MASK_SPP) == 0)
     {
         struct process *process = current_process();
         DEBUG_ASSERT(KERNEL_ADDR(process));
         process->user_ip = (void __user *)state->sepc;
+        from_user = 1;
     }
 
     struct irq_desc *desc = NULL;
@@ -225,6 +227,17 @@ exit:
     else
     {
         // No thread switch
+    }
+
+    if(from_user) {
+        struct process *process = current_process();
+        DEBUG_ASSERT(KERNEL_ADDR(process));
+        res = signal_on_return_to_userspace(process);
+        if(res) {
+            eprintk("signal_on_return_to_userspace returned %e!\n",
+                    res);
+        }
+        state->sepc = (uint64_t)process->user_ip;
     }
 
     return;

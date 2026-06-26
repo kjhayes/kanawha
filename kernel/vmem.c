@@ -738,6 +738,8 @@ vmem_map_unhandled_user_page_fault(struct excp_state *state,
         return -EINVAL;
     }
 
+    printk("Sending user memfault signal: fault=%p\n", faulting_address);
+
     // We need to terminate the process
     res = signal_deliver(process, SIGNAL_ID_MEMFAULT, 0);
     if(res)

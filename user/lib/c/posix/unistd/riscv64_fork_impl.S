@@ -10,7 +10,7 @@ __elk_posix__fork_child_entry:
 .type __elk_posix__do_fork, @function
 __elk_posix__do_fork:
 
-    addi sp, sp, -(14 * 8)
+    addi sp, sp, -(16 * 8)
     sd s0,   0(sp)
     sd s1,   8(sp)
     sd s2,  16(sp)
@@ -24,9 +24,10 @@ __elk_posix__do_fork:
     sd s10, 80(sp)
     sd s11, 88(sp)
     sd ra,  96(sp)
+    sd gp, 104(sp)
 
     mv a3, a0 // pid_out
-    sd a3, 104(sp)
+    sd a3, 112(sp)
 
     la a0, __elk_posix__fork_child_entry // func
     mv a1, sp // arg
@@ -50,7 +51,7 @@ __elk_posix__fork_parent_exit:
     ld s10, 80(sp)
     ld s11, 88(sp)
     ld ra,  96(sp)
-    addi sp, sp, (14 * 8)
+    addi sp, sp, (16 * 8)
 
     ret
 
@@ -69,8 +70,9 @@ __elk_posix__fork_child_exit:
     ld s10, 80(sp)
     ld s11, 88(sp)
     ld ra,  96(sp)
-    ld a0, 104(sp)
-    addi sp, sp, (14 * 8)
+    ld gp, 104(sp)
+    ld a0, 112(sp)
+    addi sp, sp, (16 * 8)
 
     // Assumes that pid_t is 32-bit
     sd zero, 0(a0)
