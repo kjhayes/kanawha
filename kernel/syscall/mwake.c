@@ -3,31 +3,36 @@
 #include <kanawha/uapi/mwait.h>
 #include <kanawha/proc/mmap.h>
 
-#define LOG(...)
-
 int
 syscall_mwake(
         void __user *addr,
         unsigned long flags)
 {
     int res;
+
+#ifdef CONFIG_DEBUG_SYSCALL_MWAKE
+#define LOG(fmt, ...) printk("PID(%P) mwake: " fmt, ##__VA_ARGS__)
+#else
+#define LOG(...)
+#endif
+
     struct process *process = current_process();
     if(flags & MWAKE_ALL) {
-        LOG("PID(%P): mwake waking up all\n");
+        LOG("waking up all (addr=%p)\n", addr);
         res = mmap_wake_all(process->mmap, (uintptr_t)addr);
         if(res) {
-            LOG("PID(%P): mwake failed to wake up all (%e)\n", res);
+            LOG("failed to wake up all (addr=%p) (%e)\n", addr, res);
             return res;
         }
-        LOG("PID(%P): mwake woke up all\n");
+        LOG("woke up all (addr=%p)\n", addr);
     } else {
-        LOG("PID(%P): mwake waking up single\n");
+        LOG("waking up single (addr=%p)\n", addr);
         res = mmap_wake_single(process->mmap, (uintptr_t)addr);
         if(res) {
-            LOG("PID(%P): mwake failed to wake up single (%e)\n", res);
+            LOG("failed to wake up single (addr=%p) (%e)\n", addr, res);
             return res;
         }
-        LOG("PID(%P): mwake woke up single\n");
+        LOG("woke up single (addr=%p)\n");
     }
     return 0;
 }

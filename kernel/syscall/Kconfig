@@ -133,3 +133,13 @@ config DEBUG_SYSCALL_RID
     depends on DEBUGGING
     default n
 
+config DEBUG_SYSCALL_MWAIT
+    bool "Debug mwait"
+    depends on DEBUGGING
+    default n
+
+config DEBUG_SYSCALL_MWAKE
+    bool "Debug mwake"
+    depends on DEBUGGING
+    default n
+

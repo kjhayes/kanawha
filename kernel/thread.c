@@ -144,6 +144,7 @@ __noreturn void
 idle_loop(void)
 {
     printk("Entered Idle Thread On CPU %d\n", current_cpu_id());
+    DEBUG_ASSERT(current_thread()->flags & THREAD_FLAG_IDLE);
     enable_irqs();
     while(1)
     {
@@ -1165,7 +1166,9 @@ all_threads_running_percentage(void)
         struct thread_state *thread =
             container_of(pnode, struct thread_state, tree_node);
 
-        total += thread_running_percentage(thread);
+        if(!(thread->flags & THREAD_FLAG_IDLE)) {
+            total += thread_running_percentage(thread);
+        }
 
         pnode = ptree_get_next(pnode);
     }

@@ -6,6 +6,7 @@
 #include <string.h>
 #include <errno.h>
 #include <stdio.h>
+#include <unistd.h>
 
 struct lens_input_buffer
 {
@@ -76,7 +77,6 @@ lens_input_buffer_push(
             buffer->tail = 0;
         }
     } else {
-        printf("posting input event!\n");
         sem_post(&buffer->num_evts);
     }
 
@@ -100,15 +100,24 @@ lens_input_buffer_pop(
     // Wait for an event to show up,
     // after returning from this we should have
     // effectively claimed an event.
-    while(sem_wait(&buffer->num_evts)) {}
+    //printf("PID(%d) lens_input_buffer: waiting for event!\n", getpid());
+    while(sem_wait(&buffer->num_evts)) {
+        //printf("PID(%d) lens_input_buffer: waiting for event! (loop)\n", getpid());
+    }
+    //printf("PID(%d) lens_input_buffer: received event!\n", getpid());
 
     // Obtain the lock
-    while(sem_wait(&buffer->lock)) {}
+    //printf("PID(%d) lens_input_buffer: waiting for lock!\n", getpid());
+    while(sem_wait(&buffer->lock)) {
+        //printf("PID(%d) lens_input_buffer: waiting for lock! (loop)\n", getpid());
+    }
+    //printf("PID(%d) lens_input_buffer: received lock!\n", getpid());
 
     if(buffer->head == buffer->tail) {
         sem_post(&buffer->lock);
         // Huh? We should have blocked until an
         // event was available
+        //printf("PID(%d) lens_input_buffer: weird (no event)!\n", getpid());
         return 0;
     }
 
@@ -118,6 +127,7 @@ lens_input_buffer_pop(
         buffer->tail = 0;
     }
 
+    //printf("PID(%d) lens_input_buffer: releasing lock!\n", getpid());
     sem_post(&buffer->lock);
     return 1;
 }

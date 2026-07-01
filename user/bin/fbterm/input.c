@@ -415,12 +415,15 @@ input_getc(struct input_ctx *ctx)
         struct input_event evt;
         while(1) {
             lens_window_poll(ctx->lens.window);
+            printf("fbterm: getting input!\n");
             int popped = lens_window_get_input(
                     ctx->lens.window,
                     &evt);
             if(popped <= 0) {
+                printf("fbterm: failed to get input!\n");
                 continue;
             }
+            printf("fbterm: got input!\n");
             res = handle_input_event(ctx, &evt, &c);
             if(res == 0) {
                 return c;
