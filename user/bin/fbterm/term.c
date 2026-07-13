@@ -92,7 +92,7 @@ init_terminal(FILE *log_file, size_t width, size_t height)
 
     tdata->running = 1;
     tdata->cursor_x = 0;
-    tdata->cursor_y = 0;
+    tdata->cursor_y = height-1;
     tdata->cur_fg_color.r = 0xFF;
     tdata->cur_fg_color.g = 0xFF;
     tdata->cur_fg_color.b = 0xFF;

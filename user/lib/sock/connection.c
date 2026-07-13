@@ -158,6 +158,12 @@ sock_connection_read_thread(void *_conn)
         if(res) {
             // Weird but we will ignore it...
         }
+        if(conn->autopoll) {
+            res = sock_connection_poll(conn);
+            if(res) {
+                // Weird but we will ignore it...
+            }
+        }
     }
     return 0;
 }
@@ -307,12 +313,42 @@ sock_connection_send_msg(
 }
 
 int
-sock_connection_poll(
+sock_connection_set_callback(
         struct sock_connection *conn,
         int(*on_recv)(struct sock_connection *conn,
                       struct sock_msg *msg,
                       void *state),
         void *state)
+{
+    if(conn->recv_callback != NULL) {
+        conn->recv_callback = NULL;
+    }
+    asm ("" ::: "memory");
+    conn->recv_callback_state = state;
+    asm ("" ::: "memory");
+    conn->recv_callback = on_recv;
+    return 0;
+}
+
+int
+sock_connection_start_autopoll(
+        struct sock_connection *conn)
+{
+    conn->autopoll = 1;
+    return 0;
+}
+
+int
+sock_connection_stop_autopoll(
+        struct sock_connection *conn)
+{
+    conn->autopoll = 0;
+    return 0;
+}
+
+int
+sock_connection_poll(
+        struct sock_connection *conn)
 {
     int res;
 
@@ -323,14 +359,15 @@ sock_connection_poll(
         return 0;
     }
 
-    if(on_recv != NULL) {
-        res = (*on_recv)(conn,
+    if(conn->recv_callback != NULL) {
+        res = (*conn->recv_callback)(conn,
                    &msg->msg,
-                   state);
+                   conn->recv_callback_state);
     } else {
         res = 0;
     }
     sock_buffered_msg_free(msg);
+
     return res;
 }
 
@@ -351,6 +388,7 @@ sock_connection_await_msg(
         ssize_t total = 0;
         while(total < sizeof(msg)) {
             ssize_t amt = read(conn->conn_fd, ((void*)&msg) + total, sizeof(msg) - total);
+            //printf("PID(%d) read %ld bytes from socket!\n", getpid(), amt);
             if(amt <= 0) {
                 sem_post(&conn->read_lock);
                 return -EFAULT;
@@ -382,6 +420,7 @@ sock_connection_await_msg(
         }
     }
 
+    //printf("PID(%d) pushing sock msg!\n", getpid());
     res = sock_msg_buffer_push_tail(
             conn->recv_buffer,
             buffer);

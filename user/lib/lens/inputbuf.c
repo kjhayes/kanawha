@@ -68,6 +68,7 @@ lens_input_buffer_push(
         struct lens_input_buffer *buffer,
         struct input_event *evt)
 {
+    //printf("PID(%d) lens_input_buffer_push!\n", getpid());
     while(sem_wait(&buffer->lock)) {}
 
     if(((buffer->head+1)%buffer->buflen) == buffer->tail) {

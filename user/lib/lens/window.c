@@ -80,6 +80,8 @@ lens_window_on_recv(
 
     struct lens_window *window =
         container_of(conn, struct lens_window, conn);
+
+    //printf("lens_window_on_recv\n");
     
     unsigned long old;
 
@@ -149,6 +151,9 @@ lens_open_window(void)
         return NULL;
     }
 
+    sock_connection_set_callback(&window->conn, lens_window_on_recv, NULL);
+    sock_connection_start_autopoll(&window->conn);
+
     return window;
 }
 
@@ -204,7 +209,7 @@ lens_window_poll(
         struct lens_window *window)
 {
     int res;
-    res = sock_connection_poll(&window->conn, lens_window_on_recv, NULL);
+    res = sock_connection_poll(&window->conn);
     if(res) {
         return res;
     }

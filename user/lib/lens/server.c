@@ -58,6 +58,9 @@ lens_server_wait_for_client(void)
         return NULL;
     }
 
+    sock_connection_set_callback(&client->conn, lens_server_on_recv, NULL);
+    sock_connection_start_autopoll(&client->conn);
+
     return client;
 }
 
@@ -87,10 +90,7 @@ int
 lens_server_poll_client(
         struct lens_client *client)
 {
-    return sock_connection_poll(
-            &client->conn,
-            lens_server_on_recv,
-            NULL);
+    return sock_connection_poll(&client->conn);
 }
 
 int

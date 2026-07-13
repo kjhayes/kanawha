@@ -1808,6 +1808,10 @@ mmap_get_waitqueue(
                 mmap_lock_release(mmap);
                 return NULL;
             }
+            char buffer[32];
+            snprintk(buffer, 32, "mwait-%p", (uintptr_t)offset);
+            buffer[31] = '\0';
+            waitqueue_name(&wq->waitqueue, buffer);
             ptree_insert(&region->waitqueue_tree, &wq->ptree_node, offset);
         } else {
             wq = container_of(pnode, struct mmap_waitqueue, ptree_node);
@@ -1865,6 +1869,7 @@ mmap_wake_single(
     if(wq == NULL) {
         return -ENOMEM;
     }
+    //printk("mmap_wake_single: %lu\n", wq->waitqueue.num_threads);
     wake_res = wake_single(&wq->waitqueue);
     mmap_put_waitqueue(wq);
     return wake_res;

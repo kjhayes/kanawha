@@ -20,6 +20,14 @@ struct sock_connection
 
     int conn_fd;
 
+    unsigned autopoll : 1;
+
+    int(*recv_callback)(struct sock_connection *conn,
+                        struct sock_msg *msg,
+                        void *state);
+    void *recv_callback_state;
+
+
     enum {
         SOCK_CONNECTION_CONNECTED,
         SOCK_CONNECTION_DISCONNECTED,
@@ -44,16 +52,34 @@ sock_connection_send_msg(
         void *data,
         size_t datalen);
 
-// Polls the receive buffer and handles a single
-// msg if any are available (non-blocking
-// if the response to the msg is non-blocking)
 int
-sock_connection_poll(
+sock_connection_set_callback(
         struct sock_connection *conn,
         int(*on_recv)(struct sock_connection *conn,
                       struct sock_msg *msg,
                       void *state),
         void *state);
+
+// Automatically call any registered callback when a msg is
+// received, if no callback is registered, silently drops
+// all incoming messages...
+//
+// If the callback is blocking, note: messages are handled fully
+// sequentially e.g. the callback for a previous message must
+// be processed before the next message's callback will begin.
+int
+sock_connection_start_autopoll(
+        struct sock_connection *conn);
+int
+sock_connection_stop_autopoll(
+        struct sock_connection *conn);
+
+// Polls the receive buffer and handles a single
+// msg if any are available (non-blocking
+// if the registered callback is non-blocking)
+int
+sock_connection_poll(
+        struct sock_connection *conn);
 
 // Read from the connection until a msg arrives
 // and save the message into the connection recv_buffer.

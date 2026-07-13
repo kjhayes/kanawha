@@ -32,7 +32,7 @@ syscall_mwake(
             LOG("failed to wake up single (addr=%p) (%e)\n", addr, res);
             return res;
         }
-        LOG("woke up single (addr=%p)\n");
+        LOG("woke up single (addr=%p)\n", addr);
     }
     return 0;
 }

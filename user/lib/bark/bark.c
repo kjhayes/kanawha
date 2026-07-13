@@ -146,6 +146,7 @@ bark_server_wait_for_client(void)
         return NULL;
     }
 
+    sock_connection_set_callback(&client->conn, bark_server_handle_msg, NULL);
     return client;
 }
 int
@@ -165,6 +166,6 @@ int
 bark_client_poll(
         struct bark_client *client)
 {
-    return sock_connection_poll(&client->conn, bark_server_handle_msg, NULL);
+    return sock_connection_poll(&client->conn);
 }
 

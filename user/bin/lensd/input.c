@@ -230,7 +230,7 @@ input_send_event_to_ctx(
         void *_evt)
 {
     struct input_event *evt = _evt;
-    printf("lensd: sending client event!\n");
+    //printf("lensd: sending client event!\n");
     return lens_client_send_input_event(
             ctx->client,
             evt);
