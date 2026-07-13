@@ -178,7 +178,7 @@ mmio_map(void __phys *paddr, size_t size)
 
 #ifdef CONFIG_DEBUGGING
     {
-        printk("mmio_map(%p, 0x%lx) -> %p\n", page_base, total_size, addr);
+        dprintk("mmio_map(%p, 0x%lx) -> %p\n", page_base, total_size, addr);
         void __phys *mapped;
         res = vmem_map_translate(
                 vmem_map_get_current(),

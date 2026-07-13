@@ -210,7 +210,7 @@ pci_setup_bars(struct pci_func *func)
                 bar->type = PCI_BAR_NONE;
                 continue;
             }
-            printk("Mapped MMIO PCI Bar to %p\n", bar->mmio.base);
+            dprintk("Mapped MMIO PCI Bar to %p\n", bar->mmio.base);
         }
     }
     return 0;

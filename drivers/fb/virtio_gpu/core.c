@@ -193,7 +193,7 @@ virtio_gpu_fb_load_buffer(struct fb_dev *dev, void __phys **base_out)
 
     *base_out = dma_phys_addr(gpu->current_buffer);
 
-    printk("virtio_gpu_fb_load_buffer success!\n");
+    dprintk("virtio_gpu_fb_load_buffer success!\n");
     return 0;
 }
 

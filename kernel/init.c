@@ -76,7 +76,7 @@ handle_init_stage_generic(const char *stage_name,
                     event->func = NULL;
                     if(event->desc_name)
                     {
-                        LOG("%s [COMPLETE]\n", event->desc_name);
+                        //LOG("%s [COMPLETE]\n", event->desc_name);
                     }
                     break;
                 default:

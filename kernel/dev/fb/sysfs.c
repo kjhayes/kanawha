@@ -646,7 +646,7 @@ fb_dev_mode_info_fs_file_read(struct file *file,
     DEBUG_ASSERT(KERNEL_ADDR(file));
     DEBUG_ASSERT(KERNEL_ADDR(file->path));
 
-    printk("fb_dev_fs_file_read\n");
+    dprintk("fb_dev_fs_file_read\n");
 
     struct fs_node *node = fs_path_get_fs_node(file->path);
     if(node == NULL)

@@ -292,12 +292,12 @@ main(int argc, const char **argv)
         shell_argv = pos_argv;
     }
 
-    printf("SHELL:");
-    for(size_t i = 0; i < shell_argc; i++)
-    {
-        printf(" %s", shell_argv[i]);
-    }
-    printf("\n");
+    //printf("SHELL:");
+    //for(size_t i = 0; i < shell_argc; i++)
+    //{
+    //    printf(" %s", shell_argv[i]);
+    //}
+    //printf("\n");
 
     launch_shell(&terminal_data, shell_argc, shell_argv);
 

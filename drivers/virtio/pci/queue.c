@@ -141,7 +141,7 @@ virtio_pci_create_queue(struct virtio_pci_device *device, uint16_t queue_no)
         return NULL;
     }
 
-    printk("unmasking virtio queue IRQ...\n");
+    dprintk("unmasking virtio queue IRQ...\n");
     unmask_irq(irq);
 
     return queue;

@@ -131,7 +131,7 @@ main(int argc, const char **argv)
             to_read -= read;
         }
 
-        printf("Script: %s\n", script_buffer);
+        //printf("Script: %s\n", script_buffer);
 
         fclose(script_file);
     }

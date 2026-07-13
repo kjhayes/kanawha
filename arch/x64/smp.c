@@ -139,7 +139,7 @@ x64_bsp_bringup_aps(void)
         *ap_launched_byte = 0;
         asm volatile("mfence" ::: "memory");
 
-        printk("Launching AP %ld\n", (sl_t)gen_ap->id);
+        dprintk("Launching AP %ld\n", (sl_t)gen_ap->id);
 
         res = lapic_send_ipi(&bsp->apic,
                              ap->apic.id,
@@ -156,7 +156,7 @@ x64_bsp_bringup_aps(void)
             continue;
         }
 
-        printk("Sent INIT IPI to APIC %ld\n", (sl_t)ap->apic.id);
+        dprintk("Sent INIT IPI to APIC %ld\n", (sl_t)ap->apic.id);
 
         // Intel says to wait for 10ms after an INIT IPI
         res = clk_delay(msec_to_duration(10));
@@ -181,7 +181,7 @@ x64_bsp_bringup_aps(void)
         }
         else
         {
-            printk("Sent SIPI\n");
+            dprintk("Sent SIPI\n");
         }
 
         res = clk_delay(msec_to_duration(1));
@@ -205,7 +205,7 @@ x64_bsp_bringup_aps(void)
             }
             else
             {
-                printk("Sent Second SIPI\n");
+                dprintk("Sent Second SIPI\n");
             }
 
             res = clk_delay(sec_to_duration(1));
@@ -221,10 +221,10 @@ x64_bsp_bringup_aps(void)
             panic("Failed to Launch AP %ld\n", ap->cpu.id);
         }
 
-        printk("AP %ld Is Running\n", ap->cpu.id);
+        dprintk("AP %ld Is Running\n", ap->cpu.id);
     }
 
-    printk("BSP Waiting for all AP(s) to finish booting...\n");
+    dprintk("BSP Waiting for all AP(s) to finish booting...\n");
     while(booting_ap != NULL_CPU_ID)
     {
     }
