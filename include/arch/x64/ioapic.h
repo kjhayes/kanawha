@@ -37,18 +37,6 @@ struct ioapic
 int
 x64_register_ioapic(ioapic_id_t id, void __phys *reg_base, hwirq_t irq_base);
 
-uint32_t
-ioapic_read_reg(struct ioapic *ioapic, uint8_t reg_index);
-
-void
-ioapic_write_reg(struct ioapic *ioapic, uint8_t reg_index, uint32_t value);
-
-uint64_t
-ioapic_read_iored(struct ioapic *ioapic, hwirq_t irq);
-
-void
-ioapic_write_iored(struct ioapic *ioapic, hwirq_t irq, uint64_t value);
-
 // IRQ Lookup
 irq_t
 x64_ioapic_irq(hwirq_t hwirq);

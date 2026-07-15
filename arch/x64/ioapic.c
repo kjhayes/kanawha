@@ -20,21 +20,22 @@ static DECLARE_ILIST(ioapic_list);
 #define IOAPIC_IOREGSEL_OFFSET 0x00
 #define IOAPIC_IOWIN_OFFSET 0x10
 
-uint32_t
+static inline uint32_t
 ioapic_read_reg(struct ioapic *ioapic, uint8_t reg_index)
 {
     mmio_writel(ioapic->ioregsel, reg_index);
     return mmio_readl(ioapic->iowin);
 }
 
-void
+__maybe_unused
+static inline void
 ioapic_write_reg(struct ioapic *ioapic, uint8_t reg_index, uint32_t value)
 {
     mmio_writel(ioapic->ioregsel, reg_index);
     mmio_writel(ioapic->iowin, value);
 }
 
-uint64_t
+static inline uint64_t
 ioapic_read_iored(struct ioapic *ioapic, hwirq_t irq)
 {
     size_t irq_offset = irq - ioapic->base_irq;
@@ -50,7 +51,7 @@ ioapic_read_iored(struct ioapic *ioapic, hwirq_t irq)
     return (((uint64_t)high) << 32) | low;
 }
 
-void
+static inline void
 ioapic_write_iored(struct ioapic *ioapic, hwirq_t irq, uint64_t value)
 {
     size_t irq_offset = irq - ioapic->base_irq;
