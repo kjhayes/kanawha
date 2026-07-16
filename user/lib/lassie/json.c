@@ -6,6 +6,46 @@
 
 struct lassie *lassie_json_read(FILE *file)
 {
+    unsigned parsing = 1;
+    while(parsing) {
+        char c = fgetc(file);
+        if(isspace(c)) {
+            continue;
+        }
+        switch(c) {
+            case '{': // Object
+                // TODO
+                break;
+            case '[': // Array
+                // TODO
+                break;
+            case '"': // String
+                // TODO
+                break;
+            case '-':
+            case '0':
+            case '1':
+            case '2':
+            case '3':
+            case '4':
+            case '5':
+            case '6':
+            case '7':
+            case '8':
+            case '9': // Number
+                // TODO
+                break;
+            case 't': // Boolean (true)
+                // TODO
+                break;
+            case 'f': // Boolean (false)
+                // TODO
+                break;
+            case 'n': // Null
+                // TODO
+                break;
+        }
+    }
     return NULL;
 }
 

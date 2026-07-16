@@ -30,7 +30,6 @@ struct lassie * lassie_alloc_array(void)
         return NULL;
     }
     array->type = LASSIE_TYPE_ARRAY;
-    array->array.len = 0;
     array->array.buflen = 0;
     array->array.buffer = NULL;
     return array;
