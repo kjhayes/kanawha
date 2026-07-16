@@ -121,10 +121,5 @@ static struct pci_driver qemu_edu_pci_driver = {
     .num_ids = sizeof(qemu_edu_pci_ids) / sizeof(struct pci_id),
     .ids = qemu_edu_pci_ids,
 };
+DECLARE_PCI_DRIVER(qemu_edu_pci_driver);
 
-static int
-qemu_edu_pci_register(void)
-{
-    return register_pci_driver(&qemu_edu_pci_driver);
-}
-declare_init(device, qemu_edu_pci_register);

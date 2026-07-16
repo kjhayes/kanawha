@@ -80,9 +80,4 @@ static struct pci_driver qemu_serial_pci_driver = {
     .ids = qemu_serial_pci_ids,
 };
 
-static int
-qemu_serial_pci_register(void)
-{
-    return register_pci_driver(&qemu_serial_pci_driver);
-}
-declare_init(device, qemu_serial_pci_register);
+DECLARE_PCI_DRIVER(qemu_serial_pci_driver);

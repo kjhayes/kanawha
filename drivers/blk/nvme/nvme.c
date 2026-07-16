@@ -1838,9 +1838,4 @@ static struct pci_driver nvme_pci_driver = {
     .ids = nvme_pci_ids,
 };
 
-static int
-nvme_pci_register(void)
-{
-    return register_pci_driver(&nvme_pci_driver);
-}
-declare_init(device, nvme_pci_register);
+DECLARE_PCI_DRIVER(nvme_pci_driver);

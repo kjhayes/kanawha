@@ -528,11 +528,4 @@ static struct pci_driver usb_xhci_pci_driver = {
     .ids = usb_xhci_pci_ids,
 };
 
-static int
-usb_xhci_pci_register(void)
-{
-    return register_pci_driver(&usb_xhci_pci_driver);
-}
-declare_init_desc(device,
-                  usb_xhci_pci_register,
-                  "Registering USB XHCI PCI Driver");
+DECLARE_PCI_DRIVER(usb_xhci_pci_driver);

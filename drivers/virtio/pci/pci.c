@@ -578,11 +578,4 @@ static struct pci_driver virtio_pci_driver = {
     .ids = virtio_pci_ids,
 };
 
-static int
-virtio_pci_driver_register(void)
-{
-    return register_pci_driver(&virtio_pci_driver);
-}
-declare_init_desc(bus,
-                  virtio_pci_driver_register,
-                  "Registering Virtio PCI Transport");
+DECLARE_PCI_DRIVER(virtio_pci_driver);

@@ -284,4 +284,13 @@ pci_segment_clear_pio_flags(struct pci_segment *segment,
     return mem_flags_clear_flags(&segment->pio_flags, base, size, flags);
 }
 
+#ifndef DECLARE_PCI_DRIVER
+#define DECLARE_PCI_DRIVER(__driver_symbol) \
+    static int \
+    pci_driver_init_ ## __driver_symbol (void) {\
+        return register_pci_driver(&__driver_symbol);\
+    }\
+    declare_init(device, pci_driver_init_ ## __driver_symbol);
+#endif
+
 #endif

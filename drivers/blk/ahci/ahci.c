@@ -117,9 +117,4 @@ static struct pci_driver ahci_pci_driver = {
     .ids = ahci_pci_ids,
 };
 
-static int
-ahci_pci_register(void)
-{
-    return register_pci_driver(&ahci_pci_driver);
-}
-declare_init(device, ahci_pci_register);
+DECLARE_PCI_DRIVER(ahci_pci_driver);

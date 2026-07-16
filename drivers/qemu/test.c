@@ -96,9 +96,4 @@ static struct pci_driver qemu_test_pci_driver = {
     .ids = qemu_test_pci_ids,
 };
 
-static int
-qemu_test_pci_register(void)
-{
-    return register_pci_driver(&qemu_test_pci_driver);
-}
-declare_init(device, qemu_test_pci_register);
+DECLARE_PCI_DRIVER(qemu_test_pci_driver);

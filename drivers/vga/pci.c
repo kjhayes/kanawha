@@ -103,9 +103,4 @@ static struct pci_driver vga_pci_driver = {
     .ids = vga_pci_ids,
 };
 
-static int
-vga_pci_register(void)
-{
-    return register_pci_driver(&vga_pci_driver);
-}
-declare_init_desc(device, vga_pci_register, "Registering VGA PCI Driver");
+DECLARE_PCI_DRIVER(vga_pci_driver);

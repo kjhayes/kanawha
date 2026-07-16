@@ -295,9 +295,4 @@ static struct pci_driver ide_pci_driver = {
     .ids = ide_pci_ids,
 };
 
-static int
-ide_pci_register(void)
-{
-    return register_pci_driver(&ide_pci_driver);
-}
-declare_init(device, ide_pci_register);
+DECLARE_PCI_DRIVER(ide_pci_driver);
