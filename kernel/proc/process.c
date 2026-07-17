@@ -863,10 +863,16 @@ process_write_usermem(struct process *process,
                       size_t length)
 {
     int res;
+    
+    //time_t start = current_timestamp();
     res = mmap_write(process,
                      (uintptr_t)dst - (uintptr_t)process->mmap_ref->virt_addr,
                      src,
                      length);
+    //time_t end = current_timestamp();
+    //duration_t elapsed = duration_between(start, end);
+    //printk("process_write_usermem: %lld ns per byte\n",
+    //        duration_to_nsec(elapsed) / length);
     if(res)
     {
         return res;

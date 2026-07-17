@@ -3,9 +3,24 @@
 #include <kanawha/proc/process.h>
 #include <kanawha/strace.h>
 #include <kanawha/syscall.h>
+#ifdef CONFIG_STRACE_TIME_SYSCALLS
+#include <kanawha/time.h>
+#endif
 
 #define __KANAWHA_SYSCALL_KEEP_XLIST
 #include <kanawha/uapi/syscall.h>
+
+#ifdef CONFIG_STRACE_TIME_SYSCALLS
+static struct syscall_timing {
+    duration_t avg;
+    unsigned long num_samples;
+} syscall_timings[SYSCALL_MAX_NUM_IDS] = {0};
+
+// Add a check to make sure this is never more than
+// a few pages at maximum
+// (usually will be much less than a single page)
+_Static_assert(SYSCALL_MAX_NUM_IDS < 1024, "Absurd maximum syscall ID number");
+#endif
 
 static int
 syscall_unknown(syscall_id_t id)
@@ -36,6 +51,7 @@ handle_syscall(syscall_id_t id, struct syscall_args *args, uint64_t *ret_out)
 
     strace_begin_syscall(process, id);
 #ifdef CONFIG_STRACE_TIME_SYSCALLS
+    struct syscall_timing *timing = &syscall_timings[id];
     time_t __start_time = current_timestamp();
 #endif
 
@@ -343,19 +359,27 @@ handle_syscall(syscall_id_t id, struct syscall_args *args, uint64_t *ret_out)
                      syscall_id_string(id));
 
 #ifdef CONFIG_STRACE_TIME_SYSCALLS
-    time_t __end_time = current_timestamp();
-    duration_t __handler_duration = duration_between(__start_time, __end_time);
-
-    switch(id)
     {
-    case SYSCALL_ID_SLEEP:
-        break;
-    default:
-        printk("PID(%ld) syscall [%s] took %lld ns\n",
-               (sl_t)process->id,
-               syscall_id_string(id),
-               duration_to_nsec(__handler_duration));
-        break;
+        time_t __end_time = current_timestamp();
+        duration_t elapsed = duration_between(__start_time, __end_time);
+
+        {
+            duration_t avg_sum = timing->avg * timing->num_samples;
+            timing->num_samples++;
+            timing->avg = (avg_sum + elapsed) / timing->num_samples;
+        }
+
+        switch(id)
+        {
+        case SYSCALL_ID_SLEEP:
+            break;
+        default:
+            printk("PID(%P) syscall [%s] took %lld ns (avg = %lld ns)\n",
+                   syscall_id_string(id),
+                   duration_to_nsec(elapsed),
+                   duration_to_nsec(timing->avg));
+            break;
+        }
     }
 #endif
     strace_end_syscall(process, id);
