@@ -502,6 +502,16 @@ vprintk_print_process_id(struct vprintk_state *state)
     if(res) {
         return res;
     }
+#ifdef CONFIG_DEBUG_TRACK_PROCESS_EXEC
+    if(process->tracked_exec) {
+        res = vprintk_puts(state, "[");
+        if(res) {return res;}
+        res = vprintk_puts(state, (char*)process->tracked_exec);
+        if(res) {return res;}
+        res = vprintk_puts(state, "]");
+        if(res) {return res;}
+    }
+#endif
     return 0; 
 }
 
