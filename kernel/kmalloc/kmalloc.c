@@ -14,6 +14,10 @@
 extern struct kheap kmalloc_heap;
 #endif
 
+#ifdef CONFIG_KMALLOC_TRACK_CALLSITES
+#include <kanawha/backtrace.h>
+#endif
+
 // DEFINE_LOCAL_IRQ_LOCK(kmalloc_lock);
 
 #ifdef CONFIG_DEBUG_KMALLOC_BITMAP
@@ -114,7 +118,7 @@ kmalloc(size_t size, unsigned long flags)
     allocation->hdr.flags = flags;
 
 #ifdef CONFIG_KMALLOC_TRACK_CALLSITES
-    allocation->hdr.return_addr = __builtin_return_address(0);
+    allocation->hdr.return_addr = current_return_address();
     int found = 0;
     ilist_node_t *iter;
     ilist_for_each(iter, &callsite_allocation_list)
