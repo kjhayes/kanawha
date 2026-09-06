@@ -1336,6 +1336,8 @@ nvme_namespace_blk_dev_sector_order(struct blk_dev *dev)
 }
 
 static struct blk_driver nvme_namespace_blk_driver = {
+    // TODO: NVME naturally works on physical addresses so we should
+    // reimplement using pwrite/pread...
     .write = nvme_namespace_blk_dev_write,
     .read = nvme_namespace_blk_dev_read,
     .pread = blk_dev_pread_using_read,
