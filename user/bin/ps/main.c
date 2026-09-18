@@ -15,6 +15,7 @@ struct proc
     int idle;
 
     const char *exec;
+    const char *name;
 
     struct proc *next;
 };
@@ -32,7 +33,7 @@ read_string_file(int dir, const char *file)
 
     char buf[128] = {0};
     res = read(strfile, buf, 127);
-    if(res <= 0)
+    if(res < 0)
     {
         return "???";
     }
@@ -93,6 +94,7 @@ init_proc(char *fname, int procfile)
     proc_list = p;
 
     p->exec = read_string_file(procfile, "exec");
+    p->name = read_string_file(procfile, "name");
     p->parent = read_int_file(procfile, "parent");
     p->idle = read_int_file(procfile, "idle");
 
@@ -105,6 +107,9 @@ print_proc(struct proc *p, int depth)
     for(int i = 0; i < depth; i++)
     {
         printf("\t");
+    }
+    if(strlen(p->name) > 0) {
+        printf("\"%s\" ", p->name);
     }
     printf("%s(%d) %d%%", p->exec, (int)p->id, 100 - p->idle);
     printf("\n");

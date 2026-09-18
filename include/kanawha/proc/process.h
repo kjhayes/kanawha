@@ -84,8 +84,13 @@ struct process
     struct fs_path *working_directory;
 
 #ifdef CONFIG_DEBUG_TRACK_PROCESS_EXEC
-    const char *tracked_exec;
+    char *tracked_exec;
 #endif
+
+    // Name process set for itself,
+    // helps to differentiate between distinct
+    // threads in a single application
+    char *self_name;
 
 #ifdef CONFIG_PROCFS
     struct procfs_process_data procfs_data;
@@ -145,6 +150,14 @@ process_set_root_directory(struct process *process, struct fs_path *root);
 
 int
 process_set_working_directory(struct process *process, struct fs_path *root);
+
+int
+process_set_self_name(
+        struct process *process,
+        const char *name);
+const char *
+process_get_self_name(
+        struct process *process);
 
 int
 process_write_usermem(struct process *process,

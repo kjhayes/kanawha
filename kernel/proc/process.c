@@ -360,6 +360,10 @@ process_alloc(thread_f *kernel_entry,
     process->mmap = NULL;
     process->file_table = NULL;
     process->environ = NULL;
+#ifdef CONFIG_DEBUG_TRACK_PROCESS_EXEC
+    process->tracked_exec=  NULL;
+#endif
+    process->self_name = NULL;
 
     res = signal_state_init(&process->signal_state);
     if(res)
@@ -447,6 +451,10 @@ process_free(struct process *process)
         kfree((void *)process->tracked_exec);
     }
 #endif
+
+    if(process->self_name) {
+        kfree(process->self_name);
+    }
 
     thread_deinit(&process->thread);
     kfree(process);
@@ -854,6 +862,39 @@ process_set_working_directory(struct process *process, struct fs_path *path)
     process->working_directory = path;
 
     return 0;
+}
+
+int
+process_set_self_name(
+        struct process *process,
+        const char *name)
+{
+    char *old_name = process->self_name;
+    char *dup = kstrdup(name);
+    if(dup == NULL) {
+        return -ENOMEM;
+    }
+    process->self_name = dup;
+    if(old_name) {
+        kfree(old_name);
+    }
+    return 0;
+}
+
+const char *
+process_get_self_name(
+        struct process *process)
+{
+    // KJH - There's a data-race here somewhere if
+    // one thread attempts to change the process name
+    // while another is reading from it but
+    // this is for debug printing so I'm not going to
+    // fix it yet: TODO
+    const char *name = process->self_name;
+    if(name == NULL) {
+        return "";
+    }
+    return name;
 }
 
 int
@@ -1451,10 +1492,6 @@ process_spawn_child(struct process *parent,
     if(parent->tracked_exec)
     {
         process->tracked_exec = kstrdup(parent->tracked_exec);
-    }
-    else
-    {
-        process->tracked_exec = NULL;
     }
 #endif
 

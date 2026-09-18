@@ -118,6 +118,35 @@ __procfs_read_tracked_exec(size_t offset, char *buf, size_t buflen, void *state)
 }
 #endif
 
+static ssize_t
+__procfs_read_self_name(size_t offset, char *buf, size_t buflen, void *state)
+{
+    struct process *proc = state;
+
+    const char *name = proc->self_name;
+    if(name == NULL)
+    {
+        name = "";
+    }
+
+    size_t len = strlen(name);
+    if(offset >= len)
+    {
+        return 0;
+    }
+
+    strncpy(buf, name + offset, buflen);
+
+    if((len - offset) < buflen)
+    {
+        return len - offset;
+    }
+    else
+    {
+        return buflen;
+    }
+}
+
 int
 procfs_register_process(struct process *process)
 {
@@ -209,6 +238,17 @@ procfs_register_process(struct process *process)
                 errnostr(res));
     }
 #endif
+
+    res = vfs_struct_node_add_buffer_field(data->vfs_struct_node,
+                                           "name",
+                                           (void *)process,
+                                           __procfs_read_self_name,
+                                           NULL);
+    if(res)
+    {
+        wprintk("Failed to register procfs \"name\" node (err=%s)!\n",
+                errnostr(res));
+    }
 
     return 0;
 }
