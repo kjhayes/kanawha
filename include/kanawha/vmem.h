@@ -259,8 +259,11 @@ extern uintptr_t idmap_virtual_base;
 static inline void *
 __idmap_va(void __phys *paddr)
 {
-    DEBUG_ASSERT((uintptr_t)paddr < (uintptr_t)1ULL
-                                        << CONFIG_IDMAP_SIZE_ORDER);
+    DEBUG_ASSERT_MSG((uintptr_t)paddr < (uintptr_t)1ULL
+                                        << CONFIG_IDMAP_SIZE_ORDER,
+                     "paddr=%p, CONFIG_IDMAP_SIZE_ORDER=%d",
+                     (uintptr_t)paddr,
+                     (int)CONFIG_IDMAP_SIZE_ORDER);
     return (void *)(paddr + idmap_virtual_base);
 }
 

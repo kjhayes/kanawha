@@ -67,18 +67,18 @@ setstderr(const char *path)
     dup2(file, 2);
 }
 
-static const char *randd_args[] = {"randd", NULL};
-static struct daemon_socket randd_sockets[] = {{
-    .env = "RANDD_SOCKET",
-}};
-static struct daemon randd = {
-    .command = "/sys/initrd/randd",
-    .args = randd_args,
-    .status = DAEMON_UNINIT,
-    .restart_on_exit = 1,
-    .num_sockets = 1,
-    .sockets = randd_sockets,
-};
+//static const char *randd_args[] = {"randd", NULL};
+//static struct daemon_socket randd_sockets[] = {{
+//    .env = "RANDD_SOCKET",
+//}};
+//static struct daemon randd = {
+//    .command = "/sys/initrd/randd",
+//    .args = randd_args,
+//    .status = DAEMON_UNINIT,
+//    .restart_on_exit = 1,
+//    .num_sockets = 1,
+//    .sockets = randd_sockets,
+//};
 
 //static const char *windd_args[] = {
 //    "windd",
@@ -98,21 +98,21 @@ static struct daemon randd = {
 //    .sockets = windd_sockets,
 //};
 
-static const char *barkd_args[] = {
-    "barkd",
-    NULL,
-};
-static struct daemon_socket barkd_sockets[] = {{
-    .env = "BARKD_SOCKET",
-}};
-static struct daemon barkd = {
-    .command = "/sys/initrd/barkd",
-    .args = barkd_args,
-    .status = DAEMON_UNINIT,
-    .restart_on_exit = 1,
-    .num_sockets = 1,
-    .sockets = barkd_sockets,
-};
+//static const char *barkd_args[] = {
+//    "barkd",
+//    NULL,
+//};
+//static struct daemon_socket barkd_sockets[] = {{
+//    .env = "BARKD_SOCKET",
+//}};
+//static struct daemon barkd = {
+//    .command = "/sys/initrd/barkd",
+//    .args = barkd_args,
+//    .status = DAEMON_UNINIT,
+//    .restart_on_exit = 1,
+//    .num_sockets = 1,
+//    .sockets = barkd_sockets,
+//};
 
 static const char *lensd_args[] = {
     "lensd",
@@ -174,11 +174,11 @@ static struct daemon termsh = {
 };
 
 static struct daemon *daemons[] = {
-    &randd,
+    // &randd,
     // &windd,
-    &barkd,
-    &lensd,
-    &sh,
+    // &barkd,
+    //&lensd,
+    //&sh,
     &termsh,
     // &sysplot,
     // &klog,

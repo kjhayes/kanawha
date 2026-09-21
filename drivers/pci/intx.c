@@ -240,6 +240,9 @@ pci_func_start_intx(struct pci_func *func, size_t req_num_irqs)
 {
     int res;
 
+#ifdef CONFIG_PCI_DISABLE_INTX
+    return -EINVAL;
+#else
     res = pci_func_link_intx(func, PCI_INTX_INTA, func->intx_routing[0]);
     if(res) {return res;}
     res = pci_func_link_intx(func, PCI_INTX_INTB, func->intx_routing[1]);
@@ -256,6 +259,7 @@ pci_func_start_intx(struct pci_func *func, size_t req_num_irqs)
     }
 
     return 0;
+#endif
 }
 int
 pci_func_stop_intx(struct pci_func *func)

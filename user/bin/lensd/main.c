@@ -26,7 +26,7 @@ int main(int argc, const char **argv)
     input_init();
     printf("lensd: input inited\n"); fflush(stdout);
 
-    add_display("/dev/fb/vga", 2);
+    add_display("/dev/fb/vga", 0);
     // add_display("/dev/fb/virtio-gpu-0", 0);
 
     add_input("/dev/input/ps2-kbd-0");
