@@ -18,10 +18,9 @@ obj-y += \
 	virtio/ \
 	usb/ \
 	scsi/ \
+	vga/ \
 
 obj-y += linux/
-
-obj-$(CONFIG_VGA) += vga/
 
 obj-$(CONFIG_PS2) += ps2/
 

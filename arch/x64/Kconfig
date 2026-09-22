@@ -38,15 +38,6 @@ config X64_ASSUME_1GB_PAGES
   depends on X64_ASSUME_2MB_PAGES
   default n
 
-config X64_BOOT_VGA
-  bool "Use Early Platform VGA for printk"
-  default y
-
-config X64_BOOT_VGA_POST_LAUNCH
-  bool "Keep Using Early Platform VGA for printk After Boot"
-  default n
-  depends on X64_BOOT_VGA
-
 config X64_BOOT_SERIAL
   bool "Use Early Platform Serial Port for printk"
   default y

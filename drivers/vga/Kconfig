@@ -1,5 +1,43 @@
 
+menu "VGA Options"
+
 config VGA
     bool "VGA Support"
     depends on PORT_IO
+
+config LEGACY_VGA
+    bool "Legacy VGA Support"
+    depends on HAVE_LEGACY_VGA
+
+config LEGACY_VGA_BASE_ADDRESS
+    hex "Legacy VGA Base Address"
+    depends on LEGACY_VGA
+    default 0xB8000
+
+config LEGACY_VGA_BOOT_PRINTK
+    bool "Use Legacy VGA for Boot printk"
+    depends on LEGACY_VGA
+    default y
+
+choice
+    prompt "VGA Post-Launch Config"
+    default VGA_FB
+
+    config VGA_FB
+        bool "Mode-setting Framebuffer Device"
+        depends on VGA
+    config VGA_LEGACY_TERMINAL
+        bool "Legacy Terminal Device"
+        depends on LEGACY_VGA
+endchoice
+
+config LEGACY_VGA_TERMINAL_PRINTK
+    bool "Mirror printk to VGA Terminal Device Post-Launch"
+    depends on VGA_LEGACY_TERMINAL && LEGACY_VGA_BOOT_PRINTK
+    default y
+
+config HAVE_LEGACY_VGA
+    def_bool n
+
+endmenu
 

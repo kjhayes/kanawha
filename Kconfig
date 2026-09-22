@@ -12,6 +12,7 @@ choice
     select IDMAP_MUST_BE_STATIC
     select ACPI_REQUIRED
     select BUILD_GRUB_ISOIMAGE
+    select HAVE_LEGACY_VGA
   config RISCV64
     bool "RISCV64"
     select DEVICETREE
