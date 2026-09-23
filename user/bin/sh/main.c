@@ -57,10 +57,6 @@ run_line(const char *raw)
             {
             }
         }
-        else
-        {
-            printf("Command running in background...\n");
-        }
         return 0;
     }
 }
