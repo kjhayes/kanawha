@@ -82,6 +82,7 @@ struct irq_action
 {
     struct irq_desc *desc;
     ilist_node_t list_node;
+    char *description;
 
     enum
     {
@@ -186,6 +187,13 @@ irq_install_resolved_link(struct irq_desc *desc, irq_resolver_f *resolver);
 // This should "free" the action struct
 int
 irq_uninstall_action(struct irq_action *action);
+
+// Set a debug "description" string for this
+// action.
+int
+irq_action_set_description(
+        struct irq_action *action,
+        const char *desc);
 
 int
 run_irq_actions(struct irq_desc *desc, struct excp_state *excp_state);

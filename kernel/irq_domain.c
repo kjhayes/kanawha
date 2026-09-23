@@ -93,6 +93,7 @@ irq_install_handler(struct irq_desc *desc,
 
     action->desc = desc;
     action->type = IRQ_ACTION_HANDLER;
+    action->description = NULL;
     action->handler_data.priv_data = priv_data;
     action->handler_data.handler = handler;
 
@@ -119,6 +120,7 @@ irq_install_direct_link(struct irq_desc *from, struct irq_desc *to)
 
     action->desc = from;
     action->type = IRQ_ACTION_DIRECT_LINK;
+    action->description = NULL;
     action->direct_link_data.link = to;
 
     int irq_state = disable_save_irqs();
@@ -155,6 +157,7 @@ irq_install_percpu_link(struct irq_desc *desc)
 
     action->desc = desc;
     action->type = IRQ_ACTION_PERCPU_LINK;
+    action->description = NULL;
     action->percpu_link_data.link = percpu_calloc(sizeof(struct irq_desc *));
 
     if(action->percpu_link_data.link == PERCPU_NULL)
@@ -203,6 +206,7 @@ irq_install_resolved_link(struct irq_desc *desc, irq_resolver_f *resolver)
 
     action->desc = desc;
     action->type = IRQ_ACTION_RESOLVED_LINK;
+    action->description = NULL;
     action->resolved_link_data.resolver = resolver;
 
     return action;
@@ -223,8 +227,35 @@ irq_uninstall_action(struct irq_action *action)
         percpu_free(action->percpu_link_data.link, sizeof(struct irq_desc *));
     }
 
+    if(action->description != NULL) {
+        kfree(action->description);
+    }
+
     kfree(action);
     return res;
+}
+
+int
+irq_action_set_description(
+        struct irq_action *action,
+        const char *desc)
+{
+    char *dup = kstrdup(desc);
+    if(dup == NULL) {
+        return -ENOMEM;
+    }
+
+    rlock_write_lock(&action->desc->lock);
+
+    char *old = action->description;
+    action->description = dup;
+    if(old != NULL) {
+        kfree(old);
+    }
+
+    rlock_write_unlock(&action->desc->lock);
+
+    return 0;
 }
 
 int
@@ -656,6 +687,9 @@ irq_domain_dump(printk_f *printer, struct irq_domain *domain)
         irq_t irq = domain->base_irq + index;
         (*printer)("\tIRQ(0x%x) -> ", irq);
         struct irq_desc *desc = &domain->irq_descs[index];
+        // TODO: We should ideally be locking the descriptors,
+        // but as this is mostly a GDB invoked debugging function,
+        // doing so may reduce how useful that actually is.
         if(desc == NULL)
         {
             (*printer)("NULL");
@@ -688,9 +722,13 @@ irq_domain_dump(printk_f *printer, struct irq_domain *domain)
         ilist_node_t *action_node;
         ilist_for_each(action_node, &desc->actions)
         {
-            (*printer)("\t\t");
             struct irq_action *action =
                 container_of(action_node, struct irq_action, list_node);
+
+            (*printer)("\t\t");
+            if(action->description) {
+                (*printer)("\"%s\" ", action->description);
+            }
 
             switch(action->type)
             {
