@@ -166,6 +166,7 @@ do_echo(struct simple_cmd *cmd)
         printf("%s ", arg->value);
         arg = arg->next;
     }
+    putchar('\n');
 }
 
 static int
@@ -281,10 +282,10 @@ static struct directive_handler
         .handler = do_cd,
         .directive = "cd",
     },
-    //    {
-    //        .handler = do_echo,
-    //        .directive = "echo",
-    //    },
+    {
+        .handler = do_echo,
+        .directive = "echo",
+    },
     {
         .handler = do_getenv,
         .directive = "getenv",
