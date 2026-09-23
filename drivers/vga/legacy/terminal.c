@@ -40,7 +40,7 @@ static int
 legacy_vga_term_dev_init(void)
 {
     legacy_term.attr = LEGACY_VGA_ATTR(
-            LEGACY_VGA_ATTR_BLUE,
+            LEGACY_VGA_ATTR_CYAN,
             LEGACY_VGA_ATTR_BLACK);
     legacy_term.term_dev.driver = &legacy_vga_term_driver;
     return register_term_dev(&legacy_term.term_dev, "vga");

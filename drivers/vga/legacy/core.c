@@ -87,7 +87,7 @@ legacy_vga_setchar(uint8_t c, uint8_t attr, unsigned x, unsigned y)
 {
     int res;
 
-    if(y >= LEGACY_VGA_RAW_HEIGHT) {
+    if(y < LEGACY_VGA_RAW_HEIGHT) {
         attr = legacy_vga_attr_invert(attr);
     }
 
@@ -132,7 +132,7 @@ legacy_vga_getattr(unsigned x, unsigned y)
     uint16_t raw = legacy_vga_get_value_raw(raw_x, raw_y);
     uint8_t attr = (raw>>8) & 0xFF;
 
-    if(y >= LEGACY_VGA_RAW_HEIGHT) {
+    if(y < LEGACY_VGA_RAW_HEIGHT) {
         attr = legacy_vga_attr_invert(attr);
     }
 
