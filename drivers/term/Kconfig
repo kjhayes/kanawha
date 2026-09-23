@@ -13,7 +13,7 @@ config VIRTIO_CONSOLE
 config QEMU_SERIAL
     bool "QEMU PCI Serial"
     default n
-    depends on PCI
+    depends on PCI && WIP
 
 source "drivers/term/8250/Kconfig"
 
