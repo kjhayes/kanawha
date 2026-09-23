@@ -30,6 +30,10 @@ pci_bar_readb(struct pci_bar *bar, size_t offset)
         DEBUG_LOG("PCI BAR MMIO 8-bit Read: offset=%p, phys_addr=%p\n",
                   offset,
                   bar->phys_addr + offset);
+        if(bar->mmio.base == NULL) {
+            wprintk("pci_bar_readb on MMIO bar with NULL MMIO region!\n");
+            return 0;
+        }
         return mmio_readb(bar->mmio.base + offset);
     case PCI_BAR_PIO:
 #ifdef CONFIG_PORT_IO
@@ -58,6 +62,10 @@ pci_bar_readw(struct pci_bar *bar, size_t offset)
         DEBUG_LOG("PCI BAR MMIO 16-bit Read: offset=%p, phys_addr=%p\n",
                   offset,
                   bar->phys_addr + offset);
+        if(bar->mmio.base == NULL) {
+            wprintk("pci_bar_readw on MMIO bar with NULL MMIO region!\n");
+            return 0;
+        }
         return mmio_readw(bar->mmio.base + offset);
     case PCI_BAR_PIO:
 #ifdef CONFIG_PORT_IO
@@ -86,6 +94,10 @@ pci_bar_readl(struct pci_bar *bar, size_t offset)
         DEBUG_LOG("PCI BAR MMIO 32-bit Read: offset=%p, phys_addr=%p\n",
                   offset,
                   bar->phys_addr + offset);
+        if(bar->mmio.base == NULL) {
+            wprintk("pci_bar_readl on MMIO bar with NULL MMIO region!\n");
+            return 0;
+        }
         return mmio_readl(bar->mmio.base + offset);
     case PCI_BAR_PIO:
 #ifdef CONFIG_PORT_IO
@@ -114,6 +126,10 @@ pci_bar_readq(struct pci_bar *bar, size_t offset)
         DEBUG_LOG("PCI BAR MMIO 64-bit Read: offset=%p, phys_addr=%p\n",
                   offset,
                   bar->phys_addr + offset);
+        if(bar->mmio.base == NULL) {
+            wprintk("pci_bar_readq on MMIO bar with NULL MMIO region!\n");
+            return 0;
+        }
         return mmio_readq(bar->mmio.base + offset);
     case PCI_BAR_PIO:
 #ifdef CONFIG_PORT_IO
@@ -144,6 +160,10 @@ pci_bar_writeb(struct pci_bar *bar, size_t offset, uint8_t val)
         DEBUG_LOG("PCI BAR MMIO 8-bit Write: offset=%p, phys_addr=%p\n",
                   offset,
                   bar->phys_addr + offset);
+        if(bar->mmio.base == NULL) {
+            wprintk("pci_bar_writeb on MMIO bar with NULL MMIO region!\n");
+            return;
+        }
         mmio_writeb(bar->mmio.base + offset, val);
         break;
     case PCI_BAR_PIO:
@@ -172,6 +192,10 @@ pci_bar_writew(struct pci_bar *bar, size_t offset, uint16_t val)
         DEBUG_LOG("PCI BAR MMIO 16-bit Write: offset=%p, phys_addr=%p\n",
                   offset,
                   bar->phys_addr + offset);
+        if(bar->mmio.base == NULL) {
+            wprintk("pci_bar_writew on MMIO bar with NULL MMIO region!\n");
+            return;
+        }
         mmio_writew(bar->mmio.base + offset, val);
         break;
     case PCI_BAR_PIO:
@@ -201,6 +225,11 @@ pci_bar_writel(struct pci_bar *bar, size_t offset, uint32_t val)
         DEBUG_LOG("PCI BAR MMIO 32-bit Write: offset=%p, phys_addr=%p\n",
                   offset,
                   bar->phys_addr + offset);
+        if(bar->mmio.base == NULL) {
+            wprintk("pci_bar_writel on MMIO bar with NULL MMIO region!\n");
+            return;
+        }
+
         mmio_writel(bar->mmio.base + offset, val);
         break;
     case PCI_BAR_PIO:
@@ -229,6 +258,10 @@ pci_bar_writeq(struct pci_bar *bar, size_t offset, uint64_t val)
         DEBUG_LOG("PCI BAR MMIO 64-bit Write: offset=%p, phys_addr=%p\n",
                   offset,
                   bar->phys_addr + offset);
+        if(bar->mmio.base == NULL) {
+            wprintk("pci_bar_writeq on MMIO bar with NULL MMIO region!\n");
+            return;
+        }
         mmio_writeq(bar->mmio.base + offset, val);
         break;
     case PCI_BAR_PIO:

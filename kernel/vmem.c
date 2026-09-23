@@ -37,8 +37,8 @@ DECLARE_LOCAL_PERF_TIMER(vmem_map_create_perf_timer)
 #define TIMER_START(_TIMER) perf_timer_start(&_TIMER)
 #define TIMER_STOP(_TIMER) perf_timer_stop(&_TIMER)
 
-static inline void
-dump_pf_flags(printk_f *printer, unsigned long flags)
+void
+vmem_dump_page_fault_flags(printk_f *printer, unsigned long flags)
 {
     (*printer)("%s%s%s%s%s",
             (flags & PF_FLAG_NOT_PRESENT) ? "[NOT-PRESENT]" : "",
@@ -752,7 +752,7 @@ vmem_map_unhandled_user_page_fault(struct excp_state *state,
             do_panic_printk("Failed to signal process MEMFAULT (err=%s) (faulting-address=%p) (flags=",
                     errnostr(res),
                     faulting_address);
-            dump_pf_flags(do_panic_printk, access_flags);
+            vmem_dump_page_fault_flags(do_panic_printk, access_flags);
             do_panic_printk(")\n");
             //arch_dump_vmem_map(do_panic_printk, vmem_map_get_current());
             panic("Failed to terminate process!\n");

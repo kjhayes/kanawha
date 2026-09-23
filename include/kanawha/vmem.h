@@ -181,6 +181,12 @@ vmem_map_handle_page_fault(struct excp_state *state,
                            void *faulting_address,
                            unsigned long flags,
                            struct vmem_map *map);
+
+void
+vmem_dump_page_fault_flags(
+        printk_f *printer,
+        unsigned long flags);
+
 int
 vmem_percpu_init(void);
 

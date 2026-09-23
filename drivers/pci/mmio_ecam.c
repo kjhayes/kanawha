@@ -26,7 +26,7 @@ mmio_ecam_compute_pointer(struct pci_cam *cam,
         return -EINVAL;
     }
 
-    if(final_offset > ecam->size)
+    if(final_offset >= ecam->size)
     {
         return -EINVAL;
     }
@@ -55,6 +55,7 @@ mmio_ecam_pci_readb(struct pci_cam *cam,
     {
         return res;
     }
+    DEBUG_ASSERT(mmio_check_mapped(ptr, sizeof(uint8_t)) == 0);
     *out = mmio_readb(ptr);
     return 0;
 }
@@ -75,6 +76,7 @@ mmio_ecam_pci_readw(struct pci_cam *cam,
     {
         return res;
     }
+    DEBUG_ASSERT(mmio_check_mapped(ptr, sizeof(uint16_t)) == 0);
     *out = mmio_readw(ptr);
     return 0;
 }
@@ -95,6 +97,7 @@ mmio_ecam_pci_readl(struct pci_cam *cam,
     {
         return res;
     }
+    DEBUG_ASSERT(mmio_check_mapped(ptr, sizeof(uint32_t)) == 0);
     *out = mmio_readl(ptr);
     return 0;
 }
@@ -115,6 +118,7 @@ mmio_ecam_pci_writeb(struct pci_cam *cam,
     {
         return res;
     }
+    DEBUG_ASSERT(mmio_check_mapped(ptr, sizeof(uint8_t)) == 0);
     mmio_writeb(ptr, in);
     return 0;
 }
@@ -135,6 +139,7 @@ mmio_ecam_pci_writew(struct pci_cam *cam,
     {
         return res;
     }
+    DEBUG_ASSERT(mmio_check_mapped(ptr, sizeof(uint16_t)) == 0);
     mmio_writew(ptr, in);
     return 0;
 }
@@ -155,6 +160,7 @@ mmio_ecam_pci_writel(struct pci_cam *cam,
     {
         return res;
     }
+    DEBUG_ASSERT(mmio_check_mapped(ptr, sizeof(uint32_t)) == 0);
     mmio_writel(ptr, in);
     return 0;
 }

@@ -25,7 +25,10 @@ mmio_page_fault_handler(struct excp_state *state,
                         unsigned long pf_flags,
                         void *priv_state)
 {
-    eprintk("MMIO Region Page Fault! (offset=0x%llx)\n", (ull_t)offset);
+    eprintk("MMIO Region Page Fault! (offset=0x%llx) ", (ull_t)offset);
+    eprintk("flag=(");
+    vmem_dump_page_fault_flags(do_printk, pf_flags);
+    eprintk(")\n");
     return PAGE_FAULT_UNHANDLED;
 }
 
@@ -155,6 +158,8 @@ mmio_map(void __phys *paddr, size_t size)
         bitmap_set(mmio_region_bitmap, page_bit + i);
     }
 
+    printk("mmio_map: offset=0x%lx, size=0x%lx\n",
+            region_offset, total_size);
     res = vmem_paged_region_map(__mmio_vmem_region,
                                 region_offset,
                                 page_base,
@@ -205,4 +210,25 @@ int
 mmio_unmap(void __mmio *addr, size_t size)
 {
     return -EUNIMPL;
+}
+
+int
+mmio_check_mapped(
+        void __mmio *addr,
+        unsigned long size)
+{
+    size_t num_pages = (size >> VMEM_MIN_PAGE_ORDER) + !!(size & ((1ULL<<VMEM_MIN_PAGE_ORDER) - 1));
+    uintptr_t offset = addr - mmio_region_base;
+    uintptr_t page_offset = offset >> VMEM_MIN_PAGE_ORDER;
+
+    for(unsigned long i = 0; i < num_pages; i++) {
+        unsigned long bit = page_offset + i;
+        if(bit >= MMIO_REGION_BITMAP_NUM_ENTRIES) {
+            return -EINVAL;
+        }
+        if(bitmap_check(mmio_region_bitmap, bit) == 0) {
+            return -ENXIO;
+        }
+    }
+    return 0;
 }
