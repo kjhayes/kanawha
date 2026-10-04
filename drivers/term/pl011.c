@@ -61,7 +61,26 @@ struct pl011 {
     struct irq_action *action;
 
     struct term_dev term_dev;
+
+    irq_lock_t lock;
 };
+
+static inline void
+pl011_lock_init(struct pl011 *term)
+{
+    irq_lock_init(&term->lock);
+}
+
+static inline void
+pl011_lock_acquire(struct pl011 *term)
+{
+    irq_lock_acquire(&term->lock);
+}
+static inline void
+pl011_lock_release(struct pl011 *term)
+{
+    irq_lock_release(&term->lock);
+}
 
 static inline uint32_t
 pl011_read_reg(struct pl011 *p, size_t offset)
@@ -220,20 +239,35 @@ pl011_term_dev_irq_handler(
         struct excp_state *excp_state,
         struct irq_action *action)
 {
-    // printk("pl011_term_dev_irq_handler!\n");
     struct pl011 *term = action->handler_data.priv_data;
     while(pl011_busy(term)) {
         // Waiting... Hmmmm Maybe we shouldn't be waiting
         // in an IRQ handler... -KJH TODO
     }
-    uint32_t irq_status = pl011_read_reg(term, PL011_REG_MIS);
-    if(!pl011_recv_empty(term)) {
-        // We should read some byte
-        uint32_t dr = pl011_read_reg(term, PL011_REG_DR);
-        char c = (char)dr;
-        term_driver_provide_input(&term->term_dev, c);
+
+    pl011_lock_acquire(term);
+    {
+        uint32_t irq_status = pl011_read_reg(term, PL011_REG_MIS);
+
+        // Clear the IRQ status immediately so if more data
+        // arrives while we are in the handling logic below,
+        // then the device can reassert any interrupt(s)
+        pl011_write_reg(term, PL011_REG_ICR, 1UL<<4);
+
+        while(!pl011_recv_empty(term)) {
+            // We should read some byte
+            uint32_t dr = pl011_read_reg(term, PL011_REG_DR);
+            char c = (char)(dr & 0xFF);
+            if(dr & ~0xFFUL) {
+                // Error bit was set
+                eprintk("pl011 error in recv data!\n");
+            } else {
+                term_driver_provide_input(&term->term_dev, c);
+            }
+        }
     }
-    pl011_write_reg(term, PL011_REG_ICR, irq_status);
+    pl011_lock_release(term);
+
     return IRQ_NONE;
 }
 
@@ -272,6 +306,8 @@ pl011_create(void __phys *reg_phys,
     term->regsize = reg_size;
     term->regbase = mmio_map(reg_phys, reg_size);
     term->clock_freq = clock_freq;
+    pl011_lock_init(term);
+
     if(term->regbase == NULL) {
         kfree(term);
         return NULL;
@@ -308,6 +344,8 @@ pl011_create(void __phys *reg_phys,
              "pl011-%lu", (ul_t)term->ptree_node.key);
     term->namebuf[PL011_NAMEBUFLEN-1] = '\0';
 
+    irq_action_set_description(term->action, term->namebuf);
+
     // Configure the PL011
     term->baudrate = PL011_DEFAULT_BAUD;
     uint64_t hz = freq_to_hz(term->clock_freq);
@@ -335,8 +373,6 @@ pl011_create(void __phys *reg_phys,
     pl011_write_reg(term, PL011_REG_CR, ctrl);
 
     uint32_t int_mask; // = pl011_read_reg(term, PL011_REG_IMSC);
-    // The definition of this field in the official PL011 documentation
-    // really indicates to me that this is reversed (0 -> interrupt can be raised, 1 -> masked)
     int_mask = 0x0; // Mask all initially
     int_mask |= (1UL<<4); // Unmask recv interrupts
     int_mask |= (1UL<<6); // Unmask recv timeout interrupts
