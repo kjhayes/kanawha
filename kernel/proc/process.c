@@ -519,6 +519,74 @@ init_process_open_sysfs_file(const char *sysfs_name,
 }
 
 static int
+init_process_open_sysfs_path(const char *sysfs_name,
+                             const char *file_name,
+                             struct fs_path **path_out)
+{
+    int res;
+
+    struct fs_node *backing_node;
+    res = init_process_open_sysfs_file(
+            sysfs_name,
+            file_name,
+            &backing_node);
+    if(res) {
+        return res;
+    }
+
+    res = fs_path_create_anonymous(backing_node, path_out);
+    fs_node_put(backing_node);
+    if(res) {
+        eprintk("Failed to create anonymous sysfs path for file \"%s\"!\n", file_name);
+        return res;
+    }
+
+    return 0;
+}
+
+static int
+init_process_open_sysfs_fd(const char *sysfs_name,
+                           const char *file_name,
+                           fd_t fd,
+                           unsigned long access_flags,
+                           unsigned long mode_flags)
+{
+    int res;
+
+    struct fs_path *path;
+    res = init_process_open_sysfs_path(
+            sysfs_name,
+            file_name,
+            &path);
+    if(res) {
+        return res;
+    }
+
+    fd_t initial_fd;
+    res = file_table_open_path(
+            init_process->file_table,
+            init_process,
+            path,
+            access_flags,
+            mode_flags,
+            0,
+            &initial_fd);
+    fs_path_put(path);
+    if(res) {
+        return res;
+    }
+
+    if(initial_fd != fd) {
+        res = file_table_swap(init_process->file_table, initial_fd, fd);
+        if(res) {
+            return res;
+        }
+    }
+
+    return 0;
+}
+
+static int
 launch_init_process(void)
 {
     int res;
@@ -613,6 +681,48 @@ launch_init_process(void)
     }
 
     init_process = process;
+
+    // Setup stdin/stdout/stderr
+
+#ifdef CONFIG_INIT_PROCESS_STDIN
+    res = init_process_open_sysfs_fd(
+            CONFIG_INIT_PROCESS_STDIN_SYSFS,
+            CONFIG_INIT_PROCESS_STDIN_PATH,
+            0,
+            FILE_PERM_READ,
+            0);
+    if(res) {
+        wprintk("Failed to open sysfs \"%s\" file \"%s\" for 'init' stdin!\n",
+                CONFIG_INIT_PROCESS_STDIN_SYSFS,
+                CONFIG_INIT_PROCESS_STDIN_PATH);
+    }
+#endif
+#ifdef CONFIG_INIT_PROCESS_STDOUT
+    res = init_process_open_sysfs_fd(
+            CONFIG_INIT_PROCESS_STDOUT_SYSFS,
+            CONFIG_INIT_PROCESS_STDOUT_PATH,
+            1,
+            FILE_PERM_WRITE,
+            0);
+    if(res) {
+        wprintk("Failed to open sysfs \"%s\" file \"%s\" for 'init' stdout!\n",
+                CONFIG_INIT_PROCESS_STDOUT_SYSFS,
+                CONFIG_INIT_PROCESS_STDOUT_PATH);
+    }
+#endif
+#ifdef CONFIG_INIT_PROCESS_STDERR
+    res = init_process_open_sysfs_fd(
+            CONFIG_INIT_PROCESS_STDERR_SYSFS,
+            CONFIG_INIT_PROCESS_STDERR_PATH,
+            2,
+            FILE_PERM_WRITE,
+            0);
+    if(res) {
+        wprintk("Failed to open sysfs \"%s\" file \"%s\" for 'init' stderr!\n",
+                CONFIG_INIT_PROCESS_STDERR_SYSFS,
+                CONFIG_INIT_PROCESS_STDERR_PATH);
+    }
+#endif
 
     dprintk("Created init Process (pid=%ld)\n", (sl_t)process->id);
 

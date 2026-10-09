@@ -1,4 +1,6 @@
 
+menu "init Options"
+
 config INIT_PROCESS_PATH
     string "init Path"
     default "/init"
@@ -24,6 +26,38 @@ config INITIAL_FS_FILESYSTEM
     default "cpio"
     help
       Filesystem type to try mounting the root fs as.
+
+config INIT_PROCESS_STDIN
+    bool "Setup stdin"
+    default y
+config INIT_PROCESS_STDIN_SYSFS
+    string "stdin sysfs Directory"
+    default "info"
+config INIT_PROCESS_STDIN_PATH
+    string "stdin sysfs File Name"
+    default "klog"
+
+config INIT_PROCESS_STDOUT
+    bool "Setup stdout"
+    default y
+config INIT_PROCESS_STDOUT_SYSFS
+    string "stdout sysfs Directory"
+    default "info"
+config INIT_PROCESS_STDOUT_PATH
+    string "stdout sysfs File Name"
+    default "klog"
+
+config INIT_PROCESS_STDERR
+    bool "Setup stderr"
+    default y
+config INIT_PROCESS_STDERR_SYSFS
+    string "stderr sysfs Directory"
+    default "info"
+config INIT_PROCESS_STDERR_PATH
+    string "stderr sysfs File Name"
+    default "klog"
+
+endmenu
 
 menu "printk Options"
 
