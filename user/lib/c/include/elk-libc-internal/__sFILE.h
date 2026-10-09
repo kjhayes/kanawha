@@ -373,11 +373,11 @@ __elk_libc_internal__file_ungetc(char c, struct __sFILE *file)
 {
     int res;
 
-    ssize_t off = kanawha_sys_seek(file->__fd, 1, SEEK_CUR);
-    if(off < 0)
-    {
-        return off;
-    }
+//    ssize_t off = kanawha_sys_seek(file->__fd, 1, SEEK_CUR);
+//    if(off < 0)
+//    {
+//        return off;
+//    }
 
     // Ensure the buffer is long enough
     if(__elk_libc_internal__file_prefetch_buffer_full(file))
@@ -390,8 +390,10 @@ __elk_libc_internal__file_ungetc(char c, struct __sFILE *file)
     }
 
     // Insert into the buffer
-    file->prefetch_buffer[file->prefetch_head] = c;
-    file->prefetch_head = (file->prefetch_head + 1) % file->prefetch_buflen;
+    unsigned long pre_tail = (file->prefetch_tail - 1) % file->prefetch_buflen;
+
+    file->prefetch_buffer[pre_tail] = c;
+    file->prefetch_tail = pre_tail;
 
     return 0;
 }
