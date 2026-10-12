@@ -316,6 +316,10 @@ cp15_dt_init_node(struct dt_driver *driver, struct dt_node *node)
         return -EINVAL;
     }
 
+    irq_action_set_description(
+            timer->action,
+            "cp15");
+
     unmask_irq(timer->irq);
 
     return 0;

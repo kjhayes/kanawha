@@ -109,7 +109,7 @@ arm64_boot_bsp_init(struct fdt __phys *dtb)
     res = arm64_reserve_dtb(dtb);
     if(res)
     {
-        panic("Failed to reserve the RISC-V device tree blob in physical "
+        panic("Failed to reserve the ARM64 device tree blob in physical "
               "memory!\n");
     }
     res = handle_init_stage__post_mem_flags();

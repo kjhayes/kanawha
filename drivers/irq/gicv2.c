@@ -143,7 +143,7 @@ gicv2_set_irq_edge_triggered_local(
     size_t register_shift = (hwirq % 16)*2;
 
     uint32_t reg = gicd_read(gic, GICV2_GICD_ICFGR(register_index));
-    reg &= ~(0b11 << register_shift);
+    reg &= ~(0b10 << register_shift);
     reg |=  (0b10 << register_shift);
     gicd_write(gic, GICV2_GICD_ICFGR(register_index), reg);
 
@@ -210,8 +210,7 @@ gicv2_set_irq_level_sensitive_local(
     size_t register_shift = (hwirq % 16)*2;
 
     uint32_t reg = gicd_read(gic, GICV2_GICD_ICFGR(register_index));
-    reg &= ~(0b11 << register_shift);
-    // reg |=  (0b00 << register_shift);
+    reg &= ~(0b10 << register_shift);
     gicd_write(gic, GICV2_GICD_ICFGR(register_index), reg);
 
     return 0;
@@ -411,6 +410,17 @@ static unsigned long
 gicv2_irq_status(struct irq_dev *irq_dev, hwirq_t hwirq)
 {
     struct gicv2 *gic = container_of(irq_dev, struct gicv2, irq_dev);
+
+    unsigned long rindex = hwirq / 32;
+    unsigned long bindex = hwirq % 32;
+
+    uint32_t ispendr = gicd_read(gic, GICV2_GICD_ISPENDR(rindex));
+
+    if(ispendr & (1ULL<<bindex))
+    {
+        return IRQ_STATUS_PENDING;
+    }
+
     return IRQ_STATUS_UNKNOWN;
 }
 int

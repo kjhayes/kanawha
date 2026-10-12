@@ -64,6 +64,7 @@ doscan_handle_escaped(struct doscan_state *state)
         int_ptr = va_arg(state->args, int *);
         peek = doscan_peekstr(state, 1, 32);
         *int_ptr = strtol(peek, &endptr, 0);
+        state->num_matches++;
         diff = endptr - peek;
         res = doscan_consume(state, diff);
         if(res)

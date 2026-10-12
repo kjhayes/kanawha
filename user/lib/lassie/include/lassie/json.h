@@ -4,9 +4,16 @@
 #include <lassie/lassie.h>
 #include <stdio.h>
 
-#define LASSIE_JSON_WRITE_COMPACT (1UL<<0)
+struct lassie *
+lassie_json_read(FILE *file);
 
-struct lassie *lassie_json_read(FILE *file);
-int lassie_json_write(FILE *file, struct lassie *value, unsigned long flags, int depth);
+#define LASSIE_JSON_WRITE_COMPACT (1UL<<0)
+#define LASSIE_JSON_WRITE_NO_INITIAL_INDENT (1UL<<1)
+int
+lassie_json_write(
+        FILE *file,
+        struct lassie *value,
+        unsigned long flags,
+        int depth);
 
 #endif

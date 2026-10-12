@@ -57,4 +57,3 @@ char input_getc(void)
     return fgetc(file);
 }
 
-

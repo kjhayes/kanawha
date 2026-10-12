@@ -6,11 +6,12 @@ QEMU_PREFIX :=
 
 QEMU_DEBUG_LOG ?= qemu.log
 QEMU_FLAGS += -d int,cpu_reset
-QEMU_FLAGS += -D $(QEMU_DEBUG_LOG) -d guest_errors
+QEMU_FLAGS += -D $(QEMU_DEBUG_LOG)
+QEMU_FLAGS += -d guest_errors
 
-# QEMU_FLAGS += -trace "*pl011*"
+QEMU_FLAGS += -trace "*pl011*"
 
-QEMU_FLAGS += -device virtio-gpu-pci,disable-legacy=on,disable-modern=off
+# QEMU_FLAGS += -device virtio-gpu-pci,disable-legacy=on,disable-modern=off
 
 # QEMU_FLAGS += -drive id=ahcidisk,file=ahci.img,if=none \
 #              -device ahci,id=ahci \
@@ -106,6 +107,8 @@ QEMU_FLAGS += -m 2G
 
 QEMU_FLAGS += -drive file=$(OUTPUT_DIR)/initrd,if=none,id=virtio-disk-root,format=raw \
 			  -device virtio-blk-pci,disable-legacy=on,disable-modern=off,drive=virtio-disk-root,id=root-disk
+
+# QEMU_FLAGS += -display none
 
 QEMU_DEPS += $(OUTPUT_DIR)/initrd
 QEMU_DEPS += $(OUTPUT_DIR)/kanawha.bin

@@ -46,8 +46,8 @@ polling_pci_mailbox_handle_pending(void *_mb)
             continue;
         }
 
-        // printk("polling_pci_mailbox: HIT! (irq=%ld) (hwirq=%ld)\n",
-        // (sl_t)irq, (sl_t)hwirq);
+        dprintk("polling_pci_mailbox: HIT! (irq=%ld) (hwirq=%ld)\n",
+                (sl_t)irq, (sl_t)hwirq);
         res = handle_irq(desc, NULL);
         if(res == IRQ_UNHANDLED)
         {

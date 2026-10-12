@@ -57,4 +57,5 @@ bins += \
 	tinfo \
 	kvi \
 	doomgeneric \
+	kinit \
 
