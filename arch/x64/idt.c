@@ -6,6 +6,9 @@
 #include <kanawha/string.h>
 #include <kanawha/types.h>
 #include <kanawha/vmem.h>
+#include <arch/x64/segdesc.h>
+#include <kanawha/attribute.h>
+#include <kanawha/types.h>
 
 struct __packed idt64
 {
