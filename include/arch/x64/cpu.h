@@ -6,6 +6,7 @@
 #include <arch/x64/lapic.h>
 #include <kanawha/cpu.h>
 #include <kanawha/ptree.h>
+#include <kanawha/list.h>
 
 #define X64_CPU_NAME_BUFLEN (16)
 
@@ -15,6 +16,9 @@ struct x64_cpu
 
     struct lapic apic;
     struct lapic_timer apic_timer;
+
+    struct x64_idt *idt;
+    ilist_node_t idt_node;
 
     struct gdt64 *gdt;
     void *tss_segment;

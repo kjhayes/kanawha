@@ -38,7 +38,7 @@ x64_boot_bsp_init(void)
 
     x64_fpu_init_bsp();
     x64_init_gdt_bsp();
-    x64_init_idt_bsp();
+    x64_init_default_idt_bsp();
 
     klog_init();
     printk_init();
@@ -267,7 +267,7 @@ x64_boot_ap_init(void)
 
     x64_fpu_init_ap();
     x64_init_gdt_ap();
-    x64_init_idt_ap();
+    x64_init_default_idt_ap();
 
     /*
      * Tricky Ordering here because technically there is

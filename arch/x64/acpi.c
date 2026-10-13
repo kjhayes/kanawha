@@ -52,12 +52,11 @@ parse_madt_lapic(struct acpi_madt *madt, struct acpi_madt_entry_hdr *hdr)
     }
 #endif
 
-    struct x64_cpu *cpu = kmalloc(sizeof(struct x64_cpu), KM_KERNEL);
+    struct x64_cpu *cpu = kzmalloc(sizeof(struct x64_cpu), KM_KERNEL);
     if(cpu == NULL)
     {
         return -ENOMEM;
     }
-    memset(cpu, 0, sizeof(struct x64_cpu));
 
     int res = x64_bsp_register_smp_cpu(cpu, entry->apic_id, is_bsp);
 
@@ -505,3 +504,4 @@ x64_cache_bsp_apic_id(void)
 declare_init_desc(static,
                   x64_cache_bsp_apic_id,
                   "Reading BSP APIC ID From CPUID");
+

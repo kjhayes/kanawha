@@ -2,6 +2,7 @@
 #include <arch/x64/apic_timer.h>
 #include <arch/x64/cpu.h>
 #include <arch/x64/lapic.h>
+#include <arch/x64/idt.h>
 #include <kanawha/lock.h>
 #include <kanawha/ptree.h>
 #include <kanawha/stddef.h>
@@ -28,6 +29,9 @@ x64_bsp_register_smp_cpu(struct x64_cpu *cpu, apic_id_t apic_id, int is_bsp)
 
     cpu->apic.id = apic_id;
     cpu->apic_tree_node.key = (uintptr_t)apic_id;
+
+    cpu->gdt = NULL;
+    cpu->idt = NULL;
 
     snprintk(cpu->name, X64_CPU_NAME_BUFLEN, "apic%lu", (ul_t)apic_id);
     cpu->name[X64_CPU_NAME_BUFLEN - 1] = '\0';
@@ -66,6 +70,11 @@ x64_bsp_register_smp_cpu(struct x64_cpu *cpu, apic_id_t apic_id, int is_bsp)
     printk("Registered CPU %ld with APIC ID 0x%lx\n",
            (long)cpu->cpu.id,
            (unsigned long)cpu->apic.id);
+
+    res = x64_cpu_set_idt(x64_get_default_idt(), cpu);
+    if(res) {
+        eprintk("Failed to assign default IDT to x64_cpu structure!\n");
+    }
 
     if(is_bsp)
     {

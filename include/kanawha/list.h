@@ -20,6 +20,12 @@ typedef struct ilist_head ilist_node_t;
         .prev = &__list,                                                       \
     }
 
+#define DECLARE_FIELD_ILIST(__struct, __list)\
+    .__list = {\
+        .next = &__struct.__list,\
+        .prev = &__struct.__list,\
+    }
+
 #define ilist_for_each(node, list)                                             \
     for(node = (list)->next; node != (list); node = (node)->next)
 
