@@ -130,17 +130,17 @@ x64_request_cpu_irq_vector(cpu_id_t cpu_id)
     return min_irq;
 }
 
-__noreturn void
-x64_unhandled_exception(struct x64_excp_state *state)
+void
+x64_get_excp_vector_info(
+        unsigned int vector,
+        struct x64_excp_vector_info *info_out)
 {
     const char *mnemonic = "UNKNOWN";
     const char *desc_str = "Unknown-Vector";
-    int errcode_valid = 0;
-    __maybe_unused int type = X64_EXCP_TYPE_UNDEF;
+    unsigned int errcode_valid = 0;
+    int type = X64_EXCP_TYPE_UNDEF;
 
-    int ring_from = state->cs & 0b11;
-
-    switch(state->vector)
+    switch(vector)
     {
 #define UNHANDLED_EXCEPTION_CASE(VECTOR,                                       \
                                  MNEMONIC,                                     \
@@ -157,13 +157,30 @@ x64_unhandled_exception(struct x64_excp_state *state)
 #undef UNHANDLED_EXCEPTION_CASE
     }
 
+    if(info_out) {
+        info_out->mnemonic = mnemonic;
+        info_out->description = desc_str;
+        info_out->errcode_valid = errcode_valid;
+        info_out->type = type;
+    }
+}
+
+
+__noreturn void
+x64_unhandled_exception(struct x64_excp_state *state)
+{
+    int ring_from = state->cs & 0b11;
+
+    struct x64_excp_vector_info info;
+    x64_get_excp_vector_info(state->vector, &info);
+
     printk("===== UNHANDLED \"%s\" EXCEPTION ===== (#%s)\n",
-           desc_str,
-           mnemonic);
+           info.description,
+           info.mnemonic);
     printk("\tVECTOR=0x%x\n", state->vector);
-    if(errcode_valid)
+    if(info.errcode_valid)
     {
-        printk("ERR=0x%x\n", (unsigned)state->error_code);
+        printk("ERR=0x%lx\n", (unsigned long)state->error_code);
     }
     printk("\n");
     printk("\tRFLAGS=%p\n", (uintptr_t)state->rflags);
@@ -179,7 +196,7 @@ x64_unhandled_exception(struct x64_excp_state *state)
     arch_excp_dump_state((struct excp_state *)state, do_printk);
 
     panic("Unhandled %s Exception! (vector=0x%x)\n",
-          desc_str,
+          info.description,
           (unsigned)state->vector);
 }
 
@@ -327,28 +344,16 @@ arch_excp_dump_state(struct excp_state *gen_state, printk_f *printer)
 {
     struct x64_excp_state *state = (struct x64_excp_state *)gen_state;
 
-    int errcode_valid = 0;
-    switch(state->vector)
-    {
-#define UNHANDLED_EXCEPTION_CASE(VECTOR,                                       \
-                                 MNEMONIC,                                     \
-                                 DESC_STR,                                     \
-                                 ERRCODE_VALID,                                \
-                                 TYPE)                                         \
-    case VECTOR:                                                               \
-        errcode_valid = ERRCODE_VALID;                                         \
-        break;
-        X64_EXCP_XLIST(UNHANDLED_EXCEPTION_CASE)
-#undef UNHANDLED_EXCEPTION_CASE
-    }
+    struct x64_excp_vector_info info;
+    x64_get_excp_vector_info(state->vector, &info);
 
 #undef PRINT
 #define PRINT (*printer)
 
     PRINT("\tVECTOR=0x%x", state->vector);
-    if(errcode_valid)
+    if(info.errcode_valid)
     {
-        printk(", ERR=0x%x", (unsigned)state->error_code);
+        printk(", ERR=0x%lx", (unsigned long)state->error_code);
     }
     PRINT("\n");
     PRINT("\tRFLAGS=%p\n", (uintptr_t)state->rflags);

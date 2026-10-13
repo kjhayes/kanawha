@@ -10,9 +10,6 @@
 .global x64_syscall_entry
 .type x64_syscall_entry, @function
 
-.global x64_syscall_call_gate_entry
-.type x64_syscall_call_gate_entry, @function
-
 x64_syscall_entry_compatibility_mode: 
     jmp . // This should never happen
 
@@ -121,13 +118,3 @@ x64_syscall_entry:
     // Set Usermode CS and SS, jump to %rcx and restore %r11 rflags
     sysretq
 
-#ifdef CONFIG_X64_ENABLE_CALL_GATE_SYSCALL
-// Call gate syscalls are not fully implemented,
-// (and I'm not sure they really should be, hardware
-//  really does NOT seem to like 64-bit call gates)
-x64_syscall_call_gate_entry:
-    // There is a race condition with other interrupts here
-    cli
-    jmp .
-    lretq
-#endif

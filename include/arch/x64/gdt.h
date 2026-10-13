@@ -52,8 +52,8 @@ _Static_assert(sizeof(struct gdt64) == X64_GDT64_SIZE,
     offsetof(struct gdt64, syscall_call_gate)
 #endif
 
-#define X64_SEGMENT_SELECTOR(__OFFSET, __USE_LDT, __RING)                      \
-    (((__OFFSET & ~0b111) | ((!!__USE_LDT) << 2) | (__RING & 0b11)) & 0xFFFFU)
+#define X64_SEGMENT_SELECTOR(__OFFSET, __USE_LDT, __RPL)                      \
+    (((__OFFSET & ~0b111) | ((!!__USE_LDT) << 2) | (__RPL & 0b11)) & 0xFFFFU)
 
 static inline uint16_t
 x64_segment_selector(uint16_t segment_offset, int use_ldt, int ring)

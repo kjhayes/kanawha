@@ -114,60 +114,60 @@ setstderr(const char *path)
 //    .sockets = barkd_sockets,
 //};
 
-static const char *lensd_args[] = {
-    "lensd",
-    NULL,
-};
-static struct daemon_socket lensd_sockets[] = {{
-    .env = "LENSD_SOCKET",
-}};
-static struct daemon lensd = {
-    .command = "/sys/initrd/lensd",
-    .args = lensd_args,
-    .status = DAEMON_UNINIT,
-    .restart_on_exit = 1,
-    .num_sockets = 1,
-    .sockets = lensd_sockets,
-};
-
-static const char *sh_args[] = {"sh", "/sys/initrd/aidedinit.sh", NULL};
-static struct daemon sh = {
-    .command = "/sys/initrd/sh",
-    .args = sh_args,
-    .restart_on_exit = 1,
-    .status = DAEMON_UNINIT,
-    .num_sockets = 0,
-};
-
-static const char *klog_args[] = {"fbterm",
-                                  "-t",
-                                  "/sys/initrd/arm8.psf",
-                                  "-d",
-                                  "/dev/term/COM1",
-                                  "/sys/initrd/klog",
-                                  NULL};
-static struct daemon klog = {
-    .command = "/sys/initrd/fbterm",
-    .args = klog_args,
-    .restart_on_exit = 0,
-    .status = DAEMON_UNINIT,
-    .num_sockets = 0,
-};
-
-static const char *sysplot_args[] = {"sysplot", NULL};
-static struct daemon sysplot = {
-    .command = "/sys/initrd/sysplot",
-    .args = sysplot_args,
-    .restart_on_exit = 0,
-    .status = DAEMON_UNINIT,
-    .num_sockets = 0,
-};
+// static const char *lensd_args[] = {
+//     "lensd",
+//     NULL,
+// };
+// static struct daemon_socket lensd_sockets[] = {{
+//     .env = "LENSD_SOCKET",
+// }};
+// static struct daemon lensd = {
+//     .command = "/sys/initrd/lensd",
+//     .args = lensd_args,
+//     .status = DAEMON_UNINIT,
+//     .restart_on_exit = 1,
+//     .num_sockets = 1,
+//     .sockets = lensd_sockets,
+// };
+// 
+// static const char *sh_args[] = {"sh", "/sys/initrd/aidedinit.sh", NULL};
+// static struct daemon sh = {
+//     .command = "/sys/initrd/sh",
+//     .args = sh_args,
+//     .restart_on_exit = 1,
+//     .status = DAEMON_UNINIT,
+//     .num_sockets = 0,
+// };
+// 
+// static const char *klog_args[] = {"fbterm",
+//                                   "-t",
+//                                   "/sys/initrd/arm8.psf",
+//                                   "-d",
+//                                   "/dev/term/COM1",
+//                                   "/sys/initrd/klog",
+//                                   NULL};
+// static struct daemon klog = {
+//     .command = "/sys/initrd/fbterm",
+//     .args = klog_args,
+//     .restart_on_exit = 0,
+//     .status = DAEMON_UNINIT,
+//     .num_sockets = 0,
+// };
+// 
+// static const char *sysplot_args[] = {"sysplot", NULL};
+// static struct daemon sysplot = {
+//     .command = "/sys/initrd/sysplot",
+//     .args = sysplot_args,
+//     .restart_on_exit = 0,
+//     .status = DAEMON_UNINIT,
+//     .num_sockets = 0,
+// };
 
 // Open a shell on the terminal "init" is printing to
-static const char *termsh_args[] = {"sh", NULL};
+static const char *termsh_args[] = {"sh", "/sys/initrd/test.sh", NULL};
 static struct daemon termsh = {
     .command = "/sys/initrd/sh",
-    .args = sysplot_args,
+    .args = termsh_args,
     .restart_on_exit = 1,
     .status = DAEMON_UNINIT,
     .num_sockets = 0,
@@ -196,9 +196,9 @@ main(int argc, const char **argv)
         return res;
     }
 
-    setstdin(TERM_PATH);
-    setstdout(TERM_PATH);
-    setstderr(TERM_PATH);
+    // setstdin(TERM_PATH);
+    // setstdout(TERM_PATH);
+    // setstderr(TERM_PATH);
 
     printf_enabled = 1;
 

@@ -213,3 +213,54 @@ x64_setup_syscalls(void)
 declare_init_desc(late,
                   x64_setup_syscalls,
                   "Initializing x64 syscall Instruction");
+
+#ifdef CONFIG_X64_ENABLE_CALL_GATE_SYSCALL
+
+#include <arch/x64/exception.h>
+#include <kanawha/event.h>
+
+void
+x64_handle_call_gate_syscall(struct x64_excp_state *state)
+{
+    int ring_from = state->cs & 0b11;
+
+    printk("CPU(%ld) call-gate syscall 0x%lx ring_from=%d\n"
+            "\trip=%p\n",
+            (sl_t)current_cpu_id(),
+            (ul_t)state->vector,
+            ring_from,
+            state->rip);
+
+    return;
+}
+
+// TODO: Remove these
+static unsigned long x64_call_gate_syscall_counter_printed = -1;
+unsigned long x64_call_gate_syscall_counter = 0;
+static void
+x64_call_gate_syscall_counter_dump(void *_state)
+{
+    if(x64_call_gate_syscall_counter != x64_call_gate_syscall_counter_printed) {
+        printk("# Call Gate Invocations = %lu\n",
+                x64_call_gate_syscall_counter);
+        x64_call_gate_syscall_counter_printed = x64_call_gate_syscall_counter;
+    }
+}
+
+static int
+x64_call_gate_dump_register(void)
+{
+    struct periodic_event *evt;
+    evt = create_periodic_event(
+            sec_to_duration(5),
+            NULL,
+            x64_call_gate_syscall_counter_dump);
+    if(evt == NULL) {
+        return -EINVAL;
+    }
+    return 0;
+}
+declare_init(launch, x64_call_gate_dump_register);
+
+#endif
+

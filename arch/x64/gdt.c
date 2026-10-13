@@ -135,17 +135,17 @@ __attribute__((used)) uint8_t x64_bsp_tss_data[X64_TSS_SEGMENT_SIZE] = {0};
 static void
 x64_init_gdt_runtime_patch(void)
 {
-
 #ifdef CONFIG_X64_ENABLE_CALL_GATE_SYSCALL
     // The compiler doesn't have support for generating this
     // statically, so we need to do a patch early during boot
     void *target_ptr = (&x64_syscall_call_gate_entry);
+    uint64_t target = (uintptr_t)target_ptr;
     x64_bsp_gdt64.syscall_call_gate.target_offset_15_0 =
-        (0xFFFF & (((uint64_t)(void *)target_ptr) >> 0));
+        (0xFFFFUL & (target >> 0));
     x64_bsp_gdt64.syscall_call_gate.target_offset_31_16 =
-        (0xFFFF & (((uint64_t)(void *)target_ptr) >> 16));
+        (0xFFFFUL & (target >> 16));
     x64_bsp_gdt64.syscall_call_gate.target_offset_63_32 =
-        (0xFFFFFFFF & (((uint64_t)(void *)target_ptr) >> 32));
+        (0xFFFFFFFFUL & (target >> 32));
 #endif
 }
 
@@ -287,3 +287,21 @@ x64_gdt_init_smp(void)
     return 0;
 }
 declare_init_desc(smp, x64_gdt_init_smp, "Setting Up percpu GDT TSS Segments");
+
+#ifdef CONFIG_X64_ENABLE_CALL_GATE_SYSCALL
+static int
+x64_dump_call_gate_segment_offset(void)
+{
+    printk("Call Gate Segment Offset = 0x%lx\n",
+            (unsigned long)X64_SYSCALL_CALL_GATE_GDT_SEGMENT_OFFSET);
+    struct gdt64_call_gate *gate = &x64_bsp_gdt64.syscall_call_gate;
+    uint32_t *l = (void*)gate;
+    for(unsigned int i = 0; i < sizeof(*gate) / sizeof(uint32_t); i++) {
+        printk("[%d]: 0x%x\n",
+                i, l[i]);
+    }
+    return 0;
+}
+declare_init(launch, x64_dump_call_gate_segment_offset);
+#endif
+

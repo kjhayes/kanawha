@@ -5,179 +5,122 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#define REST (0)
-
-#define C8 (4186)
-#define CS8 (4435)
-#define D8 (4699)
-#define DS8 (4978)
-#define E8 (5274)
-#define F8 (5588)
-#define FS8 (5920)
-#define G8 (6272)
-#define GS8 (6645)
-#define A8 (7040)
-#define AS8 (7459)
-#define B8 (7902)
-
-#define C7 ((4186) / 2)
-#define CS7 ((4435) / 2)
-#define D7 ((4699) / 2)
-#define DS7 ((4978) / 2)
-#define E7 ((5274) / 2)
-#define F7 ((5588) / 2)
-#define FS7 ((5920) / 2)
-#define G7 ((6272) / 2)
-#define GS7 ((6645) / 2)
-#define A7 ((7040) / 2)
-#define AS7 ((7459) / 2)
-#define B7 ((7902) / 2)
-
-#define C6 ((4186) / 4)
-#define CS6 ((4435) / 4)
-#define D6 ((4699) / 4)
-#define DS6 ((4978) / 4)
-#define E6 ((5274) / 4)
-#define F6 ((5588) / 4)
-#define FS6 ((5920) / 4)
-#define G6 ((6272) / 4)
-#define GS6 ((6645) / 4)
-#define A6 ((7040) / 4)
-#define AS6 ((7459) / 4)
-#define B6 ((7902) / 4)
-
-#define C5 ((4186) / 8)
-#define CS5 ((4435) / 8)
-#define D5 ((4699) / 8)
-#define DS5 ((4978) / 8)
-#define E5 ((5274) / 8)
-#define F5 ((5588) / 8)
-#define FS5 ((5920) / 8)
-#define G5 ((6272) / 8)
-#define GS5 ((6645) / 8)
-#define A5 ((7040) / 8)
-#define AS5 ((7459) / 8)
-#define B5 ((7902) / 8)
-
-#define C4 ((4186) / 16)
-#define CS4 ((4435) / 16)
-#define D4 ((4699) / 16)
-#define DS4 ((4978) / 16)
-#define E4 ((5274) / 16)
-#define F4 ((5588) / 16)
-#define FS4 ((5920) / 16)
-#define G4 ((6272) / 16)
-#define GS4 ((6645) / 16)
-#define A4 ((7040) / 16)
-#define AS4 ((7459) / 16)
-#define B4 ((7902) / 16)
-
-#define C3 ((4186) / 32)
-#define CS3 ((4435) / 32)
-#define D3 ((4699) / 32)
-#define DS3 ((4978) / 32)
-#define E3 ((5274) / 32)
-#define F3 ((5588) / 32)
-#define FS3 ((5920) / 32)
-#define G3 ((6272) / 32)
-#define GS3 ((6645) / 32)
-#define A3 ((7040) / 32)
-#define AS3 ((7459) / 32)
-#define B3 ((7902) / 32)
-
-#define _QUARTER(NOTE) NOTE, NOTE, NOTE, NOTE,
-#define _HALF(NOTE) _QUARTER(NOTE) _QUARTER(NOTE)
-#define _FULL(NOTE) _HALF(NOTE) _HALF(NOTE)
-#define _DOUBLE(NOTE) _FULL(NOTE) _FULL(NOTE)
-#define _QUAD(NOTE) _DOUBLE(NOTE) _DOUBLE(NOTE)
-
-#define QUARTER(NOTE) _QUARTER(NOTE) _QUARTER(REST)
-#define HALF(NOTE) _HALF(NOTE) _QUARTER(REST)
-#define FULL(NOTE) _FULL(NOTE) _QUARTER(REST)
-#define DOUBLE(NOTE) _DOUBLE(NOTE) _QUARTER(REST)
-#define QUAD(NOTE) _QUAD(NOTE) _QUARTER(REST)
-
-uint16_t tune_0[] = {
-    FULL(A3) FULL(B3) FULL(D4) FULL(B3)
-
-        DOUBLE(F4) QUARTER(REST) DOUBLE(F4) QUARTER(REST) DOUBLE(E4)
-
-            QUAD(REST)
-
-                FULL(A3) FULL(B3) FULL(D4) FULL(B3)
-
-                    DOUBLE(E4) QUARTER(REST) DOUBLE(E4) QUARTER(REST) DOUBLE(D4)
-                        FULL(CS4) DOUBLE(B3)
-
-                            QUAD(REST)
-
-                                FULL(A3) FULL(B3) FULL(D4) FULL(B3)
-
-                                    DOUBLE(D4) DOUBLE(E4) QUAD(CS4)
-                                        QUARTER(REST) FULL(A3) DOUBLE(E4)
-                                            DOUBLE(D4)};
-
-int
-main(int argc, const char **argv)
+static inline uint64_t __attribute__((always_inline))
+rdtsc (void)
 {
-    int res;
+    uint32_t lo, hi;
+    __asm__ ("rdtsc" : "=a"(lo), "=d"(hi));
+    return lo | ((uint64_t)(hi) << 32);
+}
 
-    // const char *randd_env = getenv("RANDD_SOCKET");
-    // int randd_socket = strtoul(randd_env, NULL, 10);
-    // int randd_conn;
+struct {
+    uint32_t offset;
+    uint16_t selector;
+} __attribute__((packed))
+call_gate = {
+    .offset = 0UL,
+    .selector = 0x38UL | 0x0UL,
+};
 
-    // res = kanawha_sys_connect(randd_socket, &randd_conn, 0);
-    // if(res)
-    //{
-    //     fprintf(stderr, "Failed to connect to randd socket! res=%d\n", res);
-    //     perror("accept");
-    //     return -1;
-    // }
+struct stats {
+    unsigned long to_kernel;
+    unsigned long from_kernel;
+    unsigned long total;
+};
 
-    // while(1)
-    //{
-    //     char buf[5];
-    //     buf[4] = 0;
-    //     ssize_t amt = read(randd_conn, buf, 4);
-    //     if(amt == 4)
-    //     {
-    //         puts(buf);
-    //     }
-    //     else if(amt < 0)
-    //     {
-    //         fprintf(stderr, "Failed to read from randd!\n");
-    //         return -1;
-    //     }
-    //     else
-    //     {
-    //         fprintf(stderr, "randd EOF?\n");
-    //         return -1;
-    //     }
-    // }
+static inline int
+run_test(struct stats *stats)
+{
+    uint32_t lo, hi;
+    uint64_t before = rdtsc();
+    __asm__ volatile (
+	    "leaq call_gate, %%rax;"
+        "rex64 lcall *(%%rax);"
+	    : "=a" (lo), "=d" (hi));
 
-    ////    fd_t socket;
-    ////    kanawha_sys_socket(0, FILE_MODE_NON_BLOCK, &socket);
-    ////    fd_t accept_conn;
-    ////    kanawha_sys_accept(socket, &accept_conn, 0);
-    ////    fd_t connect_conn;
-    ////    kanawha_sys_connect(socket, &connect_conn, 0);
+    uint64_t after = rdtsc();
+    uint64_t in_kernel_time = lo | ((uint64_t)(hi) << 32);
 
-    ////    FILE *file = fopen("/dev/snd/pc-speaker", "a");
-    ////    if(file == NULL) {
-    ////        printf("Failed to open /dev/snd/pc-speaker!\n");
-    ////        exit(-1);
-    ////    }
-    ////
-    ////    uint16_t *tune = tune_0;
-    ////    int num_notes = sizeof(tune_0) / 2;
-    ////
-    ////    printf("Playing tune of length %d\n", num_notes);
-    ////    ssize_t res = fwrite(tune, 2, num_notes, file);
-    ////    if(res < 0) {
-    ////        printf("Failed to write to /dev/snd/pc-speaker!\n");
-    ////        exit(res);
-    ////    }
-    ////    printf("Finished playing\n");
+    if(before > in_kernel_time || in_kernel_time > after || before > after) {
+        // Discard this test
+        printf("Discarding test due to rdtsc overflow!\n");
+        return 1;
+    }
+
+    uint64_t entry = in_kernel_time - before;
+    uint64_t ret = after - in_kernel_time;
+    uint64_t total = after-before;
+
+    if(stats) {
+        stats->to_kernel = entry;
+        stats->from_kernel = ret;
+        stats->total = total;
+    }
+
+    return 0;
+}
+
+int main(int argc, const char **argv)
+{
+    size_t runs = 0;
+
+    struct stats min = {
+        .total = ~0UL,
+        .to_kernel = ~0UL,
+        .from_kernel = ~0UL,
+    };
+    struct stats max = {
+        .total = 0,
+        .to_kernel = 0,
+        .from_kernel = 0,
+    };
+    struct stats sum = {
+        .total = 0,
+        .to_kernel = 0,
+        .from_kernel = 0,
+    };
+
+    for(size_t i = 0; i < 100000; i++) {
+
+        struct stats cur = {0};
+	    int discard = run_test(&cur);
+        if(discard) {
+            continue;
+        }
+
+        if(cur.total < min.total) {
+            min.total = cur.total;
+        }
+        if(cur.to_kernel < min.to_kernel) {
+            min.to_kernel = cur.to_kernel;
+        }
+        if(cur.from_kernel < min.from_kernel) {
+            min.from_kernel = cur.from_kernel;
+        }
+
+        if(cur.total > max.total) {
+            max.total = cur.total;
+        }
+        if(cur.to_kernel > max.to_kernel) {
+            max.to_kernel = cur.to_kernel;
+        }
+        if(cur.from_kernel > max.from_kernel) {
+            max.from_kernel = cur.from_kernel;
+        }
+
+	    sum.total += cur.total;
+	    sum.to_kernel += cur.to_kernel;
+	    sum.from_kernel += cur.from_kernel;
+
+	    runs++;
+    }
+
+    printf("Total Cycles: Minimum(%lu) Maximum(%lu) Avg(%lu)\n",
+	    min.total, max.total, sum.total / runs);
+    printf("Entry Cycles: Minimum(%lu) Maximum(%lu) Avg(%lu)\n",
+	    min.to_kernel, max.to_kernel, sum.to_kernel/ runs);
+    printf("Return Cycles: Minimum(%lu) Maximum(%lu) Avg(%lu)\n",
+	    min.from_kernel, max.from_kernel, sum.from_kernel/ runs);
 
     return 0;
 }

@@ -62,12 +62,15 @@ config X64_IGNORE_MADT_X2APIC
 config X64_ENABLE_CALL_GATE_SYSCALL
   bool "Include Call Gate Syscall Support (WIP/Unimplemented)"
   default n
-  depends on WIP
 
 config X64_IGNORE_APIC_MSI
   bool "Disable Use of  LAPIC for PCI MSI/MSI-X"
   default n
   depends on PCI
+
+config X64_LOG_USERSPACE_FAULTS
+  bool "Log Userspace Unexpected Faults"
+  default y
 
 endmenu
 

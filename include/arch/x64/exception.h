@@ -49,6 +49,18 @@
 
 #ifndef __ASSEMBLER__
 
+struct x64_excp_vector_info {
+    const char *mnemonic;
+    const char *description;
+    unsigned int errcode_valid;
+    int type;
+};
+
+void
+x64_get_excp_vector_info(
+        unsigned int vector,
+        struct x64_excp_vector_info *info_out);
+
 #include <arch/x64/asm/regs.S>
 #include <kanawha/irq_domain.h>
 #include <kanawha/types.h>

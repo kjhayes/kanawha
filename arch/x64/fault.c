@@ -9,6 +9,19 @@ static struct irq_action *x64_gpf_action = NULL;
 static struct irq_action *x64_div_zero_action = NULL;
 static struct irq_action *x64_inval_inst_action = NULL;
 
+static void
+x64_log_userspace_fault(
+        struct x64_excp_state *excp_state,
+        struct irq_action *action)
+{
+    struct x64_excp_vector_info info;
+    x64_get_excp_vector_info(excp_state->vector, &info);
+
+    eprintk("PID(%P) \"%s\" Fault!\n",
+            info.description);
+    arch_excp_dump_state((struct excp_state*)excp_state, do_printk);
+}
+
 static int
 x64_gp_fault_handler(struct excp_state *gen_excp_state,
                      struct irq_action *action)
@@ -28,6 +41,12 @@ x64_gp_fault_handler(struct excp_state *gen_excp_state,
     {
         return IRQ_UNHANDLED;
     }
+
+#ifdef CONFIG_X64_LOG_USERSPACE_FAULTS
+    x64_log_userspace_fault(
+            excp_state,
+            action);
+#endif
 
     res = signal_deliver(process, SIGNAL_ID_PROTFAULT, 0);
     if(res)
@@ -93,6 +112,12 @@ x64_div_zero_fault_handler(struct excp_state *gen_excp_state,
     {
         return IRQ_UNHANDLED;
     }
+
+#ifdef CONFIG_X64_LOG_USERSPACE_FAULTS
+    x64_log_userspace_fault(
+            excp_state,
+            action);
+#endif
 
     res = signal_deliver(process, SIGNAL_ID_PROTFAULT, 0);
     if(res)
@@ -160,6 +185,12 @@ x64_inval_inst_fault_handler(struct excp_state *gen_excp_state,
     {
         return IRQ_UNHANDLED;
     }
+
+#ifdef CONFIG_X64_LOG_USERSPACE_FAULTS
+    x64_log_userspace_fault(
+            excp_state,
+            action);
+#endif
 
     res = signal_deliver(process, SIGNAL_ID_DECODEFAULT, 0);
     if(res)
