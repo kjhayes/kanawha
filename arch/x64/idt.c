@@ -7,6 +7,21 @@
 #include <kanawha/types.h>
 #include <kanawha/vmem.h>
 
+struct __packed idt64
+{
+    struct idt64_entry exception_descriptors[32];
+    struct idt64_entry interrupt_descriptors[256 - 32];
+};
+
+_Static_assert(sizeof(struct idt64) == (sizeof(struct idt64_entry) * 256),
+               "IDT64 is not the same size as 256 IDT64 entries!");
+
+struct __packed idt64_descriptor
+{
+    uint16_t size;
+    uint64_t offset;
+};
+
 extern size_t x64_exception_entry_size;
 extern size_t x64_interrupt_entry_size;
 extern int x64_exception_entry_table[];
@@ -14,7 +29,7 @@ extern int x64_interrupt_entry_table[];
 
 struct idt64 x64_idt64;
 
-void
+static void
 x64_setup_idt_exception_descriptor(struct idt64_entry *desc, void *excp_entry)
 {
     memset(desc, 0, sizeof(struct idt64_entry));
@@ -28,10 +43,8 @@ x64_setup_idt_exception_descriptor(struct idt64_entry *desc, void *excp_entry)
     desc->flags &= ~IDT64_ENTRY_FLAG_IST_MASK;
     desc->flags |= IDT64_ENTRY_FLAG_IST_NONE;
 
-    // We still want IF disabled
-    // on user exceptions, so we
-    // don't have a race
-    // condition setting swapgs
+    // We still want IF disabled on user exceptions, so we
+    // don't have a race condition setting swapgs
     desc->flags &= ~IDT64_ENTRY_FLAG_GATE_TYPE_MASK;
     desc->flags |= IDT64_ENTRY_FLAG_GATE_TYPE_INTERRUPT;
 
@@ -41,7 +54,7 @@ x64_setup_idt_exception_descriptor(struct idt64_entry *desc, void *excp_entry)
         x64_segment_selector(X64_KERNEL_CODE_GDT_SEGMENT_OFFSET, 0, 0);
 }
 
-void
+static void
 x64_setup_idt_interrupt_descriptor(struct idt64_entry *desc, void *irq_entry)
 {
     memset(desc, 0, sizeof(struct idt64_entry));
@@ -64,8 +77,8 @@ x64_setup_idt_interrupt_descriptor(struct idt64_entry *desc, void *irq_entry)
         x64_segment_selector(X64_KERNEL_CODE_GDT_SEGMENT_OFFSET, 0, 0);
 }
 
-void
-x64_setup_idt(struct idt64 *idt,
+static void
+x64_setup_idt64(struct idt64 *idt,
               void *excp_entry_table,
               size_t excp_entry_size,
               void *irq_entry_table,
@@ -85,8 +98,8 @@ x64_setup_idt(struct idt64 *idt,
     }
 }
 
-void
-x64_load_idt(struct idt64 *idt)
+static void
+x64_load_idt64(struct idt64 *idt)
 {
     struct idt64_descriptor idtr;
     idtr.offset = (uint64_t)idt;
@@ -97,17 +110,17 @@ x64_load_idt(struct idt64 *idt)
 void
 x64_init_idt_bsp(void)
 {
-    x64_setup_idt(&x64_idt64,
+    x64_setup_idt64(&x64_idt64,
                   x64_exception_entry_table,
                   x64_exception_entry_size,
                   x64_interrupt_entry_table,
                   x64_interrupt_entry_size);
 
-    x64_load_idt(&x64_idt64);
+    x64_load_idt64(&x64_idt64);
 }
 
 void
 x64_init_idt_ap(void)
 {
-    x64_load_idt(&x64_idt64);
+    x64_load_idt64(&x64_idt64);
 }
