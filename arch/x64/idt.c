@@ -22,18 +22,18 @@ x64_setup_idt_exception_descriptor(struct idt64_entry *desc, void *excp_entry)
     desc->offset_16_31 = (((uintptr_t)excp_entry) >> 16) & 0xFFFF;
     desc->offset_32_64 = (((uintptr_t)excp_entry) >> 32) & 0xFFFFFFFF;
 
-    desc->flags =
-        (desc->flags & ~IDT64_ENTRY_FLAG_DPL_MASK) | IDT64_ENTRY_FLAG_DPL_RING0;
+    desc->flags &= ~IDT64_ENTRY_FLAG_DPL_MASK;
+    desc->flags |= IDT64_ENTRY_FLAG_DPL_RING0;
 
-    desc->flags =
-        (desc->flags & ~IDT64_ENTRY_FLAG_IST_MASK) | IDT64_ENTRY_FLAG_IST_NONE;
+    desc->flags &= ~IDT64_ENTRY_FLAG_IST_MASK;
+    desc->flags |= IDT64_ENTRY_FLAG_IST_NONE;
 
-    desc->flags =
-        (desc->flags & ~IDT64_ENTRY_FLAG_GATE_TYPE_MASK) |
-        IDT64_ENTRY_FLAG_GATE_TYPE_INTERRUPT; // We still want IF disabled
-                                              // on user exceptions, so we
-                                              // don't have a race
-                                              // condition setting swapgs
+    // We still want IF disabled
+    // on user exceptions, so we
+    // don't have a race
+    // condition setting swapgs
+    desc->flags &= ~IDT64_ENTRY_FLAG_GATE_TYPE_MASK;
+    desc->flags |= IDT64_ENTRY_FLAG_GATE_TYPE_INTERRUPT;
 
     desc->flags |= IDT64_ENTRY_FLAG_PRESENT;
 
@@ -75,13 +75,13 @@ x64_setup_idt(struct idt64 *idt,
     {
         x64_setup_idt_exception_descriptor(&idt->exception_descriptors[i],
                                            excp_entry_table +
-                                               (i * excp_entry_size));
+                                           (i * excp_entry_size));
     }
     for(int i = 0; i < (256 - 32); i++)
     {
         x64_setup_idt_interrupt_descriptor(&idt->interrupt_descriptors[i],
                                            irq_entry_table +
-                                               (i * irq_entry_size));
+                                           (i * irq_entry_size));
     }
 }
 
