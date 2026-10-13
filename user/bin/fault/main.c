@@ -35,7 +35,7 @@ run_test(struct stats *stats)
     uint64_t before = rdtsc();
     __asm__ volatile (
 	    "leaq call_gate, %%rax;"
-        "rex64 lcall *(%%rax);"
+        "lcall *(%%rax);"
 	    : "=a" (lo), "=d" (hi));
 
     uint64_t after = rdtsc();
