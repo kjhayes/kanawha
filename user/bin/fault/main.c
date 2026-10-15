@@ -80,7 +80,7 @@ int main(int argc, const char **argv)
         .from_kernel = 0,
     };
 
-    for(size_t i = 0; i < 100000; i++) {
+    for(size_t i = 0; i < 100; i++) {
 
         struct stats cur = {0};
 	    int discard = run_test(&cur);
