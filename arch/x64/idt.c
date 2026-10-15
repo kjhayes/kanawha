@@ -12,6 +12,8 @@
 #include <kanawha/types.h>
 #include <kanawha/xcall.h>
 
+static int x64_reload_all_smp_idt(void);
+
 struct __packed idt64
 {
     struct idt64_entry exception_descriptors[32];
@@ -73,19 +75,45 @@ x64_setup_idt_interrupt_descriptor(struct idt64_entry *desc, void *irq_entry)
     desc->offset_16_31 = (((uintptr_t)irq_entry) >> 16) & 0xFFFF;
     desc->offset_32_64 = (((uintptr_t)irq_entry) >> 32) & 0xFFFFFFFF;
 
-    desc->flags =
-        (desc->flags & ~IDT64_ENTRY_FLAG_DPL_MASK) | IDT64_ENTRY_FLAG_DPL_RING0;
+    desc->flags &= ~IDT64_ENTRY_FLAG_DPL_MASK;
+    desc->flags |= IDT64_ENTRY_FLAG_DPL_RING0;
 
-    desc->flags =
-        (desc->flags & ~IDT64_ENTRY_FLAG_IST_MASK) | IDT64_ENTRY_FLAG_IST_NONE;
+    desc->flags &= ~IDT64_ENTRY_FLAG_IST_MASK;
+    desc->flags |= IDT64_ENTRY_FLAG_IST_NONE;
 
-    desc->flags = (desc->flags & ~IDT64_ENTRY_FLAG_GATE_TYPE_MASK) |
-                  IDT64_ENTRY_FLAG_GATE_TYPE_INTERRUPT;
+    desc->flags &= ~IDT64_ENTRY_FLAG_GATE_TYPE_MASK;
+    desc->flags |= IDT64_ENTRY_FLAG_GATE_TYPE_INTERRUPT;
 
     desc->flags |= IDT64_ENTRY_FLAG_PRESENT;
 
     desc->segment_selector =
         x64_segment_selector(X64_KERNEL_CODE_GDT_SEGMENT_OFFSET, 0, 0);
+}
+
+int
+x64_set_idt_entry(
+        struct x64_idt *idt,
+        uint8_t vector,
+        void *addr,
+        uint16_t seg_selector,
+        uint16_t flags)
+{
+    struct idt64_entry *desc = NULL;
+    if(vector < 32) {
+        desc = &idt->idt64.exception_descriptors[vector];
+    } else {
+        desc = &idt->idt64.interrupt_descriptors[vector - 32];
+    }
+
+    memset(desc, 0, sizeof(struct idt64_entry));
+    uintptr_t irq_entry = (uintptr_t)addr;
+    desc->offset_0_15 = (irq_entry) & 0xFFFF;
+    desc->offset_16_31 = ((irq_entry) >> 16) & 0xFFFF;
+    desc->offset_32_64 = ((irq_entry) >> 32) & 0xFFFFFFFF;
+    desc->segment_selector = seg_selector;
+    desc->flags = flags;
+    x64_reload_all_smp_idt();
+    return 0;
 }
 
 static void
@@ -198,11 +226,45 @@ static int
 x64_reload_all_smp_idt(void)
 {
     int res;
-    res = xcall_broadcast(x64_reload_idt_xcall, NULL);
-    if(res) {
-        return res;
+    if(completed_init_stage_xcall()) {
+        res = xcall_broadcast(x64_reload_idt_xcall, NULL);
+        if(res) {
+            return res;
+        }
     }
     return 0;
 }
 declare_init_desc(smp, x64_reload_all_smp_idt, "Reloading All CPU IDT(s)");
+
+static int
+x64_point_idt_at_userspace(void)
+{
+    struct x64_idt *idt = x64_get_default_idt();
+
+#define HANDLER_ADDR (0x8000181ul)
+
+    // Int 9
+    x64_set_idt_entry(
+            idt,
+            9,
+            (void*)HANDLER_ADDR,
+            x64_segment_selector(X64_USER_CODE_GDT_SEGMENT_OFFSET, 0, 0),
+            IDT64_ENTRY_FLAG_DPL_RING3
+           |IDT64_ENTRY_FLAG_GATE_TYPE_TRAP
+           |IDT64_ENTRY_FLAG_IST_NONE
+           |IDT64_ENTRY_FLAG_PRESENT);
+
+    // // Divide by zero
+    // x64_set_idt_entry(
+    //         idt,
+    //         0,
+    //         (void*)HANDLER_ADDR,
+    //         x64_segment_selector(X64_USER_CODE_GDT_SEGMENT_OFFSET, 0, 0),
+    //         IDT64_ENTRY_FLAG_DPL_RING3
+    //        |IDT64_ENTRY_FLAG_GATE_TYPE_TRAP
+    //        |IDT64_ENTRY_FLAG_IST_NONE
+    //        |IDT64_ENTRY_FLAG_PRESENT);
+    return 0;
+}
+declare_init_desc(launch, x64_point_idt_at_userspace, "Pointing IDT Trap Gate(s) At Userspace");
 
