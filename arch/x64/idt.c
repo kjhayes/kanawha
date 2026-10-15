@@ -27,11 +27,6 @@ struct __packed idt64_descriptor
     uint64_t offset;
 };
 
-extern size_t x64_exception_entry_size;
-extern size_t x64_interrupt_entry_size;
-extern int x64_exception_entry_table[];
-extern int x64_interrupt_entry_table[];
-
 struct x64_idt
 {
     ilist_t cpu_list;
@@ -115,6 +110,22 @@ x64_setup_idt64(struct idt64 *idt,
 }
 
 static void
+x64_setup_idt64_kernel_entries(
+        struct idt64 *idt)
+{
+extern size_t x64_exception_entry_size;
+extern size_t x64_interrupt_entry_size;
+extern int x64_exception_entry_table[];
+extern int x64_interrupt_entry_table[];
+
+    x64_setup_idt64(idt,
+                  x64_exception_entry_table,
+                  x64_exception_entry_size,
+                  x64_interrupt_entry_table,
+                  x64_interrupt_entry_size);
+}
+
+static void
 x64_load_idt64(struct idt64 *idt)
 {
     struct idt64_descriptor idtr;
@@ -126,12 +137,7 @@ x64_load_idt64(struct idt64 *idt)
 void
 x64_init_default_idt_bsp(void)
 {
-    x64_setup_idt64(&default_x64_idt.idt64,
-                  x64_exception_entry_table,
-                  x64_exception_entry_size,
-                  x64_interrupt_entry_table,
-                  x64_interrupt_entry_size);
-
+    x64_setup_idt64_kernel_entries(&default_x64_idt.idt64);
     x64_load_idt64(&default_x64_idt.idt64);
 }
 
