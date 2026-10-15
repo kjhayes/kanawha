@@ -1,0 +1,8 @@
+
+.ksymtab : AT(VA_TO_PA(ADDR(.ksymtab)))
+{
+  __ksymtab_start = .;
+  *(.ksymtab* .ksymtab.*)
+  __ksymtab_end = .;
+} :ksymtab = 0
+

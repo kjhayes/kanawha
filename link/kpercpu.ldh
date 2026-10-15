@@ -1,0 +1,9 @@
+
+.kpercpu : AT(VA_TO_PA(ADDR(.kpercpu))) {
+  . = ALIGN(0x1000);
+  __builtin_kpercpu_start = .;
+  *(.kpercpu* .kpercpu.*)
+  . = ALIGN(0x1000);
+  __builtin_kpercpu_end = .;
+} :data = 0
+

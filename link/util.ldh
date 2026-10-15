@@ -1,0 +1,7 @@
+#ifndef __KANAWHA__LINKER__UTIL_LDH__
+#define __KANAWHA__LINKER__UTIL_LDH__
+
+#define AFTER(sec) ADDR(sec) + SIZEOF(sec)
+#define LOAD_AFTER(sec) LOADADDR(sec) + SIZEOF(sec)
+
+#endif

@@ -4,8 +4,7 @@ ENTRY( riscv64_kernel_entry )
 #define __LINKER__
 #include <kanawha/init.h>
 
-#define AFTER(sec) ADDR(sec) + SIZEOF(sec)
-#define LOAD_AFTER(sec) LOADADDR(sec) + SIZEOF(sec)
+#include "util.ldh"
 
 #define VA_TO_PA(addr) ((addr+CONFIG_RISCV64_LINKED_PHYS_BASE)-CONFIG_RISCV64_KERNEL_VIRTUAL_BASE)
 
@@ -71,29 +70,9 @@ SECTIONS
 
 // Past Here Everything Should be Discardable After Kernel Initialization
 
-  .kpercpu : AT(VA_TO_PA(ADDR(.kpercpu))) {
-    . = ALIGN(0x1000);
-    __builtin_kpercpu_start = .;
-    *(.kpercpu* .kpercpu.*)
-    . = ALIGN(0x1000);
-    __builtin_kpercpu_end = .;
-  } :data = 0
-
-#define DECLARE_INIT_STAGE_LINKER_SCRIPT_SECTIONS(STAGE,...)\
-  .kinit.STAGE : AT(VA_TO_PA(ADDR(.kinit.STAGE))) \
-  { \
-    __init_stage_##STAGE##__init_start = .;\
-    *(.kinit.STAGE.init);\
-    __init_stage_##STAGE##__init_end = .;\
-  } :data = 0
-XFOR_INIT_STAGE(DECLARE_INIT_STAGE_LINKER_SCRIPT_SECTIONS)
-
-  .ksymtab : AT(VA_TO_PA(ADDR(.ksymtab)))
-  {
-    __ksymtab_start = .;
-    *(.ksymtab* .ksymtab.*)
-    __ksymtab_end = .;
-  } :data = 0
+#include "kpercpu.ldh"
+#include "kinit.ldh"
+#include "ksymtab.ldh"
 
   . = ALIGN(0x1000);
 
@@ -106,7 +85,6 @@ XFOR_INIT_STAGE(DECLARE_INIT_STAGE_LINKER_SCRIPT_SECTIONS)
   .strtab : {
      *(.strtab* .strtab.*) 
   } :note
-
 
   /* Discard Sections */
 
@@ -129,11 +107,6 @@ XFOR_INIT_STAGE(DECLARE_INIT_STAGE_LINKER_SCRIPT_SECTIONS)
   	*(.rela.*) *(.rela_*)
   }
   ASSERT(SIZEOF(.rela.dyn) == 0, "Unexpected run-time relocations (.rela) detected!")
-
-  .kinit_leftovers : {
-    *(.kinit.*) *(.kinit)
-  }
-  ASSERT(SIZEOF(.kinit_leftovers) == 0, "Unexpected .kinit section(s) detected! (check that all declare_init() calls have a valid init_stage)")
 
   /DISCARD/ : {
       *(.eh_frame* .eh_frame.*)

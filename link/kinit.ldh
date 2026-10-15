@@ -1,0 +1,14 @@
+
+#define DECLARE_INIT_STAGE_LINKER_SCRIPT_SECTIONS(STAGE,...)\
+  .kinit.STAGE : AT(VA_TO_PA(ADDR(.kinit.STAGE))) \
+  { \
+    __init_stage_##STAGE##__init_start = .;\
+    *(.kinit.STAGE.init);\
+    __init_stage_##STAGE##__init_end = .;\
+  } :data = 0
+XFOR_INIT_STAGE(DECLARE_INIT_STAGE_LINKER_SCRIPT_SECTIONS)
+
+.kinit_leftovers : {
+  *(.kinit.*) *(.kinit)
+}
+ASSERT(SIZEOF(.kinit_leftovers) == 0, "Unexpected .kinit section(s) detected! (check that all declare_init() calls have a valid init_stage)")
