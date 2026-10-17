@@ -10,11 +10,7 @@ ENTRY( riscv64_kernel_entry )
 
 PHDRS
 {
-  text PT_LOAD FLAGS(5);
-  data PT_LOAD FLAGS(6);
-  rodata PT_LOAD FLAGS(4);
-  boot PT_LOAD FLAGS(7);
-  note PT_NULL FLAGS(0);
+#include "phdrs.ldh"
 }
 
 // Don't assume a physical base of zero, to give room for the program headers
@@ -25,7 +21,7 @@ SECTIONS
 
   PROVIDE(__riscv64_kernel_load_addr = .);
 
-  __kernel_boot_start = .;
+  __riscv64_kernel_boot_start = .;
 
   .boot.init : AT(ADDR(.boot.init)) {
       *(.boot.init*) *(boot.init.*)
@@ -37,11 +33,11 @@ SECTIONS
       *(.boot.data*) *(.boot.data.*)
   } :boot = 0
 
-  __kernel_boot_end = .;
+  __riscv64_kernel_boot_end = .;
 
   . = CONFIG_RISCV64_KERNEL_VIRTUAL_BASE + (LOAD_AFTER(.boot.data) - CONFIG_RISCV64_LINKED_PHYS_BASE);
 
-  __kernel_virt_start = .;
+  __riscv64_kernel_virt_start = .;
 
   .text ALIGN(0x1000) : AT(VA_TO_PA(ADDR(.text))) {
     *(.text*)
@@ -60,13 +56,13 @@ SECTIONS
     PROVIDE( __global_pointer$ = . + 0x800 );
   } :data = 0
 
-  __kernel_bss_start = .;
+  __riscv64_kernel_bss_start = .;
   .bss : AT(VA_TO_PA(ADDR(.bss))) {
     *(.sbss .sbss.*)
     *(.bss .bss.*);
     *(.tbss .tbss*);
   } :data = 0
-  __kernel_bss_end = .;
+  __riscv64_kernel_bss_end = .;
 
 // Past Here Everything Should be Discardable After Kernel Initialization
 
@@ -76,7 +72,9 @@ SECTIONS
 
   . = ALIGN(0x1000);
 
-  __kernel_virt_end = .;
+  __riscv64_kernel_virt_end = .;
+
+#include "kuser.ldh"
 
   .shstrtab : {
      *(.shstrtab* .shstrtab.*)

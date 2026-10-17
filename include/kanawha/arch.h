@@ -72,7 +72,7 @@ declare_init_desc(static,
                   "Detecting Kernel Endianness");
 #else
 const static endian_t kernel_endian = KERNEL_ENDIANNESS;
-#undef KENREL_ENDIANNESS
+#undef KERNEL_ENDIANNESS
 #endif
 
 #endif

@@ -3,16 +3,16 @@
 #include <kanawha/mem_flags.h>
 #include <kanawha/vmem.h>
 
-extern uint8_t __kernel_virt_start[];
-extern uint8_t __kernel_virt_end[];
-static void __phys *kernel_virt_start = (void __phys *)&__kernel_virt_start;
-static void __phys *kernel_virt_end = (void __phys *)&__kernel_virt_end;
+extern uint8_t __arm64_kernel_virt_start[];
+extern uint8_t __arm64_kernel_virt_end[];
+static void __phys *kernel_virt_start = (void __phys *)&__arm64_kernel_virt_start;
+static void __phys *kernel_virt_end = (void __phys *)&__arm64_kernel_virt_end;
 
-extern uint8_t __kernel_boot_start[];
-extern uint8_t __kernel_boot_end[];
+extern uint8_t __arm64_kernel_boot_start[];
+extern uint8_t __arm64_kernel_boot_end[];
 static void __phys *volatile kernel_boot_start =
-    (void __phys *)__kernel_boot_start;
-static void __phys *volatile kernel_boot_end = (void __phys *)__kernel_boot_end;
+    (void __phys *)__arm64_kernel_boot_start;
+static void __phys *volatile kernel_boot_end = (void __phys *)__arm64_kernel_boot_end;
 
 
 
@@ -80,13 +80,15 @@ arm64_virt_flags_static_init(void)
 
     // Reserve the kernel in high-mem
     printk("Reserving the Kernel in Virtual Memory [%p - %p)\n",
-           __kernel_virt_start,
-           __kernel_virt_end);
-    res = mem_flags_check_region(vflags,
-                                 (uintptr_t)__kernel_virt_start,
-                                 (__kernel_virt_end - __kernel_virt_start),
+           __arm64_kernel_virt_start,
+           __arm64_kernel_virt_end);
+    res = mem_flags_reserve_region(vflags,
+                                 (uintptr_t)__arm64_kernel_virt_start,
+                                 (__arm64_kernel_virt_end - __arm64_kernel_virt_start),
                                  VIRT_MEM_FLAGS_AVAIL | VIRT_MEM_FLAGS_HIGHMEM,
-                                 0);
+                                 0,
+                                 0,
+                                 VIRT_MEM_FLAGS_AVAIL);
     if(res)
     {
         eprintk("Failed to reserve kernel in virtual memory! (err=%s)\n",
@@ -95,13 +97,6 @@ arm64_virt_flags_static_init(void)
         return res;
     }
 
-    res = mem_flags_clear_flags(vflags,
-                                (uintptr_t)__kernel_virt_start,
-                                (__kernel_virt_end - __kernel_virt_start),
-                                VIRT_MEM_FLAGS_AVAIL);
-    if(res) {
-        return res;
-    }
     return 0;
 }
 declare_init_desc(mem_flags,

@@ -515,6 +515,9 @@ mem_flags_check_region(struct mem_flags *map,
                        unsigned long must_be_clear)
 {
     int res;
+    if(size == 0) {
+        return 0;
+    }
     size_t base_index;
     size_t num_indices;
     res = mem_flags_get_overlapping_regions(map,
@@ -532,7 +535,7 @@ mem_flags_check_region(struct mem_flags *map,
         struct mem_flags_entry *entry = &map->entries[i];
         if((entry->flags & must_be_set) != must_be_set)
         {
-            return -EEXIST;
+            return -ENXIO;
         }
         if((entry->flags & must_be_clear) != 0)
         {
@@ -541,6 +544,47 @@ mem_flags_check_region(struct mem_flags *map,
     }
 
 #undef BUFLEN
+    return 0;
+}
+
+int
+mem_flags_reserve_region(struct mem_flags *map,
+                         uintptr_t base,
+                         size_t size,
+                         unsigned long must_be_set,
+                         unsigned long must_be_clear,
+                         unsigned long to_set,
+                         unsigned long to_clear)
+{
+    int res;
+    if(size == 0) {
+        return 0;
+    }
+    res = mem_flags_check_region(
+            map,
+            base,
+            size,
+            must_be_set,
+            must_be_clear);
+    if(res) {
+        return res;
+    }
+    res = mem_flags_set_flags(
+            map,
+            base,
+            size,
+            to_set);
+    if(res) {
+        return res;
+    }
+    res = mem_flags_clear_flags(
+            map,
+            base,
+            size,
+            to_clear);
+    if(res) {
+        return res;
+    }
     return 0;
 }
 
@@ -651,50 +695,12 @@ phys_mem_flags_reserve_kernel(void)
 static void
 phys_mem_flags_printer(printk_f *printer, unsigned long flags)
 {
-    if(flags & PHYS_MEM_FLAGS_AVAIL)
-    {
-        (*printer)("[AVAIL]");
+#define XCASE(__NAME,...) \
+    if(flags & PHYS_MEM_FLAGS_ ## __NAME) {\
+        (*printer)("["#__NAME"]");\
     }
-    if(flags & PHYS_MEM_FLAGS_FW_RESV)
-    {
-        (*printer)("[FW_RESV]");
-    }
-    if(flags & PHYS_MEM_FLAGS_KERNEL)
-    {
-        (*printer)("[KERNEL]");
-    }
-    if(flags & PHYS_MEM_FLAGS_RAM)
-    {
-        (*printer)("[RAM]");
-    }
-    if(flags & PHYS_MEM_FLAGS_SAVE)
-    {
-        (*printer)("[SAVE]");
-    }
-    if(flags & PHYS_MEM_FLAGS_DEFECT)
-    {
-        (*printer)("[DEFECT]");
-    }
-    if(flags & PHYS_MEM_FLAGS_FW_IGNORE)
-    {
-        (*printer)("[FW_IGNORE]");
-    }
-    if(flags & PHYS_MEM_FLAGS_PAGE_ALLOC)
-    {
-        (*printer)("[PAGE_ALLOC]");
-    }
-    if(flags & PHYS_MEM_FLAGS_16_BIT)
-    {
-        (*printer)("[16]");
-    }
-    if(flags & PHYS_MEM_FLAGS_32_BIT)
-    {
-        (*printer)("[32]");
-    }
-    if(flags & PHYS_MEM_FLAGS_MMIO)
-    {
-        (*printer)("[MMIO]");
-    }
+    PHYS_MEM_FLAGS_XLIST(XCASE)
+#undef XCASE
 }
 
 int
@@ -748,30 +754,12 @@ virt_mem_flags_static_init(void)
 static void
 virt_mem_flags_printer(printk_f *printer, unsigned long flags)
 {
-    if(flags & VIRT_MEM_FLAGS_NONCANON)
-    {
-        (*printer)("[NONCANON]");
+#define XCASE(__NAME,...) \
+    if(flags & VIRT_MEM_FLAGS_ ## __NAME) {\
+        (*printer)("["#__NAME"]");\
     }
-    if(flags & VIRT_MEM_FLAGS_HIGHMEM)
-    {
-        (*printer)("[HIGH]");
-    }
-    if(flags & VIRT_MEM_FLAGS_AVAIL)
-    {
-        (*printer)("[AVAIL]");
-    }
-    if(flags & VIRT_MEM_FLAGS_HEAP)
-    {
-        (*printer)("[HEAP]");
-    }
-    if(flags & VIRT_MEM_FLAGS_MMIO)
-    {
-        (*printer)("[MMIO]");
-    }
-    if(flags & VIRT_MEM_FLAGS_PERCPU)
-    {
-        (*printer)("[PERCPU]");
-    }
+    VIRT_MEM_FLAGS_XLIST(XCASE)
+#undef XCASE
 }
 
 int

@@ -1,0 +1,15 @@
+
+boot PT_LOAD FLAGS(7);
+
+text PT_LOAD FLAGS(5);
+data PT_LOAD FLAGS(6);
+rodata PT_LOAD FLAGS(4);
+
+usertext PT_LOAD FLAGS(5);
+userdata PT_LOAD FLAGS(6);
+userrodata PT_LOAD FLAGS(4);
+
+kinit PT_LOAD FLAGS(6);
+ksymtab PT_LOAD FLAGS(6);
+
+note PT_NULL FLAGS(0);

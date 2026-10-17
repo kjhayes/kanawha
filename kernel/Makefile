@@ -43,6 +43,7 @@ obj-y += \
 	udrv.o \
 	perf.o \
 	lock.o \
+	kuser.o \
 
 obj-y += stack.o
 

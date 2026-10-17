@@ -1,0 +1,34 @@
+
+#define KUSER_ALIGN 0x1000
+
+. = ALIGN(KUSER_ALIGN);
+__kuser_virt_start = .;
+__kuser_text_virt_start = .;
+.user.text : AT(VA_TO_PA(ADDR(.user.text))) {
+    *(.user.text*)
+    *(.user.text.*)
+} :usertext = 0
+. = ALIGN(KUSER_ALIGN);
+__kuser_text_virt_end = .;
+
+. = ALIGN(KUSER_ALIGN);
+__kuser_rodata_virt_start = .;
+.user.rodata : AT(VA_TO_PA(ADDR(.user.rodata))) {
+    *(.user.srodata .user.srodata.*)
+    *(.user.rodata .user.rodata.*)
+} :userrodata = 0
+. = ALIGN(KUSER_ALIGN);
+__kuser_rodata_virt_end = .;
+
+. = ALIGN(KUSER_ALIGN);
+__kuser_data_virt_start = .;
+.user.data : AT(VA_TO_PA(ADDR(.user.data))) {
+    *(.user.sdata .user.sdata.*)
+    *(.user.data .user.data.*)
+    *(.user.tdata .user.tdata.*)
+
+} :userdata = 0
+. = ALIGN(KUSER_ALIGN);
+__kuser_data_virt_end = .;
+__kuser_virt_end = .;
+

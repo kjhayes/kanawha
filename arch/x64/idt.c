@@ -236,35 +236,35 @@ x64_reload_all_smp_idt(void)
 }
 declare_init_desc(smp, x64_reload_all_smp_idt, "Reloading All CPU IDT(s)");
 
-static int
-x64_point_idt_at_userspace(void)
-{
-    struct x64_idt *idt = x64_get_default_idt();
-
-#define HANDLER_ADDR (0x8000181ul)
-
-    // Int 9
-    x64_set_idt_entry(
-            idt,
-            9,
-            (void*)HANDLER_ADDR,
-            x64_segment_selector(X64_USER_CODE_GDT_SEGMENT_OFFSET, 0, 0),
-            IDT64_ENTRY_FLAG_DPL_RING3
-           |IDT64_ENTRY_FLAG_GATE_TYPE_TRAP
-           |IDT64_ENTRY_FLAG_IST_NONE
-           |IDT64_ENTRY_FLAG_PRESENT);
-
-    // // Divide by zero
-    // x64_set_idt_entry(
-    //         idt,
-    //         0,
-    //         (void*)HANDLER_ADDR,
-    //         x64_segment_selector(X64_USER_CODE_GDT_SEGMENT_OFFSET, 0, 0),
-    //         IDT64_ENTRY_FLAG_DPL_RING3
-    //        |IDT64_ENTRY_FLAG_GATE_TYPE_TRAP
-    //        |IDT64_ENTRY_FLAG_IST_NONE
-    //        |IDT64_ENTRY_FLAG_PRESENT);
-    return 0;
-}
-declare_init_desc(launch, x64_point_idt_at_userspace, "Pointing IDT Trap Gate(s) At Userspace");
+// static int
+// x64_point_idt_at_userspace(void)
+// {
+//     struct x64_idt *idt = x64_get_default_idt();
+// 
+// #define HANDLER_ADDR (0x8000181ul)
+// 
+//     // Int 9
+//     x64_set_idt_entry(
+//             idt,
+//             9,
+//             (void*)HANDLER_ADDR,
+//             x64_segment_selector(X64_USER_CODE_GDT_SEGMENT_OFFSET, 0, 0),
+//             IDT64_ENTRY_FLAG_DPL_RING3
+//            |IDT64_ENTRY_FLAG_GATE_TYPE_TRAP
+//            |IDT64_ENTRY_FLAG_IST_NONE
+//            |IDT64_ENTRY_FLAG_PRESENT);
+// 
+//     // // Divide by zero
+//     // x64_set_idt_entry(
+//     //         idt,
+//     //         0,
+//     //         (void*)HANDLER_ADDR,
+//     //         x64_segment_selector(X64_USER_CODE_GDT_SEGMENT_OFFSET, 0, 0),
+//     //         IDT64_ENTRY_FLAG_DPL_RING3
+//     //        |IDT64_ENTRY_FLAG_GATE_TYPE_TRAP
+//     //        |IDT64_ENTRY_FLAG_IST_NONE
+//     //        |IDT64_ENTRY_FLAG_PRESENT);
+//     return 0;
+// }
+// declare_init_desc(launch, x64_point_idt_at_userspace, "Pointing IDT Trap Gate(s) At Userspace");
 

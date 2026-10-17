@@ -10,12 +10,9 @@ ENTRY( arm64_kernel_entry )
 
 PHDRS
 {
-  text PT_LOAD FLAGS(5);
-  data PT_LOAD FLAGS(6);
-  rodata PT_LOAD FLAGS(4);
+#include "phdrs.ldh"
   boottext PT_LOAD FLAGS(5);
   bootdata PT_LOAD FLAGS(6);
-  note PT_NULL FLAGS(0);
 }
 
 // Don't assume a physical base of zero, to give room for the program headers
@@ -26,8 +23,8 @@ SECTIONS
 
   PROVIDE(__arm64_kernel_load_addr = .);
 
-  __kernel_boot_start = .;
-  __kernel_phys_start = .;
+  __arm64_kernel_boot_start = .;
+  __arm64_kernel_phys_start = .;
 
   .boot.text ALIGN(16) : AT(ADDR(.boot.text)) {
       KEEP(*(.boot.text*))
@@ -38,11 +35,11 @@ SECTIONS
       KEEP(*(.boot.data.*))
   } :bootdata = 0
 
-  __kernel_boot_end = .;
+  __arm64_kernel_boot_end = .;
 
   . = CONFIG_ARM64_KERNEL_VIRTUAL_BASE + (LOAD_AFTER(.boot.data) - CONFIG_ARM64_LINKED_PHYS_BASE);
 
-  __kernel_virt_start = .;
+  __arm64_kernel_virt_start = .;
 
   .text ALIGN(0x1000) : AT(VA_TO_PA(ADDR(.text))) {
     *(.text*)
@@ -61,13 +58,13 @@ SECTIONS
     PROVIDE( __global_pointer$ = . + 0x800 );
   } :data = 0
 
-  __kernel_bss_start = .;
+  __arm64_kernel_bss_start = .;
   .bss : AT(VA_TO_PA(ADDR(.bss))) {
     *(.sbss .sbss.*)
     *(.bss .bss.*);
     *(.tbss .tbss*);
   } :data = 0
-  __kernel_bss_end = .;
+  __arm64_kernel_bss_end = .;
 
 // Past Here Everything Should be Discardable After Kernel Initialization
 
@@ -77,9 +74,11 @@ SECTIONS
 
   . = ALIGN(0x1000);
 
-  __kernel_virt_end = .;
-  __kernel_phys_end = . - CONFIG_ARM64_KERNEL_VIRTUAL_BASE;
-  __kernel_phys_size = __kernel_phys_end - __kernel_phys_start;
+  __arm64_kernel_virt_end = .;
+
+#include "kuser.ldh"
+
+  __arm64_kernel_phys_end = . - CONFIG_ARM64_KERNEL_VIRTUAL_BASE;
 
   .shstrtab : {
      *(.shstrtab* .shstrtab.*)

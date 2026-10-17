@@ -86,6 +86,16 @@ mem_flags_check_region(struct mem_flags *map,
                        unsigned long must_be_set,
                        unsigned long must_be_clear);
 
+// Combines "check_region", followed by "set_flags, clear_flags"
+int
+mem_flags_reserve_region(struct mem_flags *map,
+                         uintptr_t base,
+                         size_t size,
+                         unsigned long must_be_set,
+                         unsigned long must_be_clear,
+                         unsigned long to_set,
+                         unsigned long to_clear);
+
 void
 mem_flags_print(struct mem_flags *map,
                 printk_f *printer,
@@ -95,17 +105,25 @@ mem_flags_print(struct mem_flags *map,
  * Physical Memory Flags
  */
 
-#define PHYS_MEM_FLAGS_AVAIL (1UL << 0)
-#define PHYS_MEM_FLAGS_FW_RESV (1UL << 1)
-#define PHYS_MEM_FLAGS_KERNEL (1UL << 2)
-#define PHYS_MEM_FLAGS_RAM (1UL << 3)
-#define PHYS_MEM_FLAGS_SAVE (1UL << 4)
-#define PHYS_MEM_FLAGS_DEFECT (1UL << 5)
-#define PHYS_MEM_FLAGS_FW_IGNORE (1UL << 6)
-#define PHYS_MEM_FLAGS_PAGE_ALLOC (1UL << 7)
-#define PHYS_MEM_FLAGS_16_BIT (1UL << 8)
-#define PHYS_MEM_FLAGS_32_BIT (1UL << 9)
-#define PHYS_MEM_FLAGS_MMIO (1UL << 10)
+#define PHYS_MEM_FLAGS_XLIST(X,...)\
+X(AVAIL,       0,   ##__VA_ARGS__)\
+X(FW_RESV,     1,   ##__VA_ARGS__)\
+X(KERNEL,      2,   ##__VA_ARGS__)\
+X(RAM,         3,   ##__VA_ARGS__)\
+X(SAVE,        4,   ##__VA_ARGS__)\
+X(DEFECT,      5,   ##__VA_ARGS__)\
+X(FW_IGNORE,   6,   ##__VA_ARGS__)\
+X(PAGE_ALLOC,  7,   ##__VA_ARGS__)\
+X(16_BIT,      8,   ##__VA_ARGS__)\
+X(32_BIT,      9,   ##__VA_ARGS__)\
+X(MMIO,        10,  ##__VA_ARGS__)\
+
+enum {
+#define XCASE(__NAME, __BIT_OFFSET, ...)\
+    PHYS_MEM_FLAGS_##__NAME = (1UL<<(__BIT_OFFSET)),
+    PHYS_MEM_FLAGS_XLIST(XCASE)
+#undef XCASE
+};
 
 int
 phys_mem_flags_dump(void);
@@ -115,12 +133,22 @@ get_phys_mem_flags(void);
 /*
  * Virtual Memory Flags
  */
-#define VIRT_MEM_FLAGS_NONCANON (1UL << 0)
-#define VIRT_MEM_FLAGS_HIGHMEM (1UL << 1)
-#define VIRT_MEM_FLAGS_AVAIL (1UL << 2)
-#define VIRT_MEM_FLAGS_HEAP (1UL << 3)
-#define VIRT_MEM_FLAGS_MMIO (1UL << 4)
-#define VIRT_MEM_FLAGS_PERCPU (1UL << 5)
+
+#define VIRT_MEM_FLAGS_XLIST(X,...)\
+X(NONCANON,  0, ##__VA_ARGS__)\
+X(HIGHMEM,   1, ##__VA_ARGS__)\
+X(AVAIL,     2, ##__VA_ARGS__)\
+X(HEAP,      3, ##__VA_ARGS__)\
+X(MMIO,      4, ##__VA_ARGS__)\
+X(PERCPU,    5, ##__VA_ARGS__)\
+X(KUSER,     6, ##__VA_ARGS__)\
+
+enum {
+#define XCASE(__NAME, __BIT_OFFSET, ...)\
+    VIRT_MEM_FLAGS_##__NAME = (1UL<<(__BIT_OFFSET)),
+    VIRT_MEM_FLAGS_XLIST(XCASE)
+#undef XCASE
+};
 
 int
 virt_mem_flags_dump(void);

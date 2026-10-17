@@ -21,12 +21,12 @@ static void
 clear_bss(void)
 {
 
-    extern uint8_t __kernel_bss_start[];
-    extern uint8_t __kernel_bss_end[];
+    extern uint8_t __arm64_kernel_bss_start[];
+    extern uint8_t __arm64_kernel_bss_end[];
 
-    memset((void *)&__kernel_bss_start,
+    memset((void *)&__arm64_kernel_bss_start,
            0,
-           (uintptr_t)&__kernel_bss_end - (uintptr_t)&__kernel_bss_start);
+           (uintptr_t)&__arm64_kernel_bss_end - (uintptr_t)&__arm64_kernel_bss_start);
 }
 static void
 clear_percpu(void)

@@ -11,21 +11,16 @@ ENTRY( x64_kernel_entry )
 
 PHDRS
 {
-  header PT_PHDR PHDRS FLAGS(4);
-  phdrs PT_LOAD FILEHDR PHDRS FLAGS(5);
-  text PT_LOAD FLAGS(5);
-  data PT_LOAD FLAGS(6);
-  kinit PT_LOAD FLAGS(6);
-  ksymtab PT_LOAD FLAGS(6);
-  rodata PT_LOAD FLAGS(4);
-  boot PT_LOAD FLAGS(7);
-  note PT_NULL FLAGS(0);
+header PT_PHDR PHDRS FLAGS(4);
+phdrs PT_LOAD FILEHDR PHDRS FLAGS(5);
+#include "phdrs.ldh"
 }
 
 SECTIONS
 {  
   . = CONFIG_X64_KERNEL_LOAD_ADDR;
-  __kernel_phys_start = .;
+
+  __x64_kernel_phys_start = .;
 
   .hdrs ALIGN(16) : AT(CONFIG_X64_KERNEL_LOAD_ADDR) {
     *(.hdrs*) 
@@ -40,6 +35,7 @@ SECTIONS
   } :boot = 0
 
   . = KERNEL_VIRTUAL_ADDR + (LOAD_AFTER(.boot.data) - CONFIG_X64_KERNEL_LOAD_ADDR);
+  __x64_kernel_virt_start = .;
 
   .text ALIGN(0x1000) : AT(VA_TO_PA(ADDR(.text))) {
     *(.text*)
@@ -59,8 +55,8 @@ SECTIONS
 
   .bss : AT(VA_TO_PA(ADDR(.bss))) {
     *(.sbss .sbss.*)
-    *(.bss .bss.*);
-    *(.tbss .tbss*);
+    *(.bss .bss.*)
+    *(.tbss .tbss*)
   } :data = 0
 
 // Past Here Everything Should be Discardable After Kernel Initialization
@@ -69,9 +65,13 @@ SECTIONS
 #include "kinit.ldh"
 #include "ksymtab.ldh"
 
+  __x64_kernel_virt_end = .;
+
+#include "kuser.ldh"
+
   . = ALIGN(0x1000);
 
-  __kernel_phys_end = VA_TO_PA(.);
+  __x64_kernel_phys_end = VA_TO_PA(.);
 
   .shstrtab : {
      *(.shstrtab* .shstrtab.*)

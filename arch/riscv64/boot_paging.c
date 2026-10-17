@@ -79,12 +79,12 @@ riscv64_boot_alloc_page_table(void)
     return table;
 }
 
-extern uint8_t __kernel_virt_start[];
-extern uint8_t __kernel_virt_end[];
+extern uint8_t __riscv64_kernel_virt_start[];
+extern uint8_t __riscv64_kernel_virt_end[];
 __boot_data static void __phys *volatile kernel_start =
-    (void __phys *)&__kernel_virt_start;
+    (void __phys *)&__riscv64_kernel_virt_start;
 __boot_data static void __phys *volatile kernel_end =
-    (void __phys *)&__kernel_virt_end;
+    (void __phys *)&__riscv64_kernel_virt_end;
 
 static void __boot_text
 riscv64_boot_drill_mapping(struct riscv64_sv_page_table *pt,
