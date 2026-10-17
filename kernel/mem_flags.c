@@ -660,34 +660,42 @@ phys_mem_flags_static_init(void)
 }
 
 static int
-phys_mem_flags_reserve_kernel(void)
+mem_flags_reserve_kernel(void)
 {
     int res;
 
     void __phys *phys_start = arch_kernel_phys_start();
-    size_t size = arch_kernel_phys_size();
+    size_t phys_size = arch_kernel_phys_size();
+    void *virt_start = arch_kernel_virt_start();
+    size_t virt_size = arch_kernel_virt_size();
+    struct mem_flags *pflags = get_phys_mem_flags();
+    struct mem_flags *vflags = get_virt_mem_flags();
 
-    printk("Kernel Physical Region [%p - %p)\n", phys_start, phys_start + size);
-
-    res = mem_flags_set_flags(get_phys_mem_flags(),
-                              (uintptr_t)phys_start,
-                              size,
-                              PHYS_MEM_FLAGS_KERNEL);
-
-    if(res)
-    {
+    res = mem_flags_reserve_region(
+            pflags,
+            (uintptr_t)phys_start,
+            phys_size,
+            PHYS_MEM_FLAGS_RAM,
+            0,
+            PHYS_MEM_FLAGS_KERNEL,
+            PHYS_MEM_FLAGS_AVAIL);
+    if(res) {
         return res;
     }
+    printk("Reserved Kernel Physical Region [%p - %p)\n", phys_start, phys_start + phys_size);
 
-    res = mem_flags_clear_flags(get_phys_mem_flags(),
-                                (uintptr_t)arch_kernel_phys_start(),
-                                arch_kernel_phys_size(),
-                                PHYS_MEM_FLAGS_AVAIL);
-
-    if(res)
-    {
+    res = mem_flags_reserve_region(
+            vflags,
+            (uintptr_t)virt_start,
+            virt_size,
+            0,
+            VIRT_MEM_FLAGS_NONCANON,
+            VIRT_MEM_FLAGS_KERNEL,
+            VIRT_MEM_FLAGS_AVAIL);
+    if(res) {
         return res;
     }
+    printk("Reserved Kernel Virtual Region [%p - %p)\n", virt_start, virt_start + virt_size);
 
     return 0;
 }
@@ -716,8 +724,8 @@ declare_init_desc(static,
                   phys_mem_flags_static_init,
                   "Setting Up Physical Memory Map");
 declare_init_desc(post_mem_flags,
-                  phys_mem_flags_reserve_kernel,
-                  "Reserving the Kernel in Physical Memory");
+                  mem_flags_reserve_kernel,
+                  "Reserving the Kernel in Virtual/Physical Memory");
 
 /*
  * Virtual Memory

@@ -3,8 +3,8 @@
 #include <kanawha/mem_flags.h>
 #include <arch/x64/mmu.h>
 
-extern int __x64_kernel_phys_start[];
-extern int __x64_kernel_phys_end[];
+extern uint8_t __x64_kernel_phys_start[];
+extern uint8_t __x64_kernel_phys_end[];
 
 void __phys *
 arch_kernel_phys_start(void)
@@ -16,6 +16,20 @@ arch_kernel_phys_size(void)
 {
     return (size_t)((uintptr_t)__x64_kernel_phys_end -
                     (uintptr_t)__x64_kernel_phys_start);
+}
+
+extern uint8_t __x64_kernel_virt_start[];
+extern uint8_t __x64_kernel_virt_end[];
+void *
+arch_kernel_virt_start(void)
+{
+    return (void *)__x64_kernel_virt_start;
+}
+size_t
+arch_kernel_virt_size(void)
+{
+    return (size_t)((uintptr_t)(void*)__x64_kernel_virt_end -
+                    (uintptr_t)(void*)__x64_kernel_virt_start);
 }
 
 static int

@@ -31,6 +31,20 @@ arch_kernel_phys_size(void)
                      (uintptr_t)kernel_boot_start));
 }
 
+extern uint8_t __arm64_kernel_virt_start[];
+extern uint8_t __arm64_kernel_virt_end[];
+void *
+arch_kernel_virt_start(void)
+{
+    return (void *)__arm64_kernel_virt_start;
+}
+size_t
+arch_kernel_virt_size(void)
+{
+    return (size_t)((uintptr_t)(void*)__arm64_kernel_virt_end -
+                    (uintptr_t)(void*)__arm64_kernel_virt_start);
+}
+
 static int
 arm64_virt_flags_static_init(void)
 {
@@ -75,25 +89,6 @@ arm64_virt_flags_static_init(void)
                               VIRT_MEM_FLAGS_HIGHMEM);
     if(res)
     {
-        return res;
-    }
-
-    // Reserve the kernel in high-mem
-    printk("Reserving the Kernel in Virtual Memory [%p - %p)\n",
-           __arm64_kernel_virt_start,
-           __arm64_kernel_virt_end);
-    res = mem_flags_reserve_region(vflags,
-                                 (uintptr_t)__arm64_kernel_virt_start,
-                                 (__arm64_kernel_virt_end - __arm64_kernel_virt_start),
-                                 VIRT_MEM_FLAGS_AVAIL | VIRT_MEM_FLAGS_HIGHMEM,
-                                 0,
-                                 0,
-                                 VIRT_MEM_FLAGS_AVAIL);
-    if(res)
-    {
-        eprintk("Failed to reserve kernel in virtual memory! (err=%s)\n",
-                errnostr(res));
-        virt_mem_flags_dump();
         return res;
     }
 

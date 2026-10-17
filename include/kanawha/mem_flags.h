@@ -11,6 +11,11 @@ arch_kernel_phys_start(void);
 size_t
 arch_kernel_phys_size(void);
 
+void *
+arch_kernel_virt_start(void);
+size_t
+arch_kernel_virt_size(void);
+
 struct mem_flags_entry
 {
     uintptr_t base;
@@ -142,6 +147,7 @@ X(HEAP,      3, ##__VA_ARGS__)\
 X(MMIO,      4, ##__VA_ARGS__)\
 X(PERCPU,    5, ##__VA_ARGS__)\
 X(KUSER,     6, ##__VA_ARGS__)\
+X(KERNEL,    7, ##__VA_ARGS__)\
 
 enum {
 #define XCASE(__NAME, __BIT_OFFSET, ...)\
