@@ -8,6 +8,21 @@
 #include <string.h>
 #include <stdint.h>
 
+static inline int
+lassie_scan_specific(
+        FILE *file,
+        const char *spec)
+{
+    unsigned long len = strlen(spec);
+    for(unsigned long i = 0; i < len; i++) {
+        char c = fgetc(file);
+        if(c != spec[i]) {
+            return -EINVAL;
+        }
+    }
+    return 0;
+}
+
 static inline void
 lassie_json_skip_whitespace(FILE *file)
 {
@@ -41,11 +56,11 @@ lassie_json_read_boolean(
         FILE *file)
 {
     int res;
-    res = fscanf(file, "true");
+    res = lassie_scan_specific(file, "true");
     if(res == 0) {
         return lassie_create_boolean(1);
     }
-    res = fscanf(file, "false");
+    res = lassie_scan_specific(file, "false");
     if(res == 0) {
         return lassie_create_boolean(0);
     }
@@ -215,6 +230,13 @@ lassie_json_read_obj(
         }
         else if(c == '}') {
             return obj;
+        } else if(c != '"') {
+            // Expected key string
+            fprintf(stderr, "lassie_json_read_obj: expected key-string instead got \'%c\'\n",
+                    c);
+            lassie_json_write(stderr, lassie_from_obj(obj), 0, 0);
+            lassie_destroy_obj(obj);
+            return NULL;
         }
 
         // If this is an opening quotation mark, put it back
