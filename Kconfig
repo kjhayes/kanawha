@@ -1,3 +1,4 @@
+mainmenu "Kanawha Kernel Configuration"
 
 choice
   prompt "Architecture"
