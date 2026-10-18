@@ -17,6 +17,10 @@ lassie_scan_specific(
     for(unsigned long i = 0; i < len; i++) {
         char c = fgetc(file);
         if(c != spec[i]) {
+            ungetc(c, file);
+            for(long j = i-1; j >= 0; j--) {
+                ungetc(spec[j], file);
+            }
             return -EINVAL;
         }
     }
