@@ -153,3 +153,5 @@ clean: FORCE
 endif
 endif
 
+.SUFFIXES:
+

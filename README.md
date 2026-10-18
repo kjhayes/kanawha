@@ -9,7 +9,7 @@ A simple hobby kernel I'm ([Kevin](https://kjhayes.github.io)) writing in my fre
 
 On most x86_64 linux distributions
 ```
-make x64/defconfig
+make defconfig/x64
 make
 ```
 will build the kernel as `build/kanawha.o`.
@@ -30,9 +30,8 @@ configuration (the specifics of which can be found
 in the file `scripts/make/qemu.mk`).
 
 More kernel default configurations can be found in
-`setups/*/defconfig` or loaded by running `make */defconfig`
-(notably `make riscv64/defconfig` for testing the RISC-V support
-in Kanawha).
+`setups/*/defconfig` or `setups/*/%_defconfig` or loaded
+by running `make defconfig/*` or `make defconfig/*/%` respectively.
 
 To configure a custom kernel run
 ```

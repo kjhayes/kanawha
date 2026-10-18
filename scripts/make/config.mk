@@ -5,8 +5,11 @@ endef
 DOT_CONFIG ?= $(ROOT_DIR)/.config
 KERNEL_AUTOCONF ?= $(OUTPUT_DIR)/autoconf.h
 
-%/defconfig: $(SETUPS_DIR)/%/defconfig FORCE
-	$(Q)cp $(SETUPS_DIR)/$@ $(DOT_CONFIG)
+defconfig/%: $(SETUPS_DIR)/%/defconfig FORCE
+	$(Q)cp $(SETUPS_DIR)/$(*)/defconfig $(DOT_CONFIG)
+defconfig/%: $(SETUPS_DIR)/%_defconfig FORCE
+	$(Q)cp $(SETUPS_DIR)/$(*)_defconfig $(DOT_CONFIG)
+
 
 menuconfig: FORCE
 	$(Q)$(PYTHON) -m menuconfig
