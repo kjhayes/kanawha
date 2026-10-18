@@ -359,12 +359,12 @@ kinit_read_config(void)
         return -EINVAL;
     }
 
-    printf("kinit: Config...\n");
-    res = lassie_json_write(stdout, cfg, 0, 0);
-    if(res) {
-        return res;
-    }
-    putc('\n', stdout);
+    //printf("kinit: Config...\n");
+    //res = lassie_json_write(stdout, cfg, 0, 0);
+    //if(res) {
+    //    return res;
+    //}
+    //putc('\n', stdout);
 
     res = kinit_handle_config(cfg);
     lassie_destroy(cfg);

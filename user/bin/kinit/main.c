@@ -9,7 +9,7 @@ int main(int argc, const char **argv)
 {
     int res;
 
-    puts("kinit\n");
+    puts("--- Kanawha OS ---\n");
 
     res = kinit_read_config();
     if(res) {
