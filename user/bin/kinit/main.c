@@ -18,13 +18,18 @@ int main(int argc, const char **argv)
     {
         struct kinit_daemon *d = kinit_daemons_begin();
         while(d) {
-            printf("DAEMON(\"%s\")\n", kinit_daemon_get_name(d));
+            res = kinit_daemon_start_manager(d);
+            if(res) {
+                fprintf(stderr, "Failed to start manager for daemon \'%s\'\n",
+                        kinit_daemon_get_name(d));
+            }
             d = kinit_daemons_next(d);
         }
     }
 
     while(1) { // This is "init" we should *never* return
-        sleep(1000);
+        // Sleep for 10 seconds at a time... (TODO: actually invoke `wait`)
+        sleep(10000);
     }
 
     // Exiting "init" is always an error

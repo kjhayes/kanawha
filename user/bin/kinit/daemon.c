@@ -288,11 +288,13 @@ kinit_daemon_start_manager(
 {
     int res;
     if(d->manager_status != KINIT_DAEMON_MANAGER_STATUS_INIT) {
+        fprintf(stderr, "kinit_daemon_start_manager: manager_status != INIT\n");
         return -EINVAL;
     }
     d->manager_status = KINIT_DAEMON_MANAGER_STATUS_MANAGED;
     res = thrd_create(&d->manager, kinit_daemon_manager, d);
     if(res) {
+        fprintf(stderr, "kinit_daemon_start_manager: thrd_create failed!\n");
         return res;
     }
     return 0;

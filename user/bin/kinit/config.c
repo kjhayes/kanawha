@@ -97,11 +97,6 @@ kinit_handle_daemon_config(
 
     } while(0);
 
-    res = kinit_daemon_start_manager(daemon);
-    if(res) {
-        return res;
-    }
-
     return 0;
 }
 
