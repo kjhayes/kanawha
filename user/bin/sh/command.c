@@ -2,7 +2,7 @@
 #include "command.h"
 #include <kanawha/environ.h>
 #include <kanawha/process.h>
-#include <kanawha/sys-wrappers.h>
+#include <kanawha/syscall.h>
 
 #include <ctype.h>
 #include <errno.h>

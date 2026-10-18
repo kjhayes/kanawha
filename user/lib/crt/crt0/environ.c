@@ -1,6 +1,6 @@
 
 #include <kanawha/environ.h>
-#include <kanawha/sys-wrappers.h>
+#include <kanawha/syscall.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>

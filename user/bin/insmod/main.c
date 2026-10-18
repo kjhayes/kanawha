@@ -1,5 +1,5 @@
 
-#include "kanawha/sys-wrappers.h"
+#include "kanawha/syscall.h"
 #include <stdio.h>
 
 const char *progname = "insmod";

@@ -1,6 +1,6 @@
 
 #include <kanawha/mount.h>
-#include <kanawha/sys-wrappers.h>
+#include <kanawha/syscall.h>
 #include <sys/stat.h>
 #include <unistd.h>
 

@@ -1,6 +1,6 @@
 
 #include <semaphore.h>
-#include <kanawha/sys-wrappers.h>
+#include <kanawha/syscall.h>
 #include <kanawha/mwait.h>
 
 int

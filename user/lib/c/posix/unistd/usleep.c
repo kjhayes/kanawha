@@ -1,6 +1,6 @@
 
 #include <kanawha/sleep.h>
-#include <kanawha/sys-wrappers.h>
+#include <kanawha/syscall.h>
 #include <sys/types.h>
 
 int

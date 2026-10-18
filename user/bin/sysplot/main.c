@@ -1,5 +1,5 @@
 
-#include <kanawha/sys-wrappers.h>
+#include <kanawha/syscall.h>
 #include <kanawha/time.h>
 #include <stdio.h>
 #include <stdlib.h>

@@ -1,6 +1,6 @@
 
 #include <elk-libc-internal/atexit.h>
-#include <kanawha/sys-wrappers.h>
+#include <kanawha/syscall.h>
 #include <stdlib.h>
 
 void

@@ -1,6 +1,6 @@
 
 #include <kanawha/mmap.h>
-#include <kanawha/sys-wrappers.h>
+#include <kanawha/syscall.h>
 
 #include <stddef.h>
 

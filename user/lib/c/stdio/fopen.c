@@ -4,7 +4,7 @@
 #include <elk-libc-internal/dofopen.h>
 
 #include <kanawha/file.h>
-#include <kanawha/sys-wrappers.h>
+#include <kanawha/syscall.h>
 
 #include <errno.h>
 #include <stdio.h>

@@ -1,6 +1,6 @@
 
 #include <kanawha/mmap.h>
-#include <kanawha/sys-wrappers.h>
+#include <kanawha/syscall.h>
 
 int
 __elk_crt__map_zero_page(void)

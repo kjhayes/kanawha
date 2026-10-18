@@ -2,7 +2,7 @@
 #include <errno.h>
 #include <kanawha/file.h>
 #include <kanawha/snd.h>
-#include <kanawha/sys-wrappers.h>
+#include <kanawha/syscall.h>
 #include <ksnd/ksnd.h>
 #include <stdio.h>
 #include <stdlib.h>

@@ -5,7 +5,7 @@
 #include <kanawha/environ.h>
 #include <kanawha/exec.h>
 #include <kanawha/spawn.h>
-#include <kanawha/sys-wrappers.h>
+#include <kanawha/syscall.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>

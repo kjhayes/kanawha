@@ -3,7 +3,7 @@
 #include <sock/sock.h>
 #include <sock/msg.h>
 
-#include <kanawha/sys-wrappers.h>
+#include <kanawha/syscall.h>
 
 #include <unistd.h>
 #include <errno.h>

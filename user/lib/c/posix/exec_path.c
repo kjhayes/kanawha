@@ -2,7 +2,7 @@
 #include <elk-libc-internal/exec_path.h>
 #include <errno.h>
 #include <kanawha/file.h>
-#include <kanawha/sys-wrappers.h>
+#include <kanawha/syscall.h>
 #include <stdlib.h>
 #include <string.h>
 

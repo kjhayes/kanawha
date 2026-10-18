@@ -1,6 +1,6 @@
 
 #include <kanawha/sleep.h>
-#include <kanawha/sys-wrappers.h>
+#include <kanawha/syscall.h>
 
 unsigned int
 sleep(unsigned int seconds)

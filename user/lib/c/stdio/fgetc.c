@@ -1,7 +1,7 @@
 
 #include <elk-libc-internal/__sFILE.h>
 #include <kanawha/file.h>
-#include <kanawha/sys-wrappers.h>
+#include <kanawha/syscall.h>
 
 #include <assert.h>
 #include <stdio.h>

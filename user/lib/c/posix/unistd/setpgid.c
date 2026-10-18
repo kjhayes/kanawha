@@ -1,7 +1,7 @@
 
 #include <errno.h>
 #include <kanawha/process.h>
-#include <kanawha/sys-wrappers.h>
+#include <kanawha/syscall.h>
 #include <unistd.h>
 
 int

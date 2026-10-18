@@ -2,7 +2,7 @@
 #include <dirent.h>
 #include <elk-libc-internal/DIR.h>
 #include <errno.h>
-#include <kanawha/sys-wrappers.h>
+#include <kanawha/syscall.h>
 #include <stdio.h>
 #include <sys/limits.h>
 

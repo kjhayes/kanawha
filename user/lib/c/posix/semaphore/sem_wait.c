@@ -3,7 +3,7 @@
 #include <semaphore.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <kanawha/sys-wrappers.h>
+#include <kanawha/syscall.h>
 #include <kanawha/mwait.h>
 
 int

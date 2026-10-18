@@ -2,7 +2,7 @@
 #include <errno.h>
 #include <kanawha/dir.h>
 #include <kanawha/file.h>
-#include <kanawha/sys-wrappers.h>
+#include <kanawha/syscall.h>
 #include <stdio.h>
 #include <stdlib.h>
 

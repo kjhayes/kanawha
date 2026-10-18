@@ -1,6 +1,6 @@
 
 #include <errno.h>
-#include <kanawha/sys-wrappers.h>
+#include <kanawha/syscall.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>

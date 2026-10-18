@@ -1,5 +1,5 @@
 
-#include "kanawha/sys-wrappers.h"
+#include "kanawha/syscall.h"
 #include <kanawha/signal.h>
 #include <stdio.h>
 #include <stdlib.h>

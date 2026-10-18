@@ -4,7 +4,7 @@
 #include <errno.h>
 #include <kanawha/exec.h>
 #include <kanawha/spawn.h>
-#include <kanawha/sys-wrappers.h>
+#include <kanawha/syscall.h>
 #include <unistd.h>
 
 int

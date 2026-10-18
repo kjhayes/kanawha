@@ -2,7 +2,7 @@
 #include <fcntl.h>
 #include <kanawha/errno.h>
 #include <kanawha/file.h>
-#include <kanawha/sys-wrappers.h>
+#include <kanawha/syscall.h>
 #include <stdarg.h>
 
 extern int

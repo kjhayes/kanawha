@@ -2,7 +2,7 @@
 #include "command.h"
 #include "directive.h"
 #include <kanawha/prinfo.h>
-#include <kanawha/sys-wrappers.h>
+#include <kanawha/syscall.h>
 
 #include <ctype.h>
 #include <errno.h>

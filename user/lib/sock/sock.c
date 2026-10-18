@@ -1,7 +1,7 @@
 
 #include <sock/sock.h>
 
-#include <kanawha/sys-wrappers.h>
+#include <kanawha/syscall.h>
 #include <errno.h>
 #include <stdlib.h>
 #include <unistd.h>

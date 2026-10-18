@@ -4,7 +4,7 @@
 #include <paint/paint.h>
 #include <kanawha/fb.h>
 #include <kanawha/file.h>
-#include <kanawha/sys-wrappers.h>
+#include <kanawha/syscall.h>
 #include <kfb/kfb.h>
 #include <stdio.h>
 #include <stdlib.h>

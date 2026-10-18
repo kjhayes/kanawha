@@ -1,7 +1,7 @@
 
 #include <errno.h>
 #include <kanawha/spawn.h>
-#include <kanawha/sys-wrappers.h>
+#include <kanawha/syscall.h>
 #include <stdint.h>
 #include <sys/wait.h>
 #include <threads.h>

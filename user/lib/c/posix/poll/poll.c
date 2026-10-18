@@ -1,6 +1,6 @@
 
 #include <kanawha/poll.h>
-#include <kanawha/sys-wrappers.h>
+#include <kanawha/syscall.h>
 #include <poll.h>
 
 int

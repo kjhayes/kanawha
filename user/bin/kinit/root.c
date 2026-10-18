@@ -1,7 +1,7 @@
 
 #include <kanawha/file.h>
 #include <kanawha/mount.h>
-#include <kanawha/sys-wrappers.h>
+#include <kanawha/syscall.h>
 
 int
 kinit_set_root_fs(

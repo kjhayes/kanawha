@@ -4,7 +4,7 @@
 #include <kanawha/errno.h>
 #include <kanawha/file.h>
 #include <kanawha/mount.h>
-#include <kanawha/sys-wrappers.h>
+#include <kanawha/syscall.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

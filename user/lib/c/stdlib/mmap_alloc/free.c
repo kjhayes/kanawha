@@ -1,5 +1,5 @@
 
-#include <kanawha/sys-wrappers.h>
+#include <kanawha/syscall.h>
 
 #include <assert.h>
 #include <stddef.h>

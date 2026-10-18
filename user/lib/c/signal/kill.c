@@ -1,7 +1,7 @@
 
 #include <errno.h>
 #include <kanawha/process.h>
-#include <kanawha/sys-wrappers.h>
+#include <kanawha/syscall.h>
 
 int
 kill(pid_t pid, int sig)

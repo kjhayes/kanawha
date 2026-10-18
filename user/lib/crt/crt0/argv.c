@@ -2,7 +2,7 @@
 #include <kanawha/environ.h>
 #include <kanawha/errno.h>
 #include <kanawha/mmap.h>
-#include <kanawha/sys-wrappers.h>
+#include <kanawha/syscall.h>
 
 static size_t
 strlen(char *str)

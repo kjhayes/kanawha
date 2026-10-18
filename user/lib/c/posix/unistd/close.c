@@ -1,6 +1,6 @@
 
 #include <kanawha/file.h>
-#include <kanawha/sys-wrappers.h>
+#include <kanawha/syscall.h>
 
 int
 close(int fd)

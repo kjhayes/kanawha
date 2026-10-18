@@ -1,7 +1,7 @@
 
 #include "daemon.h"
 #include <errno.h>
-#include <kanawha/sys-wrappers.h>
+#include <kanawha/syscall.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <sock/sock.h>

@@ -2,7 +2,7 @@
 #include <elk-libc-internal/DIR.h>
 #include <errno.h>
 #include <kanawha/file.h>
-#include <kanawha/sys-wrappers.h>
+#include <kanawha/syscall.h>
 
 DIR *
 fdopendir(int fd)

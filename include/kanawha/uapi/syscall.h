@@ -11,6 +11,11 @@
 #include <kanawha/process.h>
 #include <kanawha/signature.h>
 #include <kanawha/types.h>
+#include <kanawha/mmap.h>
+#include <kanawha/sleep.h>
+#include <kanawha/types.h>
+#include <stddef.h>
+#include <stdint.h>
 #endif
 
 typedef int syscall_id_t;
@@ -353,7 +358,7 @@ SYSCALL_XLIST(DECLARE_SYSCALL_ID_CONSTANTS)
     SYSCALL_MAX_NUM_IDS,
 };
 
-#else
+#else /* !KANAWHA_BUILDING_KERNEL */
 
 #ifdef __user
 #undef __user
@@ -406,5 +411,4 @@ SYSCALL_XLIST(KANAWHA_DECLARE_UAPI_SYSCALL)
 #undef SYSCALL_XLIST
 
 #endif
-
 #endif

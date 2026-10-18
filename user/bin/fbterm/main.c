@@ -4,7 +4,7 @@
 #include <getopt.h>
 #include <kanawha/file.h>
 #include <kanawha/spawn.h>
-#include <kanawha/sys-wrappers.h>
+#include <kanawha/syscall.h>
 #include <kfb/kfb.h>
 #include <poll.h>
 #include <stdio.h>

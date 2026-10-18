@@ -4,7 +4,7 @@
 #include <elk-libc-internal/ringbuf.h>
 #include <errno.h>
 #include <kanawha/file.h>
-#include <kanawha/sys-wrappers.h>
+#include <kanawha/syscall.h>
 #include <semaphore.h>
 #include <stddef.h>
 #include <stdint.h>
