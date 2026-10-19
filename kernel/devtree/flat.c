@@ -11,6 +11,9 @@ fdt_check_header(struct fdt *fdt)
     uint32_t magic = fdttoh32(fdt->hdr.magic);
     if(magic != FDT_MAGIC)
     {
+        dprintk("fdt_check_header: received 0x%x (expected 0x%x)\n",
+                (unsigned int)magic,
+                (unsigned int)FDT_MAGIC);
         return -EINVAL;
     }
     return 0;

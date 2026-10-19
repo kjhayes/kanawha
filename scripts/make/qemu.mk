@@ -108,6 +108,9 @@ QEMU_FLAGS += -m 2G
 QEMU_FLAGS += -drive file=$(OUTPUT_DIR)/initrd,if=none,id=virtio-disk-root,format=raw \
 			  -device virtio-blk-pci,disable-legacy=on,disable-modern=off,drive=virtio-disk-root,id=root-disk
 
+QEMU_DEPS += $(OUTPUT_DIR)/initrd
+QEMU_FLAGS += -initrd $(OUTPUT_DIR)/initrd
+
 # QEMU_FLAGS += -display none
 
 QEMU_DEPS += $(OUTPUT_DIR)/initrd

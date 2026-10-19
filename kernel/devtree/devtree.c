@@ -29,11 +29,17 @@ devtree_provide_physical_fdt(
     int res;
 
     struct fdt *fdt = __va(phys_fdt);
+    dprintk("Checking provided device tree: (pa=%p, va=%p)\n",
+            phys_fdt,
+            fdt);
 
     // Check the DTB
     res = fdt_check_header(fdt);
     if(res)
     {
+        dprintk("Invalid device tree header! (pa=%p, va=%p)\n",
+                phys_fdt,
+                fdt);
         return res;
     }
 
@@ -56,6 +62,9 @@ devtree_provide_physical_fdt(
     if(tree == NULL)
     {
         device_tree_list_lock_release();
+        dprintk("Cannot handle provided device tree (no memory) (pa=%p, va=%p)\n",
+                phys_fdt,
+                fdt);
         return -ENOMEM;
     }
 
