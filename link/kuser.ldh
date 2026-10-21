@@ -1,7 +1,10 @@
+#ifdef CONFIG_KUSER
 
 #define KUSER_ALIGN 0x1000
 
 . = ALIGN(KUSER_ALIGN);
+__kuser_phys_start = VA_TO_PA(.);
+. = CONFIG_KUSER_VIRTUAL_BASE;
 __kuser_virt_start = .;
 __kuser_text_virt_start = .;
 .user.text : AT(VA_TO_PA(ADDR(.user.text))) {
@@ -32,3 +35,4 @@ __kuser_data_virt_start = .;
 __kuser_data_virt_end = .;
 __kuser_virt_end = .;
 
+#endif

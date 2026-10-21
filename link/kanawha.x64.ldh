@@ -66,12 +66,9 @@ SECTIONS
 #include "ksymtab.ldh"
 
   __x64_kernel_virt_end = .;
+  __x64_kernel_phys_end = VA_TO_PA(.);
 
 #include "kuser.ldh"
-
-  . = ALIGN(0x1000);
-
-  __x64_kernel_phys_end = VA_TO_PA(.);
 
   .shstrtab : {
      *(.shstrtab* .shstrtab.*)
