@@ -229,6 +229,29 @@ kinit_handle_root_config(
 }
 
 static int
+kinit_handle_daemon_socket_config(
+        struct lassie *socket_cfg,
+        struct kinit_daemon *daemon)
+{
+    int res;
+
+    struct lassie_string *socket_str = lassie_to_string(socket_cfg);
+    if(socket_str)
+    {
+        const char *env = lassie_string_get_value(socket_str);
+        res = kinit_daemon_add_socket(daemon, env);
+        if(res) {
+            fprintf(stderr, "kinit_handle_daemon_socket_config: failed to add daemon socket \"%s\"!\n",
+                    env);
+            return res;
+        }
+        return 0;
+    }
+
+    return -EINVAL;
+}
+
+static int
 kinit_handle_daemon_config(
         struct lassie *daemon_cfg)
 {
@@ -252,6 +275,24 @@ kinit_handle_daemon_config(
             const char *str = lassie_string_get_value(name_string);
             if(str != NULL) {
                 kinit_daemon_set_name(daemon, str);
+            }
+        }
+    }
+
+    {
+        struct lassie_array *socket_array;
+        socket_array = lassie_obj_field_array(daemon_obj, "socket");
+        if(socket_array != NULL) {
+            struct lassie *socket = lassie_array_begin(socket_array);
+            while(socket) {
+                res = kinit_handle_daemon_socket_config(
+                        socket,
+                        daemon);
+                if(res) {
+                    fprintf(stderr, "kinit_handle_daemon_config: failed to handle \"socket\" array entry!\n");
+                    return res;
+                }
+                socket = lassie_array_next(socket_array, socket);
             }
         }
     }

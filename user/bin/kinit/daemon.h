@@ -50,4 +50,9 @@ int
 kinit_daemon_stop_manager(
         struct kinit_daemon *d);
 
+int
+kinit_daemon_add_socket(
+        struct kinit_daemon *d,
+        const char *env);
+
 #endif

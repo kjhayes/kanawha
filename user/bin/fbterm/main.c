@@ -90,8 +90,8 @@ panic_usage(void)
 struct shell
 {
     int shell_pid;
-    int shell_stdin;
-    int shell_stdout;
+    int shell_stdin; // Write to here (sh will read)
+    int shell_stdout; // Read from here (sh will write)
     int shell_stdout_hijack;
 };
 
@@ -182,6 +182,10 @@ launch_shell(
     }
 #endif
 
+    shell.shell_stdin = shell_stdin[1];
+    shell.shell_stdout = shell_stdout[0];
+    tdata->response_fd = shell.shell_stdin;
+
     int pid = fork();
     if(pid == 0)
     {
@@ -194,9 +198,6 @@ launch_shell(
     }
 
     shell.shell_pid = pid;
-    shell.shell_stdin = shell_stdin[1];
-    shell.shell_stdout = shell_stdout[0];
-    tdata->response_fd = shell.shell_stdin;
 
 #ifdef USE_PTY
     shell.shell_stdout_hijack = -1;

@@ -5,6 +5,7 @@
 #include <errno.h>
 #include <threads.h>
 #include <unistd.h>
+#include <sock/sock.h>
 #include <sys/wait.h>
 #include <elk/list.h>
 
@@ -27,9 +28,24 @@ struct kinit_daemon
     int pid;
 
     list_node_t list_node;
+
+    list_t sockets;
+};
+
+struct kinit_daemon_socket {
+    list_node_t list_node;
+    char *env;
+    fd_t fd;
 };
 
 static list_t daemon_list;
+
+DEFINE_CUSTOM_LIST(
+        _kinit_daemon_sockets,
+        struct kinit_daemon,
+        sockets,
+        struct kinit_daemon_socket,
+        list_node);
 
 int
 kinit_setup_daemons(void)
@@ -68,6 +84,17 @@ kinit_destroy_daemon_from_manager(
         }
         free(d->exec_command);
         d->exec_command = NULL;
+    }
+    {
+        struct kinit_daemon_socket *s;
+        while(1) {
+            s = _kinit_daemon_sockets_begin(d);
+            _kinit_daemon_sockets_remove(d, s);
+            close(s->fd);
+            unsetenv(s->env);
+            free(s->env);
+            free(s);
+        }
     }
     free(d->name);
     free(d);
@@ -200,6 +227,7 @@ kinit_create_daemon(void)
     d->pid = -1;
     d->status = KINIT_DAEMON_STATUS_EXITED;
     d->manager_status = KINIT_DAEMON_MANAGER_STATUS_INIT;
+    _kinit_daemon_sockets_init(d);
 
     list_push_tail(&daemon_list, &d->list_node);
 
@@ -336,5 +364,50 @@ kinit_daemons_next(
         return NULL;
     }
     return container_of(node, struct kinit_daemon, list_node);
+}
+
+int
+kinit_daemon_add_socket(
+        struct kinit_daemon *d,
+        const char *env)
+{
+    int res;
+
+    struct kinit_daemon_socket *s = malloc(sizeof(*s));
+    if(s == NULL) {
+        return -ENOMEM;
+    }
+    memset(s, 0, sizeof(*s));
+
+    s->env = strdup(env);
+    if(s->env == NULL) {
+        free(s);
+        return -ENOMEM;
+    }
+
+    res = sock_create_socket(env);
+    if(res) {
+        free(s->env);
+        free(s);
+        fprintf(stderr, "kinit_daemon_add_socket: sock_create_socket returned %d!\n",
+                res);
+        return res;
+    }
+
+    unsigned long fd_value;
+    const char *fd_str = getenv(s->env);
+    if(fd_str == NULL) {
+        free(s->env);
+        free(s);
+        fprintf(stderr, "kinit_daemon_add_socket: failed to read environment variable \"%s\"\n",
+                s->env);
+        return -EINVAL;
+    }
+    fd_value = strtoul(fd_str, NULL, 0);
+    s->fd = fd_value;
+
+    _kinit_daemon_sockets_push_tail(d, s);
+
+    return 0;
 }
 

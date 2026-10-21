@@ -24,7 +24,7 @@ QEMU_FLAGS += -trace "*pl011*"
 # QEMU_FLAGS += -display gtk
 
 QEMU_FLAGS += -device virtio-rng,disable-legacy=on,disable-modern=off
-QEMU_FLAGS += -device virtio-keyboard-pci,disable-legacy=on
+# QEMU_FLAGS += -device virtio-keyboard-pci,disable-legacy=on
 
 QEMU_FLAGS += \
   -drive file=scsi.img,format=raw,if=none,id=hdscsi \
