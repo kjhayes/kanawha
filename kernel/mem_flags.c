@@ -7,6 +7,7 @@
 #include <kanawha/page_alloc.h>
 #include <kanawha/string.h>
 #include <kanawha/vmem.h>
+#include <kanawha/kinfo.h>
 
 #define MEM_FLAGS_FLAG_STATIC_BUFFER (1UL << 0)
 
@@ -588,6 +589,28 @@ mem_flags_reserve_region(struct mem_flags *map,
     return 0;
 }
 
+ssize_t
+mem_flags_size_matching(
+        struct mem_flags *map,
+        unsigned long must_be_set,
+        unsigned long must_be_clear)
+{
+    ssize_t count = 0;
+    spin_lock(&map->lock);
+    for(size_t i = 0; i < map->num_entries; i++) {
+        struct mem_flags_entry *e = &map->entries[i];
+        if(e->flags & must_be_clear) {
+            continue;
+        }
+        if((e->flags & must_be_set) != must_be_set) {
+            continue;
+        }
+        count += e->size;
+    }
+    spin_unlock(&map->lock);
+    return count;
+}
+
 void
 mem_flags_print(struct mem_flags *map,
                 printk_f *printer,
@@ -890,3 +913,29 @@ free_phys_mem(void)
 declare_init_desc(page_alloc,
                   free_phys_mem,
                   "Freeing Available Physical Memory");
+
+#define PHYS_MEM_KINFO(X,...)\
+X(phys_ram, PHYS_MEM_FLAGS_RAM, 0)\
+X(phys_mmio, PHYS_MEM_FLAGS_MMIO, 0)\
+X(phys_page_alloc, PHYS_MEM_FLAGS_PAGE_ALLOC, 0)\
+X(phys_fw_resv, PHYS_MEM_FLAGS_FW_RESV, 0)\
+X(phys_defect, PHYS_MEM_FLAGS_DEFECT, 0)\
+X(phys_fw_ignore, PHYS_MEM_FLAGS_FW_IGNORE, 0)\
+X(phys_avail, PHYS_MEM_FLAGS_AVAIL, 0)\
+
+#define XCASE(__NAME, __SET, __CLR)\
+declare_kinfo(__NAME, "%lu",\
+        (ul_t)({\
+            ssize_t size = 0;\
+            struct mem_flags *flags = get_phys_mem_flags();\
+            if(flags != NULL) {\
+                size = mem_flags_size_matching(\
+                        flags,\
+                        (__SET),\
+                        (__CLR));\
+            }\
+            size;\
+        }));
+PHYS_MEM_KINFO(XCASE)
+#undef XCASE
+

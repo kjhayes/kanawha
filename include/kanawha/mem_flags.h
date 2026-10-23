@@ -101,6 +101,13 @@ mem_flags_reserve_region(struct mem_flags *map,
                          unsigned long to_set,
                          unsigned long to_clear);
 
+// Get the "size" of regions matching a description
+ssize_t
+mem_flags_size_matching(
+        struct mem_flags *map,
+        unsigned long must_be_set,
+        unsigned long must_be_clear);
+
 void
 mem_flags_print(struct mem_flags *map,
                 printk_f *printer,
