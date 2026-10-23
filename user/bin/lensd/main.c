@@ -6,25 +6,28 @@
 
 int lensd_running = 1;
 
+#define INFO(FMT, ...)\
+    printf(FMT, ##__VA_ARGS__)
+
 int main(int argc, const char **argv)
 {
     int res;
 
-    printf("lensd: running...\n"); fflush(stdout);
+    INFO("lensd: running...\n"); fflush(stdout);
 
     lensd_running = 1;
     lens_init(); 
-    printf("lensd: lens inited\n"); fflush(stdout);
+    INFO("lensd: lens inited\n"); fflush(stdout);
     ctx_init();
-    printf("lensd: ctx inited\n"); fflush(stdout);
+    INFO("lensd: ctx inited\n"); fflush(stdout);
     display_init();
-    printf("lensd: display inited\n"); fflush(stdout);
+    INFO("lensd: display inited\n"); fflush(stdout);
     render_init();
-    printf("lensd: render inited\n"); fflush(stdout);
+    INFO("lensd: render inited\n"); fflush(stdout);
     listener_init();
-    printf("lensd: listener inited\n"); fflush(stdout);
+    INFO("lensd: listener inited\n"); fflush(stdout);
     input_init();
-    printf("lensd: input inited\n"); fflush(stdout);
+    INFO("lensd: input inited\n"); fflush(stdout);
 
     add_display("/dev/fb/vga", 0);
     // add_display("/dev/fb/virtio-gpu-0", 0);
