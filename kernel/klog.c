@@ -13,6 +13,7 @@
 #include <kanawha/stddef.h>
 #include <kanawha/string.h>
 #include <kanawha/thread.h>
+#include <kanawha/kinfo.h>
 
 static int __klog_boot_frames_used = 0;
 static uint8_t
@@ -143,18 +144,6 @@ static struct fs_node_ops klog_fs_node_ops;
 static struct fs_file_ops klog_fs_file_ops;
 static struct vfs_node klog_fs_node = {0};
 
-static struct fs_node_ops kmem_total_fs_node_ops;
-static struct fs_file_ops kmem_total_fs_file_ops;
-static struct vfs_node kmem_total_fs_node = {0};
-
-static struct fs_node_ops kmem_free_fs_node_ops;
-static struct fs_file_ops kmem_free_fs_file_ops;
-static struct vfs_node kmem_free_fs_node = {0};
-
-static struct fs_node_ops total_cpu_percent_fs_node_ops;
-static struct fs_file_ops total_cpu_percent_fs_file_ops;
-static struct vfs_node total_cpu_percent_fs_node = {0};
-
 static int
 klog_init_fs_mount(void)
 {
@@ -179,40 +168,7 @@ klog_init_fs_mount(void)
         return res;
     }
 
-    kmem_total_fs_node.fs_file_ops = &kmem_total_fs_file_ops;
-    kmem_total_fs_node.fs_node_ops = &kmem_total_fs_node_ops;
-    res = vfs_mount_insert_node_and_link_root(mnt,
-                                              &kmem_total_fs_node,
-                                              "mem_total");
-    if(res)
-    {
-        vfs_mount_destroy(mnt);
-        return res;
-    }
-
-    kmem_free_fs_node.fs_file_ops = &kmem_free_fs_file_ops;
-    kmem_free_fs_node.fs_node_ops = &kmem_free_fs_node_ops;
-    res = vfs_mount_insert_node_and_link_root(mnt,
-                                              &kmem_free_fs_node,
-                                              "mem_free");
-    if(res)
-    {
-        vfs_mount_destroy(mnt);
-        return res;
-    }
-
-    total_cpu_percent_fs_node.fs_file_ops = &total_cpu_percent_fs_file_ops;
-    total_cpu_percent_fs_node.fs_node_ops = &total_cpu_percent_fs_node_ops;
-    res = vfs_mount_insert_node_and_link_root(mnt,
-                                              &total_cpu_percent_fs_node,
-                                              "usage_percent");
-    if(res)
-    {
-        vfs_mount_destroy(mnt);
-        return res;
-    }
-
-    res = sysfs_register_mount(&klog_fs_mount->fs_mount, "info");
+    res = sysfs_register_mount(&klog_fs_mount->fs_mount, "klog");
     if(res)
     {
         vfs_mount_destroy(mnt);
@@ -282,88 +238,8 @@ static struct fs_file_ops klog_fs_file_ops = {
 };
 FS_FILE_OPS_INIT_UNDEF(klog_fs_file_ops);
 
-static ssize_t
-kmem_total_fs_file_read(struct file *file,
-                        void *buffer,
-                        ssize_t amount,
-                        unsigned long flags)
-{
-    if(file->seek_offset != 0)
-    {
-        return 0;
-    }
-    size_t total = page_alloc_amount_total();
-    snprintk(buffer, amount, "%lu", total);
-    ((char *)buffer)[amount - 1] = '\0';
-    return strlen(buffer);
-}
+declare_kinfo(klog_boot_frames, "%lu/%lu (%u%%)",
+        (ul_t)__klog_boot_frames_used,
+        (ul_t)(CONFIG_KLOG_BOOT_FRAMES),
+        (u_t)((100 * __klog_boot_frames_used)/CONFIG_KLOG_BOOT_FRAMES));
 
-static struct fs_node_ops kmem_total_fs_node_ops = {
-    .flush = fs_node_flush_nop,
-};
-FS_NODE_OPS_INIT_UNDEF(kmem_total_fs_node_ops);
-
-static struct fs_file_ops kmem_total_fs_file_ops = {
-    .read = kmem_total_fs_file_read,
-    .write = fs_file_eof_write,
-    .flush = fs_file_nop_flush,
-    .seek = fs_file_seek_pinned_zero,
-};
-FS_FILE_OPS_INIT_UNDEF(kmem_total_fs_file_ops);
-
-static ssize_t
-kmem_free_fs_file_read(struct file *file,
-                       void *buffer,
-                       ssize_t amount,
-                       unsigned long flags)
-{
-    if(file->seek_offset != 0)
-    {
-        return 0;
-    }
-    snprintk(buffer, amount, "%lu", (ul_t)page_alloc_amount_free());
-    ((char *)buffer)[amount - 1] = '\0';
-    return strlen(buffer);
-}
-
-static struct fs_node_ops kmem_free_fs_node_ops = {
-    .flush = fs_node_flush_nop,
-};
-FS_NODE_OPS_INIT_UNDEF(kmem_free_fs_node_ops);
-
-static struct fs_file_ops kmem_free_fs_file_ops = {
-    .read = kmem_free_fs_file_read,
-    .write = fs_file_eof_write,
-    .flush = fs_file_nop_flush,
-    .seek = fs_file_seek_pinned_zero,
-};
-FS_FILE_OPS_INIT_UNDEF(kmem_free_fs_file_ops);
-
-static ssize_t
-total_cpu_percent_fs_file_read(struct file *file,
-                               void *buffer,
-                               ssize_t amount,
-                               unsigned long flags)
-{
-    if(file->seek_offset != 0)
-    {
-        return 0;
-    }
-    int percent = all_threads_running_percentage();
-    snprintk(buffer, amount, "%lu", (ul_t)percent);
-    ((char *)buffer)[amount - 1] = '\0';
-    return strlen(buffer);
-}
-
-static struct fs_node_ops total_cpu_percent_fs_node_ops = {
-    .flush = fs_node_flush_nop,
-};
-FS_NODE_OPS_INIT_UNDEF(total_cpu_percent_fs_node_ops);
-
-static struct fs_file_ops total_cpu_percent_fs_file_ops = {
-    .read = total_cpu_percent_fs_file_read,
-    .write = fs_file_eof_write,
-    .flush = fs_file_nop_flush,
-    .seek = fs_file_seek_pinned_zero,
-};
-FS_FILE_OPS_INIT_UNDEF(total_cpu_percent_fs_file_ops);

@@ -13,6 +13,7 @@
 #include <kanawha/stddef.h>
 #include <kanawha/types.h>
 #include <kanawha/vmem.h>
+#include <kanawha/kinfo.h>
 
 EXPORT_SYMBOL(register_page_allocator);
 
@@ -364,3 +365,10 @@ page_alloc_verify(void)
         irq_lock_release(&alloc->lock);
     }
 }
+
+declare_kinfo(page_alloc_free,
+        "%lu/%lu (%u%%)",
+        (ul_t)page_alloc_amount_free(),
+        (ul_t)page_alloc_amount_total(),
+        (u_t)((100*page_alloc_amount_free())/page_alloc_amount_total()));
+

@@ -215,6 +215,12 @@ fs_file_eof_write(struct file *file,
 ssize_t
 fs_file_seek_pinned_zero(struct file *file, ssize_t offset, int whence);
 
+ssize_t
+fs_file_seek_any(
+        struct file *file,
+        ssize_t offset,
+        int whence);
+
 // Does nothing and returns zero
 int
 fs_file_nop_flush(struct file *file, unsigned long flags);

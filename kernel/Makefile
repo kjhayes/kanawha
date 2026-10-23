@@ -43,6 +43,8 @@ obj-y += \
 	udrv.o \
 	perf.o \
 	lock.o \
+	panic.o \
+	kinfo.o \
 
 obj-y += stack.o
 
@@ -58,7 +60,6 @@ obj-y += proc/
 obj-y += net/
 obj-y += sysfs/
 obj-y += gfx/
-obj-y += panic/
 obj-$(CONFIG_PAGING) += paging/
 obj-$(CONFIG_IDMAP) += idmap.o
 obj-$(CONFIG_KUSER) += kuser.o

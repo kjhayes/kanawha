@@ -97,6 +97,23 @@ fs_file_seek_pinned_zero(struct file *file, ssize_t offset, int whence)
     return (ssize_t)0;
 }
 
+ssize_t
+fs_file_seek_any(
+        struct file *file,
+        ssize_t offset,
+        int whence)
+{
+    switch(whence) {
+        case FS_FILE_SEEK_CUR:
+            return file->seek_offset + offset;
+        case FS_FILE_SEEK_SET:
+            return offset;
+        case FS_FILE_SEEK_END:
+        default:
+            return -EINVAL;
+    }
+}
+
 // Does nothing and returns zero
 int
 fs_file_nop_flush(struct file *file, unsigned long flags)

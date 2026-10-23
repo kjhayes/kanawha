@@ -8,6 +8,7 @@
 #include <kanawha/stddef.h>
 #include <kanawha/string.h>
 #include <kanawha/thread.h>
+#include <kanawha/kinfo.h>
 
 DEFINE_LOCAL_THREAD_LOCK(system_cpus_lock);
 static struct cpu *system_cpus[CONFIG_MAX_CPUS] = {0};
@@ -123,3 +124,6 @@ cpu_idle_percentage(cpu_id_t cpu)
     }
     return thread_running_percentage(idle);
 }
+
+declare_kinfo(num_cpus, "%lu", (ul_t)total_num_cpus());
+

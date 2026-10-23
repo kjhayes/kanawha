@@ -4,6 +4,7 @@
 #include <kanawha/event.h>
 #include <kanawha/init.h>
 #include <kanawha/time.h>
+#include <kanawha/kinfo.h>
 
 static duration_t system_timestamp = 0;
 static struct periodic_event *tick_event = NULL;
@@ -43,3 +44,7 @@ start_timestamp_tick(void)
 }
 
 declare_init_desc(late, start_timestamp_tick, "Starting Timestamp Tick Event");
+
+declare_kinfo(uptime_ns, "%luns",
+        (ul_t)time_to_nsec(current_timestamp()));
+

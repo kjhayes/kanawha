@@ -3,7 +3,9 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <kanawha/syscall.h>
 
+#define BYTE_BY_BYTE
 #define BUFSIZE 512
 
 int
@@ -23,6 +25,25 @@ main(int argc, const char **argv)
         return -1;
     }
 
+#ifdef BYTE_BY_BYTE
+    ssize_t amt;
+    int fd = fileno(file);
+    char c;
+    while(1) {
+        amt = kanawha_sys_read(fd, &c, 1);
+        if(amt < 0) {
+            return amt;
+        }
+        if(amt == 0) {
+            break;
+        }
+        amt = kanawha_sys_write(1, &c, 1);
+        if(amt < 0) {
+            return amt;
+        }
+    }
+    return 0;
+#else
     uint8_t *buffer = malloc(BUFSIZE);
     if(buffer == NULL)
     {
@@ -57,6 +78,7 @@ main(int argc, const char **argv)
     }
 
     free(buffer);
+#endif
 
     return 0;
 }

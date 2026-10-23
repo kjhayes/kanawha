@@ -4,6 +4,7 @@
 #include <kanawha/dev/clk.h>
 #include <kanawha/errno.h>
 #include <kanawha/time.h>
+#include <kanawha/kinfo.h>
 
 DEFINE_LOCAL_IRQ_LOCK(clk_source_lock);
 static struct clk_dev *clk_source = NULL;
@@ -138,3 +139,16 @@ LOCAL_REGISTRY_HOOK(clk_mono_clk_dev_hook,
 //{
 //     return clk_source;
 // }
+
+declare_kinfo(clk_mono_ns, "%lu", (ul_t)duration_to_nsec(clk_mono_current()));
+declare_kinfo(clk_mono, "%s",
+        ({
+           const char *name = "NULL";
+           clk_source_lock_acquire();
+           if(clk_source != NULL) {
+               name = clk_dev_get_name(clk_source);
+           }
+           clk_source_lock_release();
+           name;
+         }));
+

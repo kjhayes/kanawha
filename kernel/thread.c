@@ -1175,3 +1175,4 @@ all_threads_running_percentage(void)
     thread_tree_lock_release();
     return total;
 }
+

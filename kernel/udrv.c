@@ -122,7 +122,7 @@ udrv_mount_mkfile(struct fs_node *fs_node,
 {
     int res;
 
-    struct vfs_node *vfs_node = fs_node->backing.priv_state;
+    struct vfs_node *vfs_node = vfs_node_from_fs_node(fs_node);
     struct udrv_mount *mnt =
         container_of(vfs_node, struct udrv_mount, vfs_node);
 

@@ -70,31 +70,32 @@ printk_remove_handler(printk_handler_f *handler);
 int
 printk_print_buffer(void *state, size_t len, char *buffer);
 
-int
+// "windowed" printk
+ssize_t
+vswprintk(
+        char *buf,
+        size_t offset,
+        size_t *size,
+        const char *fmt,
+        va_list *args); 
+ssize_t
+swprintk(
+        char *buf,
+        size_t offset,
+        size_t *size,
+        const char *fmt,
+        ...);
+
+// Alias for "swprintk(buf, 0, &buf_size, fmt, ...)"
+ssize_t
 snprintk(char *buf, size_t buf_size, const char *fmt, ...);
 
-struct vprintk_state
-{
-    // Inputs
-    const char *fmt_iter;
-    va_list *args_ptr;
+struct vprintk_state;
 
-    // State
-    int escaped;
-    size_t buffer_head;
-
-    int uppercase_hex;
-    int size_modifier;
-    int leading_zeros;
-    int digits_specifier;
-
-    // Constants
-    void *state;
-    int (*print_buffer)(void *state, size_t len, char *buf);
-    size_t buffer_size;
-    char *buffer;
-};
 int
-vprintk(struct vprintk_state *state, const char *fmt, va_list *args);
+vprintk(
+        struct vprintk_state *state,
+        const char *fmt,
+        va_list *args);
 
 #endif

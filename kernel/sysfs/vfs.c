@@ -465,3 +465,21 @@ vfs_mount_insert_and_link(struct vfs_mount *mnt,
 
     return 0;
 }
+
+
+struct vfs_node *
+vfs_node_from_fs_node(
+        struct fs_node *fs_node)
+{
+    return (struct vfs_node *)fs_node->backing.priv_state;
+}
+struct vfs_node *
+vfs_node_from_fs_path(
+        struct fs_path *path)
+{
+    struct fs_node *fs_node = fs_path_get_fs_node(path);
+    if(fs_node == NULL) {
+        return NULL;
+    }
+    return vfs_node_from_fs_node(fs_node);
+}

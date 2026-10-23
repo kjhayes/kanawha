@@ -15,6 +15,28 @@
 
 DEFINE_LOCAL_IRQ_LOCK(printk_lock);
 
+struct vprintk_state
+{
+    // Inputs
+    const char *fmt_iter;
+    va_list *args_ptr;
+
+    // State
+    int escaped;
+    size_t buffer_head;
+
+    int uppercase_hex;
+    int size_modifier;
+    int leading_zeros;
+    int digits_specifier;
+
+    // Constants
+    void *state;
+    int (*print_buffer)(void *state, size_t len, char *buf);
+    size_t buffer_size;
+    char *buffer;
+};
+
 static int
 vprintk_flush(struct vprintk_state *state);
 static int
@@ -815,44 +837,115 @@ printk_init(void)
     return 0;
 }
 
-struct snprintk_state
+struct sprintk_state
 {
     char *buf;
+    size_t to_skip;
     size_t chars_left;
+    size_t chars_copied;
     size_t chars_attempted;
     struct vprintk_state vprintk_state;
 };
 
 static int
-snprintk_print_buffer(void *_state, size_t n, char *buf)
+sprintk_print_buffer(void *_state, size_t n, char *buf)
 {
-    struct snprintk_state *state = _state;
+    struct sprintk_state *state = _state;
+
+    state->chars_attempted += n;
+
+    if(state->to_skip) {
+        if(n <= state->to_skip) {
+            state->to_skip -= n;
+            return 0;
+        }
+        n -= state->to_skip;
+        buf += state->to_skip;
+        state->to_skip = 0;
+    }
 
     size_t to_copy = n > state->chars_left ? state->chars_left : n;
     memcpy(state->buf, buf, to_copy);
 
     state->chars_left -= to_copy;
     state->buf += to_copy;
-
-    state->chars_attempted += n;
+    state->chars_copied += to_copy;
 
     return 0;
 }
 
-int
-snprintk(char *buf, size_t size, const char *fmt, ...)
+ssize_t
+swprintk(char *buf, size_t offset, size_t *size, const char *fmt, ...)
 {
-    struct snprintk_state state;
+    ssize_t res;
 
+    va_list args;
+    va_start(args, fmt);
+
+    res = vswprintk(
+            buf,
+            offset,
+            size,
+            fmt,
+            &args);
+
+    va_end(args);
+
+    return res;
+}
+
+ssize_t
+vswprintk(
+        char *buf,
+        size_t offset,
+        size_t *size,
+        const char *fmt,
+        va_list *args)
+{
+    struct sprintk_state state;
+
+    state.to_skip = offset;
+    state.chars_copied = 0;
     state.chars_attempted = 0;
-    state.chars_left = size - 1;
+    state.chars_left = *size;
     state.buf = buf;
 
     char buffer[64];
     state.vprintk_state.buffer = buffer;
     state.vprintk_state.buffer_head = 0;
     state.vprintk_state.buffer_size = 64;
-    state.vprintk_state.print_buffer = snprintk_print_buffer;
+    state.vprintk_state.print_buffer = sprintk_print_buffer;
+
+    state.vprintk_state.state = &state;
+
+    vprintk(&state.vprintk_state, fmt, args);
+
+    if(state.chars_left > 0)
+    {
+        *(char *)state.buf = '\0';
+    }
+
+    *size = state.chars_copied;
+
+    return state.chars_attempted;
+}
+
+ssize_t
+snprintk(char *buf, size_t size, const char *fmt, ...)
+{
+    struct sprintk_state state;
+
+    state.to_skip = 0;
+    state.chars_copied = 0;
+    state.chars_attempted = 0;
+    state.chars_left = size;
+    state.buf = buf;
+
+    char buffer[64];
+    state.vprintk_state.buffer = buffer;
+    state.vprintk_state.buffer_head = 0;
+    state.vprintk_state.buffer_size = 64;
+    state.vprintk_state.print_buffer = sprintk_print_buffer;
 
     state.vprintk_state.state = &state;
 
@@ -874,3 +967,32 @@ snprintk(char *buf, size_t size, const char *fmt, ...)
 EXPORT_SYMBOL(do_printk);
 EXPORT_SYMBOL(printk_add_handler);
 EXPORT_SYMBOL(snprintk);
+
+// PANIC printing
+static char panic_state_buffer[CONFIG_PANIC_BUFFER_SIZE] = {0};
+static struct vprintk_state panic_state = {0};
+int
+do_panic_printk(const char *fmt, ...)
+{
+    int res;
+
+    va_list args;
+    va_start(args, fmt);
+
+    res = vprintk(&panic_state, fmt, &args);
+
+    va_end(args);
+    return res;
+}
+
+int
+panic_printk_init(void)
+{
+    panic_state.buffer = panic_state_buffer;
+    panic_state.buffer_size = CONFIG_PANIC_BUFFER_SIZE;
+    panic_state.print_buffer = printk_print_buffer;
+    panic_state.state = NULL;
+    return 0;
+}
+EXPORT_SYMBOL(do_panic_printk);
+
