@@ -16,7 +16,6 @@ struct kinfo {
     ilist_node_t list_node;
 
     kinfo_callback_f *callback;
-    void *priv_state;
 
     struct vfs_node vfs_node;
     char *name;
@@ -135,8 +134,8 @@ kinfo_fs_file_read(struct file *file,
     };
 
     (*info->callback)(
-            &printer.printer,
-            info->priv_state);
+            info,
+            &printer.printer);
 
     fs_path_put(path);
     return printer.amount_copied;
@@ -158,8 +157,7 @@ FS_FILE_OPS_INIT_UNDEF(kinfo_fs_file_ops);
 struct kinfo *
 kinfo_create(
         const char *name,
-        kinfo_callback_f *callback,
-        void *state)
+        kinfo_callback_f *callback)
 {
     int res;
 
@@ -175,7 +173,6 @@ kinfo_create(
     info->flags = 0;
 
     info->callback = callback;
-    info->priv_state = state;
 
     kinfo_list_lock_acquire();
     kinfo_attach_to_mount_lockless(info);

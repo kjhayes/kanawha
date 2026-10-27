@@ -5,8 +5,8 @@
 #include <stdlib.h>
 #include <kanawha/syscall.h>
 
-#define BYTE_BY_BYTE
-#define BUFSIZE 512
+// #define BYTE_BY_BYTE
+#define BUFSIZE 0x10000
 
 int
 main(int argc, const char **argv)

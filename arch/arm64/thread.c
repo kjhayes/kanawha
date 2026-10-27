@@ -72,8 +72,8 @@ arch_deinit_thread_state(struct thread_state *thread)
 }
 
 int
-arch_dump_thread(printk_f *printer, struct thread_state *state)
+arch_dump_thread(struct printer *printer, struct thread_state *state)
 {
-    (*printer)("arch_dump_thread is unimplemented!");
-    return -EUNIMPL;
+    // TODO
+    return 0;
 }

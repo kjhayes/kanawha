@@ -245,10 +245,10 @@ __noreturn void
 arch_thread_run_thread(struct thread_state *to_run);
 
 int
-arch_dump_thread(printk_f *printer, struct thread_state *state);
+arch_dump_thread(struct printer *printer, struct thread_state *state);
 
 int
-dump_threads(printk_f *printer);
+dump_threads(struct printer *printer);
 
 __noreturn void
 idle_loop(void);

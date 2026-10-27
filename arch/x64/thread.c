@@ -89,8 +89,6 @@ arch_init_thread_state(struct thread_state *state)
 
     memset(arch->xsave_buffer, 0, X64_XSAVE_BUFLEN);
 
-    // arch_dump_thread(do_printk, state);
-
     return 0;
 }
 
@@ -108,7 +106,7 @@ arch_deinit_thread_state(struct thread_state *state)
 }
 
 int
-arch_dump_thread(printk_f *printer, struct thread_state *state)
+arch_dump_thread(struct printer *printer, struct thread_state *state)
 {
     struct arch_thread_state *arch_state = &state->arch_state;
     return 0;

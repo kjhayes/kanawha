@@ -914,28 +914,21 @@ declare_init_desc(page_alloc,
                   free_phys_mem,
                   "Freeing Available Physical Memory");
 
-#define PHYS_MEM_KINFO(X,...)\
-X(phys_ram, PHYS_MEM_FLAGS_RAM, 0)\
-X(phys_mmio, PHYS_MEM_FLAGS_MMIO, 0)\
-X(phys_page_alloc, PHYS_MEM_FLAGS_PAGE_ALLOC, 0)\
-X(phys_fw_resv, PHYS_MEM_FLAGS_FW_RESV, 0)\
-X(phys_defect, PHYS_MEM_FLAGS_DEFECT, 0)\
-X(phys_fw_ignore, PHYS_MEM_FLAGS_FW_IGNORE, 0)\
-X(phys_avail, PHYS_MEM_FLAGS_AVAIL, 0)\
+static void
+kinfo_phys_mem_flags(
+        struct kinfo *info,
+        struct printer *p)
+{
+    mem_flags_print(get_phys_mem_flags(), p, phys_mem_flags_printer);
+}
+declare_kinfo_callback(phys_mem, kinfo_phys_mem_flags);
 
-#define XCASE(__NAME, __SET, __CLR)\
-declare_kinfo(__NAME, "%lu",\
-        (ul_t)({\
-            ssize_t size = 0;\
-            struct mem_flags *flags = get_phys_mem_flags();\
-            if(flags != NULL) {\
-                size = mem_flags_size_matching(\
-                        flags,\
-                        (__SET),\
-                        (__CLR));\
-            }\
-            size;\
-        }));
-PHYS_MEM_KINFO(XCASE)
-#undef XCASE
+static void
+kinfo_virt_mem_flags(
+        struct kinfo *info,
+        struct printer *p)
+{
+    mem_flags_print(get_virt_mem_flags(), p, virt_mem_flags_printer);
+}
+declare_kinfo_callback(virt_mem, kinfo_virt_mem_flags);
 

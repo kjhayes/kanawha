@@ -20,6 +20,7 @@
 #include <kanawha/tasklet.h>
 #include <kanawha/thread.h>
 #include <kanawha/vmem.h>
+#include <kanawha/kinfo.h>
 
 static void
 set_current_thread(struct thread_state *state);
@@ -27,7 +28,7 @@ set_current_thread(struct thread_state *state);
 static void
 dump_thread_flags(struct thread_state *thread,
                   unsigned long flags,
-                  printk_f *printer);
+                  struct printer *printer);
 
 static DECLARE_PTREE(thread_tree);
 DEFINE_LOCAL_IRQ_LOCK(thread_tree_lock);
@@ -845,27 +846,27 @@ cpu_start_threading(thread_f *func, void *state)
 static void
 dump_thread_flags(struct thread_state *thread,
                   unsigned long flags,
-                  printk_f *printer)
+                  struct printer *printer)
 {
     if(flags == 0)
     {
         return;
     }
-    (*printer)(" ");
+    fmt_print(printer, " ");
     if(flags & THREAD_FLAG_IDLE)
     {
-        (*printer)("[IDLE]");
+        fmt_print(printer, "[IDLE]");
     }
     if(flags & THREAD_FLAG_TASKLET)
     {
-        (*printer)("[TASKLET]");
+        fmt_print(printer, "[TASKLET]");
     }
     if(flags & THREAD_FLAG_PROCESS)
     {
         struct process *process = container_of(thread, struct process, thread);
-        (*printer)("[PROCESS(%ld)]", (sl_t)process->id);
+        fmt_print(printer, "[PROCESS(%ld)]", (sl_t)process->id);
 #ifdef CONFIG_DEBUG_TRACK_PROCESS_EXEC
-        (*printer)("[EXEC(%s)]",
+        fmt_print(printer, "[EXEC(%s)]",
                    process->tracked_exec != NULL ? process->tracked_exec
                                                  : "UNKNOWN");
 #endif
@@ -873,17 +874,17 @@ dump_thread_flags(struct thread_state *thread,
 }
 
 int
-dump_threads(printk_f *printer)
+dump_threads(struct printer *printer)
 {
     thread_tree_lock_acquire();
 
-    (*printer)("--- Threads ---\n");
+    fmt_print(printer, "--- Threads ---\n");
     struct ptree_node *node = ptree_get_first(&thread_tree);
     for(; node != NULL; node = ptree_get_next(node))
     {
         struct thread_state *thread =
             container_of(node, struct thread_state, tree_node);
-        (*printer)("\tThread(%ld): %s",
+        fmt_print(printer, "\tThread(%ld): %s",
                    (sl_t)thread->id,
                    thread_status_to_string(thread->status));
 
@@ -891,11 +892,11 @@ dump_threads(printk_f *printer)
 
         if(thread->status == THREAD_STATUS_RUNNING)
         {
-            (*printer)(" CPU(%ld)", (sl_t)thread->running_on);
+            fmt_print(printer, " CPU(%ld)", (sl_t)thread->running_on);
         }
         if(thread->pin_refs)
         {
-            (*printer)(" PINNED(%ld) PIN-REFS(%ld)",
+            fmt_print(printer, " PINNED(%ld) PIN-REFS(%ld)",
                        (sl_t)thread->pinned_to,
                        (sl_t)thread->pin_refs);
         }
@@ -906,23 +907,32 @@ dump_threads(printk_f *printer)
             // get as much information as possible.
             DEBUG_ASSERT(KERNEL_ADDR(thread->waitqueue));
             DEBUG_ASSERT(KERNEL_ADDR(thread->waitqueue->name));
-            (*printer)(" WAITING-ON(%s)", thread->waitqueue->name);
+            fmt_print(printer, " WAITING-ON(%s)", thread->waitqueue->name);
         }
 
-        (*printer)("\n");
+        fmt_print(printer, "\n");
     }
-    (*printer)("---------------\n");
+    fmt_print(printer, "---------------\n");
 
     thread_tree_lock_release();
     return 0;
 }
+
+static void
+kinfo_dump_threads(
+        struct kinfo *info,
+        struct printer *p)
+{
+    dump_threads(p);
+}
+declare_kinfo_callback(threads, kinfo_dump_threads);
 
 #ifdef CONFIG_DEBUG_DUMP_THREADS_PERIODICALLY
 static struct periodic_event *debug_dump_threads_event = NULL;
 static void
 debug_dump_threads_periodically(void *state)
 {
-    dump_threads(do_printk);
+    dump_threads(printk_printer());
 }
 static int
 init_debug_dump_threads_periodically(void)
@@ -1116,7 +1126,7 @@ sample_thread_running_percentage(void *state)
     //        printk("Weird: total running = %ld, num cpus = %ld?\n",
     //                (sl_t)total_running,
     //                (sl_t)total_num_cpus());
-    //        dump_threads(do_printk);
+    //        dump_threads(printk_printer());
     //    }
 }
 static int
