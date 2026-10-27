@@ -75,7 +75,6 @@ riscv64_boot_bsp_init(void __phys *kernel_phys_base,
     clear_percpu();
     klog_init();
     printk_init();
-    panic_printk_init();
     riscv64_enable_fpu();
 
     res = handle_init_stage__boot();

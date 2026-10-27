@@ -4,18 +4,12 @@
 #include <kanawha/registry.h>
 #include <kanawha/sysfs/vfs.h>
 #include <kanawha/init.h>
+#include <kanawha/printer.h>
 
 struct kinfo;
-struct kinfo_printer_state;
-
-typedef void(kinfo_printer_f)(
-        struct kinfo_printer_state *state,
-        const char *fmt,
-        ...);
 
 typedef void(kinfo_callback_f)(
-        kinfo_printer_f *printer,
-        struct kinfo_printer_state *pstate,
+        struct printer *p,
         void *state);
 
 struct kinfo *
@@ -51,11 +45,10 @@ declare_init(late, __register_kinfo_##__NAME);
 #define declare_kinfo(__NAME, __FMT, ...)\
 static void \
 __kinfo_##__NAME##_callback( \
-        kinfo_printer_f *__printer, \
-        struct kinfo_printer_state *__pstate, \
+        struct printer *__printer,\
         void *__null_state) \
 { \
-    (*__printer)(__pstate, __FMT, ##__VA_ARGS__); \
+    fmt_print(__printer, __FMT, ##__VA_ARGS__); \
 } \
 declare_kinfo_callback( \
         __NAME, \

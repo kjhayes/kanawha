@@ -613,20 +613,20 @@ mem_flags_size_matching(
 
 void
 mem_flags_print(struct mem_flags *map,
-                printk_f *printer,
-                void (*flag_printer)(printk_f *printer, unsigned long flags))
+                struct printer *printer,
+                void (*flag_printer)(struct printer *printer, unsigned long flags))
 {
     spin_lock(&map->lock);
     for(size_t i = 0; i < map->num_entries; i++)
     {
         struct mem_flags_entry *entry = &map->entries[i];
         uintptr_t end = entry->base + entry->size;
-        (*printer)("[%p - %p) size=%lx ",
+        fmt_print(printer, "[%p - %p) size=0x%lx ",
                    entry->base,
                    end,
                    (unsigned long)entry->size);
         (*flag_printer)(printer, (unsigned long)entry->flags);
-        (*printer)("\n");
+        printer_puts(printer, "\n");
     }
     spin_unlock(&map->lock);
 }
@@ -724,11 +724,11 @@ mem_flags_reserve_kernel(void)
 }
 
 static void
-phys_mem_flags_printer(printk_f *printer, unsigned long flags)
+phys_mem_flags_printer(struct printer *printer, unsigned long flags)
 {
 #define XCASE(__NAME,...) \
     if(flags & PHYS_MEM_FLAGS_ ## __NAME) {\
-        (*printer)("["#__NAME"]");\
+        printer_puts(printer, "["#__NAME"]");\
     }
     PHYS_MEM_FLAGS_XLIST(XCASE)
 #undef XCASE
@@ -738,7 +738,7 @@ int
 phys_mem_flags_dump(void)
 {
     printk("=== Physical Memory Flags ===\n");
-    mem_flags_print(get_phys_mem_flags(), do_printk, phys_mem_flags_printer);
+    mem_flags_print(get_phys_mem_flags(), printk_printer(), phys_mem_flags_printer);
     printk("=============================\n");
     return 0;
 }
@@ -783,11 +783,11 @@ virt_mem_flags_static_init(void)
 }
 
 static void
-virt_mem_flags_printer(printk_f *printer, unsigned long flags)
+virt_mem_flags_printer(struct printer *printer, unsigned long flags)
 {
 #define XCASE(__NAME,...) \
     if(flags & VIRT_MEM_FLAGS_ ## __NAME) {\
-        (*printer)("["#__NAME"]");\
+        printer_puts(printer, "["#__NAME"]");\
     }
     VIRT_MEM_FLAGS_XLIST(XCASE)
 #undef XCASE
@@ -797,7 +797,7 @@ int
 virt_mem_flags_dump(void)
 {
     printk("=== Virtual Memory Flags ===\n");
-    mem_flags_print(get_virt_mem_flags(), do_printk, virt_mem_flags_printer);
+    mem_flags_print(get_virt_mem_flags(), printk_printer(), virt_mem_flags_printer);
     printk("============================\n");
     return 0;
 }

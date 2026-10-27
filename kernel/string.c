@@ -1,8 +1,11 @@
 
 #include <kanawha/kmalloc.h>
-#include <kanawha/printk.h>
 #include <kanawha/string.h>
 #include <kanawha/vmem.h>
+#include <kanawha/printer.h>
+#include <kanawha/fmt.h>
+#include <kanawha/stddef.h>
+#include <kanawha/export.h>
 
 static inline void *
 memset_bytewise(void *str, int c, size_t n)
@@ -337,3 +340,80 @@ memset_p(void __phys *str, int c, size_t n)
     void *str_v = __va(str);
     memset(str_v, c, n);
 }
+
+// String formatting
+
+struct string_printer {
+    char *buffer;
+    size_t buflen;
+    size_t offset;
+    struct printer printer;
+};
+
+static inline int
+string_printer_putc(
+        struct printer *p,
+        char c)
+{
+    struct string_printer *sp =
+        container_of(p, struct string_printer, printer);
+    if(sp->offset < sp->buflen) {
+        sp->buffer[sp->offset] = c;
+    }
+    sp->offset++;
+    return 0;
+}
+
+static inline void
+string_printer_init(
+        struct string_printer *p,
+        char *buffer,
+        size_t buflen)
+{
+    p->buffer = buffer;
+    p->buflen = buflen;
+    p->offset = 0;
+    p->printer.write = &printer_write_using_putc;
+    p->printer.puts = &printer_puts_using_write;
+    p->printer.putc = &string_printer_putc;
+    return;
+}
+
+ssize_t
+vsnprintk(
+        char *buf,
+        size_t size,
+        const char *fmt,
+        va_list *args)
+{
+    int res;
+    struct string_printer sp = {0};
+    string_printer_init(&sp, buf, size);
+    res = fmt_vprint(&sp.printer, fmt, args);
+    if(sp.offset < sp.buflen) {
+        buf[sp.offset] = '\0';
+    } else {
+        buf[size-1] = '\0';
+    }
+    if(res) {
+        return res;
+    }
+    return sp.offset;
+}
+ssize_t
+snprintk(
+        char *buf,
+        size_t size,
+        const char *fmt,
+        ...)
+{
+    ssize_t s;
+    va_list args;
+    va_start(args, fmt);
+    s = vsnprintk(buf, size, fmt, &args);
+    va_end(args);
+    return s;
+}
+EXPORT_SYMBOL(snprintk);
+EXPORT_SYMBOL(vsnprintk);
+

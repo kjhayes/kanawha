@@ -423,9 +423,9 @@ pci_device_for_each_func(struct pci_device *device,
 }
 
 static void
-mmio_mem_flags_printer(printk_f *printer, unsigned long flags)
+mmio_mem_flags_printer(struct printer *printer, unsigned long flags)
 {
-    (*printer)("%s%s%s%s%s",
+    fmt_print(printer, "%s%s%s%s%s",
                flags &PCI_MMIO_MEM_MAPPED ? "[MAPPED]" : "",
                flags &PCI_MMIO_MEM_32_BIT ? "[32]" : "",
                flags &PCI_MMIO_MEM_SNOOPED ? "[SNOOPED]" : "",
@@ -433,24 +433,23 @@ mmio_mem_flags_printer(printk_f *printer, unsigned long flags)
                flags &PCI_MMIO_MEM_CONFIG ? "[CONFIG]" : "");
 }
 int
-pci_segment_dump_mmio_mem_flags(struct pci_segment *segment, printk_f *printer)
+pci_segment_dump_mmio_mem_flags(struct pci_segment *segment, struct printer *printer)
 {
     mem_flags_print(&segment->mmio_flags, printer, mmio_mem_flags_printer);
     return 0;
 }
 
 static void
-pio_mem_flags_printer(printk_f *printer, unsigned long flags)
+pio_mem_flags_printer(struct printer *printer, unsigned long flags)
 {
-    (*printer)("%s%s",
+    fmt_print(printer, "%s%s",
                flags &PCI_PIO_MEM_MAPPED ? "[MAPPED]" : "",
                flags &PCI_PIO_MEM_SNOOPED ? "[SNOOPED]" : "");
 }
 int
-pci_segment_dump_pio_mem_flags(struct pci_segment *segment, printk_f *printer)
+pci_segment_dump_pio_mem_flags(struct pci_segment *segment, struct printer *printer)
 {
     mem_flags_print(&segment->pio_flags, printer, pio_mem_flags_printer);
-
     return 0;
 }
 

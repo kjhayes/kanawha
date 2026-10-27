@@ -3,6 +3,7 @@
 
 #include <kanawha/pointer.h>
 #include <kanawha/types.h>
+#include <stdarg.h>
 
 void *
 memset(void *str, int c, size_t n);
@@ -45,5 +46,19 @@ memcpy_pv(void *dest, void __phys *src, size_t n);
 // Memset on physical memory
 void
 memset_p(void __phys *str, int c, size_t n);
+
+// Formatted strings
+ssize_t
+vsnprintk(
+        char *buf,
+        size_t size,
+        const char *fmt,
+        va_list *args);
+ssize_t
+snprintk(
+        char *buf,
+        size_t size,
+        const char *fmt,
+        ...);
 
 #endif

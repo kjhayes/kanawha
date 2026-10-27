@@ -6,6 +6,8 @@ obj-y += \
 	buddy.o \
 	kheap.o \
 	printk.o \
+	printer.o \
+	fmt.o \
 	klog.o \
 	mem_flags.o \
 	page_alloc.o \

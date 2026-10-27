@@ -8,7 +8,10 @@
 #include <kanawha/common.h>
 #include <kanawha/time.h>
 #include <kanawha/types.h>
+#include <kanawha/fmt.h>
 #include <stdarg.h>
+
+struct printer;
 
 typedef int(printk_handler_f)(char);
 
@@ -25,36 +28,24 @@ int
 do_vprintk(const char *fmt, va_list args);
 
 #define printk(fmt, ...)                                                       \
-    do                                                                         \
-    {                                                                          \
-        do_printk("[%t]: " fmt,                                           \
-                  current_timestamp(), \
-                  ##__VA_ARGS__);                                              \
+    do {\
+        fmt_print(printk_printer(), "[%t]: " fmt, current_timestamp(), ##__VA_ARGS__);\
     } while(0)
 
-#define eprintk(fmt, ...)                                                      \
-    do                                                                         \
-    {                                                                          \
-        do_printk("[ERROR (%t)]: " fmt,                                   \
-                  current_timestamp(), \
-                  ##__VA_ARGS__);                                              \
+#define eprintk(fmt, ...)\
+    do {\
+        fmt_print(printk_printer(), "[%t] ERROR: " fmt, current_timestamp(), ##__VA_ARGS__);\
     } while(0)
 
-#define wprintk(fmt, ...)                                                      \
-    do                                                                         \
-    {                                                                          \
-        do_printk("[WARN (%t)]: " fmt,                                    \
-                  current_timestamp(),                                           \
-                  ##__VA_ARGS__);                                              \
+#define wprintk(fmt, ...)\
+    do {\
+        fmt_print(printk_printer(), "[%t] WARNING: " fmt, current_timestamp(), ##__VA_ARGS__);\
     } while(0)
 
 #ifdef DEBUG
-#define dprintk(fmt, ...)                                                      \
-    do                                                                         \
-    {                                                                          \
-        do_printk("[DEBUG (%t)]: " fmt,                                   \
-                  current_timestamp(),                                           \
-                  ##__VA_ARGS__);                                              \
+#define dprintk(fmt, ...)\
+    do {\
+        fmt_print(printk_printer(), "[%t] WARNING: " fmt, current_timestamp(), ##__VA_ARGS__);\
     } while(0)
 #else
 #define dprintk(fmt, ...)
@@ -67,35 +58,8 @@ printk_add_handler(printk_handler_f *handler);
 int
 printk_remove_handler(printk_handler_f *handler);
 
-int
-printk_print_buffer(void *state, size_t len, char *buffer);
-
-// "windowed" printk
-ssize_t
-vswprintk(
-        char *buf,
-        size_t offset,
-        size_t *size,
-        const char *fmt,
-        va_list *args); 
-ssize_t
-swprintk(
-        char *buf,
-        size_t offset,
-        size_t *size,
-        const char *fmt,
-        ...);
-
-// Alias for "swprintk(buf, 0, &buf_size, fmt, ...)"
-ssize_t
-snprintk(char *buf, size_t buf_size, const char *fmt, ...);
-
-struct vprintk_state;
-
-int
-vprintk(
-        struct vprintk_state *state,
-        const char *fmt,
-        va_list *args);
+// Printers
+struct printer *
+printk_printer(void);
 
 #endif

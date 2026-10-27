@@ -241,12 +241,12 @@ pci_lookup_func(
 #define PCI_MMIO_MEM_PREFETCH (1UL << 3)
 #define PCI_MMIO_MEM_CONFIG (1UL << 4)
 int
-pci_segment_dump_mmio_mem_flags(struct pci_segment *segment, printk_f *printer);
+pci_segment_dump_mmio_mem_flags(struct pci_segment *segment, struct printer *printer);
 
 #define PCI_PIO_MEM_MAPPED (1UL << 0)
 #define PCI_PIO_MEM_SNOOPED (1UL << 1)
 int
-pci_segment_dump_pio_mem_flags(struct pci_segment *segment, printk_f *printer);
+pci_segment_dump_pio_mem_flags(struct pci_segment *segment, struct printer *printer);
 
 static inline int
 pci_segment_set_mmio_flags(struct pci_segment *segment,

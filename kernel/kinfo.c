@@ -75,45 +75,26 @@ kinfo_init_fs_mount(void)
 }
 declare_init_desc(fs, kinfo_init_fs_mount, "Registering \"info\" Sysfs Mount");
 
-struct kinfo_printer_state {
-    void *buffer;
+struct kinfo_printer {
+    char *buffer;
     size_t buflen;
+    ssize_t offset;
     size_t amount_copied;
-    size_t to_skip;
+    struct printer printer;
 };
 
-static void
-kinfo_read_printer(
-        struct kinfo_printer_state *state,
-        const char *fmt,
-        ...)
+static int
+kinfo_printer_putc(
+        struct printer *p,
+        char c)
 {
-    if(state->amount_copied >= state->buflen) {
-        return;
+    struct kinfo_printer *kp = container_of(p, struct kinfo_printer, printer);
+    if(kp->offset >= 0 && kp->offset < kp->buflen) {
+        kp->buffer[kp->offset] = c;
+        kp->amount_copied++;
     }
-
-    va_list args;
-    va_start(args, fmt);
-
-    size_t copied = state->buflen - state->amount_copied;
-    ssize_t attempted = vswprintk(
-            state->buffer + state->amount_copied,
-            state->to_skip,
-            &copied,
-            fmt,
-            &args);
-
-    va_end(args);
-
-    if(state->to_skip >= attempted) {
-        state->to_skip -= attempted;
-    } else {
-        state->to_skip = 0;
-    }
-
-    state->amount_copied += copied;
-
-    return;
+    kp->offset++;
+    return 0;
 }
 
 static ssize_t
@@ -141,47 +122,24 @@ kinfo_fs_file_read(struct file *file,
 
     size_t offset = file->seek_offset;
 
-    struct kinfo_printer_state state = {
+    struct kinfo_printer printer = {
         .buflen = amount,
         .buffer = buffer,
         .amount_copied = 0,
-        .to_skip = offset,
+        .offset = -(ssize_t)offset,
+        .printer = {
+            .putc = kinfo_printer_putc,
+            .puts = printer_puts_using_write,
+            .write = printer_write_using_putc,
+        },
     };
 
     (*info->callback)(
-            kinfo_read_printer,
-            &state,
+            &printer.printer,
             info->priv_state);
 
-    return state.amount_copied;
-
-//    kinfo_tree_lock_acquire();
-//
-//    struct ptree_node *node = ptree_get_max_less_or_eq(&kinfo_tree, offset);
-//    if(node == NULL)
-//    {
-//        kinfo_tree_lock_release();
-//        fs_path_put(path);
-//        return 0;
-//    }
-//
-//    struct kinfo_frame *frame = container_of(node, struct kinfo_frame, tree_node);
-//
-//    size_t rel_offset = offset - frame->tree_node.key;
-//    size_t room_left = frame->filled_len - rel_offset;
-//
-//    if(room_left < amount)
-//    {
-//        amount = room_left;
-//    }
-//
-//    memcpy(buffer, frame->data + rel_offset, amount);
-//
-//    kinfo_tree_lock_release();
-
     fs_path_put(path);
-
-    return amount;
+    return printer.amount_copied;
 }
 
 static struct fs_node_ops kinfo_fs_node_ops = {

@@ -74,7 +74,6 @@ arm64_boot_bsp_init(struct fdt __phys *dtb)
     clear_percpu();
     klog_init();
     printk_init();
-    panic_printk_init();
 
     res = handle_init_stage__boot();
     if(res)

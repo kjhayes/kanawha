@@ -110,8 +110,8 @@ mem_flags_size_matching(
 
 void
 mem_flags_print(struct mem_flags *map,
-                printk_f *printer,
-                void (*flag_printer)(printk_f *printer, unsigned long flags));
+                struct printer *printer,
+                void (*flag_printer)(struct printer *printer, unsigned long flags));
 
 /*
  * Physical Memory Flags

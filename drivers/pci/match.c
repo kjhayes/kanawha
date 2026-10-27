@@ -173,9 +173,9 @@ dump_pci_segment_memory(struct pci_segment *segment)
 {
     int id = segment->segment_id;
     printk("--- PCI Segment %d MMIO Map\n", id);
-    pci_segment_dump_mmio_mem_flags(segment, do_printk);
+    pci_segment_dump_mmio_mem_flags(segment, printk_printer());
     printk("--- PCI Segment %d PIO Map\n", id);
-    pci_segment_dump_pio_mem_flags(segment, do_printk);
+    pci_segment_dump_pio_mem_flags(segment, printk_printer());
     printk("---\n");
     return 0;
 }
