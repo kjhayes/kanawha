@@ -12,6 +12,7 @@
 #include <kanawha/stddef.h>
 #include <kanawha/string.h>
 #include <kanawha/printk.h>
+#include <kanawha/kinfo.h>
 
 static DECLARE_RLOCK(irq_domain_map_lock);
 static DECLARE_PTREE(irq_domain_map);
@@ -135,9 +136,9 @@ irq_install_direct_link(struct irq_desc *from, struct irq_desc *to)
     spin_unlock(&to->direct_links_lock);
 
     //printk("Installed IRQ Direct Link ");
-    //describe_irq_desc(do_printk, from);
+    //describe_irq_desc(printk_printer(), from);
     //do_printk(" -> ");
-    //describe_irq_desc(do_printk, to);
+    //describe_irq_desc(printk_printer(), to);
     //do_printk("\n");
 
     enable_restore_irqs(irq_state);
@@ -635,7 +636,9 @@ irq_domain_set_all_irq_dev(struct irq_domain *domain, struct irq_dev *dev)
 }
 
 int
-describe_irq_desc(printk_f *printer, struct irq_desc *desc)
+describe_irq_desc(
+        struct printer *printer,
+        struct irq_desc *desc)
 {
 #define BUFLEN 256
     if(desc->dev)
@@ -643,16 +646,16 @@ describe_irq_desc(printk_f *printer, struct irq_desc *desc)
         char buffer[BUFLEN];
         irq_dev_describe_irq(desc->dev, desc->hwirq, buffer, BUFLEN);
         buffer[BUFLEN - 1] = '\0';
-        (*printer)(buffer);
+        fmt_print(printer, buffer);
     } else {
-        (*printer)("irq-%ld", desc->irq);
+        fmt_print(printer, "irq-%ld", desc->irq);
     }
 #undef BUFLEN
     return 0;
 }
 
 int
-dump_irq_descs(printk_f *printer)
+dump_irq_descs(struct printer *printer)
 {
     int irq_flags = disable_save_irqs();
 
@@ -674,37 +677,46 @@ dump_irq_descs(printk_f *printer)
     return 0;
 }
 
+static void
+kinfo_dump_irq_descs(
+        struct kinfo *info,
+        struct printer *printer)
+{
+    dump_irq_descs(printer);
+}
+declare_kinfo_callback(irq, kinfo_dump_irq_descs);
+
 int
-irq_domain_dump(printk_f *printer, struct irq_domain *domain)
+irq_domain_dump(struct printer *printer, struct irq_domain *domain)
 {
     int irq_flags = disable_save_irqs();
 
-    (*printer)("Domain: [0x%x - 0x%x] {\n",
+    fmt_print(printer, "Domain: [0x%x - 0x%x] {\n",
                domain->base_irq,
                (domain->base_irq + domain->num_irq) - 1);
     for(size_t index = 0; index < domain->num_irq; index++)
     {
         irq_t irq = domain->base_irq + index;
-        (*printer)("\tIRQ(0x%x) -> ", irq);
+        fmt_print(printer, "\tIRQ(0x%x) -> ", irq);
         struct irq_desc *desc = &domain->irq_descs[index];
         // TODO: We should ideally be locking the descriptors,
         // but as this is mostly a GDB invoked debugging function,
         // doing so may reduce how useful that actually is.
         if(desc == NULL)
         {
-            (*printer)("NULL");
+            fmt_print(printer, "NULL");
         }
         else
         {
-            (*printer)("HWIRQ(0x%x) \"", desc->hwirq);
+            fmt_print(printer, "HWIRQ(0x%x) \"", desc->hwirq);
             describe_irq_desc(printer, desc);
-            (*printer)("\"");
+            fmt_print(printer, "\"");
         }
 
         unsigned long status = irq_desc_status(desc);
         if(status & IRQ_STATUS_INVALID)
         {
-            (*printer)(" [INVALID]");
+            fmt_print(printer, " [INVALID]");
         }
         else if(status & IRQ_STATUS_UNKNOWN)
         {
@@ -712,12 +724,12 @@ irq_domain_dump(printk_f *printer, struct irq_domain *domain)
         }
         else
         {
-            (*printer)(" %s%s",
+            fmt_print(printer, " %s%s",
                        status &IRQ_STATUS_MASKED ? "[MASKED]" : "",
                        status &IRQ_STATUS_PENDING ? "[PENDING]" : "");
         }
 
-        (*printer)("\n");
+        fmt_print(printer, "\n");
 
         ilist_node_t *action_node;
         ilist_for_each(action_node, &desc->actions)
@@ -725,40 +737,40 @@ irq_domain_dump(printk_f *printer, struct irq_domain *domain)
             struct irq_action *action =
                 container_of(action_node, struct irq_action, list_node);
 
-            (*printer)("\t\t");
+            fmt_print(printer, "\t\t");
             if(action->description) {
-                (*printer)("\"%s\" ", action->description);
+                fmt_print(printer, "\"%s\" ", action->description);
             }
 
             switch(action->type)
             {
             case IRQ_ACTION_HANDLER:
-                (*printer)("HANDLER(%p)\n", action->handler_data.handler);
+                fmt_print(printer, "HANDLER(%p)\n", action->handler_data.handler);
                 break;
             case IRQ_ACTION_DIRECT_LINK:
-                (*printer)("DIRECT-LINK(0x%lx)\n",
+                fmt_print(printer, "DIRECT-LINK(0x%lx)\n",
                            (ul_t)action->direct_link_data.link->irq);
                 break;
             case IRQ_ACTION_PERCPU_LINK:
-                (*printer)("PERCPU-LINK\n");
+                fmt_print(printer, "PERCPU-LINK\n");
                 for(cpu_id_t id = 0; id < total_num_cpus(); id++)
                 {
-                    (*printer)("\t\t\tCPU(%lu)", (ul_t)id);
+                    fmt_print(printer, "\t\t\tCPU(%lu)", (ul_t)id);
                     struct irq_desc **percpu_desc =
                         percpu_ptr_specific(action->percpu_link_data.link, id);
                     if(*percpu_desc == NULL)
                     {
-                        (*printer)(" INVALID-DESC(%p)", *percpu_desc);
+                        fmt_print(printer, " INVALID-DESC(%p)", *percpu_desc);
                     }
                     else
                     {
-                        (*printer)(" IRQ(0x%lx)", (ul_t)(*percpu_desc)->irq);
+                        fmt_print(printer, " IRQ(0x%lx)", (ul_t)(*percpu_desc)->irq);
                     }
-                    (*printer)("\n");
+                    fmt_print(printer, "\n");
                 }
                 break;
             case IRQ_ACTION_RESOLVED_LINK:
-                (*printer)("RESOLVED-LINK RESOLVER(%p)\n",
+                fmt_print(printer, "RESOLVED-LINK RESOLVER(%p)\n",
                            action->resolved_link_data.resolver);
                 break;
             }
@@ -767,15 +779,15 @@ irq_domain_dump(printk_f *printer, struct irq_domain *domain)
         ilist_node_t *incoming_node;
         ilist_for_each(incoming_node, &desc->direct_links)
         {
-            (*printer)("\t\t");
+            fmt_print(printer, "\t\t");
             struct irq_action *direct_link =
                 container_of(incoming_node,
                              struct irq_action,
                              direct_link_data.incoming_node);
-            (*printer)("INCOMING-LINK(0x%lx)\n", (ul_t)direct_link->desc->irq);
+            fmt_print(printer, "INCOMING-LINK(0x%lx)\n", (ul_t)direct_link->desc->irq);
         }
     }
-    (*printer)("}\n");
+    fmt_print(printer, "}\n");
 
     enable_restore_irqs(irq_flags);
     return 0;

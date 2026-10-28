@@ -2,6 +2,7 @@
 #define __KANAWHA__ASSERT_H__
 
 #include <kanawha/printk.h>
+#include <kanawha/panic.h>
 #include <kanawha/types.h>
 
 #define ASSERT_TYPE_SIZE(__type, __size)                                       \

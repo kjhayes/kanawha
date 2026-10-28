@@ -4,6 +4,7 @@
 #include <kanawha/assert.h>
 #include <kanawha/printk.h>
 #include <kanawha/types.h>
+#include <kanawha/panic.h>
 
 struct ilist_head
 {

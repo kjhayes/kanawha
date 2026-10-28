@@ -1,5 +1,6 @@
 
 #include <kanawha/assert.h>
+#include <kanawha/panic.h>
 #include <kanawha/errno.h>
 #include <kanawha/gfx/convert.h>
 #include <kanawha/gfx/layout.h>

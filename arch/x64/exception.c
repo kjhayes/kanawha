@@ -193,7 +193,7 @@ x64_unhandled_exception(struct x64_excp_state *state)
                             : "USERMODE");
     printk("\tCR2 = %p\n", (void *)read_cr2());
 
-    arch_excp_dump_state((struct excp_state *)state, do_printk);
+    arch_excp_dump_state((struct excp_state *)state, printk_printer());
 
     panic("Unhandled %s Exception! (vector=0x%x)\n",
           info.description,
@@ -340,7 +340,9 @@ exit:
 }
 
 void
-arch_excp_dump_state(struct excp_state *gen_state, printk_f *printer)
+arch_excp_dump_state(
+        struct excp_state *gen_state,
+        struct printer *p)
 {
     struct x64_excp_state *state = (struct x64_excp_state *)gen_state;
 
@@ -348,7 +350,7 @@ arch_excp_dump_state(struct excp_state *gen_state, printk_f *printer)
     x64_get_excp_vector_info(state->vector, &info);
 
 #undef PRINT
-#define PRINT (*printer)
+#define PRINT(fmt, ...) fmt_print(p, fmt, ##__VA_ARGS__)
 
     PRINT("\tVECTOR=0x%x", state->vector);
     if(info.errcode_valid)

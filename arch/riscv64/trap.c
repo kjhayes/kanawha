@@ -103,7 +103,7 @@ riscv64_unhandled_trap(struct riscv64_excp_state *state)
     printk("\tSEPC    = %p\n", state->sepc);
     printk("\tSSTATUS = %p\n", state->sstatus);
 
-    dump_threads(do_panic_printk);
+    dump_threads(printk_printer());
 
     panic("Unhandled Exception!\n");
 }
@@ -290,11 +290,17 @@ riscv64_shared_exception_domain(void)
 }
 
 void
-arch_excp_dump_state(struct excp_state *gen_excp_state, printk_f *printer)
+arch_excp_dump_state(
+        struct excp_state *gen_excp_state,
+        struct printer *p)
 {
     struct riscv64_excp_state *state = (void *)gen_excp_state;
-
-    (*printer)("\tSCAUSE = %p\n", state->scause);
-    (*printer)("\tSTVAL  = %p\n", state->stval);
-    (*printer)("\tSEPC   = %p\n", state->sepc);
+#ifdef PRINT
+#undef PRINT
+#endif
+#define PRINT(fmt, ...) fmt_print(p, fmt, ##__VA_ARGS__)
+    PRINT("\tSCAUSE = %p\n", state->scause);
+    PRINT("\tSTVAL  = %p\n", state->stval);
+    PRINT("\tSEPC   = %p\n", state->sepc);
+#undef PRINT
 }

@@ -39,7 +39,7 @@ do_panic(void)
 
     do_panic_printk(" THREAD(%T) PROCESS(%P)\n");
 
-    // dump_threads(do_panic_printk);
+    // dump_threads(panic_printer());
 
     while(1)
     {
@@ -49,3 +49,10 @@ do_panic(void)
 }
 
 EXPORT_SYMBOL(do_panic);
+
+struct printer *
+panic_printer(void)
+{
+    return printk_printer();
+}
+

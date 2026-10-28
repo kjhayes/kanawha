@@ -288,8 +288,8 @@ riscv64_init(void *in)
         panic("RISCV64 init did not complete all init stages!\n");
     }
 
-    // dump_irq_descs(printk);
-    // dump_threads(printk);
+    // dump_irq_descs(printk_printer());
+    // dump_threads(printk_printer());
 
     printk("CPU (%ld) init thread is idling\n", (sl_t)current_cpu_id());
     idle_loop();

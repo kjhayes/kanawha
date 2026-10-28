@@ -5,6 +5,7 @@
 #include <kanawha/atomic.h>
 #include <kanawha/errno.h>
 #include <kanawha/printk.h>
+#include <kanawha/panic.h>
 #include <kanawha/types.h>
 
 typedef struct

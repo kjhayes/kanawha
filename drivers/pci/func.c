@@ -162,7 +162,7 @@ pci_setup_bars(struct pci_func *func)
                             (sl_t)bar_index,
                             (ul_t)bar->size,
                             errnostr(res));
-                    pci_segment_dump_mmio_mem_flags(func->segment, do_printk);
+                    pci_segment_dump_mmio_mem_flags(func->segment, printk_printer());
                     bar->phys_addr = 0;
                 }
                 else

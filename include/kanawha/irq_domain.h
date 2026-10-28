@@ -7,6 +7,7 @@
 #include <kanawha/percpu.h>
 #include <kanawha/printk.h>
 #include <kanawha/rwlock.h>
+#include <kanawha/printer.h>
 
 struct irq_domain;
 struct irq_desc;
@@ -256,10 +257,14 @@ int
 irq_domain_set_all_irq_dev(struct irq_domain *domain, struct irq_dev *dev);
 
 int
-describe_irq_desc(printk_f *printer, struct irq_desc *desc);
+describe_irq_desc(
+        struct printer *printer,
+        struct irq_desc *desc);
 
 static inline int
-describe_irq(printk_f *printer, irq_t irq)
+describe_irq(
+        struct printer *printer,
+        irq_t irq)
 {
     struct irq_desc *desc = irq_to_desc(irq);
     if(desc == NULL)
@@ -270,8 +275,11 @@ describe_irq(printk_f *printer, irq_t irq)
 }
 
 int
-dump_irq_descs(printk_f *printer);
+dump_irq_descs(
+        struct printer *printer);
 int
-irq_domain_dump(printk_f *printer, struct irq_domain *domain);
+irq_domain_dump(
+        struct printer *printer,
+        struct irq_domain *domain);
 
 #endif

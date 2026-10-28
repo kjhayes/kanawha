@@ -3,8 +3,7 @@
 
 #include <kanawha/attribute.h>
 
-int
-panic_printk_init(void);
+struct printer;
 
 // panic's get their own buffer, so that there's no need for locking
 int
@@ -25,5 +24,8 @@ do_panic(void);
         {                                                                      \
         }                                                                      \
     } while(0)
+
+struct printer *
+panic_printer(void);
 
 #endif

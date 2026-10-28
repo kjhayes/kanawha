@@ -19,7 +19,7 @@ x64_log_userspace_fault(
 
     eprintk("PID(%P) \"%s\" Fault!\n",
             info.description);
-    arch_excp_dump_state((struct excp_state*)excp_state, do_printk);
+    arch_excp_dump_state((struct excp_state*)excp_state, printk_printer());
 }
 
 static int

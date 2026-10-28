@@ -50,10 +50,16 @@ arm64_handle_excp(
 
 
 void
-arch_excp_dump_state(struct excp_state *gen_state, printk_f *printer)
+arch_excp_dump_state(
+        struct excp_state *gen_state,
+        struct printer *p)
 {
     struct arm64_excp_state *state = (void*)gen_state;
-    (*printer)("--- CPU(%lu) %s%s%s ---\n",
+#ifdef PRINT
+#undef PRINT
+#endif
+#define PRINT(fmt, ...) fmt_print(p, fmt, ##__VA_ARGS__)
+    PRINT("CPU(%lu) %s%s%s ---\n",
             (ul_t)current_cpu_id(),
             state->flags & ARM64_EXCP_FLAG_32BIT ? "32-bit " : "",
             state->flags & ARM64_EXCP_FLAG_USER ? "Usermode " : "",
@@ -62,9 +68,10 @@ arch_excp_dump_state(struct excp_state *gen_state, printk_f *printer)
             state->hwirq == ARM64_EXCP_HWIRQ_FIQ ? "Fast Interrupt" :
             state->hwirq == ARM64_EXCP_HWIRQ_SERROR ? "SError" :
             "Unknown Exception?");
-    (*printer)("\tELR=%p\n", (void*)state->elr);
-    (*printer)("\tESR=0x%lx\n", (uint64_t)state->esr);
-    (*printer)("\tFAR=%p\n", (void*)state->far);
+    PRINT("\tELR=%p\n", (void*)state->elr);
+    PRINT("\tESR=0x%lx\n", (uint64_t)state->esr);
+    PRINT("\tFAR=%p\n", (void*)state->far);
+#undef PRINT
 }
 
 static int

@@ -1,8 +1,6 @@
 #ifndef __KANAWHA__PRINTK_H__
 #define __KANAWHA__PRINTK_H__
 
-#include <kanawha/panic.h>
-
 #include <kanawha/attribute.h>
 #include <kanawha/clk.h>
 #include <kanawha/common.h>

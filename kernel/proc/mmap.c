@@ -14,6 +14,7 @@
 #include <kanawha/syscall.h>
 #include <kanawha/types.h>
 #include <kanawha/vmem.h>
+#include <kanawha/panic.h>
 
 static inline struct mmap_waitqueue *
 mmap_get_waitqueue(
@@ -1809,7 +1810,7 @@ mmap_page_fault_handler(struct excp_state *state,
 
     if((pf_flags & PF_FLAG_USERMODE) == 0)
     {
-        arch_excp_dump_state(state, do_panic_printk);
+        arch_excp_dump_state(state, panic_printer());
         panic("Kernel attempted to access process mmap region directly! "
               "(mmap_offset=%p)\n",
               offset);

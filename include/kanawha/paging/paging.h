@@ -4,6 +4,7 @@
 #include <kanawha/assert.h>
 #include <kanawha/pointer.h>
 #include <kanawha/types.h>
+#include <kanawha/panic.h>
 
 /*
  * This is an abstraction for page tables
