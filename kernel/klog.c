@@ -238,8 +238,3 @@ static struct fs_file_ops klog_fs_file_ops = {
 };
 FS_FILE_OPS_INIT_UNDEF(klog_fs_file_ops);
 
-declare_kinfo(klog_boot_frames, "%lu/%lu (%u%%)",
-        (ul_t)__klog_boot_frames_used,
-        (ul_t)(CONFIG_KLOG_BOOT_FRAMES),
-        (u_t)((100 * __klog_boot_frames_used)/CONFIG_KLOG_BOOT_FRAMES));
-
