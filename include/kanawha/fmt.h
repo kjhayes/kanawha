@@ -44,4 +44,11 @@ fmt_print(
         const char *fmt,
         ...);
 
+// strdup
+char *
+fmt_kstrdup(
+        unsigned long alloc_flags,
+        const char *fmt,
+        ...);
+
 #endif
