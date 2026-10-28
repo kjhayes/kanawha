@@ -80,13 +80,24 @@ irq_to_desc(irq_t irq)
     return desc;
 }
 
+static struct irq_action *
+alloc_irq_action(void)
+{
+    struct irq_action *action = kzmalloc(sizeof(struct irq_action), KM_KERNEL);
+    if(action == NULL) {
+        return NULL;
+    }
+    action->stats.count = 0;
+    return action;
+}
+
 struct irq_action *
 irq_install_handler(struct irq_desc *desc,
                     void *priv_data,
                     irq_handler_f *handler)
 {
     struct irq_action *action;
-    action = kzmalloc(sizeof(struct irq_action), KM_KERNEL);
+    action = alloc_irq_action();
     if(action == NULL)
     {
         return NULL;
@@ -113,7 +124,7 @@ irq_install_direct_link(struct irq_desc *from, struct irq_desc *to)
     DEBUG_ASSERT_MSG(from != to, "Trivial IRQ Loop %p == %p", from, to);
 
     struct irq_action *action;
-    action = kzmalloc(sizeof(struct irq_action), KM_KERNEL);
+    action = alloc_irq_action();
     if(action == NULL)
     {
         return NULL;
@@ -150,7 +161,7 @@ struct irq_action *
 irq_install_percpu_link(struct irq_desc *desc)
 {
     struct irq_action *action;
-    action = kzmalloc(sizeof(struct irq_action), KM_KERNEL);
+    action = alloc_irq_action();
     if(action == NULL)
     {
         return NULL;
@@ -199,7 +210,7 @@ struct irq_action *
 irq_install_resolved_link(struct irq_desc *desc, irq_resolver_f *resolver)
 {
     struct irq_action *action;
-    action = kzmalloc(sizeof(struct irq_action), KM_KERNEL);
+    action = alloc_irq_action();
     if(action == NULL)
     {
         return NULL;
@@ -290,6 +301,9 @@ run_irq_actions(struct irq_desc *desc, struct excp_state *excp_state)
                                                            : "UNKNOWN");
 
         action_num++;
+
+        // Update statistics
+        action->stats.count++;
 
         switch(action->type)
         {
@@ -745,14 +759,22 @@ irq_domain_dump(struct printer *printer, struct irq_domain *domain)
             switch(action->type)
             {
             case IRQ_ACTION_HANDLER:
-                fmt_print(printer, "HANDLER(%p)\n", action->handler_data.handler);
+                fmt_print(printer, "HANDLER(%p)", action->handler_data.handler);
                 break;
             case IRQ_ACTION_DIRECT_LINK:
-                fmt_print(printer, "DIRECT-LINK(0x%lx)\n",
+                fmt_print(printer, "DIRECT-LINK(0x%lx)",
                            (ul_t)action->direct_link_data.link->irq);
                 break;
             case IRQ_ACTION_PERCPU_LINK:
-                fmt_print(printer, "PERCPU-LINK\n");
+                fmt_print(printer, "PERCPU-LINK");
+                break;
+            case IRQ_ACTION_RESOLVED_LINK:
+                fmt_print(printer, "RESOLVED-LINK RESOLVER(%p)",
+                           action->resolved_link_data.resolver);
+                break;
+            }
+            fmt_print(printer, "[count=%lu]\n", (ul_t)action->stats.count);
+            if(action->type == IRQ_ACTION_PERCPU_LINK) {
                 for(cpu_id_t id = 0; id < total_num_cpus(); id++)
                 {
                     fmt_print(printer, "\t\t\tCPU(%lu)", (ul_t)id);
@@ -760,19 +782,13 @@ irq_domain_dump(struct printer *printer, struct irq_domain *domain)
                         percpu_ptr_specific(action->percpu_link_data.link, id);
                     if(*percpu_desc == NULL)
                     {
-                        fmt_print(printer, " INVALID-DESC(%p)", *percpu_desc);
+                        fmt_print(printer, " INVALID-DESC(%p)\n", *percpu_desc);
                     }
                     else
                     {
-                        fmt_print(printer, " IRQ(0x%lx)", (ul_t)(*percpu_desc)->irq);
+                        fmt_print(printer, " IRQ(0x%lx)\n", (ul_t)(*percpu_desc)->irq);
                     }
-                    fmt_print(printer, "\n");
                 }
-                break;
-            case IRQ_ACTION_RESOLVED_LINK:
-                fmt_print(printer, "RESOLVED-LINK RESOLVER(%p)\n",
-                           action->resolved_link_data.resolver);
-                break;
             }
         }
 

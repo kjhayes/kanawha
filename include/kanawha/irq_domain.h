@@ -114,6 +114,10 @@ struct irq_action
             irq_resolver_f *resolver;
         } resolved_link_data;
     };
+
+    struct {
+        unsigned long count;
+    } stats;
 };
 
 struct irq_domain *
