@@ -2182,7 +2182,7 @@ mmap_clone(struct mmap *from, struct process *onto)
 {
     int res;
 
-    // mmap_dump(do_printk, from);
+    // mmap_dump(printk_printer(), from);
 
     res = mmap_create(from->vmem_region->size, onto);
     if(res)
@@ -2231,19 +2231,19 @@ mmap_clone(struct mmap *from, struct process *onto)
     mmap_lock_release(mmap);
     mmap_lock_release(from);
 
-    // mmap_dump(do_printk, from);
-    // mmap_dump(do_printk, onto->mmap);
+    // mmap_dump(printk_printer(), from);
+    // mmap_dump(printk_printer(), onto->mmap);
     // dump_threads(do_printk);
 
     return 0;
 }
 
 static int
-dump_mmap_page(printk_f *printer,
+dump_mmap_page(struct printer *printer,
                struct mmap_region *region,
                struct mmap_page *page)
 {
-    (*printer)("\t\tPage [%p-%p] -> %p %s%s%s\n",
+    fmt_print(printer, "\t\tPage [%p-%p] -> %p %s%s%s\n",
                region->tree_node.key + page->tree_node.key,
                region->tree_node.key + page->tree_node.key +
                    (1ULL << page->order),
@@ -2255,13 +2255,13 @@ dump_mmap_page(printk_f *printer,
 }
 
 static int
-dump_mmap_region(printk_f *printer, struct mmap_region *region)
+dump_mmap_region(struct printer *printer, struct mmap_region *region)
 {
     int res;
 
     mmap_region_page_tree_lock_acquire(region);
 
-    (*printer)("\tRegion [%p-%p] %s%s%s %s%s%s %s\n",
+    fmt_print(printer, "\tRegion [%p-%p] %s%s%s %s%s%s %s\n",
                (uintptr_t)region->tree_node.key,
                (uintptr_t)region->tree_node.key + region->size,
                region->mmap_flags & MMAP_PROT_READ ? "[READ]" : "",
@@ -2291,12 +2291,10 @@ dump_mmap_region(printk_f *printer, struct mmap_region *region)
 }
 
 int
-mmap_dump(printk_f *printer, struct mmap *mmap)
+mmap_dump(struct printer *printer, struct mmap *mmap)
 {
     int res;
     mmap_lock_acquire(mmap);
-
-    (*printer)("MMAP\n");
 
     struct ptree_node *pnode;
     for(pnode = ptree_get_first(&mmap->region_tree); pnode != NULL;
@@ -2317,3 +2315,4 @@ mmap_dump(printk_f *printer, struct mmap *mmap)
     mmap_lock_release(mmap);
     return 0;
 }
+

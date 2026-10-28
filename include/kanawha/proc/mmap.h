@@ -172,6 +172,6 @@ int
 mmap_clone(struct mmap *from, struct process *onto);
 
 int
-mmap_dump(printk_f *printer, struct mmap *mmap);
+mmap_dump(struct printer *printer, struct mmap *mmap);
 
 #endif
