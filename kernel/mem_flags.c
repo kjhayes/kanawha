@@ -611,24 +611,30 @@ mem_flags_size_matching(
     return count;
 }
 
-void
+int
 mem_flags_print(struct mem_flags *map,
                 struct printer *printer,
                 void (*flag_printer)(struct printer *printer, unsigned long flags))
 {
+    int res;
     spin_lock(&map->lock);
     for(size_t i = 0; i < map->num_entries; i++)
     {
         struct mem_flags_entry *entry = &map->entries[i];
         uintptr_t end = entry->base + entry->size;
-        fmt_print(printer, "[%p - %p) size=0x%lx ",
+        res = fmt_print(printer, "[%p - %p) size=0x%lx ",
                    entry->base,
                    end,
                    (unsigned long)entry->size);
+        if(res) {
+            spin_unlock(&map->lock);
+            return res;
+        }
         (*flag_printer)(printer, (unsigned long)entry->flags);
         printer_puts(printer, "\n");
     }
     spin_unlock(&map->lock);
+    return 0;
 }
 
 /*
@@ -735,12 +741,10 @@ phys_mem_flags_printer(struct printer *printer, unsigned long flags)
 }
 
 int
-phys_mem_flags_dump(void)
+phys_mem_flags_dump(
+        struct printer *printer)
 {
-    printk("=== Physical Memory Flags ===\n");
-    mem_flags_print(get_phys_mem_flags(), printk_printer(), phys_mem_flags_printer);
-    printk("=============================\n");
-    return 0;
+    return mem_flags_print(get_phys_mem_flags(), printer, phys_mem_flags_printer);
 }
 
 declare_init_desc(static,
@@ -781,6 +785,9 @@ virt_mem_flags_static_init(void)
     printk("Marking all of virtual memory available\n");
     return 0;
 }
+declare_init_desc(static,
+                  virt_mem_flags_static_init,
+                  "Initializing Virtual Memory Map");
 
 static void
 virt_mem_flags_printer(struct printer *printer, unsigned long flags)
@@ -794,25 +801,11 @@ virt_mem_flags_printer(struct printer *printer, unsigned long flags)
 }
 
 int
-virt_mem_flags_dump(void)
+virt_mem_flags_dump(
+        struct printer *printer)
 {
-    printk("=== Virtual Memory Flags ===\n");
-    mem_flags_print(get_virt_mem_flags(), printk_printer(), virt_mem_flags_printer);
-    printk("============================\n");
-    return 0;
+    return mem_flags_print(get_virt_mem_flags(), printer, virt_mem_flags_printer);
 }
-declare_init_desc(static,
-                  virt_mem_flags_static_init,
-                  "Initializing Virtual Memory Map");
-
-static int
-mem_flags_dump(void)
-{
-    phys_mem_flags_dump();
-    virt_mem_flags_dump();
-    return 0;
-}
-declare_init_desc(page_alloc, mem_flags_dump, "Memory Map Dump");
 
 // Freeing Memory
 

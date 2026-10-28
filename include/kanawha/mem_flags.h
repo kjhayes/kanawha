@@ -108,7 +108,7 @@ mem_flags_size_matching(
         unsigned long must_be_set,
         unsigned long must_be_clear);
 
-void
+int
 mem_flags_print(struct mem_flags *map,
                 struct printer *printer,
                 void (*flag_printer)(struct printer *printer, unsigned long flags));
@@ -138,7 +138,7 @@ enum {
 };
 
 int
-phys_mem_flags_dump(void);
+phys_mem_flags_dump(struct printer *printer);
 struct mem_flags *
 get_phys_mem_flags(void);
 
@@ -164,7 +164,7 @@ enum {
 };
 
 int
-virt_mem_flags_dump(void);
+virt_mem_flags_dump(struct printer *printer);
 struct mem_flags *
 get_virt_mem_flags(void);
 
