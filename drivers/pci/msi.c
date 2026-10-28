@@ -420,20 +420,16 @@ msi_irq_status(struct irq_dev *dev, hwirq_t hwirq)
 static int
 msi_describe_irq(struct irq_dev *dev,
                  hwirq_t hwirq,
-                 char *buffer,
-                 size_t buflen)
+                 struct printer *printer)
 {
     struct msi_irq_dev *msi_dev =
         container_of(dev, struct msi_irq_dev, irq_dev);
     struct pci_func *func = msi_dev->func;
 
-    snprintk(buffer,
-             buflen,
+    return fmt_print(printer,
              "msi-%lu.%lu",
              (ul_t)func->device->index,
              (ul_t)func->index);
-
-    return 0;
 }
 
 static struct irq_driver msi_irq_driver = {

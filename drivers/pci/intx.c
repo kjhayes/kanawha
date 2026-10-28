@@ -39,14 +39,11 @@ static inline int
 pci_intx_describe_irq(
         struct irq_dev *dev,
         hwirq_t hwirq,
-        char *buffer,
-        size_t buflen)
+        struct printer *printer)
 {
     struct pci_intx_info *info = container_of(dev, struct pci_intx_info, irq_dev);
     if(hwirq >= 1 && hwirq <= 4) {
-        snprintk(
-                buffer,
-                buflen,
+        fmt_print(printer,
                 "%s-int-%c",
                 info->func->namebuf,
                 hwirq == 1 ? 'A' :
@@ -55,9 +52,7 @@ pci_intx_describe_irq(
                 hwirq == 4 ? 'D' :
                 '?');
     } else {
-        snprintk(
-                buffer,
-                buflen,
+        fmt_print(printer,
                 "%s-int-x",
                 info->func->namebuf
                 ); 

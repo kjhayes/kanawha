@@ -433,13 +433,11 @@ static int
 gicv2_describe_irq(
         struct irq_dev *irq_dev,
         hwirq_t hwirq,
-        char *buffer,
-        size_t buflen)
+        struct printer *printer)
 {
-    snprintk(buffer, buflen,
+    return fmt_print(printer,
             "gicv2-%lu",
             (ul_t)hwirq);
-    return 0;
 }
 
 static struct irq_driver gicv2_irq_driver = {

@@ -555,8 +555,7 @@ msix_irq_status(struct irq_dev *dev, hwirq_t hwirq)
 static int
 msix_describe_irq(struct irq_dev *dev,
                   hwirq_t hwirq,
-                  char *buffer,
-                  size_t buflen)
+                  struct printer *printer)
 {
     struct msix_irq_dev *msix_dev =
         container_of(dev, struct msix_irq_dev, irq_dev);
@@ -568,13 +567,10 @@ msix_describe_irq(struct irq_dev *dev,
     struct pci_msix_info *info = func->msix_info;
     DEBUG_ASSERT(KERNEL_ADDR(info));
 
-    snprintk(buffer,
-             buflen,
+    return fmt_print(printer,
              "msix-%lu.%lu",
              (ul_t)func->device->index,
              (ul_t)func->index);
-
-    return 0;
 }
 
 static struct irq_driver msix_irq_driver = {

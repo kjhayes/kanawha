@@ -28,14 +28,17 @@ irq_dev_unknown_irq_status(struct irq_dev *dev, hwirq_t hwirq)
 int
 irq_dev_default_describe_irq(struct irq_dev *dev,
                              hwirq_t hwirq,
-                             char *buffer,
-                             size_t buflen)
+                             struct printer *p)
 {
-    if(buflen > 0)
-    {
-        buffer[0] = '\0';
+    int res;
+    const char *name = irq_dev_get_name(dev);
+    if(name != NULL) {
+        return fmt_print(p, "%s-hwirq-%lu",
+                name,
+                (ul_t)hwirq);
+    } else {
+        return 0;
     }
-    return 0;
 }
 
 #ifdef CONFIG_LOG_IRQDEV_REGISTRY_ON_LAUNCH

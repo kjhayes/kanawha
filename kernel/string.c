@@ -143,6 +143,7 @@ memcmp(const void *lhs, const void *rhs, size_t n)
 size_t
 strlen(const char *str)
 {
+    DEBUG_ASSERT(KERNEL_ADDR(str));
     const char *term = str;
     while(*term != '\0')
     {
@@ -343,7 +344,7 @@ memset_p(void __phys *str, int c, size_t n)
 
 // String formatting
 
-struct string_printer {
+struct buffer_printer {
     char *buffer;
     size_t buflen;
     size_t offset;
@@ -351,12 +352,12 @@ struct string_printer {
 };
 
 static inline int
-string_printer_putc(
+buffer_printer_putc(
         struct printer *p,
         char c)
 {
-    struct string_printer *sp =
-        container_of(p, struct string_printer, printer);
+    struct buffer_printer *sp =
+        container_of(p, struct buffer_printer, printer);
     if(sp->offset < sp->buflen) {
         sp->buffer[sp->offset] = c;
     }
@@ -365,8 +366,8 @@ string_printer_putc(
 }
 
 static inline void
-string_printer_init(
-        struct string_printer *p,
+buffer_printer_init(
+        struct buffer_printer *p,
         char *buffer,
         size_t buflen)
 {
@@ -375,7 +376,7 @@ string_printer_init(
     p->offset = 0;
     p->printer.write = &printer_write_using_putc;
     p->printer.puts = &printer_puts_using_write;
-    p->printer.putc = &string_printer_putc;
+    p->printer.putc = &buffer_printer_putc;
     return;
 }
 
@@ -387,8 +388,8 @@ vsnprintk(
         va_list *args)
 {
     int res;
-    struct string_printer sp = {0};
-    string_printer_init(&sp, buf, size);
+    struct buffer_printer sp = {0};
+    buffer_printer_init(&sp, buf, size);
     res = fmt_vprint(&sp.printer, fmt, args);
     if(sp.offset < sp.buflen) {
         buf[sp.offset] = '\0';
@@ -416,4 +417,82 @@ snprintk(
 }
 EXPORT_SYMBOL(snprintk);
 EXPORT_SYMBOL(vsnprintk);
+
+struct string_printer {
+    unsigned long alloc_flags;
+    char *buffer;
+    size_t buflen;
+    size_t content_len;
+    struct printer printer;
+};
+
+static inline int
+string_printer_putc(
+        struct printer *p,
+        char c)
+{
+    struct string_printer *sp =
+        container_of(p, struct string_printer, printer);
+    if(sp->content_len >= sp->buflen) {
+        size_t newlen = sp->buflen * 2;
+        if(newlen == 0) {
+            newlen = 32;
+        }
+        char *new_buffer = kzmalloc(newlen, sp->alloc_flags);
+        if(new_buffer == NULL) {
+            return -ENOMEM;
+        }
+        memcpy(new_buffer, sp->buffer, sp->content_len);
+        char *old_buffer = sp->buffer;
+        sp->buffer = new_buffer;
+        sp->buflen = newlen;
+        if(old_buffer) {
+            kfree(old_buffer);
+        }
+    }
+    sp->buffer[sp->content_len] = c;
+    sp->content_len++;
+    return 0;
+}
+char *
+fmt_kstrdup(
+        unsigned long alloc_flags,
+        const char *fmt,
+        ...)
+{
+    int res;
+
+    struct string_printer sp = {
+        .alloc_flags = alloc_flags,
+        .buffer = NULL,
+        .buflen = 0,
+        .content_len = 0,
+        .printer = {
+            .putc = string_printer_putc,
+            .puts = printer_puts_using_putc,
+            .write = printer_write_using_putc,
+        },
+    };
+
+    va_list args;
+    va_start(args, fmt);
+    res = fmt_vprint(&sp.printer, fmt, &args);
+    if(res) {
+        kfree(sp.buffer);
+        return NULL;
+    }
+    va_end(args);
+
+    if(sp.buffer == NULL) {
+        return "";
+    }
+    char *final = kmalloc(sp.content_len + 1, alloc_flags);
+    if(final == NULL) {
+        kfree(sp.buffer);
+        return NULL;
+    }
+    memcpy(final, sp.buffer, sp.content_len);
+    final[sp.content_len] = '\0';
+    return final;
+}
 

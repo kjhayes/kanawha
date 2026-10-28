@@ -14,6 +14,7 @@
 
 DEFINE_LOCAL_THREAD_LOCK(ioapic_list_lock);
 static DECLARE_ILIST(ioapic_list);
+static unsigned long ioapic_next_id = 0;
 
 #define IOAPIC_MMIO_SIZE 0x20
 
@@ -152,9 +153,21 @@ x64_register_ioapic(ioapic_id_t id, void __phys *reg_base, hwirq_t irq_base)
     ioapic->phys_regs_base = reg_base;
     ioapic->base_irq = irq_base;
 
+    ioapic_list_lock_acquire();
+    ioapic->name = fmt_kstrdup(KM_KERNEL, "ioapic-%lu", (ul_t)ioapic_next_id);
+    if(ioapic->name == NULL) {
+        ioapic_list_lock_release();
+        kfree(ioapic);
+        return -ENOMEM;
+    }
+    ioapic_next_id++;
+    ioapic_list_lock_release();
+
+
     ioapic->regs = mmio_map(ioapic->phys_regs_base, IOAPIC_MMIO_SIZE);
     if(ioapic->regs == NULL)
     {
+        kfree(ioapic->name);
         kfree(ioapic);
         return -ENOMEM;
     }
@@ -180,6 +193,7 @@ x64_register_ioapic(ioapic_id_t id, void __phys *reg_base, hwirq_t irq_base)
     {
         eprintk("x64_register_ioapic: failed to create irq_domain!\n");
         mmio_unmap(ioapic->regs, IOAPIC_MMIO_SIZE);
+        kfree(ioapic->name);
         kfree(ioapic);
         return -EINVAL;
     }
@@ -208,6 +222,7 @@ x64_register_ioapic(ioapic_id_t id, void __phys *reg_base, hwirq_t irq_base)
                     hwirq);
             free_irq_domain_linear(ioapic->irq_domain);
             mmio_unmap(ioapic->regs, IOAPIC_MMIO_SIZE);
+            kfree(ioapic->name);
             kfree(ioapic);
             return -EINVAL;
         }
@@ -242,6 +257,7 @@ x64_register_ioapic(ioapic_id_t id, void __phys *reg_base, hwirq_t irq_base)
                     next_to_assign);
             free_irq_domain_linear(ioapic->irq_domain);
             mmio_unmap(ioapic->regs, IOAPIC_MMIO_SIZE);
+            kfree(ioapic->name);
             kfree(ioapic);
             return -EINVAL;
         }
@@ -256,6 +272,7 @@ x64_register_ioapic(ioapic_id_t id, void __phys *reg_base, hwirq_t irq_base)
                     (sl_t)next_to_assign);
             free_irq_domain_linear(ioapic->irq_domain);
             mmio_unmap(ioapic->regs, IOAPIC_MMIO_SIZE);
+            kfree(ioapic->name);
             kfree(ioapic);
             return -EINVAL;
         }
@@ -293,6 +310,7 @@ x64_register_ioapic(ioapic_id_t id, void __phys *reg_base, hwirq_t irq_base)
                     (sl_t)next_to_assign);
             free_irq_domain_linear(ioapic->irq_domain);
             mmio_unmap(ioapic->regs, IOAPIC_MMIO_SIZE);
+            kfree(ioapic->name);
             kfree(ioapic);
             return -EINVAL;
         }
@@ -311,6 +329,12 @@ x64_register_ioapic(ioapic_id_t id, void __phys *reg_base, hwirq_t irq_base)
     }
 
     ioapic_list_lock_acquire();
+    {
+        res = register_irq_dev(&ioapic->dev, ioapic->name);
+        if(res) {
+            wprintk("Failed to register IO/APIC as an irq_dev!\n");
+        }
+    }
     ilist_push_tail(&ioapic_list, &ioapic->list_node);
     ioapic_list_lock_release();
 

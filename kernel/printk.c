@@ -174,3 +174,72 @@ printk_printer(void)
     return &_printk_printer;
 }
 
+static int
+panic_printer_putc(
+        struct printer *p,
+        char c)
+{
+    for(size_t handler_i = 0; handler_i < CONFIG_PRINTK_MAX_HANDLERS; handler_i++)
+    {
+        printk_handler_f *func = printk_handlers[handler_i];
+        if(func != NULL)
+        {
+            (*func)(c);
+        }
+    }
+    return 0;
+}
+
+static int
+panic_printer_puts(
+        struct printer *p,
+        const char *str)
+{
+    char c;
+    while((c = *str++)) {
+        for(size_t handler_i = 0; handler_i < CONFIG_PRINTK_MAX_HANDLERS; handler_i++)
+        {
+            printk_handler_f *func = printk_handlers[handler_i];
+            if(func != NULL)
+            {
+                (*func)(c);
+            }
+        }
+    }
+    return 0;
+}
+static int
+panic_printer_write(
+        struct printer *printer,
+        size_t buflen,
+        const char *buffer)
+{
+    for(size_t i = 0; i < buflen; i++)
+    {
+        char c = buffer[i];
+
+        for(size_t handler_i = 0; handler_i < CONFIG_PRINTK_MAX_HANDLERS; handler_i++)
+        {
+            printk_handler_f *func = printk_handlers[handler_i];
+            if(func != NULL)
+            {
+                (*func)(c);
+            }
+        }
+    }
+
+    return 0;
+}
+
+static struct printer 
+_panic_printer = {
+    .putc = panic_printer_putc,
+    .puts = panic_printer_puts,
+    .write = panic_printer_write,
+};
+struct printer *
+panic_printer(void)
+{
+    return &_panic_printer;
+}
+

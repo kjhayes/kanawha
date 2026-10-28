@@ -381,6 +381,8 @@ run_irq_actions(struct irq_desc *desc, struct excp_state *excp_state)
 int
 handle_irq(struct irq_desc *desc, struct excp_state *excp_state)
 {
+    desc->stats.count++;
+
     if(desc->dev && desc->dev->driver->ack_irq)
     {
         irq_dev_ack_irq(desc->dev, desc->hwirq);
@@ -654,18 +656,13 @@ describe_irq_desc(
         struct printer *printer,
         struct irq_desc *desc)
 {
-#define BUFLEN 256
     if(desc->dev)
     {
-        char buffer[BUFLEN];
-        irq_dev_describe_irq(desc->dev, desc->hwirq, buffer, BUFLEN);
-        buffer[BUFLEN - 1] = '\0';
-        fmt_print(printer, buffer);
-    } else {
-        fmt_print(printer, "irq-%ld", desc->irq);
+        return irq_dev_describe_irq(desc->dev, desc->hwirq, printer);
     }
-#undef BUFLEN
-    return 0;
+    else {
+        return fmt_print(printer, "irq-%ld", desc->irq);
+    }
 }
 
 int
@@ -724,7 +721,7 @@ irq_domain_dump(struct printer *printer, struct irq_domain *domain)
         {
             fmt_print(printer, "HWIRQ(0x%x) \"", desc->hwirq);
             describe_irq_desc(printer, desc);
-            fmt_print(printer, "\"");
+            fmt_print(printer, "\" [count=%lu]", desc->stats.count);
         }
 
         unsigned long status = irq_desc_status(desc);

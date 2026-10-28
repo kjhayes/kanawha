@@ -49,10 +49,3 @@ do_panic(void)
 }
 
 EXPORT_SYMBOL(do_panic);
-
-struct printer *
-panic_printer(void)
-{
-    return printk_printer();
-}
-

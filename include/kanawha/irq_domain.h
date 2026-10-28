@@ -56,6 +56,10 @@ struct irq_desc
 
     struct irq_domain *domain;
     struct irq_dev *dev;
+
+    struct {
+        unsigned long count;
+    } stats;
 };
 
 /*

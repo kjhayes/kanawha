@@ -29,6 +29,8 @@ struct ioapic
     hwirq_t base_irq;
     size_t num_irq;
 
+    char *name;
+
     struct irq_domain *irq_domain;
 
     ilist_node_t list_node;

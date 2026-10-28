@@ -61,4 +61,10 @@ snprintk(
         const char *fmt,
         ...);
 
+char *
+fmt_kstrdup(
+        unsigned long alloc_flags,
+        const char *fmt,
+        ...);
+
 #endif

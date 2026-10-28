@@ -42,8 +42,7 @@ struct irq_driver;
 #define IRQ_DEV_DESCRIBE_IRQ_SIG(RET, ARG, ...)                                \
     RET(int)                                                                   \
     ARG(hwirq_t, irq)                                                          \
-    ARG(char *, buffer)                                                        \
-    ARG(size_t, buflen)
+    ARG(struct printer *, printer)
 
 #define IRQ_DEV_OP_LIST(OP, ...)                                               \
     OP(mask_irq, IRQ_DEV_MASK_IRQ_SIG, ##__VA_ARGS__)                          \
@@ -84,7 +83,6 @@ irq_dev_unknown_irq_status(struct irq_dev *dev, hwirq_t hwirq);
 int
 irq_dev_default_describe_irq(struct irq_dev *dev,
                              hwirq_t hwirq,
-                             char *buffer,
-                             size_t buflen);
+                             struct printer *printer);
 
 #endif

@@ -208,13 +208,11 @@ static int
 sifive_plic_describe_irq(
         struct irq_dev *irq_dev,
         hwirq_t hwirq,
-        char *buffer,
-        size_t buflen)
+        struct printer *printer)
 {
-    snprintk(buffer, buflen,
+    return fmt_print(printer,
             "plic-%lu",
             (ul_t)hwirq);
-    return 0;
 }
 
 static struct irq_driver sifive_plic_irq_driver = {

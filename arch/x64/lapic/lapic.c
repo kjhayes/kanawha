@@ -96,8 +96,7 @@ lapic_lvt_irq_status(struct irq_dev *dev, hwirq_t hwirq)
 static int
 lapic_lvt_describe_irq(struct irq_dev *dev,
                        hwirq_t hwirq,
-                       char *buffer,
-                       size_t buflen)
+                       struct printer *printer)
 {
 
     struct lapic *lapic = container_of(dev, struct lapic, lvt_dev);
@@ -131,8 +130,7 @@ lapic_lvt_describe_irq(struct irq_dev *dev,
         break;
     }
 
-    snprintk(buffer, buflen, "lapic-%lu-lvt-%s", (ul_t)lapic->id, str);
-    return 0;
+    return fmt_print(printer, "lapic-%lu-lvt-%s", (ul_t)lapic->id, str);
 }
 
 static int
@@ -201,12 +199,11 @@ lapic_irq_status(struct irq_dev *dev, hwirq_t hwirq)
 static int
 lapic_describe_irq(struct irq_dev *dev,
                    hwirq_t hwirq,
-                   char *buffer,
-                   size_t buflen)
+                   struct printer *printer)
 {
 
     struct lapic *lapic = container_of(dev, struct lapic, irq_dev);
-    snprintk(buffer, buflen, "lapic-%lu", (ul_t)lapic->id);
+    fmt_print(printer, "lapic-%lu", (ul_t)lapic->id);
     return 0;
 }
 
