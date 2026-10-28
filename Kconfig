@@ -134,7 +134,7 @@ config MMIO_RESERVE_SIZE_ORDER
 config KUSER_VIRTUAL_BASE
   hex "kuser Virtual Base"
   depends on KUSER
-  default 0x0
+  default 0xffffff8000000000
 
 endmenu
 
