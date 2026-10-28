@@ -33,7 +33,7 @@ strncasecmp(const char *lhs, const char *rhs, size_t n);
 
 // Duplicates the string using kmalloc
 char *
-kstrdup(const char *str);
+kstrdup(const char *str, unsigned long alloc_flags);
 
 // Copying to/from/around physical memory
 void

@@ -62,7 +62,7 @@ create_scheduler(const char *type_name, const char *sched_name)
 
     sched->num_cpus = 0;
     sched->type = type;
-    sched->name = kstrdup(sched_name);
+    sched->name = kstrdup(sched_name, KM_KERNEL);
     if(sched->name == NULL)
     {
         scheduler_type_free_instance(type, sched);

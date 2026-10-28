@@ -119,13 +119,7 @@ virtio_input_init_device(struct virtio_driver *driver,
         return res;
     }
 
-#define NAMEBUFLEN 64
-    char namebuf[NAMEBUFLEN];
-    snprintk(namebuf, NAMEBUFLEN, "virtio-input-%ld", (sl_t)input->ptree_node.key);
-    namebuf[NAMEBUFLEN - 1] = '\0';
-#undef NAMEBUFLEN
-
-    input->name = kstrdup(namebuf);
+    input->name = fmt_kstrdup(KM_KERNEL, "virtio-input-%ld", (sl_t)input->ptree_node.key);
     if(input->name == NULL)
     {
         eprintk("virtio_input: failed to allocate device name buffer!\n");

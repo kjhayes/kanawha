@@ -236,13 +236,7 @@ virtio_blk_init_device(struct virtio_driver *driver,
     virtio_blk_count++;
     spin_unlock(&virtio_blk_count_lock);
 
-#define NAMEBUFLEN 64
-    char namebuf[NAMEBUFLEN];
-    snprintk(namebuf, NAMEBUFLEN, "virtio-blk-%ld", dev_index);
-    namebuf[NAMEBUFLEN - 1] = '\0';
-#undef NAMEBUFLEN
-
-    blk->name = kstrdup(namebuf);
+    blk->name = fmt_kstrdup(KM_KERNEL, "virtio-blk-%ld", dev_index);
     if(blk->name == NULL)
     {
         kfree(blk);

@@ -29,7 +29,7 @@ waitqueue_init(struct waitqueue *queue)
 int
 waitqueue_name(struct waitqueue *queue, const char *to_copy)
 {
-    char *name = kstrdup(to_copy);
+    char *name = kstrdup(to_copy, KM_KERNEL);
     if(name == NULL)
     {
         return -ENOMEM;

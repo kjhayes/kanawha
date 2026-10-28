@@ -42,7 +42,7 @@ sysfs_register_mount(struct fs_mount *mnt, const char *id)
     }
 
     sysmnt->mount = mnt;
-    sysmnt->tree_node.key = kstrdup(id);
+    sysmnt->tree_node.key = kstrdup(id, KM_KERNEL);
     if(sysmnt->tree_node.key == NULL)
     {
         kfree(sysmnt);

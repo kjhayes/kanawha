@@ -980,7 +980,7 @@ process_set_self_name(
         const char *name)
 {
     char *old_name = process->self_name;
-    char *dup = kstrdup(name);
+    char *dup = kstrdup(name, KM_KERNEL);
     if(dup == NULL) {
         return -ENOMEM;
     }
@@ -1601,7 +1601,7 @@ process_spawn_child(struct process *parent,
 #ifdef CONFIG_DEBUG_TRACK_PROCESS_EXEC
     if(parent->tracked_exec)
     {
-        process->tracked_exec = kstrdup(parent->tracked_exec);
+        process->tracked_exec = kstrdup(parent->tracked_exec, KM_KERNEL);
     }
 #endif
 

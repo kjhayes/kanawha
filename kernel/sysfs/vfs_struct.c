@@ -66,7 +66,7 @@ __vfs_struct_add_field(struct vfs_struct_node *struct_node,
 {
     int res;
 
-    field->name = kstrdup(name);
+    field->name = kstrdup(name, KM_KERNEL);
     if(field->name == NULL)
     {
         return -ENOMEM;
@@ -237,7 +237,7 @@ vfs_create_struct_node(struct vfs_mount *mnt, const char *name)
     spinlock_init(&node->field_tree_lock);
     stree_init(&node->field_tree);
 
-    node->name = kstrdup(name);
+    node->name = kstrdup(name, KM_KERNEL);
     if(node->name == NULL)
     {
         kfree(node);

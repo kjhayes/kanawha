@@ -354,12 +354,7 @@ virtio_gpu_init_device(struct virtio_driver *driver,
     unsigned long dev_index;
     dev_index = id_range_alloc(&virtio_gpu_id_range);
 
-#define NAMEBUFLEN 64
-    char namebuf[NAMEBUFLEN];
-    snprintk(namebuf, NAMEBUFLEN, "virtio-gpu-%ld", dev_index);
-    namebuf[NAMEBUFLEN - 1] = '\0';
-
-    gpu->name = kstrdup(namebuf);
+    gpu->name = fmt_kstrdup(KM_KERNEL, "virtio-gpu-%ld", dev_index);
     if(gpu->name == NULL)
     {
         virtio_queue_disable(gpu->control_queue);

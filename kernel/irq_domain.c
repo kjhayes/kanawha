@@ -252,7 +252,7 @@ irq_action_set_description(
         struct irq_action *action,
         const char *desc)
 {
-    char *dup = kstrdup(desc);
+    char *dup = kstrdup(desc, KM_KERNEL);
     if(dup == NULL) {
         return -ENOMEM;
     }

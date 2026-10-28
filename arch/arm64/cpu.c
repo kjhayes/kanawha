@@ -57,15 +57,10 @@ arm64_dt_cpu_init(struct dt_driver *driver, struct dt_node *node)
         return res;
     }
 
+    cpu->name = fmt_kstrdup(KM_KERNEL, "cpu%lu", (ul_t)mpid);
+    if(cpu->name == NULL)
     {
-        char namebuf[32];
-        snprintk(namebuf, 32, "cpu%lu", (ul_t)mpid);
-        namebuf[32 - 1] = '\0';
-        cpu->name = kstrdup(namebuf);
-        if(cpu->name == NULL)
-        {
-            cpu->name = "";
-        }
+        cpu->name = "";
     }
 
     int is_bsp = (mpid == current_mpid());

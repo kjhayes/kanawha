@@ -408,17 +408,10 @@ register_cpu_lapic_timer(struct x64_cpu *cpu)
 
     struct lapic_timer *timer = &cpu->apic_timer;
 
+    timer->name = fmt_kstrdup(KM_KERNEL, "lapic-timer-%ld", cpu->cpu.id);
+    if(timer->name == NULL)
     {
-#define NAMEBUFLEN 128
-        char namebuf[NAMEBUFLEN];
-        snprintk(namebuf, NAMEBUFLEN, "lapic-timer-%ld", cpu->cpu.id);
-        namebuf[NAMEBUFLEN - 1] = '\0';
-        timer->name = kstrdup(namebuf);
-        if(timer->name == NULL)
-        {
-            return -ENOMEM;
-        }
-#undef NAMEBUFLEN
+        return -ENOMEM;
     }
 
     timer->clk_dev.driver = &lapic_clk_driver;

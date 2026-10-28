@@ -41,7 +41,7 @@ static int
 __init_module(struct module *module, const char *name, unsigned long flags)
 {
     int res;
-    module->name = kstrdup(name);
+    module->name = kstrdup(name, KM_KERNEL);
     if(module->name == NULL)
     {
         return -ENOMEM;

@@ -178,12 +178,7 @@ virtio_rng_init_device(struct virtio_driver *driver,
     virtio_rng_count++;
     spin_unlock(&virtio_rng_count_lock);
 
-#define NAMEBUFLEN 64
-    char namebuf[NAMEBUFLEN];
-    snprintk(namebuf, NAMEBUFLEN, "virtio-rng-%ld", dev_index);
-    namebuf[NAMEBUFLEN - 1] = '\0';
-
-    rng->name = kstrdup(namebuf);
+    rng->name = fmt_kstrdup(KM_KERNEL, "virtio-rng-%ld", dev_index);
     if(rng->name == NULL)
     {
         virtio_queue_disable(rng->request_queue);

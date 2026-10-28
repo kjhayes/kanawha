@@ -205,7 +205,7 @@ __fs_path_traverse(struct process *process,
 #endif
 
         child->refs = 1;
-        child->name = kstrdup(child_name);
+        child->name = kstrdup(child_name, KM_KERNEL);
         if(child->name == NULL)
         {
             kfree(child);
@@ -503,7 +503,7 @@ fs_path_mount_dir(struct fs_path *parent,
 
     mntpoint->type = FS_PATH_MOUNT;
     mntpoint->parent = NULL;
-    mntpoint->name = kstrdup(name);
+    mntpoint->name = kstrdup(name, KM_KERNEL);
     if(mntpoint->name == NULL)
     {
         kfree(mntpoint);
@@ -567,7 +567,7 @@ __fs_path_lookup_for_process(struct process *process,
             process->root_directory,
             process->working_directory);
 
-    char *dup = kstrdup(path_str);
+    char *dup = kstrdup(path_str, KM_KERNEL);
     if(dup == NULL)
     {
         return -ENOMEM;

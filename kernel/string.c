@@ -302,10 +302,10 @@ strncasecmp(const char *lhs, const char *rhs, size_t n)
 }
 
 char *
-kstrdup(const char *str)
+kstrdup(const char *str, unsigned long alloc_flags)
 {
     size_t len = strlen(str);
-    char *clone = kmalloc(len + 1, KM_KERNEL);
+    char *clone = kmalloc(len + 1, alloc_flags);
     if(clone == NULL)
     {
         return clone;

@@ -115,15 +115,10 @@ riscv64_dt_cpu_init(struct dt_driver *driver, struct dt_node *node)
     }
     memset(cpu, 0, sizeof(struct riscv64_cpu));
 
+    cpu->name = fmt_kstrdup(KM_KERNEL, "hart%ld", hartid);
+    if(cpu->name == NULL)
     {
-        char namebuf[32];
-        snprintk(namebuf, 32, "hart%ld", hartid);
-        namebuf[32 - 1] = '\0';
-        cpu->name = kstrdup(namebuf);
-        if(cpu->name == NULL)
-        {
-            cpu->name = "";
-        }
+        cpu->name = "";
     }
 
     int is_bsp = (hartid == current_hartid());

@@ -60,7 +60,7 @@ environment_clone(struct environment *environ, struct process *process)
             goto err2;
         }
 
-        char *key_dup = kstrdup(var->node.key);
+        char *key_dup = kstrdup(var->node.key, KM_KERNEL);
         if(key_dup == NULL)
         {
             kfree(child_var);
@@ -68,7 +68,7 @@ environment_clone(struct environment *environ, struct process *process)
             goto err2;
         }
 
-        char *value_dup = kstrdup(var->value);
+        char *value_dup = kstrdup(var->value, KM_KERNEL);
         if(value_dup == NULL)
         {
             kfree(child_var);
@@ -239,14 +239,14 @@ environment_set(struct environment *environ,
             return -ENOMEM;
         }
 
-        char *key_dup = kstrdup(var_name);
+        char *key_dup = kstrdup(var_name, KM_KERNEL);
         if(key_dup == NULL)
         {
             kfree(var);
             spin_unlock(&environ->lock);
             return -ENOMEM;
         }
-        char *value_dup = kstrdup(value);
+        char *value_dup = kstrdup(value, KM_KERNEL);
         if(value_dup == NULL)
         {
             kfree(key_dup);
@@ -272,7 +272,7 @@ environment_set(struct environment *environ,
     {
         struct envvar *var = container_of(node, struct envvar, node);
 
-        char *value_dup = kstrdup(value);
+        char *value_dup = kstrdup(value, KM_KERNEL);
         if(value_dup == NULL)
         {
             spin_unlock(&environ->lock);

@@ -174,11 +174,7 @@ virtio_console_init_device(struct virtio_driver *driver,
 
         dprintk("enabled queues\n");
 
-        char namebuf[128];
-        snprintk(namebuf, 128, "virtio-console-%ld", (sl_t)port_i);
-        namebuf[127] = '\0';
-
-        port->name = kstrdup(namebuf);
+        port->name = fmt_kstrdup(KM_KERNEL, "virtio-console-%ld", (sl_t)port_i);
         if(port->name == NULL)
         {
             virtio_queue_disable(port->recv_queue);

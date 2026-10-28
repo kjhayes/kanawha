@@ -570,7 +570,7 @@ mmap_map_region(struct process *process,
             goto err0;
         }
 
-        name_clone = kstrdup(fs_path_get_name(desc->path));
+        name_clone = kstrdup(fs_path_get_name(desc->path), KM_KERNEL);
         if(name_clone == NULL)
         {
             // We failed to clone the name of this file...

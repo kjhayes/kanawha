@@ -238,12 +238,7 @@ cp15_setup_local_cpu_xcall(void *__global)
         return;
     }
     cp15->cpu = current_cpu_id();
-    {
-        char buffer[32];
-        snprintk(buffer, 32, "cp15-%ld", (sl_t)cp15->cpu);
-        buffer[31] = '\0';
-        cp15->name = kstrdup(buffer);
-    }
+    cp15->name = fmt_kstrdup(KM_KERNEL, "cp15-%ld", (sl_t)cp15->cpu);
     if(cp15->name == NULL) {
         cp15_global_timer_destroy_local(global, cp15);
         wprintk("OOM during CP15 timer dev init on CPU %ld!\n",

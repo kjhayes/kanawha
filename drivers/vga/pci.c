@@ -32,25 +32,17 @@ vga_pci_init_device(struct pci_driver *driver, struct pci_func *func)
     func->driver_priv_state = vga_pci_dev;
     vga_pci_dev->pci_func = func;
 
+    vga_pci_dev->name = fmt_kstrdup(
+            KM_KERNEL,
+            "%u.%u.%u.%u",
+            (u_t)func->segment->segment_id,
+            (u_t)func->device->bus->bus_index,
+            (u_t)func->device->index,
+            (u_t)func->index);
+    if(vga_pci_dev->name == NULL)
     {
-#define BUFLEN 64
-        char buffer[BUFLEN];
-        snprintk(buffer,
-                 BUFLEN,
-                 "%u.%u.%u.%u",
-                 (u_t)func->segment->segment_id,
-                 (u_t)func->device->bus->bus_index,
-                 (u_t)func->device->index,
-                 (u_t)func->index);
-        buffer[BUFLEN - 1] = '\0';
-
-        vga_pci_dev->name = kstrdup(buffer);
-        if(vga_pci_dev->name == NULL)
-        {
-            kfree(vga_pci_dev);
-            return -ENOMEM;
-        }
-#undef BUFLEN
+        kfree(vga_pci_dev);
+        return -ENOMEM;
     }
 
     res = register_vga_dev(&vga_pci_dev->vga_dev, vga_pci_dev->name);

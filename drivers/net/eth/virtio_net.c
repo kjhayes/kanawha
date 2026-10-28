@@ -613,13 +613,7 @@ virtio_net_init_device(struct virtio_driver *driver,
     virtio_net_count++;
     spin_unlock(&virtio_net_count_lock);
 
-#define NAMEBUFLEN 64
-    char namebuf[NAMEBUFLEN];
-    snprintk(namebuf, NAMEBUFLEN, "virtio-net-%ld", dev_index);
-    namebuf[NAMEBUFLEN - 1] = '\0';
-#undef NAMEBUFLEN
-
-    net->name = kstrdup(namebuf);
+    net->name = fmt_kstrdup(KM_KERNEL, "virtio-net-%ld", dev_index);
     if(net->name == NULL)
     {
         for(int i = 0; i < net->num_queue_pairs; i++)

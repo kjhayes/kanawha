@@ -314,7 +314,7 @@ ramfs_create_link(struct ramfs_node *dir,
         return -ENOMEM;
     }
 
-    dirent->name = kstrdup(name);
+    dirent->name = kstrdup(name, KM_KERNEL);
     if(dirent->name == NULL)
     {
         kfree(dirent);

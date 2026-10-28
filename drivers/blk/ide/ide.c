@@ -668,10 +668,7 @@ ide_dev_register(pio_t io_base,
     if(dev->flags & IDE_DEV_FLAG_PRIMARY_EXISTS)
     {
         {
-            char namebuf[128];
-            snprintk(namebuf, 128, "%s.0", name);
-            namebuf[128 - 1] = '\0';
-            dev->primary_name = kstrdup(namebuf);
+            dev->primary_name = fmt_kstrdup(KM_KERNEL, "%s.0", name);
             if(dev->primary_name == NULL)
             {
                 kfree(dev);
@@ -691,10 +688,7 @@ ide_dev_register(pio_t io_base,
     if(dev->flags & IDE_DEV_FLAG_SECONDARY_EXISTS)
     {
         {
-            char namebuf[128];
-            snprintk(namebuf, 128, "%s.1", name);
-            namebuf[128 - 1] = '\0';
-            dev->secondary_name = kstrdup(namebuf);
+            dev->secondary_name = fmt_kstrdup(KM_KERNEL, "%s.1", name);
             if(dev->secondary_name == NULL)
             {
                 if(dev->flags & IDE_DEV_FLAG_PRIMARY_EXISTS)

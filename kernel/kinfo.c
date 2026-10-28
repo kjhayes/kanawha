@@ -165,7 +165,7 @@ kinfo_create(
     if(info == NULL) {
         return NULL;
     }
-    info->name = kstrdup(name);
+    info->name = kstrdup(name, KM_KERNEL);
     if(info->name == NULL) {
         kfree(info);
         return NULL;

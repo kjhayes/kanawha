@@ -131,7 +131,7 @@ process_exec(struct process *process,
     }
     if(name)
     {
-        process->tracked_exec = kstrdup(name);
+        process->tracked_exec = kstrdup(name, KM_KERNEL);
     }
 #endif
 

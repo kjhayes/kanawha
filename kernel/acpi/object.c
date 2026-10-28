@@ -270,7 +270,7 @@ acpi_create_integer_constant_obj(unsigned long value)
 struct acpi_obj *
 acpi_create_string_obj(const char *string)
 {
-    char *dup = kstrdup(string);
+    char *dup = kstrdup(string, KM_KERNEL);
     if(dup == NULL)
     {
         return NULL;

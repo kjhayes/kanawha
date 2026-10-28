@@ -72,7 +72,7 @@ tasklet_create(tasklet_f *func, void *state)
 int
 tasklet_name(struct tasklet *task, const char *name)
 {
-    char *newname = kstrdup(name);
+    char *newname = kstrdup(name, KM_KERNEL);
     if(newname == NULL)
     {
         return -ENOMEM;

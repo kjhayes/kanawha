@@ -33,7 +33,7 @@ rand_dev_udrv_create(struct udrv_mount *mnt, const char *name)
         return NULL;
     }
 
-    dev->name = kstrdup(name);
+    dev->name = kstrdup(name, KM_KERNEL);
     if(dev->name == NULL)
     {
         kfree(dev);

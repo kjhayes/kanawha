@@ -473,17 +473,13 @@ scsi_dev_init(struct scsi_adaptor *adaptor,
     dev->lba_order = 0;
     dev->name = NULL;
 
-    {
-        char namebuf[64 + 1];
-        snprintk(namebuf,
-                 64,
-                 "%s-%lu-%lu",
-                 (ul_t)adaptor->name,
-                 (ul_t)target.target,
-                 (ul_t)target.lun);
-        namebuf[64] = '\0';
-
-        dev->name = kstrdup(namebuf);
+    dev->name = fmt_kstrdup(KM_KERNEL,
+             "%s-%lu-%lu",
+             (ul_t)adaptor->name,
+             (ul_t)target.target,
+             (ul_t)target.lun);
+    if(dev->name == NULL) {
+        return -ENOMEM;
     }
 
     res = scsi_dev_start(dev);

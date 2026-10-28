@@ -351,7 +351,7 @@ vfs_node_link(struct vfs_node *node, const char *name, size_t inode)
         return -ENOMEM;
     }
 
-    link->name = kstrdup(name);
+    link->name = kstrdup(name, KM_KERNEL);
     link->inode = inode;
     link->stree_node.key = link->name;
 
