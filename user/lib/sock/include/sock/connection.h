@@ -110,4 +110,8 @@ sock_connection_unmap_shmem(
         size_t size,
         void *base);
 
+int
+sock_connection_check_for_disconnect(
+        struct sock_connection *conn);
+
 #endif

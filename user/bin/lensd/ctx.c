@@ -178,7 +178,12 @@ poll_client_callback(
         struct lens_client_ctx *ctx,
         void *state)
 {
-    return lens_server_poll_client(ctx->client);
+    int res;
+    res = lens_server_poll_client(ctx->client);
+    if(res) {
+        return res;
+    }
+    return 0;
 }
 
 int

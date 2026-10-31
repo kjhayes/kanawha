@@ -12,6 +12,7 @@
 #include <string.h>
 #include <threads.h>
 #include <unistd.h>
+#include <sys/wait.h>
 #include <lens/lens.h>
 #include <lens/window.h>
 
@@ -374,6 +375,11 @@ main(int argc, const char **argv)
 
     while(terminal_data.running)
     {
+        int stat;
+        int waitres = waitpid(shell.shell_pid, &stat, WNOHANG);
+        if(waitres > 0) {
+            terminal_data.running = 0;
+        }
         render_update(&terminal_data, fdata, render);
 
         ansi_terminal_update(&terminal_data, input_from_shell);

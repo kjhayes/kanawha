@@ -143,6 +143,11 @@ input_thread(void *_src)
     struct input_source *src = _src;
 
     int input_file = open(src->path, O_RDONLY);
+    if(input_file < 0) {
+        printf("lensd: failed to open input device \"%s\"!\n",
+                src->path);
+        return -EINVAL;
+    }
 
     while(lensd_running) {
         struct input_event evt;
@@ -150,6 +155,7 @@ input_thread(void *_src)
         while(total < sizeof(evt)) {
             ssize_t amt = read(input_file, &evt + total, sizeof(evt)-total);
             if(amt <= 0) {
+                printf("lensd: input_thread error closing!\n");
                 close(input_file);
                 return amt;
             }
@@ -158,6 +164,9 @@ input_thread(void *_src)
 
         handle_input_event(src, &evt);
     }
+
+    printf("lensd: input_thread shutting down!\n");
+    close(input_file);
     return 0;
 }
 

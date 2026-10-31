@@ -156,12 +156,14 @@ sock_connection_read_thread(void *_conn)
     while(conn->status == SOCK_CONNECTION_CONNECTED) {
         res = sock_connection_await_msg(conn);
         if(res) {
-            // Weird but we will ignore it...
+            sock_connection_check_for_disconnect(conn);
+            continue;
         }
         if(conn->autopoll) {
             res = sock_connection_poll(conn);
             if(res) {
-                // Weird but we will ignore it...
+                sock_connection_check_for_disconnect(conn);
+                continue;
             }
         }
     }
@@ -176,7 +178,7 @@ sock_connection_write_thread(void *_conn)
     while(conn->status == SOCK_CONNECTION_CONNECTED) {
         res = sock_connection_flush_msg(conn);
         if(res) {
-            // Weird but we will ignore it...
+            sock_connection_check_for_disconnect(conn);
         }
         // Writes are non-blocking for now...
         usleep(10000); // 10ms sleep
@@ -263,8 +265,7 @@ sock_connection_deinit(
     return 0;
 }
 
-__attribute__((unused))
-static int
+int
 sock_connection_check_for_disconnect(
         struct sock_connection *conn)
 {

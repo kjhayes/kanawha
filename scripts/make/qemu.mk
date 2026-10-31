@@ -11,7 +11,7 @@ QEMU_FLAGS += -d guest_errors
 
 QEMU_FLAGS += -trace "*pl011*"
 
-# QEMU_FLAGS += -device virtio-gpu-pci,disable-legacy=on,disable-modern=off
+QEMU_FLAGS += -device virtio-gpu-pci,disable-legacy=on,disable-modern=off
 
 # QEMU_FLAGS += -drive id=ahcidisk,file=ahci.img,if=none \
 #              -device ahci,id=ahci \
