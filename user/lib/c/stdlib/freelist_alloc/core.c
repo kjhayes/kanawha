@@ -6,10 +6,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <string.h>
 
 #define MINIMUM_ALLOCATION_SIZE (16)
 #define HEAP_BLOCK_SIZE (0x100000)
-#define HEAP_MMAP_SIZE (0x1000)
 
 struct heap_block
 {
@@ -52,14 +52,20 @@ heap_lock_release(void)
 static struct heap_block *heap_block_list = NULL;
 
 static struct heap_block *
-heap_grow_lockless(void)
+heap_grow_lockless(size_t min_size)
 {
     int res;
+
+    size_t size = min_size;
+    if(size < HEAP_BLOCK_SIZE) {
+        size = HEAP_BLOCK_SIZE;
+    }
+
     void *new_block;
     res = kanawha_sys_mmap(0,
                            0,
                            &new_block,
-                           HEAP_BLOCK_SIZE,
+                           size,
                            MMAP_ANON | MMAP_PROT_READ | MMAP_PROT_WRITE);
     if(res)
     {
@@ -67,7 +73,7 @@ heap_grow_lockless(void)
     }
     struct heap_block *block = new_block;
 
-    block->size = HEAP_BLOCK_SIZE;
+    block->size = size;
 
     struct free_region *init_free = (void *)block->data;
     init_free->next = NULL;
@@ -97,27 +103,6 @@ malloc(size_t size)
         {
             size += (MINIMUM_ALLOCATION_SIZE - rem);
         }
-    }
-
-    if(size >= HEAP_MMAP_SIZE)
-    {
-        int res;
-        void *alloc;
-
-        // Round up to the nearest page
-        size += HEAP_MMAP_SIZE - 1;
-        size &= ~(HEAP_MMAP_SIZE - 1);
-
-        res = kanawha_sys_mmap(0,
-                               0,
-                               &alloc,
-                               size,
-                               MMAP_ANON | MMAP_PROT_WRITE | MMAP_PROT_READ);
-        if(res)
-        {
-            return NULL;
-        }
-        return alloc;
     }
 
     heap_lock_acquire();
@@ -161,7 +146,7 @@ malloc(size_t size)
         return alloc->data;
     }
 
-    heap_grow_lockless();
+    heap_grow_lockless(2*size);
     heap_lock_release();
     return malloc(size); // Recursion!
                          // Maybe a bad idea but ANY
@@ -194,14 +179,7 @@ free(void *ptr)
     }
     if(block == NULL)
     {
-        // This must have been an mmap allocation.
-        heap_lock_release();
-        int res;
-        res = kanawha_sys_munmap(ptr);
-        if(res)
-        {
-            // Huh? (TODO: Log a warning somehow?)
-        }
+        // Huh? TODO "abort()?"
         return;
     }
 
@@ -227,3 +205,58 @@ free(void *ptr)
 
     heap_lock_release();
 }
+
+void *
+realloc(void *ptr, size_t size)
+{
+    if(ptr == NULL)
+    {
+        return malloc(size);
+    }
+
+    heap_lock_acquire();
+    struct heap_block *block = NULL;
+    struct heap_block *blk_iter = heap_block_list;
+    while(blk_iter)
+    {
+        if((ptr >= (void *)blk_iter) &&
+           (ptr < ((void *)blk_iter + blk_iter->size)))
+        {
+            block = blk_iter;
+            break;
+        }
+        blk_iter = blk_iter->next;
+    }
+    if(block == NULL)
+    {
+        printf("PID(%u) realloc-ing invalid address (%p)!\n",
+               (unsigned int)getpid(),
+               ptr);
+        abort();
+    }
+
+    struct allocation *alloc = ptr - sizeof(struct allocation);
+    if(alloc->self != (void *)alloc)
+    {
+        // This is not a valid heap allocation, or a
+        // heap corruption has occurred.
+        printf("PID(%u) realloc-ing invalid address (%p)!\n",
+               (unsigned int)getpid(),
+               ptr);
+        abort();
+    }
+
+    unsigned long data_size = alloc->data_size;
+    heap_lock_release();
+
+    void *new = malloc(size);
+    if(new == NULL) {
+        return NULL;
+    }
+
+    memcpy(new, ptr, data_size < size ? data_size : size);
+    free(ptr);
+
+    return new;
+}
+

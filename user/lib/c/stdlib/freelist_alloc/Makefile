@@ -1,5 +1,3 @@
 
-obj-y += \
-	core.o \
-	realloc.o \
+obj-y += core.o
 
