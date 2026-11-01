@@ -15,4 +15,8 @@ dlclose(void *);
 char *
 dlerror(void);
 
+#ifndef __ELK_DL__INTERNAL__
+#error "Kanawha OS dlfcn.h Is Not Implemented (No Dynamic Linking Support!)"
+#endif
+
 #endif
