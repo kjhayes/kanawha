@@ -5,8 +5,8 @@
 #include <setjmp.h>
 
 .global _setjmp
-.global setjmp
 .type _setjmp,@function
+.global setjmp
 .type setjmp,@function
 _setjmp:
 setjmp:

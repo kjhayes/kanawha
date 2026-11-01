@@ -8,10 +8,12 @@ exit(int status)
 {
     __elk_libc_internal__do_atexit();
     kanawha_sys_exit(status);
+    while(1) {}
 }
 
 void
 _exit(int status)
 {
     kanawha_sys_exit(status);
+    while(1) {}
 }

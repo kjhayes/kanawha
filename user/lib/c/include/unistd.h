@@ -3,6 +3,7 @@
 
 #include <getopt.h>
 #include <sys/types.h>
+#include <elk-libc-internal/attribute.h>
 
 #ifndef container_of
 
@@ -198,6 +199,7 @@ int
 fchdir(int);
 int
 fdatasync(int);
+__elk_libc__returns_twice
 pid_t
 fork(void);
 long int

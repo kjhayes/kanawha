@@ -1,20 +1,27 @@
 
-.global __arch_longjmp
-.type __arch_longjmp,@function
-__arch_longjmp:
+.global _longjmp
+.type _longjmp,@function
+.global longjmp
+.type longjmp,@function
+
+_longjmp:
+longjmp:
 
     // rdi -> pointer to jmp_buf
     // rsi -> integer to return
 
-    // Restore the old %rsp
-    movq 0(%rdi), %rsp
+    movq 0x00(%rdi), %r12
+    movq 0x08(%rdi), %r13 
+    movq 0x10(%rdi), %r14 
+    movq 0x18(%rdi), %r15 
+    movq 0x20(%rdi), %rbx 
 
-    // Overwrite our return address
-    movq 16(%rdi), %rbp
-    movq %rbp, 0(%rsp)
+    movq 0x28(%rdi), %rsp
+    movq 0x30(%rdi), %rbp 
 
-    // Restore the old %rbp
-    movq 8(%rdi), %rbp
+    // New return address
+    movq 0x38(%rdi), %rdi
+    movq %rdi, 0x0(%rsp)
 
     // Set our return value
     movq %rsi, %rax
