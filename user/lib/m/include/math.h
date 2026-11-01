@@ -193,4 +193,8 @@ double      y0(double);
 double      y1(double);
 double      yn(int, double);
 
+#define HUGE_VAL __builtin_huge_val()
+#define HUGE_VALF __builtin_huge_valf()
+#define HUGE_VALL __builtin_huge_vall()
+
 #endif
