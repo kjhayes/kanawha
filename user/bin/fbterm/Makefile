@@ -1,4 +1,6 @@
 
+LDFLAGS += -lkfb -llens -lsock
+
 obj-y += \
 	main.o \
 	term.o \

@@ -1,5 +1,5 @@
 
-LDFLAGS += -llua
+LDFLAGS += -llua -lm
 
 obj-y += lua.o
 

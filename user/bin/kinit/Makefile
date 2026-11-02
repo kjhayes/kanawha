@@ -1,4 +1,5 @@
 
+LDFLAGS += -llassie -lsock
 
 obj-y += \
 	main.o \

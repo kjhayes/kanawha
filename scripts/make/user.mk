@@ -75,8 +75,7 @@ userbins: $$(USER_SYSROOT_BIN_DIR)/$(1)
 $$(USER_SYSROOT_BIN_DIR)/$(1): $$(CUR_OUTPUT_DIR)/bin/$(1)/obj.o $$(foreach lib,$$(libs),$$(USER_SYSROOT_LIB_DIR)/lib$$(lib).a)
 	$$(call qinfo, ULD, $$(call rel-dir, $$@, $$(OUTPUT_DIR)))
 	$$(Q)$$(USER_LD) $$(USER_LDFLAGS) $$(LDFLAGS) \
-		$$(CUR_OUTPUT_DIR)/bin/$(1)/obj.o -o $$(USER_SYSROOT_BIN_DIR)/$(1) \
-		-lansiterm -llens -lbark -lsock -lkfb -lpaint -llassie -lm -lcrt -lc
+		$$(CUR_OUTPUT_DIR)/bin/$(1)/obj.o -o $$(USER_SYSROOT_BIN_DIR)/$(1) -lcrt -lc
 
 endef
 

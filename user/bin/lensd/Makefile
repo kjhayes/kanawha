@@ -1,4 +1,6 @@
 
+LDFLAGS += -llens -lkfb -lsock -lpaint
+
 obj-y += \
 	main.o \
 	listener.o \
