@@ -14,7 +14,7 @@
 #include <kanawha/thread.h>
 #include <kanawha/types.h>
 
-DEFINE_LOCAL_IRQ_LOCK(printk_lock);
+DEFINE_GLOBAL_IRQ_LOCK(printk_lock);
 
 int
 do_printk(const char *fmt, ...)
