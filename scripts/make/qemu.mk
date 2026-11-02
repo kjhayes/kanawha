@@ -9,7 +9,7 @@ QEMU_FLAGS += -d int,cpu_reset
 QEMU_FLAGS += -D $(QEMU_DEBUG_LOG)
 QEMU_FLAGS += -d guest_errors
 
-QEMU_FLAGS += -trace "*pl011*"
+# QEMU_FLAGS += -trace "*pl011*"
 
 QEMU_FLAGS += -device virtio-gpu-pci,disable-legacy=on,disable-modern=off
 
@@ -23,10 +23,10 @@ QEMU_FLAGS += -device virtio-gpu-pci,disable-legacy=on,disable-modern=off
 
 # QEMU_FLAGS += -display gtk
 
-QEMU_FLAGS += -device virtio-rng,disable-legacy=on,disable-modern=off
+# QEMU_FLAGS += -device virtio-rng,disable-legacy=on,disable-modern=off
 # QEMU_FLAGS += -device virtio-keyboard-pci,disable-legacy=on
 
-QEMU_FLAGS += \
+# QEMU_FLAGS += \
   -drive file=scsi.img,format=raw,if=none,id=hdscsi \
   -device virtio-scsi-pci,disable-legacy=on,disable-modern=off,id=scsi0 \
   -device scsi-hd,bus=scsi0.0,drive=hdscsi
@@ -58,7 +58,7 @@ QEMU_FLAGS += \
 #              -drive if=none,id=stick1,format=raw,file=./usb1.img \
 #              -device usb-storage,bus=xhci.0,drive=stick1,id=stick1 \
 
-QEMU_FLAGS += \
+# QEMU_FLAGS += \
 		-drive file=nvme.img,if=none,id=nvm,format=raw \
  		-device nvme,serial=deadbeef,drive=nvm
 
