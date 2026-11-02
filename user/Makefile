@@ -4,6 +4,7 @@ libs += \
 	c \
 	m \
 	dl \
+	lua \
 	kfb \
 	ksnd \
 	sock \
@@ -57,4 +58,6 @@ bins += \
 	tinfo \
 	kvi \
 	kinit \
+	lua \
+	luac \
 
