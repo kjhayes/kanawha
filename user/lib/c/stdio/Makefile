@@ -89,3 +89,6 @@ obj-y += \
 	funlockfile.o \
 	ftrylockfile.o \
 
+obj-y += \
+	getline.o \
+
