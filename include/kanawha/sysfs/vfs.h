@@ -134,8 +134,5 @@ vfs_struct_node_destroy_field(struct vfs_struct_node *node, const char *name);
 struct vfs_node *
 vfs_node_from_fs_node(
         struct fs_node *node);
-struct vfs_node *
-vfs_node_from_fs_path(
-        struct fs_path *path);
 
 #endif

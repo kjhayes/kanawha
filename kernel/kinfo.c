@@ -111,9 +111,14 @@ kinfo_fs_file_read(struct file *file,
         return res;
     }
 
-    struct vfs_node *node = vfs_node_from_fs_path(path);
+    struct fs_node *fs_node = fs_path_get_node(path);
+    fs_path_put(path);
+    if(fs_node == NULL) {
+        return -EINVAL;
+    }
+
+    struct vfs_node *node = vfs_node_from_fs_node(fs_node);
     if(node == NULL) {
-        fs_path_put(path);
         return -EINVAL;
     }
 
@@ -137,7 +142,6 @@ kinfo_fs_file_read(struct file *file,
             info,
             &printer.printer);
 
-    fs_path_put(path);
     return printer.amount_copied;
 }
 
