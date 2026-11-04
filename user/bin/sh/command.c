@@ -413,13 +413,16 @@ parse_cmd(struct simple_cmd *simple)
 
             fd_t read_end;
             fd_t write_end;
-            int res = kanawha_sys_pipe(0, 0, &read_end, &write_end);
+            fd_t pipe_fd[2];
+            int res = pipe(pipe_fd);
             if(res)
             {
                 destroy_simple_cmd(simple);
                 free(cmd);
                 return NULL;
             }
+            read_end = pipe_fd[0];
+            write_end = pipe_fd[1];
 
             if(iter->prev)
             {

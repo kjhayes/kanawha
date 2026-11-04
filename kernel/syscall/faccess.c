@@ -27,7 +27,8 @@ syscall_faccess(fd_t fd, unsigned long fields, unsigned long mode)
         return -ENXIO;
     }
 
-#define SUPPORTED_MODE_FLAGS FILE_MODE_NON_BLOCK
+#define SUPPORTED_MODE_FLAGS \
+    FILE_MODE_NON_BLOCK | FILE_MODE_CLOSE_ON_EXEC
 
     unsigned long mode_flags = 0;
     if(fields & FACCESS_NON_BLOCKING)

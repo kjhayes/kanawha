@@ -2,6 +2,7 @@
 #include <sock/sock.h>
 
 #include <kanawha/syscall.h>
+#include <kanawha/pipe.h>
 #include <errno.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -16,7 +17,7 @@ sock_create_socket(const char *name)
     int res;
     int socket_fd;
 
-    res = kanawha_sys_socket(0, 0, &socket_fd);
+    res = kanawha_sys_pipe(PIPE_MUX, 0, &socket_fd);
     if(res)
     {
         return res;

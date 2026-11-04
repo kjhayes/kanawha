@@ -44,25 +44,26 @@ popen(const char *command, const char *mode)
 
     __elk_libc_internal__init_sFILE(file);
 
-    fd_t child_rp, parent_wp;
-    res = kanawha_sys_pipe(0, 0, &child_rp, &parent_wp);
+    fd_t pipe_fd[2];
+
+    res = pipe(pipe_fd);
     if(res)
     {
         free(file);
         errno = res;
         return NULL;
     }
+    fd_t child_rp = pipe_fd[0], parent_wp = pipe_fd[1];
 
-    fd_t parent_rp, child_wp;
-    res = kanawha_sys_pipe(0, 0, &parent_rp, &child_wp);
+    res = pipe(pipe_fd);
     if(res)
     {
         close(child_rp);
         close(parent_wp);
         free(file);
-        errno = res;
         return NULL;
     }
+    fd_t parent_rp = pipe_fd[0], child_wp = pipe_fd[1];
 
     pid_t pid = fork();
     if(pid == 0)
