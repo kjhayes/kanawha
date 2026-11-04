@@ -20,7 +20,7 @@ syscall_resize(fd_t file, size_t size, unsigned long flags)
         return -EINVAL;
     }
 
-    struct fs_node *fs_node = fs_path_get_fs_node(desc->path);
+    struct fs_node *fs_node = fs_path_get_node(desc->path);
     if(fs_node == NULL)
     {
         return -EINVAL;
@@ -29,6 +29,7 @@ syscall_resize(fd_t file, size_t size, unsigned long flags)
     if((desc->access_flags & FILE_PERM_WRITE) == 0)
     {
         file_table_put_file(process->file_table, process, desc);
+        fs_node_put(fs_node);
         return -EPERM;
     }
 
@@ -36,8 +37,12 @@ syscall_resize(fd_t file, size_t size, unsigned long flags)
     if(res)
     {
         file_table_put_file(process->file_table, process, desc);
+        fs_node_put(fs_node);
         return res;
     }
+
+    file_table_put_file(process->file_table, process, desc);
+    fs_node_put(fs_node);
 
     return 0;
 }

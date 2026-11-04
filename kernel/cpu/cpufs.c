@@ -192,13 +192,18 @@ id_file_read(struct file *file,
         return 0;
     }
 
-    struct fs_node *fs_node = fs_path_get_fs_node(file->path);
+    struct fs_node *fs_node = fs_path_get_node(file->path);
+    if(fs_node == NULL) {
+        return -EINVAL;
+    }
+
     struct cpu_fs_node *cpu_node =
         container_of(fs_node->backing.priv_state, struct cpu_fs_node, id_node);
 
     snprintk(buffer, buflen, "%ld", (sl_t)cpu_node->cpu->id);
     size_t len = strnlen(buffer, buflen);
 
+    fs_node_put(fs_node);
     return len;
 }
 
@@ -230,7 +235,11 @@ bsp_file_read(struct file *file,
         return -EINVAL;
     }
 
-    struct fs_node *fs_node = fs_path_get_fs_node(file->path);
+    struct fs_node *fs_node = fs_path_get_node(file->path);
+    if(fs_node == NULL) {
+        return -EINVAL;
+    }
+
     struct cpu_fs_node *cpu_node =
         container_of(fs_node->backing.priv_state, struct cpu_fs_node, bsp_node);
 
@@ -242,6 +251,8 @@ bsp_file_read(struct file *file,
     {
         *(char *)buffer = '0';
     }
+
+    fs_node_put(fs_node);
     return 1;
 }
 
@@ -273,7 +284,11 @@ idle_file_read(struct file *file,
         return -EINVAL;
     }
 
-    struct fs_node *fs_node = fs_path_get_fs_node(file->path);
+    struct fs_node *fs_node = fs_path_get_node(file->path);
+    if(fs_node == NULL) {
+        return -EINVAL;
+    }
+
     struct cpu_fs_node *cpu_node = container_of(fs_node->backing.priv_state,
                                                 struct cpu_fs_node,
                                                 idle_node);
@@ -284,8 +299,11 @@ idle_file_read(struct file *file,
         wprintk("cpufs: failed to read CPU(%ld) idle percentage! (err=%s)\n",
                 (sl_t)cpu_node->cpu->id,
                 errnostr(idle_percent));
+        fs_node_put(fs_node);
         return idle_percent;
     }
+
+    fs_node_put(fs_node);
 
     snprintk(buffer, buflen, "%d", (int)idle_percent);
     size_t len = strnlen(buffer, buflen);

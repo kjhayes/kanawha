@@ -62,7 +62,7 @@ syscall_unlink(fd_t dir_fd, char __user *name)
     }
     namebuf[namelen] = '\0';
 
-    struct fs_node *fs_node = fs_path_get_fs_node(dir_file->path);
+    struct fs_node *fs_node = fs_path_get_node(dir_file->path);
     if(fs_node == NULL)
     {
         file_table_put_file(process->file_table, process, dir_file);
@@ -75,10 +75,13 @@ syscall_unlink(fd_t dir_fd, char __user *name)
         LOG("PID(%ld) syscall_unlink: failed to unlink file! (err=%s)\n",
             (sl_t)process->id,
             errnostr(res));
+        file_table_put_file(process->file_table, process, dir_file);
+        fs_node_put(fs_node);
         return res;
     }
 
     file_table_put_file(process->file_table, process, dir_file);
+    fs_node_put(fs_node);
 
     return 0;
 }

@@ -23,7 +23,11 @@ syscall_connect(fd_t sock_fd, fd_t __user *conn, unsigned long flags)
     }
 
     struct fs_path *sock_path = sock_desc->path;
-    struct fs_node *sock_node = fs_path_get_fs_node(sock_path);
+    struct fs_node *sock_node = fs_path_get_node(sock_path);
+    if(sock_node == NULL) {
+        file_table_put_file(process->file_table, process, sock_desc);
+        return -EINVAL;
+    }
 
     unsigned long connect_flags = 0;
     if(sock_desc->mode_flags & FILE_MODE_NON_BLOCK)
@@ -36,12 +40,14 @@ syscall_connect(fd_t sock_fd, fd_t __user *conn, unsigned long flags)
     if(res)
     {
         file_table_put_file(process->file_table, process, sock_desc);
+        fs_node_put(sock_node);
         return res;
     }
 
     struct fs_node *conn_node = fs_mount_get_node(sock_node->mount, conn_inode);
     // Close the file reference no matter what
     file_table_put_file(process->file_table, process, sock_desc);
+    fs_node_put(sock_node);
     if(conn_node == NULL)
     {
         return -EINVAL;

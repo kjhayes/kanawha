@@ -351,7 +351,7 @@ mbr_root_dir_begin(struct file *file)
 {
     int res;
 
-    struct fs_node *fs_node = fs_path_get_fs_node(file->path);
+    struct fs_node *fs_node = fs_path_get_node(file->path);
     struct mbr_mount *mnt = fs_node->backing.priv_state;
 
     file->dir_offset = 1;
@@ -360,9 +360,11 @@ mbr_root_dir_begin(struct file *file)
     if(res)
     {
         file->dir_offset = 0;
+        fs_node_put(fs_node);
         return res;
     }
 
+    fs_node_put(fs_node);
     return 0;
 }
 
@@ -371,11 +373,16 @@ mbr_root_dir_next(struct file *file)
 {
     int res;
 
-    struct fs_node *fs_node = fs_path_get_fs_node(file->path);
+    struct fs_node *fs_node = fs_path_get_node(file->path);
+    if(fs_node == NULL) {
+        return -EINVAL;
+    }
+
     struct mbr_mount *mnt = fs_node->backing.priv_state;
 
     if(file->dir_offset == 0)
     {
+        fs_node_put(fs_node);
         return -EINVAL;
     }
 
@@ -384,6 +391,7 @@ mbr_root_dir_next(struct file *file)
     res = mbr_mount_load_partition_entry(mnt, file->dir_offset, &entry);
     if(res)
     {
+        fs_node_put(fs_node);
         file->dir_offset = 0;
         return res;
     }
@@ -395,11 +403,12 @@ mbr_root_dir_readattr(struct file *file, int attr, size_t *value)
 {
     int res;
 
-    struct fs_node *fs_node = fs_path_get_fs_node(file->path);
+    struct fs_node *fs_node = fs_path_get_node(file->path);
     struct mbr_mount *mnt = fs_node->backing.priv_state;
 
     if(file->dir_offset == 0)
     {
+        fs_node_put(fs_node);
         return -EINVAL;
     }
 
@@ -407,11 +416,14 @@ mbr_root_dir_readattr(struct file *file, int attr, size_t *value)
     res = mbr_mount_load_partition_entry(mnt, file->dir_offset, &entry);
     if(res)
     {
+        fs_node_put(fs_node);
         file->dir_offset = 0;
         return res;
     }
 
-    return -EUNIMPL;
+    fs_node_put(fs_node);
+
+    return EUNIMPL;
 }
 
 int
@@ -419,11 +431,12 @@ mbr_root_dir_readname(struct file *file, char *buffer, size_t buflen)
 {
     int res;
 
-    struct fs_node *fs_node = fs_path_get_fs_node(file->path);
+    struct fs_node *fs_node = fs_path_get_node(file->path);
     struct mbr_mount *mnt = fs_node->backing.priv_state;
 
     if(file->dir_offset == 0)
     {
+        fs_node_put(fs_node);
         return -EINVAL;
     }
 
@@ -431,6 +444,7 @@ mbr_root_dir_readname(struct file *file, char *buffer, size_t buflen)
     res = mbr_mount_load_partition_entry(mnt, file->dir_offset, &entry);
     if(res)
     {
+        fs_node_put(fs_node);
         file->dir_offset = 0;
         return res;
     }
@@ -438,6 +452,7 @@ mbr_root_dir_readname(struct file *file, char *buffer, size_t buflen)
     snprintk(buffer, buflen, "%lu", file->dir_offset);
     buffer[buflen - 1] = '\0';
 
+    fs_node_put(fs_node);
     return 0;
 }
 

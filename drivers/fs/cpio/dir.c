@@ -15,7 +15,7 @@ cpio_dir_begin(struct file *file)
 
     file->dir_offset = 0;
 
-    struct fs_node *fs_node = fs_path_get_fs_node(file->path);
+    struct fs_node *fs_node = fs_path_get_node(file->path);
     if(fs_node == NULL)
     {
         return -EINVAL;
@@ -29,11 +29,13 @@ cpio_dir_begin(struct file *file)
     res = cpio_read_header(mount, file->dir_offset, &hdr);
     if(res)
     {
+        fs_node_put(fs_node);
         return res;
     }
 
     if(hdr.binary.c_magic != CPIO_HEADER_MAGIC)
     {
+        fs_node_put(fs_node);
         return -EINVAL;
     }
 
@@ -47,8 +49,11 @@ cpio_dir_begin(struct file *file)
                              0);
     if(res)
     {
+        fs_node_put(fs_node);
         return res;
     }
+
+    fs_node_put(fs_node);
 
     name_buf[namesize] = '\0';
 
@@ -65,7 +70,7 @@ cpio_dir_next(struct file *file)
 {
     int res;
 
-    struct fs_node *fs_node = fs_path_get_fs_node(file->path);
+    struct fs_node *fs_node = fs_path_get_node(file->path);
     if(fs_node == NULL)
     {
         return -EINVAL;
@@ -79,11 +84,13 @@ cpio_dir_next(struct file *file)
     res = cpio_read_header(mount, file->dir_offset, &hdr);
     if(res)
     {
+        fs_node_put(fs_node);
         return res;
     }
 
     if(hdr.binary.c_magic != CPIO_HEADER_MAGIC)
     {
+        fs_node_put(fs_node);
         return -EINVAL;
     }
 
@@ -100,11 +107,13 @@ cpio_dir_next(struct file *file)
     res = cpio_read_header(mount, file->dir_offset, &hdr);
     if(res)
     {
+        fs_node_put(fs_node);
         return res;
     }
 
     if(hdr.binary.c_magic != CPIO_HEADER_MAGIC)
     {
+        fs_node_put(fs_node);
         return -EINVAL;
     }
 
@@ -118,8 +127,11 @@ cpio_dir_next(struct file *file)
                              0);
     if(res)
     {
+        fs_node_put(fs_node);
         return res;
     }
+
+    fs_node_put(fs_node);
 
     name_buf[namesize] = '\0';
 
@@ -142,7 +154,7 @@ cpio_dir_readname(struct file *file, char *buf, size_t buflen)
 {
     int res;
 
-    struct fs_node *fs_node = fs_path_get_fs_node(file->path);
+    struct fs_node *fs_node = fs_path_get_node(file->path);
     if(fs_node == NULL)
     {
         return -EINVAL;
@@ -156,6 +168,7 @@ cpio_dir_readname(struct file *file, char *buf, size_t buflen)
     res = cpio_read_header(mount, file->dir_offset, &hdr);
     if(res)
     {
+        fs_node_put(fs_node);
         return res;
     }
 
@@ -169,8 +182,11 @@ cpio_dir_readname(struct file *file, char *buf, size_t buflen)
                              0);
     if(res)
     {
+        fs_node_put(fs_node);
         return res;
     }
+
+    fs_node_put(fs_node);
 
     name_buf[namesize] = '\0';
 

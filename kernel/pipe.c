@@ -202,7 +202,7 @@ pipe_fs_pipe_file_read(struct file *file,
     {
         return 0;
     }
-    struct fs_node *fs_node = fs_path_get_fs_node(file->path);
+    struct fs_node *fs_node = fs_path_get_node(file->path);
     if(fs_node == NULL)
     {
         return -ENXIO;
@@ -229,6 +229,7 @@ pipe_fs_pipe_file_read(struct file *file,
         if(res)
         {
             pipe_lock_release(pipe);
+            fs_node_put(fs_node);
             return res;
         }
         ringbuf = &pipe->pipe.primary_ringbuf;
@@ -242,6 +243,7 @@ pipe_fs_pipe_file_read(struct file *file,
         if(res)
         {
             pipe_lock_release(pipe);
+            fs_node_put(fs_node);
             return res;
         }
         ringbuf = &pipe->pipe.secondary_ringbuf;
@@ -285,6 +287,7 @@ pipe_fs_pipe_file_read(struct file *file,
             if(can_eof)
             {
                 pipe_lock_release(pipe);
+                fs_node_put(fs_node);
                 // We read nothing, and there is no one
                 // else connected to this pipe to possibly
                 // provide more data...
@@ -301,6 +304,7 @@ pipe_fs_pipe_file_read(struct file *file,
                 enable_restore_irqs(irq_flags);
                 if(res)
                 {
+                    fs_node_put(fs_node);
                     return res;
                 }
                 // We could be interrupted here...
@@ -322,6 +326,7 @@ pipe_fs_pipe_file_read(struct file *file,
         wake_all(wake_wq);
     }
 
+    fs_node_put(fs_node);
     return read;
 }
 
@@ -337,7 +342,7 @@ pipe_fs_pipe_file_write(struct file *file,
     {
         return 0;
     }
-    struct fs_node *fs_node = fs_path_get_fs_node(file->path);
+    struct fs_node *fs_node = fs_path_get_node(file->path);
     if(fs_node == NULL)
     {
         return -ENXIO;
@@ -364,6 +369,7 @@ pipe_fs_pipe_file_write(struct file *file,
         if(res)
         {
             pipe_lock_release(pipe);
+            fs_node_put(fs_node);
             return res;
         }
         ringbuf = &pipe->pipe.primary_ringbuf;
@@ -377,6 +383,7 @@ pipe_fs_pipe_file_write(struct file *file,
         if(res)
         {
             pipe_lock_release(pipe);
+            fs_node_put(fs_node);
             return res;
         }
         ringbuf = &pipe->pipe.secondary_ringbuf;
@@ -413,6 +420,7 @@ pipe_fs_pipe_file_write(struct file *file,
         if(can_eof)
         {
             pipe_lock_release(pipe);
+            fs_node_put(fs_node);
             // If no one is connected, there is no point
             // in writing anything in the first place.
             return 0;
@@ -435,6 +443,7 @@ pipe_fs_pipe_file_write(struct file *file,
                 enable_restore_irqs(irq_flags);
                 if(res)
                 {
+                    fs_node_put(fs_node);
                     return res;
                 }
                 // We could be interrupted here...
@@ -456,6 +465,7 @@ pipe_fs_pipe_file_write(struct file *file,
     {
         wake_all(wake_wq);
     }
+    fs_node_put(fs_node);
 
     return written;
 }
@@ -467,7 +477,7 @@ pipe_fs_pipe_file_poll(struct file *file,
 {
     int res;
 
-    struct fs_node *node = fs_path_get_fs_node(file->path);
+    struct fs_node *node = fs_path_get_node(file->path);
     if(node == NULL)
     {
         return -ENXIO;
@@ -491,12 +501,14 @@ pipe_fs_pipe_file_poll(struct file *file,
         if(res)
         {
             pipe_lock_release(pipe);
+            fs_node_put(node);
             return res;
         }
         res = pipe_fs_pipe_ensure_secondary_inited(pipe);
         if(res)
         {
             pipe_lock_release(pipe);
+            fs_node_put(node);
             return res;
         }
         read_ringbuf = &pipe->pipe.secondary_ringbuf;
@@ -508,12 +520,14 @@ pipe_fs_pipe_file_poll(struct file *file,
         if(res)
         {
             pipe_lock_release(pipe);
+            fs_node_put(node);
             return res;
         }
         res = pipe_fs_pipe_ensure_secondary_inited(pipe);
         if(res)
         {
             pipe_lock_release(pipe);
+            fs_node_put(node);
             return res;
         }
         read_ringbuf = &pipe->pipe.primary_ringbuf;
@@ -542,6 +556,7 @@ pipe_fs_pipe_file_poll(struct file *file,
     }
 
     pipe_lock_release(pipe);
+    fs_node_put(node);
 
     *triggered_out = triggered;
 
@@ -553,7 +568,7 @@ pipe_fs_pipe_file_status(struct file *file,
                            unsigned long type,
                            unsigned long *value)
 {
-    struct fs_node *fs_node = fs_path_get_fs_node(file->path);
+    struct fs_node *fs_node = fs_path_get_node(file->path);
     if(fs_node == NULL)
     {
         return -ENXIO;
@@ -591,10 +606,12 @@ pipe_fs_pipe_file_status(struct file *file,
         break;
     default:
         pipe_lock_release(pipe);
+        fs_node_put(fs_node);
         return -EINVAL;
     }
 
     pipe_lock_release(pipe);
+    fs_node_put(fs_node);
 
     return 0;
 }
@@ -673,7 +690,7 @@ pipe_fs_pipe_node_getattr(struct fs_node *node, int attr, size_t *value)
 static int
 pipe_fs_pipe_file_on_open(struct file *file)
 {
-    struct fs_node *node = fs_path_get_fs_node(file->path);
+    struct fs_node *node = fs_path_get_node(file->path);
     if(node == NULL)
     {
         return -ENXIO;
@@ -709,6 +726,7 @@ pipe_fs_pipe_file_on_open(struct file *file)
         (sl_t)pipe->pipe.num_servers);
 
     pipe_lock_release(pipe);
+    fs_node_put(node);
 
     return 0;
 }
@@ -716,7 +734,7 @@ pipe_fs_pipe_file_on_open(struct file *file)
 static int
 pipe_fs_pipe_file_on_close(struct file *file)
 {
-    struct fs_node *node = fs_path_get_fs_node(file->path);
+    struct fs_node *node = fs_path_get_node(file->path);
     if(node == NULL)
     {
         return -ENXIO;
@@ -743,7 +761,6 @@ pipe_fs_pipe_file_on_close(struct file *file)
         if(pipe->pipe.num_writers == 0)
         {
             wake_all_readers = 1;
-            ;
         }
     }
     if(file->access_flags & FILE_PERM_READ)
@@ -753,7 +770,6 @@ pipe_fs_pipe_file_on_close(struct file *file)
         if(pipe->pipe.num_readers == 0)
         {
             wake_all_writers = 1;
-            ;
         }
     }
     if(file->internal_flags & FILE_INTERNAL_FLAG_CLIENT)
@@ -832,6 +848,7 @@ pipe_fs_pipe_file_on_close(struct file *file)
         (sl_t)pipe->pipe.num_servers);
 
     pipe_lock_release(pipe);
+    fs_node_put(node);
 
     return 0;
 }

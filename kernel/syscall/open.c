@@ -162,7 +162,7 @@ syscall_open(const char __user *path,
             return res;
         }
 
-        struct fs_node *fs_node = fs_path_get_fs_node(file->path);
+        struct fs_node *fs_node = fs_path_get_node(file->path);
         if(fs_node == NULL)
         {
             file_table_put_file(process->file_table, process, file);
@@ -179,8 +179,11 @@ syscall_open(const char __user *path,
                 errnostr(res));
             file_table_put_file(process->file_table, process, file);
             file_table_close(process->file_table, process, kernel_fd);
+            fs_node_put(fs_node);
             return res;
         }
+
+        fs_node_put(fs_node);
     }
 
     LOG("PID(%ld) syscall_open: fd=%ld\n", (sl_t)process->id, (sl_t)kernel_fd);

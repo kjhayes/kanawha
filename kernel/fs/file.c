@@ -1,6 +1,7 @@
 
 #include <kanawha/fs/file.h>
 #include <kanawha/string.h>
+#include <kanawha/vmem.h>
 
 /*
  * Generic Stub File Implementations
@@ -132,13 +133,14 @@ fs_file_paged_read(struct file *file,
                    unsigned long flags)
 {
     int res;
-    struct fs_node *fs_node = fs_path_get_fs_node(file->path);
-    if(fs_node == NULL)
+
+    if(buflen == 0)
     {
         return -EINVAL;
     }
 
-    if(buflen == 0)
+    struct fs_node *fs_node = fs_path_get_node(file->path);
+    if(fs_node == NULL)
     {
         return -EINVAL;
     }
@@ -147,6 +149,7 @@ fs_file_paged_read(struct file *file,
     res = fs_node_page_order(fs_node, &order);
     if(res)
     {
+        fs_node_put(fs_node);
         return res;
     }
 
@@ -154,6 +157,7 @@ fs_file_paged_read(struct file *file,
     res = fs_node_getattr(fs_node, FS_NODE_ATTR_DATA_SIZE, &file_size);
     if(res)
     {
+        fs_node_put(fs_node);
         return res;
     }
 
@@ -162,11 +166,13 @@ fs_file_paged_read(struct file *file,
 
     if(seek_loc > file_size)
     {
+        fs_node_put(fs_node);
         return -ERANGE;
     }
     if(seek_loc == file_size)
     {
         // EOF
+        fs_node_put(fs_node);
         return 0;
     }
 
@@ -182,19 +188,22 @@ fs_file_paged_read(struct file *file,
     struct fs_page *page = fs_node_get_page(fs_node, seek_pfn, 0);
     if(page == NULL)
     {
+        fs_node_put(fs_node);
         return -EINVAL;
     }
 
     ssize_t to_read = buflen < room_left ? buflen : room_left;
 
-    memcpy(buf, (void *)__va(page->paddr) + page_offset, to_read);
+    memcpy(buf, ((void *)__va(page->paddr)) + page_offset, to_read);
 
     res = fs_node_put_page(fs_node, page, 0);
     if(res)
     {
+        fs_node_put(fs_node);
         return res;
     }
 
+    fs_node_put(fs_node);
     return to_read;
 }
 
@@ -205,13 +214,14 @@ fs_file_paged_write(struct file *file,
                     unsigned long flags)
 {
     int res;
-    struct fs_node *fs_node = fs_path_get_fs_node(file->path);
-    if(fs_node == NULL)
+
+    if(buflen == 0)
     {
         return -EINVAL;
     }
 
-    if(buflen == 0)
+    struct fs_node *fs_node = fs_path_get_node(file->path);
+    if(fs_node == NULL)
     {
         return -EINVAL;
     }
@@ -223,9 +233,11 @@ fs_file_paged_write(struct file *file,
                               FS_NODE_PAGED_WRITE_MAY_EXTEND);
     if(res)
     {
+        fs_node_put(fs_node);
         return res;
     }
 
+    fs_node_put(fs_node);
     return buflen;
 }
 
@@ -233,7 +245,7 @@ int
 fs_file_paged_flush(struct file *file, unsigned long flags)
 {
     int res;
-    struct fs_node *fs_node = fs_path_get_fs_node(file->path);
+    struct fs_node *fs_node = fs_path_get_node(file->path);
     if(fs_node == NULL)
     {
         return -EINVAL;
@@ -241,8 +253,10 @@ fs_file_paged_flush(struct file *file, unsigned long flags)
     res = fs_node_flush_all_fs_pages(fs_node);
     if(res)
     {
+        fs_node_put(fs_node);
         return res;
     }
+    fs_node_put(fs_node);
     return 0;
 }
 
@@ -251,7 +265,7 @@ ssize_t
 fs_file_paged_seek(struct file *file, ssize_t offset, int whence)
 {
     int res;
-    struct fs_node *fs_node = fs_path_get_fs_node(file->path);
+    struct fs_node *fs_node = fs_path_get_node(file->path);
     if(fs_node == NULL)
     {
         return -EINVAL;
@@ -261,8 +275,11 @@ fs_file_paged_seek(struct file *file, ssize_t offset, int whence)
     res = fs_node_getattr(fs_node, FS_NODE_ATTR_DATA_SIZE, &data_size);
     if(res)
     {
+        fs_node_put(fs_node);
         return res;
     }
+
+    fs_node_put(fs_node);
 
     switch(whence)
     {
@@ -291,7 +308,7 @@ int
 fs_file_flush_all_fs_pages(struct file *file, unsigned long flags)
 {
     int res;
-    struct fs_node *fs_node = fs_path_get_fs_node(file->path);
+    struct fs_node *fs_node = fs_path_get_node(file->path);
     if(fs_node == NULL)
     {
         return -EINVAL;
@@ -300,8 +317,11 @@ fs_file_flush_all_fs_pages(struct file *file, unsigned long flags)
     res = fs_node_flush_all_fs_pages(fs_node);
     if(res)
     {
+        fs_node_put(fs_node);
         return res;
     }
+
+    fs_node_put(fs_node);
     return 0;
 }
 

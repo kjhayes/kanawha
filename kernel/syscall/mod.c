@@ -76,7 +76,7 @@ syscall_insmod(fd_t mod_fd, const char __user *modname, unsigned long flags)
         return res;
     }
 
-    struct fs_node *fs_node = fs_path_get_fs_node(file->path);
+    struct fs_node *fs_node = fs_path_get_node(file->path);
     if(fs_node == NULL)
     {
         file_table_put_file(process->file_table, process, file);
@@ -90,10 +90,12 @@ syscall_insmod(fd_t mod_fd, const char __user *modname, unsigned long flags)
     if(mod == NULL)
     {
         file_table_put_file(process->file_table, process, file);
+        fs_node_put(fs_node);
         return -EINVAL;
     }
 
     file_table_put_file(process->file_table, process, file);
+    fs_node_put(fs_node);
 
     return 0;
 }

@@ -352,7 +352,7 @@ process_exec_elf64(struct process *process, fd_t file, struct file *desc)
         return -EPERM;
     }
 
-    struct fs_node *elf_node = fs_path_get_fs_node(desc->path);
+    struct fs_node *elf_node = fs_path_get_node(desc->path);
     if(elf_node == NULL)
     {
         return -EINVAL;
@@ -364,6 +364,7 @@ process_exec_elf64(struct process *process, fd_t file, struct file *desc)
     res = fs_node_paged_read(elf_node, 0, &elf_hdr, amount, 0);
     if(res)
     {
+        fs_node_put(elf_node);
         return res;
     }
 
@@ -380,11 +381,13 @@ process_exec_elf64(struct process *process, fd_t file, struct file *desc)
                                  0);
         if(res)
         {
+            fs_node_put(elf_node);
             return res;
         }
 
         if(amount != elf_hdr.e_phentsize)
         {
+            fs_node_put(elf_node);
             return -EINVAL;
         }
 
@@ -392,9 +395,12 @@ process_exec_elf64(struct process *process, fd_t file, struct file *desc)
 
         if(res)
         {
+            fs_node_put(elf_node);
             return res;
         }
     }
+
+    fs_node_put(elf_node);
 
     process->user_ip = (void __user *)elf_hdr.e_entry;
 
@@ -407,7 +413,7 @@ elf64_exec_type_probe(struct exec_type *exec_type,
                       struct file *desc)
 {
     int res;
-    struct fs_node *elf_node = fs_path_get_fs_node(desc->path);
+    struct fs_node *elf_node = fs_path_get_node(desc->path);
     if(elf_node == NULL)
     {
         return EXEC_TYPE_PROBE_REJECT;
@@ -419,8 +425,11 @@ elf64_exec_type_probe(struct exec_type *exec_type,
     res = fs_node_paged_read(elf_node, 0, &elf_hdr, amount, 0);
     if(res)
     {
+        fs_node_put(elf_node);
         return EXEC_TYPE_PROBE_REJECT;
     }
+
+    fs_node_put(elf_node);
 
     res = exec_elf64_check_header(&elf_hdr);
     if(res)

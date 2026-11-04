@@ -70,7 +70,7 @@ eth_dev_fs_file_read(struct file *file,
                      ssize_t amount,
                      unsigned long flags)
 {
-    struct fs_node *fs_node = fs_path_get_fs_node(file->path);
+    struct fs_node *fs_node = fs_path_get_node(file->path);
     if(fs_node == NULL)
     {
         return -ENXIO;
@@ -82,6 +82,7 @@ eth_dev_fs_file_read(struct file *file,
 
     if(flags & FS_FILE_READ_NON_BLOCKING)
     {
+        fs_node_put(fs_node);
         return -EWOULDBLOCK;
     }
 
@@ -89,6 +90,7 @@ eth_dev_fs_file_read(struct file *file,
 
     // TODO
 
+    fs_node_put(fs_node);
     return amt_read;
 }
 
@@ -100,7 +102,7 @@ eth_dev_fs_file_write(struct file *file,
 {
     int res;
 
-    struct fs_node *fs_node = fs_path_get_fs_node(file->path);
+    struct fs_node *fs_node = fs_path_get_node(file->path);
     if(fs_node == NULL)
     {
         return -ENXIO;
@@ -112,11 +114,13 @@ eth_dev_fs_file_write(struct file *file,
 
     if(flags & FS_FILE_READ_NON_BLOCKING)
     {
+        fs_node_put(fs_node);
         return -EWOULDBLOCK;
     }
 
     if(amount < sizeof(struct eth_frame_hdr))
     {
+        fs_node_put(fs_node);
         return -EINVAL;
     }
 
@@ -138,6 +142,7 @@ eth_dev_fs_file_write(struct file *file,
 
     if(frame == NULL)
     {
+        fs_node_put(fs_node);
         return -ENOMEM;
     }
 
@@ -158,9 +163,11 @@ eth_dev_fs_file_write(struct file *file,
     // from eth_dev_send_frame
     if(res)
     {
+        fs_node_put(fs_node);
         return res;
     }
 
+    fs_node_put(fs_node);
     return amount;
 }
 

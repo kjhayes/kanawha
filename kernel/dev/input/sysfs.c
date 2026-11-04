@@ -110,7 +110,7 @@ input_fs_file_read(struct file *file,
                    ssize_t amount,
                    unsigned long flags)
 {
-    struct fs_node *fs_node = fs_path_get_fs_node(file->path);
+    struct fs_node *fs_node = fs_path_get_node(file->path);
     if(fs_node == NULL)
     {
         return -ENXIO;
@@ -141,6 +141,7 @@ input_fs_file_read(struct file *file,
             res = input_driver_wait_for_event(input);
             if(res)
             {
+                fs_node_put(fs_node);
                 return res;
             }
             continue;
@@ -155,6 +156,8 @@ input_fs_file_read(struct file *file,
         num_events_written++;
     }
 
+    fs_node_put(fs_node);
+
     amount = num_events_written * sizeof(struct input_event);
 
     return amount;
@@ -163,7 +166,7 @@ input_fs_file_read(struct file *file,
 static int
 input_fs_file_poll(struct file *file, unsigned long in, unsigned long *out)
 {
-    struct fs_node *fs_node = fs_path_get_fs_node(file->path);
+    struct fs_node *fs_node = fs_path_get_node(file->path);
     if(fs_node == NULL)
     {
         return -ENXIO;
@@ -174,14 +177,20 @@ input_fs_file_poll(struct file *file, unsigned long in, unsigned long *out)
         container_of(vfs_node, struct input_dev_fs_node, vfs_node);
     struct input_dev *input = kbfs->dev;
 
-    *out = 0;
+    unsigned long flags = 0;
 
     if(in & POLL_READ_NONBLOCKING)
     {
         if(!input_driver_event_buffer_empty(input))
         {
-            *out |= POLL_READ_NONBLOCKING;
+            flags |= POLL_READ_NONBLOCKING;
         }
+    }
+
+    fs_node_put(fs_node);
+
+    if(out) {
+        *out = flags;
     }
 
     return 0;

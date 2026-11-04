@@ -141,7 +141,7 @@ vfs_dir_next(struct file *dir)
 {
     dprintk("vfs_dir_next\n");
 
-    struct fs_node *fs_node = fs_path_get_fs_node(dir->path);
+    struct fs_node *fs_node = fs_path_get_node(dir->path);
     if(fs_node == NULL)
     {
         return -EINVAL;
@@ -152,13 +152,16 @@ vfs_dir_next(struct file *dir)
     dir->dir_offset++;
     if(dir->dir_offset == node->children_count)
     {
+        fs_node_put(fs_node);
         return -ENXIO;
     }
     if(dir->dir_offset > node->children_count)
     {
+        fs_node_put(fs_node);
         return -EINVAL;
     }
 
+    fs_node_put(fs_node);
     return 0;
 }
 
@@ -175,7 +178,7 @@ vfs_dir_readname(struct file *dir, char *name_buf, size_t buf_len)
 {
     dprintk("vfs_dir_readname\n");
 
-    struct fs_node *fs_node = fs_path_get_fs_node(dir->path);
+    struct fs_node *fs_node = fs_path_get_node(dir->path);
     if(fs_node == NULL)
     {
         return -EINVAL;
@@ -190,6 +193,7 @@ vfs_dir_readname(struct file *dir, char *name_buf, size_t buf_len)
         dprintk("Not searching (dir_offset=0x%lx, children_count=0x%lx)\n",
                 dir->dir_offset,
                 node->children_count);
+        fs_node_put(fs_node);
         return -ENXIO;
     }
 
@@ -206,6 +210,7 @@ vfs_dir_readname(struct file *dir, char *name_buf, size_t buf_len)
     if(snode == NULL)
     {
         irq_lock_release(&node->hierarchy_lock);
+        fs_node_put(fs_node);
         dprintk("Failed after search\n");
         return -ENXIO;
     }
@@ -216,6 +221,8 @@ vfs_dir_readname(struct file *dir, char *name_buf, size_t buf_len)
     dprintk("link=%s\n", link->name);
 
     irq_lock_release(&node->hierarchy_lock);
+    fs_node_put(fs_node);
+
     return 0;
 }
 
@@ -477,9 +484,13 @@ struct vfs_node *
 vfs_node_from_fs_path(
         struct fs_path *path)
 {
-    struct fs_node *fs_node = fs_path_get_fs_node(path);
+    struct fs_node *fs_node = fs_path_get_node(path);
     if(fs_node == NULL) {
         return NULL;
     }
-    return vfs_node_from_fs_node(fs_node);
+    struct vfs_node *vfs = vfs_node_from_fs_node(fs_node);
+    fs_node_put(fs_node);
+    // TODO reference counts are messed up here.
+    return vfs;
 }
+

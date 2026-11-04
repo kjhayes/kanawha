@@ -24,7 +24,12 @@ rand_dev_fs_file_read(struct file *file,
 {
     int res;
 
-    struct fs_node *node = fs_path_get_fs_node(file->path);
+    if(buflen <= 0)
+    {
+        return -EINVAL;
+    }
+
+    struct fs_node *node = fs_path_get_node(file->path);
     if(node == NULL)
     {
         return -ENXIO;
@@ -32,11 +37,6 @@ rand_dev_fs_file_read(struct file *file,
     struct rand_dev_fs_node *rdfs = container_of(node->backing.priv_state,
                                                  struct rand_dev_fs_node,
                                                  vfs_node);
-
-    if(buflen <= 0)
-    {
-        return -EINVAL;
-    }
 
     ssize_t amt_read;
     while(1)
@@ -49,18 +49,21 @@ rand_dev_fs_file_read(struct file *file,
                 res = wait_on(&rdfs->dev->read_wq);
                 if(res)
                 {
+                    fs_node_put(node);
                     return res;
                 }
                 continue;
             }
             else
             {
+                fs_node_put(node);
                 return amt_read;
             }
         }
         break;
     }
 
+    fs_node_put(node);
     return amt_read;
 }
 

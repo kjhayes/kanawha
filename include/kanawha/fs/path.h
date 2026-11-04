@@ -17,7 +17,7 @@ int
 fs_path_put(struct fs_path *path);
 
 struct fs_node *
-fs_path_get_fs_node(struct fs_path *node);
+fs_path_get_node(struct fs_path *path);
 
 const char *
 fs_path_get_name(struct fs_path *path);
@@ -59,28 +59,32 @@ fs_path_get_inode_index(struct fs_path *path, size_t *index_out)
     {
         return -EINVAL;
     }
-    struct fs_node *node = fs_path_get_fs_node(path);
+    struct fs_node *node = fs_path_get_node(path);
     if(node == NULL)
     {
         return -ENXIO;
     }
     *index_out = fs_node_get_inode(node);
+    fs_node_put(node);
     return 0;
 }
 
 static inline int
 fs_path_get_inode_attr(struct fs_path *path, int attr, size_t *value_out)
 {
+    int res;
     if(path == NULL)
     {
         return -EINVAL;
     }
-    struct fs_node *node = fs_path_get_fs_node(path);
+    struct fs_node *node = fs_path_get_node(path);
     if(node == NULL)
     {
         return -ENXIO;
     }
-    return fs_node_getattr(node, attr, value_out);
+    res = fs_node_getattr(node, attr, value_out);
+    fs_node_put(node);
+    return res;
 }
 
 int

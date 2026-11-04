@@ -325,7 +325,7 @@ fb_dev_buffer_fs_file_flush(struct file *file, unsigned long flags)
 {
     int res;
 
-    struct fs_node *fs_node = fs_path_get_fs_node(file->path);
+    struct fs_node *fs_node = fs_path_get_node(file->path);
     if(fs_node == NULL)
     {
         return -ENXIO;
@@ -346,10 +346,12 @@ fb_dev_buffer_fs_file_flush(struct file *file, unsigned long flags)
         res = fb_dev_flush_buffer(fbfs->dev);
         if(res)
         {
+            fs_node_put(fs_node);
             return res;
         }
     }
 
+    fs_node_put(fs_node);
     return 0;
 }
 
@@ -387,7 +389,12 @@ fb_dev_mode_set_fs_file_write(struct file *file,
 {
     int res;
 
-    struct fs_node *fs_node = fs_path_get_fs_node(file->path);
+    if(file->seek_offset != 0)
+    {
+        return 0;
+    }
+
+    struct fs_node *fs_node = fs_path_get_node(file->path);
     if(fs_node == NULL)
     {
         return -ENXIO;
@@ -398,10 +405,6 @@ fb_dev_mode_set_fs_file_write(struct file *file,
     DEBUG_ASSERT(KERNEL_ADDR(fbfs));
     DEBUG_ASSERT(KERNEL_ADDR(fbfs->dev));
 
-    if(file->seek_offset != 0)
-    {
-        return 0;
-    }
 
     char str_buf[buflen + 1];
     memcpy(str_buf, buf, buflen);
@@ -417,6 +420,7 @@ fb_dev_mode_set_fs_file_write(struct file *file,
         {
             // Cannot change modes while the buffer is loaded
             spin_unlock(&fbfs->buffer_lock);
+            fs_node_put(fs_node);
             return -EBUSY;
         }
     }
@@ -424,6 +428,7 @@ fb_dev_mode_set_fs_file_write(struct file *file,
     if(res)
     {
         spin_unlock(&fbfs->buffer_lock);
+        fs_node_put(fs_node);
         return res;
     }
 
@@ -474,6 +479,7 @@ fail_display_logo:
 #endif
 
     spin_unlock(&fbfs->buffer_lock);
+    fs_node_put(fs_node);
 
     return buflen;
 }
@@ -484,7 +490,12 @@ fb_dev_mode_set_fs_file_read(struct file *file,
                              ssize_t buflen,
                              unsigned long flags)
 {
-    struct fs_node *fs_node = fs_path_get_fs_node(file->path);
+    if(file->seek_offset != 0)
+    {
+        return 0;
+    }
+
+    struct fs_node *fs_node = fs_path_get_node(file->path);
     if(fs_node == NULL)
     {
         return -ENXIO;
@@ -495,16 +506,13 @@ fb_dev_mode_set_fs_file_read(struct file *file,
     DEBUG_ASSERT(KERNEL_ADDR(fbfs));
     DEBUG_ASSERT(KERNEL_ADDR(fbfs->dev));
 
-    if(file->seek_offset != 0)
-    {
-        return 0;
-    }
-
     ssize_t index = fb_dev_get_mode(fbfs->dev);
     if(index < 0)
     {
+        fs_node_put(fs_node);
         return index;
     }
+    fs_node_put(fs_node);
 
     int attempted = snprintk(buf, buflen, "%lld\n", (sll_t)index);
 
@@ -610,7 +618,12 @@ fb_dev_mode_info_fs_file_write(struct file *file,
 {
     int res;
 
-    struct fs_node *node = fs_path_get_fs_node(file->path);
+    if(file->seek_offset != 0)
+    {
+        return 0;
+    }
+
+    struct fs_node *node = fs_path_get_node(file->path);
     if(node == NULL)
     {
         return -ENXIO;
@@ -622,17 +635,14 @@ fb_dev_mode_info_fs_file_write(struct file *file,
     DEBUG_ASSERT(KERNEL_ADDR(fbfs));
     DEBUG_ASSERT(KERNEL_ADDR(fbfs->dev));
 
-    if(file->seek_offset != 0)
-    {
-        return 0;
-    }
-
     char str_buf[buflen + 1];
     memcpy(str_buf, buf, buflen);
     str_buf[buflen] = '\0';
 
     unsigned long long value = parse_unsigned_long_long(str_buf, 0);
     fbfs->mode_info_vfs_current_mode = value;
+
+    fs_node_put(node);
 
     return buflen;
 }
@@ -648,7 +658,7 @@ fb_dev_mode_info_fs_file_read(struct file *file,
 
     dprintk("fb_dev_fs_file_read\n");
 
-    struct fs_node *node = fs_path_get_fs_node(file->path);
+    struct fs_node *node = fs_path_get_node(file->path);
     if(node == NULL)
     {
         return -ENXIO;
@@ -660,16 +670,18 @@ fb_dev_mode_info_fs_file_read(struct file *file,
     DEBUG_ASSERT(KERNEL_ADDR(fbfs));
     DEBUG_ASSERT(KERNEL_ADDR(fbfs->dev));
 
-    struct fb_mode_info *info =
-        fb_dev_get_mode_info(fbfs->dev, fbfs->mode_info_vfs_current_mode);
+    unsigned long mode_index = fbfs->mode_info_vfs_current_mode;
+    struct fb_mode_info *info = fb_dev_get_mode_info(fbfs->dev, mode_index);
     if(info == NULL)
     {
         if(file->seek_offset == 0)
         {
+            fs_node_put(node);
             return 0; // Nothing to read
         }
         else
         {
+            fs_node_put(node);
             return -EINVAL;
         }
     }
@@ -678,6 +690,7 @@ fb_dev_mode_info_fs_file_read(struct file *file,
                   (sizeof(struct fb_layer_info) * info->layer_count);
     if(file->seek_offset > size)
     {
+        fs_node_put(node);
         return -EINVAL;
     }
 
@@ -688,6 +701,9 @@ fb_dev_mode_info_fs_file_read(struct file *file,
     }
 
     memcpy(buf, info, room_left);
+
+    fb_dev_put_mode_info(fbfs->dev, mode_index);
+    fs_node_put(node);
 
     return room_left;
 }

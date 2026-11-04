@@ -81,7 +81,7 @@ snd_dev_stream_write(struct file *file,
 {
     // printk("snd_dev_stream_write!\n");
 
-    struct fs_node *fs_node = fs_path_get_fs_node(file->path);
+    struct fs_node *fs_node = fs_path_get_node(file->path);
     if(fs_node == NULL)
     {
         return -ENXIO;
@@ -99,6 +99,7 @@ snd_dev_stream_write(struct file *file,
     ssize_t written;
     written = snd_dev_write_samples(sndfs->dev, buffer, buflen, snd_flags);
 
+    fs_node_put(fs_node);
     return written;
 }
 
@@ -188,7 +189,12 @@ snd_dev_mode_info_fs_file_write(struct file *file,
 {
     int res;
 
-    struct fs_node *node = fs_path_get_fs_node(file->path);
+    if(file->seek_offset != 0)
+    {
+        return 0;
+    }
+
+    struct fs_node *node = fs_path_get_node(file->path);
     if(node == NULL)
     {
         return -ENXIO;
@@ -200,15 +206,6 @@ snd_dev_mode_info_fs_file_write(struct file *file,
     DEBUG_ASSERT(KERNEL_ADDR(sndfs));
     DEBUG_ASSERT(KERNEL_ADDR(sndfs->dev));
 
-    if(file->seek_offset != 0)
-    {
-        return 0;
-    }
-
-    if(buflen > 0)
-    {
-    }
-
     char str_buf[buflen + 1];
     memcpy(str_buf, buf, buflen);
     str_buf[buflen] = '\0';
@@ -216,6 +213,7 @@ snd_dev_mode_info_fs_file_write(struct file *file,
     unsigned long value = parse_unsigned_long(str_buf, 0);
     sndfs->mode_info_vfs_current_mode = value;
 
+    fs_node_put(node);
     return buflen;
 }
 
@@ -228,7 +226,7 @@ snd_dev_mode_info_fs_file_read(struct file *file,
     DEBUG_ASSERT(KERNEL_ADDR(file));
     DEBUG_ASSERT(KERNEL_ADDR(file->path));
 
-    struct fs_node *node = fs_path_get_fs_node(file->path);
+    struct fs_node *node = fs_path_get_node(file->path);
     if(node == NULL)
     {
         return -ENXIO;
@@ -240,16 +238,18 @@ snd_dev_mode_info_fs_file_read(struct file *file,
     DEBUG_ASSERT(KERNEL_ADDR(sndfs));
     DEBUG_ASSERT(KERNEL_ADDR(sndfs->dev));
 
-    struct snd_mode_info *info =
-        snd_dev_get_mode_info(sndfs->dev, sndfs->mode_info_vfs_current_mode);
+    size_t mode_index = sndfs->mode_info_vfs_current_mode;
+    struct snd_mode_info *info = snd_dev_get_mode_info(sndfs->dev, mode_index);
     if(info == NULL)
     {
         if(file->seek_offset == 0)
         {
+            fs_node_put(node);
             return 0; // Nothing to read
         }
         else
         {
+            fs_node_put(node);
             return -EINVAL;
         }
     }
@@ -257,6 +257,8 @@ snd_dev_mode_info_fs_file_read(struct file *file,
     size_t size = sizeof(struct snd_mode_info);
     if(file->seek_offset > size)
     {
+        snd_dev_put_mode_info(sndfs->dev, mode_index, info);
+        fs_node_put(node);
         return -EINVAL;
     }
 
@@ -267,6 +269,9 @@ snd_dev_mode_info_fs_file_read(struct file *file,
     }
 
     memcpy(buf, info, room_left);
+
+    snd_dev_put_mode_info(sndfs->dev, mode_index, info);
+    fs_node_put(node);
 
     return room_left;
 }

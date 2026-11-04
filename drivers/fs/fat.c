@@ -822,8 +822,12 @@ fat_dir_dir_next(struct file *file)
 {
     int res;
 
-    struct fat_node *dir = fs_path_get_fs_node(file->path)->backing.priv_state;
+    struct fs_node *fs_node = fs_path_get_node(file->path);
+    if(fs_node == NULL) {
+        return -EINVAL;
+    }
 
+    struct fat_node *dir = fs_node->backing.priv_state;
     struct fat_dirent dirent;
 
     do
@@ -832,10 +836,12 @@ fat_dir_dir_next(struct file *file)
         res = fat_dir_read_dirent(dir, file->dir_offset, &dirent);
         if(res)
         {
+            fs_node_put(fs_node);
             return res;
         }
     } while(!fat_dirent_is_inode(dir->mnt, &dirent));
 
+    fs_node_put(fs_node);
     return 0;
 }
 
@@ -844,7 +850,12 @@ fat_dir_dir_begin(struct file *file)
 {
     int res;
 
-    struct fat_node *dir = fs_path_get_fs_node(file->path)->backing.priv_state;
+    struct fs_node *fs_node = fs_path_get_node(file->path);
+    if(fs_node == NULL) {
+        return -EINVAL;
+    }
+
+    struct fat_node *dir = fs_node->backing.priv_state;
 
     file->dir_offset = 0;
 
@@ -852,15 +863,18 @@ fat_dir_dir_begin(struct file *file)
     res = fat_dir_read_dirent(dir, 0, &dirent);
     if(res)
     {
+        fs_node_put(fs_node);
         return res;
     }
 
     if(!fat_dirent_is_inode(dir->mnt, &dirent))
     {
         res = fat_dir_dir_next(file);
+        fs_node_put(fs_node);
         return res;
     }
 
+    fs_node_put(fs_node);
     return 0;
 }
 
@@ -869,16 +883,29 @@ fat_dir_dir_readname(struct file *file, char *buffer, size_t buflen)
 {
     int res;
 
-    struct fat_node *dir = fs_path_get_fs_node(file->path)->backing.priv_state;
+    struct fs_node *fs_node = fs_path_get_node(file->path);;
+    if(fs_node == NULL) {
+        return -EINVAL;
+    }
+
+    struct fat_node *dir = fs_node->backing.priv_state;
 
     struct fat_dirent dirent;
     res = fat_dir_read_dirent(dir, file->dir_offset, &dirent);
     if(res)
     {
+        fs_node_put(fs_node);
         return res;
     }
 
-    return fat_dirent_readname(dir->mnt, &dirent, buffer, buflen);
+    res = fat_dirent_readname(dir->mnt, &dirent, buffer, buflen);
+    if(res) {
+        fs_node_put(fs_node);
+        return res;
+    }
+
+    fs_node_put(fs_node);
+    return 0;
 }
 
 static int

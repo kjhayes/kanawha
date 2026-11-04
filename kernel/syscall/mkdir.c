@@ -74,7 +74,7 @@ syscall_mkdir(fd_t dir_fd, char __user *name, unsigned long user_flags)
 
     unsigned long flags = 0;
 
-    struct fs_node *fs_node = fs_path_get_fs_node(dir_file->path);
+    struct fs_node *fs_node = fs_path_get_node(dir_file->path);
     if(fs_node == NULL)
     {
         file_table_put_file(process->file_table, process, dir_file);
@@ -85,9 +85,12 @@ syscall_mkdir(fd_t dir_fd, char __user *name, unsigned long user_flags)
     if(res)
     {
         file_table_put_file(process->file_table, process, dir_file);
+        fs_node_put(fs_node);
         return res;
     }
 
     file_table_put_file(process->file_table, process, dir_file);
+    fs_node_put(fs_node);
+
     return 0;
 }

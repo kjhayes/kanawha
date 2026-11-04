@@ -58,9 +58,14 @@ assign_fs_node_to_fs_path(struct fs_node *node, struct fs_path *path)
 }
 
 struct fs_node *
-fs_path_get_fs_node(struct fs_path *path)
+fs_path_get_node(struct fs_path *path)
 {
-    return path->fs_node;
+    struct fs_node *node = path->fs_node;
+    if(node == NULL) {
+        return NULL;
+    }
+    fs_node_get(node);
+    return node;
 }
 
 const char *

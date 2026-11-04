@@ -110,11 +110,12 @@ struct fs_file_ops
 
 #define FILE_FILE_OPS_ACCESSOR(__self, __field)                                \
     ({                                                                         \
-        struct fs_node *node = fs_path_get_fs_node(__self->path);              \
+        struct fs_node *node = fs_path_get_node(__self->path);                 \
         typeof(((struct fs_file_ops *)NULL)->__field) ptr = NULL;              \
         if(node != NULL)                                                       \
         {                                                                      \
             ptr = fs_node_get_file_ops(node)->__field;                         \
+            fs_node_put(node); \
         }                                                                      \
         ptr;                                                                   \
     })

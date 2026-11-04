@@ -168,7 +168,11 @@ pty_file_read(
 {
     int res;
 
-    struct fs_node *fs_node = fs_path_get_fs_node(file->path);
+    struct fs_node *fs_node = fs_path_get_node(file->path);
+    if(fs_node == NULL) {
+        return -EINVAL;
+    }
+
     struct vfs_node *vfs_node = fs_node->backing.priv_state;
     struct pty_node *pty_node = container_of(vfs_node, struct pty_node, vfs_node);
 
@@ -184,19 +188,24 @@ pty_file_read(
 
         if(amt_read == 0) {
             if(flags & FS_FILE_READ_NON_BLOCKING) {
+                fs_node_put(fs_node);
                 return -EWOULDBLOCK;
             }
             res = wait_on(&pty_node->read_wq);
             if(res) {
+                fs_node_put(fs_node);
                 return res;
             }
         } else if(amt_read < 0) {
+            fs_node_put(fs_node);
             return amt_read;
         }
         total_read = amt_read;
     }
 
     term_driver_poke_output(&pty_node->term_dev);
+    fs_node_put(fs_node);
+
     return total_read;
 }
 
@@ -209,7 +218,11 @@ pty_file_write(
 {
     int res;
 
-    struct fs_node *fs_node = fs_path_get_fs_node(file->path);
+    struct fs_node *fs_node = fs_path_get_node(file->path);
+    if(fs_node == NULL) {
+        return -ENXIO;
+    }
+
     struct vfs_node *vfs_node = fs_node->backing.priv_state;
     struct pty_node *pty_node = container_of(vfs_node, struct pty_node, vfs_node);
 
@@ -228,6 +241,8 @@ pty_file_write(
     if(total > 0) {
         wake_single(&pty_node->read_wq);
     }
+
+    fs_node_put(fs_node);
     return total;
 }
 

@@ -82,7 +82,7 @@ ipv4_dev_fs_file_write(struct file *file,
 {
     int res;
 
-    struct fs_node *fs_node = fs_path_get_fs_node(file->path);
+    struct fs_node *fs_node = fs_path_get_node(file->path);
     if(fs_node == NULL)
     {
         return -ENXIO;
@@ -94,11 +94,13 @@ ipv4_dev_fs_file_write(struct file *file,
 
     if(flags & FS_FILE_READ_NON_BLOCKING)
     {
+        fs_node_put(fs_node);
         return -EWOULDBLOCK;
     }
 
     if(amount < sizeof(struct ipv4_pkt_hdr))
     {
+        fs_node_put(fs_node);
         return -EINVAL;
     }
 
@@ -112,6 +114,7 @@ ipv4_dev_fs_file_write(struct file *file,
 
     if(pkt == NULL)
     {
+        fs_node_put(fs_node);
         return -ENOMEM;
     }
 
@@ -131,9 +134,11 @@ ipv4_dev_fs_file_write(struct file *file,
     // from ipv4_dev_send_packet
     if(res)
     {
+        fs_node_put(fs_node);
         return res;
     }
 
+    fs_node_put(fs_node);
     return amount;
 }
 

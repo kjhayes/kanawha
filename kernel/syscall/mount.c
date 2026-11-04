@@ -171,7 +171,7 @@ syscall_mount(const char __user *src,
                 return -EINVAL;
             }
 
-            struct fs_node *node = fs_path_get_fs_node(src_desc->path);
+            struct fs_node *node = fs_path_get_node(src_desc->path);
             if(node == NULL)
             {
                 file_table_put_file(process->file_table, process, src_desc);
@@ -184,6 +184,7 @@ syscall_mount(const char __user *src,
 
             file_table_put_file(process->file_table, process, src_desc);
             file_table_close(process->file_table, process, src_fd);
+            fs_node_put(node);
 
             if(res)
             {

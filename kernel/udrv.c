@@ -216,7 +216,7 @@ udrv_dev_fs_file_read(struct file *file,
 {
     int res;
 
-    struct fs_node *fs_node = fs_path_get_fs_node(file->path);
+    struct fs_node *fs_node = fs_path_get_node(file->path);
     struct vfs_node *vfs_node = fs_node->backing.priv_state;
     struct udrv_dev *dev = container_of(vfs_node, struct udrv_dev, vfs_node);
     struct udrv_mount *mnt = dev->mnt;
@@ -237,6 +237,7 @@ udrv_dev_fs_file_read(struct file *file,
             if(flags & FS_FILE_WRITE_NON_BLOCKING)
             {
                 irq_lock_release(&dev->read_pkt_queue_lock);
+                fs_node_put(fs_node);
                 return -EWOULDBLOCK;
             }
             else
@@ -248,6 +249,7 @@ udrv_dev_fs_file_read(struct file *file,
                 enable_restore_irqs(irq_flags);
                 if(res)
                 {
+                    fs_node_put(fs_node);
                     return res;
                 }
                 // Could be interrupted here...
@@ -274,6 +276,7 @@ udrv_dev_fs_file_read(struct file *file,
 
     irq_lock_release(&dev->read_pkt_queue_lock);
 
+    fs_node_put(fs_node);
     kfree(user_pkt);
 
     // printk("wrote udrv packet of length=0x%lx to userspace!\n", to_write);
@@ -299,7 +302,7 @@ udrv_dev_fs_file_write(struct file *file,
         return -EINVAL;
     }
 
-    struct fs_node *fs_node = fs_path_get_fs_node(file->path);
+    struct fs_node *fs_node = fs_path_get_node(file->path);
     struct vfs_node *vfs_node = fs_node->backing.priv_state;
     struct udrv_dev *dev = container_of(vfs_node, struct udrv_dev, vfs_node);
     struct udrv_mount *mnt = dev->mnt;
@@ -320,11 +323,13 @@ udrv_dev_fs_file_write(struct file *file,
                 res = wait_on(&dev->write_wq);
                 if(res)
                 {
+                    fs_node_put(fs_node);
                     return res;
                 }
             }
             else
             {
+                fs_node_put(fs_node);
                 return res;
             }
             continue;
@@ -336,32 +341,43 @@ udrv_dev_fs_file_write(struct file *file,
         }
     }
 
+    fs_node_put(fs_node);
     return amount;
 }
 
 static int
 udrv_dev_fs_file_poll(struct file *file, unsigned long in, unsigned long *out)
 {
-    struct fs_node *fs_node = fs_path_get_fs_node(file->path);
+    struct fs_node *fs_node = fs_path_get_node(file->path);
+    if(fs_node == NULL) {
+        return -ENXIO;
+    }
+
     struct vfs_node *vfs_node = fs_node->backing.priv_state;
     struct udrv_dev *dev = container_of(vfs_node, struct udrv_dev, vfs_node);
     struct udrv_mount *mnt = dev->mnt;
 
-    *out = 0;
+    unsigned long flags = 0;
 
     if(in & POLL_READ_NONBLOCKING)
     {
         irq_lock_acquire(&dev->read_pkt_queue_lock);
         if(!ilist_empty(&dev->read_pkt_queue))
         {
-            *out |= POLL_READ_NONBLOCKING;
+            flags |= POLL_READ_NONBLOCKING;
         }
         irq_lock_release(&dev->read_pkt_queue_lock);
     }
 
+    fs_node_put(fs_node);
+
     if(in & POLL_WRITE_NONBLOCKING)
     {
-        *out |= POLL_WRITE_NONBLOCKING;
+        flags |= POLL_WRITE_NONBLOCKING;
+    }
+
+    if(out) {
+        *out = flags;
     }
 
     return 0;
