@@ -14,7 +14,7 @@ libs += \
 bins += \
     cat \
     cp \
-    fbterm \
+    term \
 	kinit \
 	lensd \
     ls \

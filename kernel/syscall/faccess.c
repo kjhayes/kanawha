@@ -17,14 +17,14 @@ syscall_faccess(fd_t fd, unsigned long fields, unsigned long mode)
 {
     struct process *process = current_process();
 
-    LOG("fields=0x%lx, mode=0x%lx\n", fields, mode);
+    LOG("fd=%ld, fields=0x%lx, mode=0x%lx\n", (sl_t)fd, (ul_t)fields, (ul_t)mode);
 
     int res;
     struct file *file = file_table_get_file(process->file_table, process, fd);
     if(file == NULL)
     {
         LOG("failed to get file descriptor!\n");
-        return -EINVAL;
+        return -ENXIO;
     }
 
 #define SUPPORTED_MODE_FLAGS FILE_MODE_NON_BLOCK
@@ -55,6 +55,7 @@ syscall_faccess(fd_t fd, unsigned long fields, unsigned long mode)
     }
     else
     {
+        LOG("invalid mode (%lu)!\n", mode);
         res = -EINVAL;
     }
 

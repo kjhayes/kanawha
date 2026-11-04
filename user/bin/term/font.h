@@ -22,8 +22,11 @@ struct font_data
 };
 
 struct font_data *
-load_font(const char *path);
-
+load_default_font(void);
+struct font_data *
+load_font_from_buffer(void *buffer, size_t buflen);
+struct font_data *
+load_font_from_file(const char *path);
 void
 unload_font(struct font_data *fdata);
 

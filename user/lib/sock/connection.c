@@ -193,6 +193,8 @@ sock_connection_init(
 {
     int res;
 
+    conn->conn_fd = conn_fd;
+
     res = kanawha_sys_faccess(
             conn->conn_fd,
             FACCESS_NON_BLOCKING,
@@ -225,7 +227,6 @@ sock_connection_init(
         return -ENOMEM;
     }
 
-    conn->conn_fd = conn_fd;
     conn->status = SOCK_CONNECTION_CONNECTED;
 
     res = thrd_create(&conn->read_thread, sock_connection_read_thread, conn);

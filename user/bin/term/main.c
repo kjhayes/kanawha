@@ -23,59 +23,9 @@
 #include "render.h"
 #include "term.h"
 
-static const char *prog_name = "fbterm";
+static const char *prog_name = "term";
 
 #define USE_PTY
-
-// static inline void
-// find_maximum_fb_mode(struct kfb_framebuffer *fb,
-//                      int *best_mode_out,
-//                      int *best_layer_out)
-//{
-//     int best_mode = -EINVAL;
-//     int best_layer = -EINVAL;
-//     size_t best_dimensions = 0;
-//     int mode = 0;
-//
-//     while(1)
-//     {
-//         struct fb_mode_info *info = kfb_load_mode_info(fb, mode);
-//         if(info == NULL)
-//         {
-//             break;
-//         }
-//
-//         for(int layer = 0; layer < info->layer_count; layer++)
-//         {
-//             struct fb_layer_info *layer_info = &info->layer_infos[layer];
-//             size_t dimensions;
-//             switch(layer_info->layout.format)
-//             {
-//             case GFX_FORMAT_ASCII:
-//             case GFX_FORMAT_VGA_CHAR:
-//                 dimensions = 0;
-//                 break;
-//             default:
-//                 dimensions =
-//                     layer_info->layout.width * layer_info->layout.height;
-//                 break;
-//             }
-//
-//             if(dimensions > best_dimensions)
-//             {
-//                 best_mode = mode;
-//                 best_layer = layer;
-//                 break;
-//             }
-//         }
-//
-//         kfb_unload_mode_info(fb, info);
-//         mode++;
-//     }
-//
-//     *best_mode_out = best_mode;
-//     *best_layer_out = best_layer;
-// }
 
 static inline void
 panic_usage(void)
@@ -294,21 +244,17 @@ main(int argc, const char **argv)
         shell_argv = pos_argv;
     }
 
-    //printf("SHELL:");
-    //for(size_t i = 0; i < shell_argc; i++)
-    //{
-    //    printf(" %s", shell_argv[i]);
-    //}
-    //printf("\n");
-
     launch_shell(&terminal_data, shell_argc, shell_argv);
 
+    struct font_data *fdata = NULL; 
     if(font_path == NULL)
     {
-        panic_usage();
+        fdata = load_default_font();
+    }
+    else {
+        fdata = load_font_from_file(font_path);
     }
 
-    struct font_data *fdata = load_font(font_path);
     if(fdata == NULL)
     {
         fprintf(stderr, "Failed to load font \"%s\"!\n", font_path);
@@ -342,7 +288,7 @@ main(int argc, const char **argv)
         lens_init();
         l_window = lens_open_window();
         if(l_window == NULL) {
-            fprintf(stderr, "fbterm: failed to create window!\n");
+            fprintf(stderr, "term: failed to create window!\n");
             exit(EXIT_FAILURE);
         }
         render = create_lens_render_ctx(l_window);
