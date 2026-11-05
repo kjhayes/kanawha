@@ -29,7 +29,7 @@ rand_dev_fs_file_read(struct file *file,
         return -EINVAL;
     }
 
-    struct fs_node *node = fs_path_get_node(file->path);
+    struct fs_node *node = fs_file_get_node(file);
     if(node == NULL)
     {
         return -ENXIO;

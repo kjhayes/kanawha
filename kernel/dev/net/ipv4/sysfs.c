@@ -82,7 +82,7 @@ ipv4_dev_fs_file_write(struct file *file,
 {
     int res;
 
-    struct fs_node *fs_node = fs_path_get_node(file->path);
+    struct fs_node *fs_node = fs_file_get_node(file);
     if(fs_node == NULL)
     {
         return -ENXIO;

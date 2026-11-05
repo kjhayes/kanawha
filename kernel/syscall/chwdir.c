@@ -28,22 +28,11 @@ syscall_chwdir(fd_t fd)
         return -ENXIO;
     }
 
-    if(file->path == NULL)
-    {
+    struct fs_path *path = fs_file_get_path(file);
+    if(path == NULL) {
         LOG("PID(%ld) chwdir(%ld), file has NULL fs_path!\n");
-        return -EINVAL;
-    }
-
-    res = process_set_working_directory(process, file->path);
-    if(res)
-    {
         file_table_put_file(process->file_table, process, file);
-        LOG("PID(%ld) chwdir(%ld), process_set_working_directory "
-            "returned %s\n",
-            process->id,
-            fd,
-            errnostr(res));
-        return res;
+        return -EINVAL;
     }
 
     res = file_table_put_file(process->file_table, process, file);
@@ -52,8 +41,22 @@ syscall_chwdir(fd_t fd)
         LOG("PID(%ld) chwdir: failed to put file! (err=%s)\n",
             process->id,
             errnostr(res));
+        fs_path_put(path);
         return res;
     }
 
+    res = process_set_working_directory(process, path);
+    if(res)
+    {
+        LOG("PID(%ld) chwdir(%ld), process_set_working_directory "
+            "returned %s\n",
+            process->id,
+            fd,
+            errnostr(res));
+        fs_path_put(path);
+        return res;
+    }
+
+    fs_path_put(path);
     return 0;
 }

@@ -216,7 +216,7 @@ udrv_dev_fs_file_read(struct file *file,
 {
     int res;
 
-    struct fs_node *fs_node = fs_path_get_node(file->path);
+    struct fs_node *fs_node = fs_file_get_node(file);
     struct vfs_node *vfs_node = fs_node->backing.priv_state;
     struct udrv_dev *dev = container_of(vfs_node, struct udrv_dev, vfs_node);
     struct udrv_mount *mnt = dev->mnt;
@@ -302,7 +302,7 @@ udrv_dev_fs_file_write(struct file *file,
         return -EINVAL;
     }
 
-    struct fs_node *fs_node = fs_path_get_node(file->path);
+    struct fs_node *fs_node = fs_file_get_node(file);
     struct vfs_node *vfs_node = fs_node->backing.priv_state;
     struct udrv_dev *dev = container_of(vfs_node, struct udrv_dev, vfs_node);
     struct udrv_mount *mnt = dev->mnt;
@@ -348,7 +348,7 @@ udrv_dev_fs_file_write(struct file *file,
 static int
 udrv_dev_fs_file_poll(struct file *file, unsigned long in, unsigned long *out)
 {
-    struct fs_node *fs_node = fs_path_get_node(file->path);
+    struct fs_node *fs_node = fs_file_get_node(file);
     if(fs_node == NULL) {
         return -ENXIO;
     }

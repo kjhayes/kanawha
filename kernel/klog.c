@@ -187,14 +187,13 @@ klog_fs_file_read(struct file *file,
 {
     int res;
 
-    struct fs_path *path = file->path;
-    res = fs_path_get(path);
-    if(res)
-    {
-        return res;
-    }
+    size_t offset = fs_file_get_seek_offset(file);
 
-    size_t offset = file->seek_offset;
+    struct fs_path *path = fs_file_get_path(file);
+    if(path == NULL)
+    {
+        return -EINVAL;
+    }
 
     klog_tree_lock_acquire();
 

@@ -62,7 +62,7 @@ syscall_unlink(fd_t dir_fd, char __user *name)
     }
     namebuf[namelen] = '\0';
 
-    struct fs_node *fs_node = fs_path_get_node(dir_file->path);
+    struct fs_node *fs_node = fs_file_get_node(dir_file);
     if(fs_node == NULL)
     {
         file_table_put_file(process->file_table, process, dir_file);

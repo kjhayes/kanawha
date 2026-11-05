@@ -31,13 +31,13 @@ syscall_read(fd_t file, void __user *dst, size_t size)
     }
 
     struct file *desc = file_table_get_file(process->file_table, process, file);
-
     if(desc == NULL)
     {
         return -ENXIO;
     }
 
-    if((desc->access_flags & FILE_PERM_READ) == 0)
+    unsigned long aflags = fs_file_get_access_flags(desc);
+    if((aflags & FILE_PERM_READ) == 0)
     {
         file_table_put_file(process->file_table, process, desc);
         return -EPERM;
@@ -51,7 +51,8 @@ syscall_read(fd_t file, void __user *dst, size_t size)
     ssize_t amount_read = amount_to_read;
 
     unsigned long flags = 0;
-    if(desc->mode_flags & FILE_MODE_NON_BLOCK)
+    unsigned long mflags = fs_file_get_mode_flags(desc);
+    if(mflags & FILE_MODE_NON_BLOCK)
     {
         flags |= FS_FILE_READ_NON_BLOCKING;
     }
@@ -76,7 +77,7 @@ syscall_read(fd_t file, void __user *dst, size_t size)
     }
 
     res = amount_read;
-    desc->seek_offset += amount_read;
+    fs_file_add_to_seek_offset(desc, amount_read);
 
 exit:
     file_table_put_file(process->file_table, process, desc);

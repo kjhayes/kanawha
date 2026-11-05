@@ -165,7 +165,7 @@ vfs_field_fs_file_read(struct file *file,
         return -EUNIMPL;
     }
 
-    struct fs_node *fs_node = fs_path_get_node(file->path);
+    struct fs_node *fs_node = fs_file_get_node(file);
     if(fs_node == NULL)
     {
         return -EUNIMPL;
@@ -175,7 +175,7 @@ vfs_field_fs_file_read(struct file *file,
                                                   struct vfs_struct_field,
                                                   vfs_node);
 
-    ssize_t amt = (*field->raw_read)(field, file->seek_offset, buffer, buflen);
+    ssize_t amt = (*field->raw_read)(field, fs_file_get_seek_offset(file), buffer, buflen);
 
     fs_node_put(fs_node);
 
@@ -195,7 +195,7 @@ vfs_field_fs_file_write(struct file *file,
         return -EUNIMPL;
     }
 
-    struct fs_node *fs_node = fs_path_get_node(file->path);
+    struct fs_node *fs_node = fs_file_get_node(file);
     if(fs_node == NULL)
     {
         return -EUNIMPL;
@@ -205,7 +205,7 @@ vfs_field_fs_file_write(struct file *file,
                                                   struct vfs_struct_field,
                                                   vfs_node);
 
-    return (*field->raw_write)(field, file->seek_offset, buffer, buflen);
+    return (*field->raw_write)(field, fs_file_get_seek_offset(file), buffer, buflen);
 }
 
 static struct fs_node_ops vfs_field_node_ops = {

@@ -1,6 +1,8 @@
 #ifndef __KANAWHA__ELK_MATH_H__
 #define __KANAWHA__ELK_MATH_H__
 
+// #define __ELK_LIBM_LONG_DOUBLE
+
 // These should be macros
 // int fpclassify(real-floating x);
 // int isfinite(real-floating x);

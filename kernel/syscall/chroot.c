@@ -28,29 +28,31 @@ syscall_chroot(fd_t fd)
         return -ENXIO;
     }
 
-    if(file->path == NULL)
+    struct fs_path *path = fs_file_get_path(file);
+    if(path == NULL)
     {
         LOG("PID(%ld) chroot(%ld), file has NULL fs_path!\n");
+        file_table_put_file(process->file_table, process, file);
         return -EINVAL;
     }
+    file_table_put_file(process->file_table, process, file);
 
-    res = process_set_root_directory(process, file->path);
+    res = process_set_root_directory(process, path);
     if(res)
     {
-        file_table_put_file(process->file_table, process, file);
         LOG("PID(%ld) chroot(%ld), process_set_root_directory returned "
             "%s\n",
             process->id,
             fd,
             errnostr(res));
+        fs_path_put(path);
         return res;
     }
 
     // also set the working directory to the new root directory
-    res = process_set_working_directory(process, file->path);
+    res = process_set_working_directory(process, path);
     if(res)
     {
-        file_table_put_file(process->file_table, process, file);
         LOG("PID(%ld) chroot(%ld), process_set_working_directory "
             "returned %s\n",
             process->id,
@@ -59,17 +61,10 @@ syscall_chroot(fd_t fd)
         // TODO: We should probably restore the old root directory here
         //       (If we fail at restoring, we should probably kill the
         //       process)
+        fs_path_put(path);
         return res;
     }
 
-    res = file_table_put_file(process->file_table, process, file);
-    if(res)
-    {
-        LOG("PID(%ld) chroot: failed to put file! (err=%s)\n",
-            process->id,
-            errnostr(res));
-        return res;
-    }
-
+    fs_path_put(path);
     return 0;
 }

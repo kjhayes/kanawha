@@ -25,7 +25,7 @@ term_dev_raw_fs_file_read(struct file *file,
     int res;
     struct term_dev *dev = term_dev_from_file(file, raw_vfs_node);
 
-    if(file->seek_offset != 0)
+    if(fs_file_get_seek_offset(file) != 0)
     {
         return 0;
     }
@@ -47,7 +47,7 @@ term_dev_raw_fs_file_write(struct file *file,
 
     struct term_dev *dev = term_dev_from_file(file, raw_vfs_node);
 
-    if(file->seek_offset != 0)
+    if(fs_file_get_seek_offset(file) != 0)
     {
         return 0;
     }

@@ -80,8 +80,7 @@ syscall_open(const char __user *path,
         struct file *dir_file;
         dir_file = file_table_get_file(process->file_table, process, dir_fd);
 
-        dir_path = dir_file->path;
-        fs_path_get(dir_path);
+        dir_path = fs_file_get_path(dir_file);
 
         file_table_put_file(process->file_table, process, dir_file);
     }
@@ -132,6 +131,7 @@ syscall_open(const char __user *path,
             (sl_t)process->id,
             path_buf,
             errnostr(res));
+        fs_path_put(dir_path);
         return res;
     }
 
@@ -162,7 +162,7 @@ syscall_open(const char __user *path,
             return res;
         }
 
-        struct fs_node *fs_node = fs_path_get_node(file->path);
+        struct fs_node *fs_node = fs_file_get_node(file);
         if(fs_node == NULL)
         {
             file_table_put_file(process->file_table, process, file);

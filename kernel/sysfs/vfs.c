@@ -132,7 +132,8 @@ vfs_dir_begin(struct file *dir)
 {
     dprintk("vfs_dir_begin\n");
 
-    dir->dir_offset = 0;
+    fs_file_set_dir_offset(dir, 0);
+
     return 0;
 }
 
@@ -141,7 +142,7 @@ vfs_dir_next(struct file *dir)
 {
     dprintk("vfs_dir_next\n");
 
-    struct fs_node *fs_node = fs_path_get_node(dir->path);
+    struct fs_node *fs_node = fs_file_get_node(dir);
     if(fs_node == NULL)
     {
         return -EINVAL;
@@ -149,13 +150,13 @@ vfs_dir_next(struct file *dir)
 
     struct vfs_node *node = fs_node->backing.priv_state;
 
-    dir->dir_offset++;
-    if(dir->dir_offset == node->children_count)
+    fs_file_add_to_dir_offset(dir, 1);
+    if(fs_file_get_dir_offset(dir) == node->children_count)
     {
         fs_node_put(fs_node);
         return -ENXIO;
     }
-    if(dir->dir_offset > node->children_count)
+    if(fs_file_get_dir_offset(dir) > node->children_count)
     {
         fs_node_put(fs_node);
         return -EINVAL;
@@ -178,7 +179,7 @@ vfs_dir_readname(struct file *dir, char *name_buf, size_t buf_len)
 {
     dprintk("vfs_dir_readname\n");
 
-    struct fs_node *fs_node = fs_path_get_node(dir->path);
+    struct fs_node *fs_node = fs_file_get_node(dir);
     if(fs_node == NULL)
     {
         return -EINVAL;
@@ -187,18 +188,18 @@ vfs_dir_readname(struct file *dir, char *name_buf, size_t buf_len)
     struct vfs_node *node = fs_node->backing.priv_state;
 
     irq_lock_acquire(&node->hierarchy_lock);
-    if(dir->dir_offset + 1 > node->children_count)
+    if(fs_file_get_dir_offset(dir) + 1 > node->children_count)
     {
         irq_lock_release(&node->hierarchy_lock);
         dprintk("Not searching (dir_offset=0x%lx, children_count=0x%lx)\n",
-                dir->dir_offset,
+                fs_file_get_dir_offset(dir),
                 node->children_count);
         fs_node_put(fs_node);
         return -ENXIO;
     }
 
     struct stree_node *snode = stree_get_first(&node->children_tree);
-    for(size_t i = 0; i < dir->dir_offset; i++)
+    for(size_t i = 0; i < fs_file_get_dir_offset(dir); i++)
     {
         if(snode == NULL)
         {

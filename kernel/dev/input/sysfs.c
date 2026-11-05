@@ -110,7 +110,7 @@ input_fs_file_read(struct file *file,
                    ssize_t amount,
                    unsigned long flags)
 {
-    struct fs_node *fs_node = fs_path_get_node(file->path);
+    struct fs_node *fs_node = fs_file_get_node(file);
     if(fs_node == NULL)
     {
         return -ENXIO;
@@ -166,7 +166,7 @@ input_fs_file_read(struct file *file,
 static int
 input_fs_file_poll(struct file *file, unsigned long in, unsigned long *out)
 {
-    struct fs_node *fs_node = fs_path_get_node(file->path);
+    struct fs_node *fs_node = fs_file_get_node(file);
     if(fs_node == NULL)
     {
         return -ENXIO;

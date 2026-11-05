@@ -22,38 +22,36 @@ syscall_accept(fd_t sock_fd, fd_t __user *conn, unsigned long flags)
         return -ENXIO;
     }
 
-    struct fs_path *sock_path = sock_desc->path;
-    struct fs_node *sock_node = fs_path_get_node(sock_path);
+    unsigned long accept_flags = 0;
+    unsigned long mflags = fs_file_get_mode_flags(sock_desc);
+    if(mflags & FILE_MODE_NON_BLOCK)
+    {
+        accept_flags |= FS_NODE_ACCEPT_NON_BLOCKING;
+    }
+
+    struct fs_node *sock_node = fs_file_get_node(sock_desc);
     if(sock_node == NULL) {
         file_table_put_file(process->file_table, process, sock_desc);
         return -EINVAL;
     }
-
-    unsigned long accept_flags = 0;
-    if(sock_desc->mode_flags & FILE_MODE_NON_BLOCK)
-    {
-        accept_flags |= FS_NODE_ACCEPT_NON_BLOCKING;
-    }
+    file_table_put_file(process->file_table, process, sock_desc);
 
     size_t conn_inode;
     res = fs_node_accept(sock_node, &conn_inode, accept_flags);
     if(res)
     {
-        file_table_put_file(process->file_table, process, sock_desc);
         fs_node_put(sock_node);
         return res;
     }
 
     struct fs_node *conn_node = fs_mount_get_node(sock_node->mount, conn_inode);
-
-    // Close the file reference no matter what
-    file_table_put_file(process->file_table, process, sock_desc);
-    fs_node_put(sock_node);
-
     if(conn_node == NULL)
     {
+        fs_node_put(sock_node);
         return -EINVAL;
     }
+
+    fs_node_put(sock_node);
 
     fd_t conn_fd;
     res = file_table_open_node(process->file_table,

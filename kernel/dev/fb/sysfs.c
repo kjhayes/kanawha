@@ -325,7 +325,7 @@ fb_dev_buffer_fs_file_flush(struct file *file, unsigned long flags)
 {
     int res;
 
-    struct fs_node *fs_node = fs_path_get_node(file->path);
+    struct fs_node *fs_node = fs_file_get_node(file);
     if(fs_node == NULL)
     {
         return -ENXIO;
@@ -389,12 +389,12 @@ fb_dev_mode_set_fs_file_write(struct file *file,
 {
     int res;
 
-    if(file->seek_offset != 0)
+    if(fs_file_get_seek_offset(file) != 0)
     {
         return 0;
     }
 
-    struct fs_node *fs_node = fs_path_get_node(file->path);
+    struct fs_node *fs_node = fs_file_get_node(file);
     if(fs_node == NULL)
     {
         return -ENXIO;
@@ -490,12 +490,12 @@ fb_dev_mode_set_fs_file_read(struct file *file,
                              ssize_t buflen,
                              unsigned long flags)
 {
-    if(file->seek_offset != 0)
+    if(fs_file_get_seek_offset(file) != 0)
     {
         return 0;
     }
 
-    struct fs_node *fs_node = fs_path_get_node(file->path);
+    struct fs_node *fs_node = fs_file_get_node(file);
     if(fs_node == NULL)
     {
         return -ENXIO;
@@ -618,12 +618,12 @@ fb_dev_mode_info_fs_file_write(struct file *file,
 {
     int res;
 
-    if(file->seek_offset != 0)
+    if(fs_file_get_seek_offset(file) != 0)
     {
         return 0;
     }
 
-    struct fs_node *node = fs_path_get_node(file->path);
+    struct fs_node *node = fs_file_get_node(file);
     if(node == NULL)
     {
         return -ENXIO;
@@ -654,11 +654,10 @@ fb_dev_mode_info_fs_file_read(struct file *file,
                               unsigned long flags)
 {
     DEBUG_ASSERT(KERNEL_ADDR(file));
-    DEBUG_ASSERT(KERNEL_ADDR(file->path));
 
     dprintk("fb_dev_fs_file_read\n");
 
-    struct fs_node *node = fs_path_get_node(file->path);
+    struct fs_node *node = fs_file_get_node(file);
     if(node == NULL)
     {
         return -ENXIO;
@@ -674,7 +673,7 @@ fb_dev_mode_info_fs_file_read(struct file *file,
     struct fb_mode_info *info = fb_dev_get_mode_info(fbfs->dev, mode_index);
     if(info == NULL)
     {
-        if(file->seek_offset == 0)
+        if(fs_file_get_seek_offset(file) == 0)
         {
             fs_node_put(node);
             return 0; // Nothing to read
@@ -688,13 +687,13 @@ fb_dev_mode_info_fs_file_read(struct file *file,
 
     size_t size = sizeof(struct fb_mode_info) +
                   (sizeof(struct fb_layer_info) * info->layer_count);
-    if(file->seek_offset > size)
+    if(fs_file_get_seek_offset(file) > size)
     {
         fs_node_put(node);
         return -EINVAL;
     }
 
-    size_t room_left = size - file->seek_offset;
+    size_t room_left = size - fs_file_get_seek_offset(file);
     if(room_left > buflen)
     {
         room_left = buflen;

@@ -36,9 +36,9 @@ syscall_seek(fd_t file, ssize_t offset, int whence)
         return -ENXIO;
     }
 
-    desc->seek_offset = direct_file_seek(desc, offset, fs_whence);
+    ssize_t ret_offset = direct_file_seek(desc, offset, fs_whence);
+    fs_file_set_seek_offset(desc, ret_offset);
 
-    ssize_t ret_offset = desc->seek_offset;
     file_table_put_file(process->file_table, process, desc);
     return ret_offset;
 }

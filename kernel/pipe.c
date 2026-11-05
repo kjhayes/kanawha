@@ -202,7 +202,7 @@ pipe_fs_pipe_file_read(struct file *file,
     {
         return 0;
     }
-    struct fs_node *fs_node = fs_path_get_node(file->path);
+    struct fs_node *fs_node = fs_file_get_node(file);
     if(fs_node == NULL)
     {
         return -ENXIO;
@@ -222,7 +222,9 @@ pipe_fs_pipe_file_read(struct file *file,
     struct waitqueue *wait_on_wq;
     struct waitqueue *wake_wq;
 
-    if(!(file->internal_flags & FILE_INTERNAL_FLAG_CLIENT))
+    unsigned long iflags = fs_file_get_internal_flags(file);
+
+    if(!(iflags & FILE_INTERNAL_FLAG_CLIENT))
     {
         // We are a server or a simple pipe...
         res = pipe_fs_pipe_ensure_primary_inited(pipe);
@@ -262,14 +264,14 @@ pipe_fs_pipe_file_read(struct file *file,
         {
             // Checking if we should declare EOF
             int can_eof = 0;
-            if(file->internal_flags & FILE_INTERNAL_FLAG_SERVER)
+            if(iflags & FILE_INTERNAL_FLAG_SERVER)
             {
                 if(pipe->pipe.num_clients <= 0)
                 {
                     can_eof = 1;
                 }
             }
-            else if(file->internal_flags & FILE_INTERNAL_FLAG_CLIENT)
+            else if(iflags & FILE_INTERNAL_FLAG_CLIENT)
             {
                 if(pipe->pipe.num_servers <= 0)
                 {
@@ -342,7 +344,7 @@ pipe_fs_pipe_file_write(struct file *file,
     {
         return 0;
     }
-    struct fs_node *fs_node = fs_path_get_node(file->path);
+    struct fs_node *fs_node = fs_file_get_node(file);
     if(fs_node == NULL)
     {
         return -ENXIO;
@@ -358,11 +360,13 @@ pipe_fs_pipe_file_write(struct file *file,
 
     DEBUG_ASSERT(KERNEL_ADDR(buffer));
 
+    unsigned long iflags = fs_file_get_internal_flags(file);
+
     struct pipe_ring_buffer *ringbuf;
     struct waitqueue *wait_on_wq;
     struct waitqueue *wake_wq;
 
-    if(!(file->internal_flags & FILE_INTERNAL_FLAG_SERVER))
+    if(!(iflags & FILE_INTERNAL_FLAG_SERVER))
     {
         // We are a client or a simple pipe
         res = pipe_fs_pipe_ensure_primary_inited(pipe);
@@ -395,14 +399,14 @@ pipe_fs_pipe_file_write(struct file *file,
     {
         // Checking if we should declare EOF
         int can_eof = 0;
-        if(file->internal_flags & FILE_INTERNAL_FLAG_SERVER)
+        if(iflags & FILE_INTERNAL_FLAG_SERVER)
         {
             if(pipe->pipe.num_clients <= 0)
             {
                 can_eof = 1;
             }
         }
-        else if(file->internal_flags & FILE_INTERNAL_FLAG_CLIENT)
+        else if(iflags & FILE_INTERNAL_FLAG_CLIENT)
         {
             if(pipe->pipe.num_servers <= 0)
             {
@@ -477,7 +481,7 @@ pipe_fs_pipe_file_poll(struct file *file,
 {
     int res;
 
-    struct fs_node *node = fs_path_get_node(file->path);
+    struct fs_node *node = fs_file_get_node(file);
     if(node == NULL)
     {
         return -ENXIO;
@@ -490,12 +494,14 @@ pipe_fs_pipe_file_poll(struct file *file,
 
     DEBUG_ASSERT(pipe->type == PIPE_FS_NODE_PIPE);
 
+    unsigned long iflags = fs_file_get_internal_flags(file);
+
     unsigned long triggered = 0;
 
     struct pipe_ring_buffer *read_ringbuf;
     struct pipe_ring_buffer *write_ringbuf;
 
-    if(file->internal_flags & FILE_INTERNAL_FLAG_SERVER)
+    if(iflags & FILE_INTERNAL_FLAG_SERVER)
     {
         res = pipe_fs_pipe_ensure_primary_inited(pipe);
         if(res)
@@ -514,7 +520,7 @@ pipe_fs_pipe_file_poll(struct file *file,
         read_ringbuf = &pipe->pipe.secondary_ringbuf;
         write_ringbuf = &pipe->pipe.primary_ringbuf;
     }
-    else if(file->internal_flags & FILE_INTERNAL_FLAG_SERVER)
+    else if(iflags & FILE_INTERNAL_FLAG_SERVER)
     {
         res = pipe_fs_pipe_ensure_primary_inited(pipe);
         if(res)
@@ -568,7 +574,7 @@ pipe_fs_pipe_file_status(struct file *file,
                            unsigned long type,
                            unsigned long *value)
 {
-    struct fs_node *fs_node = fs_path_get_node(file->path);
+    struct fs_node *fs_node = fs_file_get_node(file);
     if(fs_node == NULL)
     {
         return -ENXIO;
@@ -582,28 +588,32 @@ pipe_fs_pipe_file_status(struct file *file,
     switch(type)
     {
     case FILE_STATUS_CONNECTED:
-        if(file->internal_flags & FILE_INTERNAL_FLAG_SERVER)
+    {
+        unsigned long iflags = fs_file_get_internal_flags(file);
+        if(iflags & FILE_INTERNAL_FLAG_SERVER)
         {
             *value = pipe->pipe.num_clients > 0;
         }
-        else if(file->internal_flags & FILE_INTERNAL_FLAG_CLIENT)
+        else if(iflags & FILE_INTERNAL_FLAG_CLIENT)
         {
             *value = pipe->pipe.num_servers > 0;
         }
         else
         {
             int other = 0;
-            if(file->access_flags & FILE_PERM_READ)
+            unsigned long aflags = fs_file_get_access_flags(file);
+            if(aflags & FILE_PERM_READ)
             {
                 other |= pipe->pipe.num_writers > 0;
             }
-            if(file->access_flags & FILE_PERM_WRITE)
+            if(aflags & FILE_PERM_WRITE)
             {
                 other |= pipe->pipe.num_readers > 0;
             }
             *value = other;
         }
         break;
+    }
     default:
         pipe_lock_release(pipe);
         fs_node_put(fs_node);
@@ -690,7 +700,7 @@ pipe_fs_pipe_node_getattr(struct fs_node *node, int attr, size_t *value)
 static int
 pipe_fs_pipe_file_on_open(struct file *file)
 {
-    struct fs_node *node = fs_path_get_node(file->path);
+    struct fs_node *node = fs_file_get_node(file);
     if(node == NULL)
     {
         return -ENXIO;
@@ -702,19 +712,22 @@ pipe_fs_pipe_file_on_open(struct file *file)
 
     pipe_lock_acquire(pipe);
 
-    if(file->access_flags & FILE_PERM_WRITE)
+    unsigned long aflags = fs_file_get_access_flags(file);
+    unsigned long iflags = fs_file_get_internal_flags(file);
+
+    if(aflags & FILE_PERM_WRITE)
     {
         pipe->pipe.num_writers++;
     }
-    if(file->access_flags & FILE_PERM_READ)
+    if(aflags & FILE_PERM_READ)
     {
         pipe->pipe.num_readers++;
     }
-    if(file->internal_flags & FILE_INTERNAL_FLAG_CLIENT)
+    if(iflags & FILE_INTERNAL_FLAG_CLIENT)
     {
         pipe->pipe.num_clients++;
     }
-    if(file->internal_flags & FILE_INTERNAL_FLAG_SERVER)
+    if(iflags & FILE_INTERNAL_FLAG_SERVER)
     {
         pipe->pipe.num_servers++;
     }
@@ -734,7 +747,7 @@ pipe_fs_pipe_file_on_open(struct file *file)
 static int
 pipe_fs_pipe_file_on_close(struct file *file)
 {
-    struct fs_node *node = fs_path_get_node(file->path);
+    struct fs_node *node = fs_file_get_node(file);
     if(node == NULL)
     {
         return -ENXIO;
@@ -746,6 +759,9 @@ pipe_fs_pipe_file_on_close(struct file *file)
 
     pipe_lock_acquire(pipe);
 
+    unsigned long aflags = fs_file_get_access_flags(file);
+    unsigned long iflags = fs_file_get_internal_flags(file);
+
     // If the final client/server disconnects, we need
     // to wake all of the opposite side which may be sleeping
     // (they should now read/write EOF instead of blocking)
@@ -754,7 +770,8 @@ pipe_fs_pipe_file_on_close(struct file *file)
     int wake_all_readers = 0;
     int wake_all_writers = 0;
 
-    if(file->access_flags & FILE_PERM_WRITE)
+
+    if(aflags & FILE_PERM_WRITE)
     {
         DEBUG_ASSERT(pipe->pipe.num_writers > 0);
         pipe->pipe.num_writers--;
@@ -763,7 +780,7 @@ pipe_fs_pipe_file_on_close(struct file *file)
             wake_all_readers = 1;
         }
     }
-    if(file->access_flags & FILE_PERM_READ)
+    if(aflags & FILE_PERM_READ)
     {
         DEBUG_ASSERT(pipe->pipe.num_readers > 0);
         pipe->pipe.num_readers--;
@@ -772,7 +789,7 @@ pipe_fs_pipe_file_on_close(struct file *file)
             wake_all_writers = 1;
         }
     }
-    if(file->internal_flags & FILE_INTERNAL_FLAG_CLIENT)
+    if(iflags & FILE_INTERNAL_FLAG_CLIENT)
     {
         DEBUG_ASSERT(pipe->pipe.num_clients > 0);
         pipe->pipe.num_clients--;
@@ -781,7 +798,7 @@ pipe_fs_pipe_file_on_close(struct file *file)
             wake_all_servers = 1;
         }
     }
-    if(file->internal_flags & FILE_INTERNAL_FLAG_SERVER)
+    if(iflags & FILE_INTERNAL_FLAG_SERVER)
     {
         DEBUG_ASSERT(pipe->pipe.num_servers > 0);
         pipe->pipe.num_servers--;

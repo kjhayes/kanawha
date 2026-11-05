@@ -152,10 +152,10 @@ static int
 riscv64_hlic_irq_dev_describe_irq(
         struct irq_dev *dev,
         hwirq_t hwirq,
-        char *buffer,
-        size_t buflen)
+        struct printer *printer
+        )
 {
-    snprintk(buffer, buflen,
+    fmt_print(printer,
             "hlic-%lu",
             (ul_t)hwirq);
     return 0;

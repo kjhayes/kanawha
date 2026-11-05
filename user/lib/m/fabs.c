@@ -17,6 +17,7 @@ double fabs(double x)
     return x;
 }
 
+#ifdef __ELK_LIBM_LONG_DOUBLE
 long double fabsl(long double x)
 {
     if(x < (long double)0.0) {
@@ -24,3 +25,4 @@ long double fabsl(long double x)
     }
     return x;
 }
+#endif

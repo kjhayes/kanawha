@@ -76,15 +76,12 @@ syscall_insmod(fd_t mod_fd, const char __user *modname, unsigned long flags)
         return res;
     }
 
-    struct fs_node *fs_node = fs_path_get_node(file->path);
+    struct fs_node *fs_node = fs_file_get_node(file);
     if(fs_node == NULL)
     {
         file_table_put_file(process->file_table, process, file);
         return -EINVAL;
     }
-
-    const char *name = fs_path_get_name(file->path);
-    printk("insmod: %s %s\n", name != NULL ? name : "???", namebuf);
 
     struct module *mod = load_module(fs_node, namebuf, 0);
     if(mod == NULL)

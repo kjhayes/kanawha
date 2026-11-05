@@ -32,7 +32,8 @@ syscall_write(fd_t file, const void __user *src, size_t size)
         return -ENXIO;
     }
 
-    if((desc->access_flags & FILE_PERM_WRITE) == 0)
+    unsigned long aflags = fs_file_get_access_flags(desc);
+    if((aflags & FILE_PERM_WRITE) == 0)
     {
         LOG("file descriptor (%ld) does not have write permissions!\n",
             desc->table_node.key);
@@ -58,7 +59,8 @@ syscall_write(fd_t file, const void __user *src, size_t size)
     }
 
     unsigned long flags = 0;
-    if(desc->mode_flags & FILE_MODE_NON_BLOCK)
+    unsigned long mflags = fs_file_get_mode_flags(desc);
+    if(mflags & FILE_MODE_NON_BLOCK)
     {
         flags |= FS_FILE_WRITE_NON_BLOCKING;
     }
@@ -72,7 +74,7 @@ syscall_write(fd_t file, const void __user *src, size_t size)
         goto exit;
     }
 
-    desc->seek_offset += amount_written;
+    fs_file_add_to_seek_offset(desc, amount_written);
     res = amount_written;
 
 exit:

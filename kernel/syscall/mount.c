@@ -171,7 +171,7 @@ syscall_mount(const char __user *src,
                 return -EINVAL;
             }
 
-            struct fs_node *node = fs_path_get_node(src_desc->path);
+            struct fs_node *node = fs_file_get_node(src_desc);
             if(node == NULL)
             {
                 file_table_put_file(process->file_table, process, src_desc);
@@ -254,8 +254,15 @@ syscall_mount(const char __user *src,
         return -ENXIO;
     }
 
+    struct fs_path *dst_path = fs_file_get_path(dst_desc);
+    if(dst_path == NULL) {
+        kfree(dst_name_buf);
+        file_table_put_file(process->file_table, process, dst_desc);
+        return res;
+    }
+
     struct fs_path *mnt_point;
-    res = fs_path_mount_dir(dst_desc->path, dst_name_buf, mnt, &mnt_point);
+    res = fs_path_mount_dir(dst_path, dst_name_buf, mnt, &mnt_point);
     if(res)
     {
         eprintk("PID(%ld) syscall_mount: Failed to attach mount point to "
@@ -264,11 +271,13 @@ syscall_mount(const char __user *src,
                 errnostr(res));
         kfree(dst_name_buf);
         file_table_put_file(process->file_table, process, dst_desc);
+        fs_path_put(dst_path);
         return res;
     }
 
     kfree(dst_name_buf);
     file_table_put_file(process->file_table, process, dst_desc);
+    fs_path_put(dst_path);
 
     return 0;
 }

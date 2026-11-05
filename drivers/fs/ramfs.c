@@ -422,7 +422,7 @@ ramfs_dir_mkdir(struct fs_node *fs_node,
 static struct ramfs_dirent *
 ramfs_get_current_dirent(struct file *file)
 {
-    struct fs_node *fs_node = fs_path_get_node(file->path);
+    struct fs_node *fs_node = fs_file_get_node(file);
     if(fs_node == NULL) {
         return NULL;
     }
@@ -441,7 +441,7 @@ ramfs_get_current_dirent(struct file *file)
     ilist_node_t *iter;
     ilist_for_each(iter, &node->directory)
     {
-        if(offset == file->dir_offset)
+        if(offset == fs_file_get_dir_offset(file))
         {
             fs_node_put(fs_node);
             return container_of(iter, struct ramfs_dirent, list_node);
@@ -456,14 +456,14 @@ ramfs_get_current_dirent(struct file *file)
 int
 ramfs_dir_dir_begin(struct file *file)
 {
-    file->dir_offset = 0;
+    fs_file_set_dir_offset(file, 0);
     return 0;
 }
 
 int
 ramfs_dir_dir_next(struct file *file)
 {
-    file->dir_offset++;
+    fs_file_add_to_dir_offset(file, 1);
     struct ramfs_dirent *dirent = ramfs_get_current_dirent(file);
     if(dirent == NULL)
     {

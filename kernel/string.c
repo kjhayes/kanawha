@@ -143,7 +143,6 @@ memcmp(const void *lhs, const void *rhs, size_t n)
 size_t
 strlen(const char *str)
 {
-    DEBUG_ASSERT(KERNEL_ADDR(str));
     const char *term = str;
     while(*term != '\0')
     {

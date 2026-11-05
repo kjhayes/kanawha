@@ -394,16 +394,18 @@ mmap_file_prot_check(struct file *desc, unsigned long mmap_flags)
 
     unsigned long mmap_type = (mmap_flags & MMAP_FLAGS_TYPE_MASK);
 
+    unsigned long aflags = fs_file_get_access_flags(desc);
+
     if((mmap_flags & MMAP_PROT_READ) &&
-       (desc->access_flags & FILE_PERM_READ) == 0)
+       (aflags & FILE_PERM_READ) == 0)
     {
         eprintk("mmap_file_prot_check: read permission fail!\n");
         return -EPERM;
     }
     if((mmap_flags & MMAP_PROT_WRITE) &&
-       (desc->access_flags & FILE_PERM_WRITE) == 0)
+       (aflags & FILE_PERM_WRITE) == 0)
     {
-        if((mmap_type == MMAP_PRIVATE) && (desc->access_flags & FILE_PERM_READ))
+        if((mmap_type == MMAP_PRIVATE) && (aflags & FILE_PERM_READ))
         {
             // This is fine,
             //
@@ -424,7 +426,7 @@ mmap_file_prot_check(struct file *desc, unsigned long mmap_flags)
         }
     }
     if((mmap_flags & MMAP_PROT_EXEC) &&
-       (desc->access_flags & FILE_PERM_EXEC) == 0)
+       (aflags & FILE_PERM_EXEC) == 0)
     {
         eprintk("mmap_file_prot_check: exec permission fail!\n");
         return -EPERM;
@@ -555,7 +557,7 @@ mmap_map_region(struct process *process,
             goto err0;
         }
 
-        fs_node = fs_path_get_node(desc->path);
+        fs_node = fs_file_get_node(desc);
         if(fs_node == NULL)
         {
             file_table_put_file(process->file_table, process, desc);
@@ -563,10 +565,15 @@ mmap_map_region(struct process *process,
             goto err0;
         }
 
-        name_clone = kstrdup(fs_path_get_name(desc->path), KM_KERNEL);
-        if(name_clone == NULL)
         {
-            // We failed to clone the name of this file...
+            name_clone = NULL;
+            struct fs_path *path = fs_file_get_path(desc);
+            if(path != NULL) {
+                name_clone = kstrdup(fs_path_get_name(path), KM_KERNEL);
+                fs_path_put(path);
+            }
+
+            // name_clone may be NULL still
         }
 
         file_table_put_file(process->file_table, process, desc);
@@ -688,7 +695,7 @@ mmap_map_region_exact(struct process *process,
             goto err0;
         }
 
-        fs_node = fs_path_get_node(desc->path);
+        fs_node = fs_file_get_node(desc);
         if(fs_node == NULL)
         {
             file_table_put_file(process->file_table, process, desc);

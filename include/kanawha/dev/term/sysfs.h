@@ -28,7 +28,7 @@ extern struct vfs_mount *term_dev_fs_mount;
 
 #define term_dev_from_file(__file, __field)                                    \
     ({                                                                         \
-        struct fs_node *fs_node = fs_path_get_node(__file->path);           \
+        struct fs_node *fs_node = fs_file_get_node(__file);           \
         struct term_dev *dev;                                                  \
         if(fs_node == NULL)                                                    \
         {                                                                      \

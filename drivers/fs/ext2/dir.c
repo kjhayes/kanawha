@@ -193,12 +193,12 @@ static int
 ext2_dir_read_cur(struct file *file, struct ext2_linked_dir_entry *out)
 {
     int res;
-    struct fs_node *fs_node = fs_path_get_node(file->path);
+    struct fs_node *fs_node = fs_file_get_node(file);
     if(fs_node == NULL)
     {
         return -EINVAL;
     }
-    res = ext2_dir_read_at(fs_node, file->dir_offset, out);
+    res = ext2_dir_read_at(fs_node, fs_file_get_dir_offset(file), out);
     if(res) {
         fs_node_put(fs_node);
         return res;
@@ -227,8 +227,8 @@ ext2_dir_next(struct file *file)
 
     while(1)
     {
-        size_t next_offset = file->dir_offset + entry.rec_len;
-        file->dir_offset = next_offset;
+        size_t next_offset = fs_file_get_dir_offset(file) + entry.rec_len;
+        fs_file_set_dir_offset(file, next_offset);
 
         // Read the next entry
         res = ext2_dir_read_cur(file, &entry);
@@ -258,9 +258,9 @@ static int
 ext2_dir_begin(struct file *file)
 {
     int res;
-    file->dir_offset = 0;
+    fs_file_set_dir_offset(file, 0);
 
-    struct fs_node *fs_node = fs_path_get_node(file->path);
+    struct fs_node *fs_node = fs_file_get_node(file);
     if(fs_node == NULL) {
         return -EINVAL;
     }
@@ -304,7 +304,7 @@ ext2_dir_readname(struct file *file, char *buf, size_t buflen)
         return -ENXIO;
     }
 
-    struct fs_node *fs_node = fs_path_get_node(file->path);
+    struct fs_node *fs_node = fs_file_get_node(file);
     if(fs_node == NULL)
     {
         return -EINVAL;
@@ -313,7 +313,7 @@ ext2_dir_readname(struct file *file, char *buf, size_t buflen)
     size_t minlen = buflen < entry.name_len ? buflen : entry.name_len;
 
     res = fs_node_paged_read(fs_node,
-                             file->dir_offset +
+                             fs_file_get_dir_offset(file) +
                                  sizeof(struct ext2_linked_dir_entry),
                              buf,
                              minlen,

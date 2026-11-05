@@ -29,7 +29,8 @@ syscall_flush(fd_t file, unsigned long flags)
     }
 
     // TODO We should be checking this in some capacity
-    // if((desc->access_flags & FILE_PERM_WRITE) == 0) {
+    // unsigned long aflags = fs_file_get_access_flags(desc);
+    // if((aflags & FILE_PERM_WRITE) == 0) {
     //     file_table_put_file(process->file_table, process, desc);
     //     LOG("syscall_flush: cannot flush a file not opened for writing!\n");
     //     return -EPERM;
@@ -43,7 +44,7 @@ syscall_flush(fd_t file, unsigned long flags)
         return res;
     }
 
-    struct fs_node *fs_node = fs_path_get_node(desc->path);
+    struct fs_node *fs_node = fs_file_get_node(desc);
     if(fs_node == NULL)
     {
         file_table_put_file(process->file_table, process, desc);

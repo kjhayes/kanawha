@@ -346,13 +346,14 @@ process_exec_elf64(struct process *process, fd_t file, struct file *desc)
 {
     int res;
 
-    if((desc->access_flags & FILE_PERM_READ) == 0)
+    unsigned long aflags = fs_file_get_access_flags(desc);
+    if((aflags & FILE_PERM_READ) == 0)
     {
         eprintk("process_exec_elf64: file does not have READ permissions!\n");
         return -EPERM;
     }
 
-    struct fs_node *elf_node = fs_path_get_node(desc->path);
+    struct fs_node *elf_node = fs_file_get_node(desc);
     if(elf_node == NULL)
     {
         return -EINVAL;
@@ -413,7 +414,7 @@ elf64_exec_type_probe(struct exec_type *exec_type,
                       struct file *desc)
 {
     int res;
-    struct fs_node *elf_node = fs_path_get_node(desc->path);
+    struct fs_node *elf_node = fs_file_get_node(desc);
     if(elf_node == NULL)
     {
         return EXEC_TYPE_PROBE_REJECT;
@@ -445,7 +446,8 @@ elf64_exec_type_load(struct exec_type *exec_type,
                      struct process *process,
                      struct file *file)
 {
-    return process_exec_elf64(process, file->table_node.key, file);
+    fd_t fd = fs_file_get_fd(file);
+    return process_exec_elf64(process, fd, file);
 }
 
 static struct exec_type_ops elf64_exec_type_ops = {

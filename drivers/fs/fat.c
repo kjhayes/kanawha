@@ -822,7 +822,7 @@ fat_dir_dir_next(struct file *file)
 {
     int res;
 
-    struct fs_node *fs_node = fs_path_get_node(file->path);
+    struct fs_node *fs_node = fs_file_get_node(file);
     if(fs_node == NULL) {
         return -EINVAL;
     }
@@ -832,8 +832,8 @@ fat_dir_dir_next(struct file *file)
 
     do
     {
-        file->dir_offset += 1;
-        res = fat_dir_read_dirent(dir, file->dir_offset, &dirent);
+        fs_file_add_to_dir_offset(file, 1);
+        res = fat_dir_read_dirent(dir, fs_file_get_dir_offset(file), &dirent);
         if(res)
         {
             fs_node_put(fs_node);
@@ -850,14 +850,14 @@ fat_dir_dir_begin(struct file *file)
 {
     int res;
 
-    struct fs_node *fs_node = fs_path_get_node(file->path);
+    struct fs_node *fs_node = fs_file_get_node(file);
     if(fs_node == NULL) {
         return -EINVAL;
     }
 
     struct fat_node *dir = fs_node->backing.priv_state;
 
-    file->dir_offset = 0;
+    fs_file_set_dir_offset(file, 0);
 
     struct fat_dirent dirent;
     res = fat_dir_read_dirent(dir, 0, &dirent);
@@ -883,7 +883,7 @@ fat_dir_dir_readname(struct file *file, char *buffer, size_t buflen)
 {
     int res;
 
-    struct fs_node *fs_node = fs_path_get_node(file->path);;
+    struct fs_node *fs_node = fs_file_get_node(file);;
     if(fs_node == NULL) {
         return -EINVAL;
     }
@@ -891,7 +891,7 @@ fat_dir_dir_readname(struct file *file, char *buffer, size_t buflen)
     struct fat_node *dir = fs_node->backing.priv_state;
 
     struct fat_dirent dirent;
-    res = fat_dir_read_dirent(dir, file->dir_offset, &dirent);
+    res = fat_dir_read_dirent(dir, fs_file_get_dir_offset(file), &dirent);
     if(res)
     {
         fs_node_put(fs_node);

@@ -104,27 +104,20 @@ kinfo_fs_file_read(struct file *file,
 {
     int res;
 
-    struct fs_path *path = file->path;
-    res = fs_path_get(path);
-    if(res)
-    {
-        return res;
-    }
-
-    struct fs_node *fs_node = fs_path_get_node(path);
-    fs_path_put(path);
+    struct fs_node *fs_node = fs_file_get_node(file);
     if(fs_node == NULL) {
         return -EINVAL;
     }
 
     struct vfs_node *node = vfs_node_from_fs_node(fs_node);
     if(node == NULL) {
+        fs_node_put(fs_node);
         return -EINVAL;
     }
 
     struct kinfo *info = container_of(node, struct kinfo, vfs_node);
 
-    size_t offset = file->seek_offset;
+    size_t offset = fs_file_get_seek_offset(file);
 
     struct kinfo_printer printer = {
         .buflen = amount,
@@ -142,6 +135,7 @@ kinfo_fs_file_read(struct file *file,
             info,
             &printer.printer);
 
+    fs_node_put(fs_node);
     return printer.amount_copied;
 }
 

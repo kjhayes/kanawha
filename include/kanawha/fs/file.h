@@ -3,6 +3,7 @@
 
 #include <kanawha/fs/node.h>
 #include <kanawha/fs/path.h>
+#include <kanawha/uapi/file.h>
 #include <kanawha/ops.h>
 
 #define FILE_INTERNAL_FLAG_PIPE (1UL << 0)
@@ -12,22 +13,7 @@
 #define FILE_INTERNAL_FLAG_MOUNT_TEMP (1UL << 4)
 #define FILE_INTERNAL_FLAG_EXEC_TEMP (1UL << 5)
 
-struct file
-{
-    struct ptree_node table_node;
-
-    int refs;
-
-    size_t seek_offset;
-    size_t dir_offset;
-
-    unsigned long status_flags;
-    unsigned long access_flags;
-    unsigned long mode_flags;
-    unsigned long internal_flags;
-
-    struct fs_path *path;
-};
+struct file;
 
 #define FS_FILE_READ_NON_BLOCKING (1ULL << 0)
 
@@ -108,24 +94,118 @@ struct fs_file_ops
     DECLARE_OP_LIST_PTRS(FS_FILE_OP_LIST, struct file *);
 };
 
-#define FILE_FILE_OPS_ACCESSOR(__self, __field)                                \
-    ({                                                                         \
-        struct fs_node *node = fs_path_get_node(__self->path);                 \
-        typeof(((struct fs_file_ops *)NULL)->__field) ptr = NULL;              \
-        if(node != NULL)                                                       \
-        {                                                                      \
-            ptr = fs_node_get_file_ops(node)->__field;                         \
-            fs_node_put(node); \
-        }                                                                      \
-        ptr;                                                                   \
-    })
-
-DEFINE_OP_LIST_WRAPPERS(FS_FILE_OP_LIST,
-                        static inline,
+DECLARE_OP_LIST_WRAPPERS(FS_FILE_OP_LIST,
+                        /* No Qualifiers */,
                         direct_,
-                        file,
-                        FILE_FILE_OPS_ACCESSOR,
-                        SELF_ACCESSOR);
+                        file);
+
+struct file *
+fs_file_create(
+        struct fs_path *path,
+        unsigned long access_flags,
+        unsigned long mode_flags,
+        unsigned long internal_flags);
+
+// Returns a copy of the file handle (or NULL)
+// (with no file_table and a ref count of 1)
+struct file *
+fs_file_clone(
+        struct file *file);
+
+int
+fs_file_get(
+        struct file *file);
+int
+fs_file_put(
+        struct file *file);
+
+fd_t
+fs_file_get_fd(
+        struct file *file);
+struct file_table *
+fs_file_get_file_table(
+        struct file *file);
+
+struct fs_path *
+fs_file_get_path(
+        struct file *file);
+struct fs_node *
+fs_file_get_node(
+        struct file *file);
+
+size_t
+fs_file_get_seek_offset(
+        struct file *file);
+int
+fs_file_set_seek_offset(
+        struct file *file,
+        size_t value);
+int
+fs_file_add_to_seek_offset(
+        struct file *file,
+        ssize_t value);
+
+size_t
+fs_file_get_dir_offset(
+        struct file *file);
+int
+fs_file_set_dir_offset(
+        struct file *file,
+        size_t value);
+int
+fs_file_add_to_dir_offset(
+        struct file *file,
+        ssize_t value);
+
+unsigned long
+fs_file_get_internal_flags(
+        struct file *file);
+int
+fs_file_overwrite_internal_flags(
+        struct file *file,
+        unsigned long flags);
+int
+fs_file_set_internal_flags(
+        struct file *file,
+        unsigned long to_set);
+int
+fs_file_clear_internal_flags(
+        struct file *file,
+        unsigned long to_clear);
+
+unsigned long
+fs_file_get_mode_flags(
+        struct file *file);
+int
+fs_file_overwrite_mode_flags(
+        struct file *file,
+        unsigned long flags);
+int
+fs_file_set_mode_flags(
+        struct file *file,
+        unsigned long to_set);
+int
+fs_file_clear_mode_flags(
+        struct file *file,
+        unsigned long to_clear);
+
+unsigned long
+fs_file_get_access_flags(
+        struct file *file);
+int
+fs_file_overwrite_access_flags(
+        struct file *file,
+        unsigned long flags);
+int
+fs_file_set_access_flags(
+        struct file *file,
+        unsigned long to_set);
+int
+fs_file_clear_access_flags(
+        struct file *file,
+        unsigned long to_clear);
+
+
 
 /*
  * Default Error-Throwing Implementations
@@ -249,15 +329,16 @@ fs_file_paged_seek(struct file *file, ssize_t offset, int whence);
 int
 fs_file_paged_flush(struct file *file, unsigned long flags);
 
-#undef FS_FILE_READ_SIG
-#undef FS_FILE_WRITE_SIG
-#undef FS_FILE_SEEK_SIG
-#undef FS_FILE_FLUSH_SIG
-#undef FS_FILE_DIR_BEGIN_SIG
-#undef FS_FILE_DIR_NEXT_SIG
-#undef FS_FILE_DIR_READATTR_SIG
-#undef FS_FILE_DIR_READNAME_SIG
-#undef FS_FILE_POLL_SIG
-#undef FS_FILE_OP_LIST
+// Only to be invoked by the internals of a file_table
+struct ptree_node *
+_fs_file_to_raw_file_table_node(
+        struct file *file);
+struct file *
+_fs_file_from_raw_file_table_node(
+        struct ptree_node *node);
+int
+_fs_file_set_raw_file_table(
+        struct file *file,
+        struct file_table *table);
 
 #endif

@@ -81,7 +81,7 @@ snd_dev_stream_write(struct file *file,
 {
     // printk("snd_dev_stream_write!\n");
 
-    struct fs_node *fs_node = fs_path_get_node(file->path);
+    struct fs_node *fs_node = fs_file_get_node(file);
     if(fs_node == NULL)
     {
         return -ENXIO;
@@ -189,12 +189,12 @@ snd_dev_mode_info_fs_file_write(struct file *file,
 {
     int res;
 
-    if(file->seek_offset != 0)
+    if(fs_file_get_seek_offset(file) != 0)
     {
         return 0;
     }
 
-    struct fs_node *node = fs_path_get_node(file->path);
+    struct fs_node *node = fs_file_get_node(file);
     if(node == NULL)
     {
         return -ENXIO;
@@ -224,9 +224,8 @@ snd_dev_mode_info_fs_file_read(struct file *file,
                                unsigned long flags)
 {
     DEBUG_ASSERT(KERNEL_ADDR(file));
-    DEBUG_ASSERT(KERNEL_ADDR(file->path));
 
-    struct fs_node *node = fs_path_get_node(file->path);
+    struct fs_node *node = fs_file_get_node(file);
     if(node == NULL)
     {
         return -ENXIO;
@@ -242,7 +241,7 @@ snd_dev_mode_info_fs_file_read(struct file *file,
     struct snd_mode_info *info = snd_dev_get_mode_info(sndfs->dev, mode_index);
     if(info == NULL)
     {
-        if(file->seek_offset == 0)
+        if(fs_file_get_seek_offset(file) == 0)
         {
             fs_node_put(node);
             return 0; // Nothing to read
@@ -255,14 +254,14 @@ snd_dev_mode_info_fs_file_read(struct file *file,
     }
 
     size_t size = sizeof(struct snd_mode_info);
-    if(file->seek_offset > size)
+    if(fs_file_get_seek_offset(file) > size)
     {
         snd_dev_put_mode_info(sndfs->dev, mode_index, info);
         fs_node_put(node);
         return -EINVAL;
     }
 
-    size_t room_left = size - file->seek_offset;
+    size_t room_left = size - fs_file_get_seek_offset(file);
     if(room_left > buflen)
     {
         room_left = buflen;

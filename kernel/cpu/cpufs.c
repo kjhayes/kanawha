@@ -187,12 +187,12 @@ id_file_read(struct file *file,
              ssize_t buflen,
              unsigned long flags)
 {
-    if(file->seek_offset != 0)
+    if(fs_file_get_seek_offset(file) != 0)
     {
         return 0;
     }
 
-    struct fs_node *fs_node = fs_path_get_node(file->path);
+    struct fs_node *fs_node = fs_file_get_node(file);
     if(fs_node == NULL) {
         return -EINVAL;
     }
@@ -225,7 +225,7 @@ bsp_file_read(struct file *file,
               ssize_t buflen,
               unsigned long flags)
 {
-    if(file->seek_offset != 0)
+    if(fs_file_get_seek_offset(file) != 0)
     {
         return 0;
     }
@@ -235,7 +235,7 @@ bsp_file_read(struct file *file,
         return -EINVAL;
     }
 
-    struct fs_node *fs_node = fs_path_get_node(file->path);
+    struct fs_node *fs_node = fs_file_get_node(file);
     if(fs_node == NULL) {
         return -EINVAL;
     }
@@ -274,7 +274,7 @@ idle_file_read(struct file *file,
                ssize_t buflen,
                unsigned long flags)
 {
-    if(file->seek_offset != 0)
+    if(fs_file_get_seek_offset(file) != 0)
     {
         return 0;
     }
@@ -284,7 +284,7 @@ idle_file_read(struct file *file,
         return -EINVAL;
     }
 
-    struct fs_node *fs_node = fs_path_get_node(file->path);
+    struct fs_node *fs_node = fs_file_get_node(file);
     if(fs_node == NULL) {
         return -EINVAL;
     }

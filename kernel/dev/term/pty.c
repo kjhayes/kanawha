@@ -168,7 +168,7 @@ pty_file_read(
 {
     int res;
 
-    struct fs_node *fs_node = fs_path_get_node(file->path);
+    struct fs_node *fs_node = fs_file_get_node(file);
     if(fs_node == NULL) {
         return -EINVAL;
     }
@@ -218,7 +218,7 @@ pty_file_write(
 {
     int res;
 
-    struct fs_node *fs_node = fs_path_get_node(file->path);
+    struct fs_node *fs_node = fs_file_get_node(file);
     if(fs_node == NULL) {
         return -ENXIO;
     }

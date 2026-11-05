@@ -23,26 +23,38 @@ syscall_fattr(fd_t fd, int attr, size_t __user *user_value)
         return -EINVAL;
     }
 
+    struct fs_path *path = fs_file_get_path(file);
+    if(path == NULL) {
+        file_table_put_file(process->file_table, process, file);
+        return -EINVAL;
+    }
+
     res = 0;
     size_t value;
     size_t tmp_value;
     switch(attr)
     {
     case FILE_ATTR_INODE:
-        res = fs_path_get_inode_index(file->path, &value);
+        res = fs_path_get_inode_index(path, &value);
         break;
     case FILE_ATTR_PAGESIZE:
-        res =
-            fs_path_get_inode_attr(file->path, FS_NODE_ATTR_PAGE_ORDER, &value);
+        res = fs_path_get_inode_attr(
+                path,
+                FS_NODE_ATTR_PAGE_ORDER,
+                &value);
         value = 1ULL << value;
         break;
     case FILE_ATTR_DATASIZE:
-        res =
-            fs_path_get_inode_attr(file->path, FS_NODE_ATTR_DATA_SIZE, &value);
+        res = fs_path_get_inode_attr(
+                path,
+                FS_NODE_ATTR_DATA_SIZE,
+                &value);
         break;
     case FILE_ATTR_TYPES:
-        res =
-            fs_path_get_inode_attr(file->path, FS_NODE_ATTR_TYPES, &tmp_value);
+        res = fs_path_get_inode_attr(
+                path,
+                FS_NODE_ATTR_TYPES,
+                &tmp_value);
         value = 0;
         if(res == 0)
         {
@@ -61,12 +73,15 @@ syscall_fattr(fd_t fd, int attr, size_t __user *user_value)
         }
         break;
     case FILE_ATTR_ACCESS:
+    {
+        unsigned long mflags = fs_file_get_mode_flags(file);
         value = 0;
-        if(file->mode_flags & FILE_MODE_NON_BLOCK)
+        if(mflags & FILE_MODE_NON_BLOCK)
         {
             value |= FACCESS_NON_BLOCKING;
         }
         break;
+    }
     case FILE_ATTR_CONNECTED:
         res = direct_file_status(file, FILE_STATUS_CONNECTED, &tmp_value);
         if(res == 0)

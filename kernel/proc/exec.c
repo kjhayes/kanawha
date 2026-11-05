@@ -66,13 +66,9 @@ process_exec(struct process *process,
 {
     int res;
 
-    const char *name = fs_path_get_name(desc->path);
-
-    if((desc->access_flags & FILE_PERM_EXEC) == 0)
+    unsigned long aflags = fs_file_get_access_flags(desc);
+    if((aflags & FILE_PERM_EXEC) == 0)
     {
-        eprintk("syscall_exec: file does not have EXEC permissions! "
-                "(path->name=\"%s\")\n",
-                name);
         return -EPERM;
     }
 
@@ -128,15 +124,25 @@ process_exec(struct process *process,
     if(process->tracked_exec)
     {
         kfree((void *)process->tracked_exec);
+        process->tracked_exec = "";
     }
-    if(name)
     {
-        process->tracked_exec = kstrdup(name, KM_KERNEL);
+        struct fs_path *path = fs_file_get_path(desc);
+        const char *name = NULL;
+        if(path != NULL) {
+            name = fs_path_get_name(path);
+        }
+        if(name)
+        {
+            process->tracked_exec = kstrdup(name, KM_KERNEL);
+        } else {
+            process->tracked_exec = "";
+        }
+        if(path) {
+            fs_path_put(path);
+        }
     }
 #endif
-
-    dprintk("syscall_exec: desc->path->fs_node->index = %lld\n",
-            (sll_t)desc->path->fs_node->cache_node.key);
 
     res = file_table_on_exec(process->file_table, process);
     if(res)

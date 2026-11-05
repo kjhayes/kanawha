@@ -13,9 +13,9 @@ cpio_dir_begin(struct file *file)
 {
     int res;
 
-    file->dir_offset = 0;
+    fs_file_set_dir_offset(file, 0);
 
-    struct fs_node *fs_node = fs_path_get_node(file->path);
+    struct fs_node *fs_node = fs_file_get_node(file);
     if(fs_node == NULL)
     {
         return -EINVAL;
@@ -26,7 +26,7 @@ cpio_dir_begin(struct file *file)
 
     struct cpio_header hdr;
 
-    res = cpio_read_header(mount, file->dir_offset, &hdr);
+    res = cpio_read_header(mount, fs_file_get_dir_offset(file), &hdr);
     if(res)
     {
         fs_node_put(fs_node);
@@ -43,7 +43,7 @@ cpio_dir_begin(struct file *file)
     char name_buf[namesize + 1];
 
     res = fs_node_paged_read(mount->backing_file,
-                             file->dir_offset + sizeof(struct cpio_header),
+                             fs_file_get_dir_offset(file) + sizeof(struct cpio_header),
                              (void *)name_buf,
                              namesize,
                              0);
@@ -70,7 +70,7 @@ cpio_dir_next(struct file *file)
 {
     int res;
 
-    struct fs_node *fs_node = fs_path_get_node(file->path);
+    struct fs_node *fs_node = fs_file_get_node(file);
     if(fs_node == NULL)
     {
         return -EINVAL;
@@ -81,7 +81,7 @@ cpio_dir_next(struct file *file)
 
     struct cpio_header hdr;
 
-    res = cpio_read_header(mount, file->dir_offset, &hdr);
+    res = cpio_read_header(mount, fs_file_get_dir_offset(file), &hdr);
     if(res)
     {
         fs_node_put(fs_node);
@@ -98,13 +98,14 @@ cpio_dir_next(struct file *file)
     size_t filesize =
         hdr.binary.c_filesize[1] + ((size_t)hdr.binary.c_filesize[0] << 16);
 
-    file->dir_offset += sizeof(struct cpio_binary_header);
-    file->dir_offset += (namesize + 1) & ~1;
-    file->dir_offset += (filesize + 1) & ~1;
+    fs_file_add_to_dir_offset(file,
+            sizeof(struct cpio_binary_header)
+            + ((namesize + 1) & ~1)
+            + ((filesize + 1) & ~1));
 
     // After advancing, read the header of the next file
 
-    res = cpio_read_header(mount, file->dir_offset, &hdr);
+    res = cpio_read_header(mount, fs_file_get_dir_offset(file), &hdr);
     if(res)
     {
         fs_node_put(fs_node);
@@ -121,7 +122,7 @@ cpio_dir_next(struct file *file)
     char name_buf[namesize + 1];
 
     res = fs_node_paged_read(mount->backing_file,
-                             file->dir_offset + sizeof(struct cpio_header),
+                             fs_file_get_dir_offset(file) + sizeof(struct cpio_header),
                              (void *)name_buf,
                              namesize,
                              0);
@@ -154,7 +155,7 @@ cpio_dir_readname(struct file *file, char *buf, size_t buflen)
 {
     int res;
 
-    struct fs_node *fs_node = fs_path_get_node(file->path);
+    struct fs_node *fs_node = fs_file_get_node(file);
     if(fs_node == NULL)
     {
         return -EINVAL;
@@ -165,7 +166,7 @@ cpio_dir_readname(struct file *file, char *buf, size_t buflen)
 
     struct cpio_header hdr;
 
-    res = cpio_read_header(mount, file->dir_offset, &hdr);
+    res = cpio_read_header(mount, fs_file_get_dir_offset(file), &hdr);
     if(res)
     {
         fs_node_put(fs_node);
@@ -176,7 +177,7 @@ cpio_dir_readname(struct file *file, char *buf, size_t buflen)
     char name_buf[namesize + 1];
 
     res = fs_node_paged_read(mount->backing_file,
-                             file->dir_offset + sizeof(struct cpio_header),
+                             fs_file_get_dir_offset(file) + sizeof(struct cpio_header),
                              (void *)name_buf,
                              namesize,
                              0);
