@@ -228,14 +228,11 @@ vfs_dir_readname(struct file *dir, char *name_buf, size_t buf_len)
 }
 
 static struct fs_node_ops vfs_root_node_ops = {
-    .lookup = vfs_dir_lookup,
+    VFS_NODE_OPS_INITIALIZERS
 };
 FS_NODE_OPS_INIT_UNDEF(vfs_root_node_ops);
 static struct fs_file_ops vfs_root_file_ops = {
-    .dir_begin = vfs_dir_begin,
-    .dir_next = vfs_dir_next,
-    .dir_readattr = vfs_dir_readattr,
-    .dir_readname = vfs_dir_readname,
+    VFS_FILE_OPS_INITIALIZERS
 };
 FS_FILE_OPS_INIT_UNDEF(vfs_root_file_ops);
 
