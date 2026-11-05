@@ -81,11 +81,17 @@ pipe_ring_buffer_read(struct pipe_ring_buffer *buf,
         DEBUG_ASSERT(buf->head < PIPE_FS_PIPE_BUFLEN);
         DEBUG_ASSERT(buf->tail < PIPE_FS_PIPE_BUFLEN);
         DEBUG_ASSERT(KERNEL_ADDR(buf->data));
-        *(uint8_t *)data = ((uint8_t *)buf->data)[buf->tail];
-        buf->tail = (buf->tail + 1) % PIPE_FS_PIPE_BUFLEN;
-        read++;
-        datalen--;
-        data++;
+
+        size_t end = buf->tail > buf->head ? PIPE_FS_PIPE_BUFLEN : buf->head;
+        size_t room = end - buf->tail;
+        size_t amt = room < datalen ? room : datalen;
+
+        memcpy(data, buf->data + buf->tail, amt);
+
+        buf->tail = (buf->tail + amt) % PIPE_FS_PIPE_BUFLEN;
+        read += amt;
+        datalen -= amt;
+        data += amt;
     }
     return read;
 }
@@ -103,11 +109,17 @@ pipe_ring_buffer_write(struct pipe_ring_buffer *buf,
         DEBUG_ASSERT(buf->head < PIPE_FS_PIPE_BUFLEN);
         DEBUG_ASSERT(buf->tail < PIPE_FS_PIPE_BUFLEN);
         DEBUG_ASSERT(KERNEL_ADDR(buf->data));
-        ((uint8_t *)buf->data)[buf->head] = *(uint8_t *)data;
-        buf->head = (buf->head + 1) % PIPE_FS_PIPE_BUFLEN;
-        written++;
-        datalen--;
-        data++;
+
+        size_t end = buf->head >= buf->tail ? PIPE_FS_PIPE_BUFLEN : buf->tail;
+        size_t room = end - buf->head;
+        size_t amt = room < datalen ? room : datalen;
+
+        memcpy(buf->data + buf->head, data, amt);
+        buf->head = (buf->head + amt) % PIPE_FS_PIPE_BUFLEN;
+
+        written += amt;
+        datalen -= amt;
+        data += amt;
     }
 
     return written;
@@ -253,7 +265,7 @@ pipe_fs_pipe_file_read(struct file *file,
         wake_wq = &pipe->pipe.secondary_write_wq;
     }
 
-    while(read == 0)
+    while(read == 0 && amount > 0)
     {
         ssize_t cur_read = pipe_ring_buffer_read(ringbuf, buffer, amount);
         amount -= cur_read;
@@ -395,7 +407,7 @@ pipe_fs_pipe_file_write(struct file *file,
         wake_wq = &pipe->pipe.secondary_read_wq;
     }
 
-    while(written == 0)
+    while(written == 0 && amount > 0)
     {
         // Checking if we should declare EOF
         int can_eof = 0;
