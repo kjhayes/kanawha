@@ -45,8 +45,15 @@ syscall_unlink(fd_t dir_fd, char __user *name)
         return res;
     }
 
-    DEBUG_ASSERT(namelen > 0);
-    DEBUG_ASSERT(namelen < SYSCALL_UNLINK_MAX_NAMELEN + 1);
+    if(namelen <= 0) {
+        fs_file_put(dir_file);
+        return -EINVAL;
+    }
+
+    if(namelen > (SYSCALL_UNLINK_MAX_NAMELEN)) {
+        fs_file_put(dir_file);
+        return -EINVAL;
+    }
 
     char namebuf[namelen + 1];
     res = process_read_usermem(process,
