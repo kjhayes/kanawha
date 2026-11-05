@@ -178,32 +178,39 @@ pty_file_read(
 
     ssize_t total_read = 0;
 
+    pty_ringbuf_lock(&pty_node->read_buffer);
     while(total_read == 0) {
-        pty_ringbuf_lock(&pty_node->read_buffer);
         ssize_t amt_read = pty_ringbuf_read(
                 &pty_node->read_buffer,
                 buf,
                 buflen);
-        pty_ringbuf_unlock(&pty_node->read_buffer);
-
         if(amt_read == 0) {
             if(flags & FS_FILE_READ_NON_BLOCKING) {
+                pty_ringbuf_unlock(&pty_node->read_buffer);
                 fs_node_put(fs_node);
                 return -EWOULDBLOCK;
             }
-            res = wait_on(&pty_node->read_wq);
+            res = wait_on_thread_lock_release(
+                    &pty_node->read_wq,
+                    &pty_node->read_buffer.lock);
             if(res) {
                 fs_node_put(fs_node);
                 return res;
             }
-        } else if(amt_read < 0) {
+            pty_ringbuf_lock(&pty_node->read_buffer);
+        }
+        else if(amt_read < 0)
+        {
+            pty_ringbuf_unlock(&pty_node->read_buffer);
             fs_node_put(fs_node);
             return amt_read;
         }
         total_read = amt_read;
     }
+    pty_ringbuf_unlock(&pty_node->read_buffer);
 
     term_driver_poke_output(&pty_node->term_dev);
+
     fs_node_put(fs_node);
 
     return total_read;
@@ -269,17 +276,15 @@ pty_term_dev_putc(
     struct pty_node *pty = container_of(term_dev, struct pty_node, term_dev);
     pty_ringbuf_lock(&pty->read_buffer);
     res = pty_ringbuf_putc(&pty->read_buffer, c);
-    if(res) {
-        pty_ringbuf_unlock(&pty->read_buffer);
-        return res;
-    }
     pty_ringbuf_unlock(&pty->read_buffer);
-    return 0;
+    wake_single(&pty->read_wq);
+    return res;
 }
 
 static int 
 pty_term_dev_flush(struct term_dev *term_dev)
 {
+    struct pty_node *pty = container_of(term_dev, struct pty_node, term_dev);
     return 0;
 }
 
