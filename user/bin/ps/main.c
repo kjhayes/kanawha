@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <ctype.h>
 
 struct proc
 {
@@ -40,7 +41,22 @@ read_string_file(int dir, const char *file)
 
     close(strfile);
 
-    return strdup(buf);
+    char *ptr = buf;
+    ptr[127] = '\0';
+
+    // Drop trailing whitespace
+    ssize_t len = strlen(ptr);
+    while(len > 0 && isspace(ptr[len-1])) {
+        len--;
+        ptr[len] = '\0';
+    }
+    // Drop leading whitespace
+    while(len > 0 && isspace(ptr[0])) {
+        ptr++;
+        len--;
+    }
+
+    return strdup(ptr);
 }
 
 static int
@@ -82,6 +98,7 @@ init_proc(char *fname, int procfile)
 
     // parse the procid
     p->id = strtol(fname, NULL, 0);
+
     // Don't consider ourselves
     if(p->id == getpid())
     {

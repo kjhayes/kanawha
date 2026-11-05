@@ -761,7 +761,6 @@ launch_init_process(void)
     if(res)
     {
         eprintk("Failed to register init process with procfs! (err=%s)\n",
-                (sl_t)process->id,
                 errnostr(res));
     }
     else {
