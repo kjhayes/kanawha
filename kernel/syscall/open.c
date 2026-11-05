@@ -79,6 +79,9 @@ syscall_open(const char __user *path,
         }
         struct file *dir_file;
         dir_file = file_table_get_file(process->file_table, process, dir_fd);
+        if(dir_file == NULL) {
+            return -EINVAL;
+        }
         dir_path = fs_file_get_path(dir_file);
         fs_file_put(dir_file);
     }
