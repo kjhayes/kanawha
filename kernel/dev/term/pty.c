@@ -160,7 +160,7 @@ pty_ringbuf_putc(
 // pty node
 
 static ssize_t
-pty_file_read(
+pty_ctrl_file_read(
         struct file *file,
         void *buf,
         ssize_t buflen,
@@ -217,7 +217,7 @@ pty_file_read(
 }
 
 static ssize_t
-pty_file_write(
+pty_ctrl_file_write(
         struct file *file,
         void *buf,
         ssize_t buflen,
@@ -254,22 +254,22 @@ pty_file_write(
 }
 
 static struct fs_node_ops
-pty_node_ops = {
+pty_ctrl_node_ops = {
     .flush = fs_node_flush_nop,
 
     VFS_NODE_OPS_INITIALIZERS
 };
-FS_NODE_OPS_INIT_UNDEF(pty_node_ops);
+FS_NODE_OPS_INIT_UNDEF(pty_ctrl_node_ops);
 
 static struct fs_file_ops
-pty_file_ops = {
-    .read = pty_file_read,
-    .write = pty_file_write,
+pty_ctrl_file_ops = {
+    .read = pty_ctrl_file_read,
+    .write = pty_ctrl_file_write,
     .flush = fs_file_nop_flush,
 
     VFS_FILE_OPS_INITIALIZERS
 };
-FS_FILE_OPS_INIT_UNDEF(pty_file_ops);
+FS_FILE_OPS_INIT_UNDEF(pty_ctrl_file_ops);
 
 static int
 pty_term_dev_putc(
@@ -310,8 +310,8 @@ pty_mount_create_pty(struct pty_mount *mnt, size_t *inode_out)
         return -ENOMEM;
     }
 
-    node->vfs_node.fs_node_ops = &pty_node_ops;
-    node->vfs_node.fs_file_ops = &pty_file_ops;
+    node->vfs_node.fs_node_ops = &pty_ctrl_node_ops;
+    node->vfs_node.fs_file_ops = &pty_ctrl_file_ops;
 
     res = pty_ringbuf_init(&node->read_buffer, PTY_READ_BUFLEN);
     if(res) {
