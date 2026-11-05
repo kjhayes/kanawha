@@ -69,7 +69,6 @@ procfs_register_process(struct process *process)
             vfs_printer_node_as_vfs_node(&data->root_node),
             data->name);
     if(res) {
-        vfs_deinit_printer_node(&data->root_node);
         eprintk("procfs_register_process: vfs_mount_insert_node_and_link_root returned %e! (when registering \"%s\")",
                 res, data->name);
         kfree(data->name);

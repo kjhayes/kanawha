@@ -27,10 +27,6 @@ vfs_init_printer_node(
             struct vfs_printer_node *,
             struct printer *));
 
-int
-vfs_deinit_printer_node(
-        struct vfs_printer_node *node);
-
 struct vfs_node *
 vfs_printer_node_as_vfs_node(
     struct vfs_printer_node *);

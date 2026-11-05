@@ -132,11 +132,6 @@ kinfo_destroy(
     kinfo_remove_from_mount_lockless(info);
     kinfo_list_lock_release();
 
-    res = vfs_deinit_printer_node(&info->vfs_printer_node);
-    if(res) {
-        return res;
-    }
-   
     kfree(info->name);
     kfree(info);
 

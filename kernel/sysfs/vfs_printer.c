@@ -22,12 +22,6 @@ vfs_init_printer_node(
     node->vfs_node.fs_file_ops = &vfs_printer_node_file_ops;
     return 0;
 }
-int
-vfs_deinit_printer_node(
-        struct vfs_printer_node *node)
-{
-    return 0;
-}
 
 struct vfs_node *
 vfs_printer_node_as_vfs_node(
