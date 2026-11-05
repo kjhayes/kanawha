@@ -2,10 +2,12 @@
 #define __KANAWHA__PROC_PROCFS_H__
 
 #include <kanawha/sysfs/vfs.h>
+#include <kanawha/sysfs/vfs_printer.h>
 
 struct procfs_process_data
 {
-    // TODO
+    char *name;
+    struct vfs_printer_node root_node;
 };
 
 int

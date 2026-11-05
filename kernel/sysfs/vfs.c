@@ -81,6 +81,8 @@ struct vfs_link
 
     char *name;
     size_t inode;
+
+    ilist_node_t inode_node;
 };
 
 int

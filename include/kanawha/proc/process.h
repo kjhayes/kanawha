@@ -93,6 +93,7 @@ struct process
     char *self_name;
 
 #ifdef CONFIG_PROCFS
+    unsigned procfs_valid : 1;
     struct procfs_process_data procfs_data;
 #endif
 };
@@ -228,9 +229,12 @@ process_send_signal(pid_t proc_id, signal_id_t id, unsigned long flags);
 int
 process_force_awake(pid_t proc_id);
 
+void
+dump_process(struct printer *printer, struct process *proc);
+
 // Debugging "Dump" Processes
 void
-dump_processes(printk_f *printer);
+dump_processes(struct printer *printer);
 
 // Allows for architecture specific initialization of a process thread
 int

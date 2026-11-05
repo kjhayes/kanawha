@@ -32,9 +32,9 @@ DECLARE_LOCAL_PERF_TIMER(process_spawn_child_perf_timer)
 static struct process *init_process = NULL;
 
 void
-dump_process(printk_f *printer, struct process *proc)
+dump_process(struct printer *printer, struct process *proc)
 {
-    (*printer)("\tPROCESS(%ld) (sched=%s) %s%s"
+    fmt_print(printer, "PROCESS(%ld) (sched=%s) %s%s"
 #ifdef CONFIG_DEBUG_TRACK_PROCESS_EXEC
                "(exec=%s)"
 #endif
@@ -70,12 +70,12 @@ dump_process(printk_f *printer, struct process *proc)
 }
 
 void
-dump_processes(printk_f *printer)
+dump_processes(struct printer *printer)
 {
     process_pid_lock_acquire();
     struct ptree_node *node;
     node = ptree_get_first(&process_pid_tree);
-    (*printer)("--- Process Table ---\n");
+    fmt_print(printer, "--- Process Table ---\n");
     while(node)
     {
         struct process *proc = container_of(node, struct process, pid_node);
@@ -756,12 +756,16 @@ launch_init_process(void)
     }
 
 #ifdef CONFIG_PROCFS
+    process->procfs_valid = 0;
     res = procfs_register_process(process);
     if(res)
     {
         eprintk("Failed to register init process with procfs! (err=%s)\n",
                 (sl_t)process->id,
                 errnostr(res));
+    }
+    else {
+        process->procfs_valid = 1;
     }
 #endif
 
@@ -1154,12 +1158,19 @@ __process_reap_parent_lock(struct process *process)
     DEBUG_ASSERT(process->thread.status == THREAD_STATUS_ABANDONED);
 
 #ifdef CONFIG_PROCFS
-    res = procfs_deregister_process(process);
-    if(res)
-    {
-        eprintk("Failed to deregister process from procfs on termination! "
-                "(err=%s)\n",
-                errnostr(res));
+    if(process->procfs_valid) {
+        res = procfs_deregister_process(process);
+        if(res)
+        {
+            eprintk("Failed to deregister process from procfs on termination! "
+                    "(err=%s)\n",
+                    errnostr(res));
+            process->procfs_valid = 1;
+        } else {
+            process->procfs_valid = 0;
+        }
+    } else {
+        wprintk("__process_reap_parent_lock: skipping procfs cleanup due to error during procfs setup!\n");
     }
 #endif
 
@@ -1627,12 +1638,15 @@ process_spawn_child(struct process *parent,
     // parent);dump_process(do_printk, process);}
 
 #ifdef CONFIG_PROCFS
+    process->procfs_valid = 0;
     res = procfs_register_process(process);
     if(res)
     {
         eprintk("Failed to register process(%ld) with procfs! (err=%s)\n",
                 (sl_t)process->id,
                 errnostr(res));
+    } else {
+        process->procfs_valid = 1;
     }
 #endif
 
