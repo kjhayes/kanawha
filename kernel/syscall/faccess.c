@@ -45,9 +45,17 @@ syscall_faccess(fd_t fd, unsigned long fields, unsigned long mode)
     res = 0;
     if(mode == FACCESS_MODE_EXACT)
     {
-        unsigned long old = fs_file_get_mode_flags(file);
-        mode_flags = ((old & (~SUPPORTED_MODE_FLAGS)) | mode_flags);
-        res = fs_file_overwrite_mode_flags(file, mode_flags);
+        res = fs_file_set_mode_flags(file, mode_flags);
+        if(res) {
+            fs_file_put(file);
+            return res;
+        }
+        res = fs_file_clear_mode_flags(file, (~mode_flags) & SUPPORTED_MODE_FLAGS);
+        if(res) {
+            fs_file_put(file);
+            return res;
+        }
+        res = 0;
     }
     else if(mode == FACCESS_MODE_SET)
     {

@@ -161,10 +161,6 @@ unsigned long
 fs_file_get_internal_flags(
         struct file *file);
 int
-fs_file_overwrite_internal_flags(
-        struct file *file,
-        unsigned long flags);
-int
 fs_file_set_internal_flags(
         struct file *file,
         unsigned long to_set);
@@ -177,10 +173,6 @@ unsigned long
 fs_file_get_mode_flags(
         struct file *file);
 int
-fs_file_overwrite_mode_flags(
-        struct file *file,
-        unsigned long flags);
-int
 fs_file_set_mode_flags(
         struct file *file,
         unsigned long to_set);
@@ -192,10 +184,6 @@ fs_file_clear_mode_flags(
 unsigned long
 fs_file_get_access_flags(
         struct file *file);
-int
-fs_file_overwrite_access_flags(
-        struct file *file,
-        unsigned long flags);
 int
 fs_file_set_access_flags(
         struct file *file,

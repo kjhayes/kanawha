@@ -240,14 +240,6 @@ fs_file_get_internal_flags(
     return file->internal_flags;
 }
 int
-fs_file_overwrite_internal_flags(
-        struct file *file,
-        unsigned long flags)
-{
-    file->internal_flags = flags;
-    return 0;
-}
-int
 fs_file_set_internal_flags(
         struct file *file,
         unsigned long to_set)
@@ -271,14 +263,6 @@ fs_file_get_mode_flags(
     return file->mode_flags;
 }
 int
-fs_file_overwrite_mode_flags(
-        struct file *file,
-        unsigned long flags)
-{
-    file->mode_flags = flags;
-    return 0;
-}
-int
 fs_file_set_mode_flags(
         struct file *file,
         unsigned long to_set)
@@ -300,14 +284,6 @@ fs_file_get_access_flags(
         struct file *file)
 {
     return file->access_flags;
-}
-int
-fs_file_overwrite_access_flags(
-        struct file *file,
-        unsigned long flags)
-{
-    file->access_flags = flags;
-    return 0;
 }
 int
 fs_file_set_access_flags(
