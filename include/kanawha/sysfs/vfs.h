@@ -95,41 +95,6 @@ vfs_dir_readattr(struct file *file, int attr, size_t *value);
 int
 vfs_dir_readname(struct file *dir, char *name_buf, size_t buf_len);
 
-// "struct" nodes
-
-struct vfs_struct_node;
-
-// create a struct and link it to the
-// root of the vfs mount as directory "name"
-struct vfs_struct_node *
-vfs_create_struct_node(struct vfs_mount *mnt, const char *name);
-int
-vfs_destroy_struct_node(struct vfs_struct_node *node);
-
-// If NULL is passed for read and/or write,
-// trying to read or write the node will fail with "-EINVAL"
-int
-vfs_struct_node_add_unsigned_long_field(struct vfs_struct_node *node,
-                                        const char *name,
-                                        void *state,
-                                        int (*read)(unsigned long *out,
-                                                    void *state),
-                                        int (*write)(unsigned long in,
-                                                     void *state));
-
-// If NULL is passed for read and/or write
-// trying to read or write will fail with "-EINVAL"
-int
-vfs_struct_node_add_buffer_field(
-    struct vfs_struct_node *node,
-    const char *name,
-    void *state,
-    ssize_t (*read)(size_t offset, char *buf_out, size_t len, void *state),
-    ssize_t (*write)(size_t offset, char *buf_in, size_t len, void *state));
-
-int
-vfs_struct_node_destroy_field(struct vfs_struct_node *node, const char *name);
-
 // Find a vfs_node from an fs_node (Dangerous)
 struct vfs_node *
 vfs_node_from_fs_node(

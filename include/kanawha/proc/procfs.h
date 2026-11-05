@@ -5,7 +5,7 @@
 
 struct procfs_process_data
 {
-    struct vfs_struct_node *vfs_struct_node;
+    // TODO
 };
 
 int
