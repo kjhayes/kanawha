@@ -553,14 +553,14 @@ mmap_map_region(struct process *process,
         res = mmap_file_prot_check(desc, mmap_flags);
         if(res)
         {
-            file_table_put_file(process->file_table, process, desc);
+            fs_file_put(desc);
             goto err0;
         }
 
         fs_node = fs_file_get_node(desc);
         if(fs_node == NULL)
         {
-            file_table_put_file(process->file_table, process, desc);
+            fs_file_put(desc);
             res = -EINVAL;
             goto err0;
         }
@@ -576,7 +576,7 @@ mmap_map_region(struct process *process,
             // name_clone may be NULL still
         }
 
-        file_table_put_file(process->file_table, process, desc);
+        fs_file_put(desc);
     }
     else
     {
@@ -691,19 +691,19 @@ mmap_map_region_exact(struct process *process,
         res = mmap_file_prot_check(desc, mmap_flags);
         if(res)
         {
-            file_table_put_file(process->file_table, process, desc);
+            fs_file_put(desc);
             goto err0;
         }
 
         fs_node = fs_file_get_node(desc);
         if(fs_node == NULL)
         {
-            file_table_put_file(process->file_table, process, desc);
+            fs_file_put(desc);
             res = -EINVAL;
             goto err0;
         }
 
-        file_table_put_file(process->file_table, process, desc);
+        fs_file_put(desc);
     }
     else
     {

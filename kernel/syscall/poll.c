@@ -34,11 +34,11 @@ syscall_poll(fd_t file_desc,
     res = direct_file_poll(file, watching, &triggered);
     if(res)
     {
-        file_table_put_file(process->file_table, process, file);
+        fs_file_put(file);
         return res;
     }
 
-    file_table_put_file(process->file_table, process, file);
+    fs_file_put(file);
 
     res = process_write_usermem(process,
                                 triggered_out,

@@ -41,7 +41,7 @@ syscall_unlink(fd_t dir_fd, char __user *name)
         LOG("PID(%ld) syscall_unlink: could not get namelen! (err=%s)\n",
             (sl_t)process->id,
             errnostr(res));
-        file_table_put_file(process->file_table, process, dir_file);
+        fs_file_put(dir_file);
         return res;
     }
 
@@ -55,7 +55,7 @@ syscall_unlink(fd_t dir_fd, char __user *name)
                                namelen);
     if(res)
     {
-        file_table_put_file(process->file_table, process, dir_file);
+        fs_file_put(dir_file);
         LOG("PID(%ld) syscall_unlink: failed to read usermem!\n",
             (sl_t)process->id);
         return res;
@@ -63,9 +63,9 @@ syscall_unlink(fd_t dir_fd, char __user *name)
     namebuf[namelen] = '\0';
 
     struct fs_node *fs_node = fs_file_get_node(dir_file);
+    fs_file_put(dir_file);
     if(fs_node == NULL)
     {
-        file_table_put_file(process->file_table, process, dir_file);
         return -EINVAL;
     }
 
@@ -75,12 +75,10 @@ syscall_unlink(fd_t dir_fd, char __user *name)
         LOG("PID(%ld) syscall_unlink: failed to unlink file! (err=%s)\n",
             (sl_t)process->id,
             errnostr(res));
-        file_table_put_file(process->file_table, process, dir_file);
         fs_node_put(fs_node);
         return res;
     }
 
-    file_table_put_file(process->file_table, process, dir_file);
     fs_node_put(fs_node);
 
     return 0;

@@ -77,21 +77,19 @@ syscall_insmod(fd_t mod_fd, const char __user *modname, unsigned long flags)
     }
 
     struct fs_node *fs_node = fs_file_get_node(file);
+    fs_file_put(file);
     if(fs_node == NULL)
     {
-        file_table_put_file(process->file_table, process, file);
         return -EINVAL;
     }
 
     struct module *mod = load_module(fs_node, namebuf, 0);
     if(mod == NULL)
     {
-        file_table_put_file(process->file_table, process, file);
         fs_node_put(fs_node);
         return -EINVAL;
     }
 
-    file_table_put_file(process->file_table, process, file);
     fs_node_put(fs_node);
 
     return 0;

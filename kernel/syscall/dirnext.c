@@ -20,27 +20,14 @@ syscall_dirnext(fd_t dir_fd)
         return -EINVAL;
     }
 
-#ifdef CONFIG_DEBUG_SYSCALL_DIRNEXT
-
-    const char *__pathname = fs_path_get_name(file->path);
-    LOG("PID(%ld) dirnext: (%s)\n",
-        process->id,
-        __pathname ? __pathname : "NULL");
-
-#endif
-
     res = direct_file_dir_next(file);
     if(res)
     {
-        file_table_put_file(process->file_table, process, file);
+        fs_file_put(file);
         return res;
     }
 
-    res = file_table_put_file(process->file_table, process, file);
-    if(res)
-    {
-        return res;
-    }
+    fs_file_put(file);
 
     return 0;
 }

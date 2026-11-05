@@ -15,6 +15,7 @@ syscall_dirbegin(fd_t dir_fd)
 {
     int res;
     struct process *process = current_process();
+
     struct file *file =
         file_table_get_file(process->file_table, process, dir_fd);
     if(file == NULL)
@@ -22,25 +23,12 @@ syscall_dirbegin(fd_t dir_fd)
         return -EINVAL;
     }
 
-#ifdef CONFIG_DEBUG_SYSCALL_DIRBEGIN
-    const char *__pathname = fs_path_get_name(file->path);
-    LOG("PID(%ld): dirbegin (%s)\n",
-        process->id,
-        __pathname ? __pathname : "NULL");
-#endif
-
     res = direct_file_dir_begin(file);
-    if(res)
-    {
-        file_table_put_file(process->file_table, process, file);
+    if(res) {
+        fs_file_put(file);
         return res;
     }
 
-    res = file_table_put_file(process->file_table, process, file);
-    if(res)
-    {
-        return res;
-    }
-
+    fs_file_put(file);
     return 0;
 }

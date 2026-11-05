@@ -27,15 +27,11 @@ syscall_dirattr(fd_t dir_fd, int attr, size_t __user *user_value)
     res = direct_file_dir_readattr(file, attr, &value);
     if(res)
     {
-        file_table_put_file(process->file_table, process, file);
+        fs_file_put(file);
         return res;
     }
 
-    res = file_table_put_file(process->file_table, process, file);
-    if(res)
-    {
-        return res;
-    }
+    fs_file_put(file);
 
     res = process_write_usermem(process, user_value, &value, sizeof(size_t));
     if(res)

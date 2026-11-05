@@ -31,7 +31,7 @@ syscall_flush(fd_t file, unsigned long flags)
     // TODO We should be checking this in some capacity
     // unsigned long aflags = fs_file_get_access_flags(desc);
     // if((aflags & FILE_PERM_WRITE) == 0) {
-    //     file_table_put_file(process->file_table, process, desc);
+    //     fs_file_put(desc);
     //     LOG("syscall_flush: cannot flush a file not opened for writing!\n");
     //     return -EPERM;
     // }
@@ -40,14 +40,14 @@ syscall_flush(fd_t file, unsigned long flags)
     if(res)
     {
         LOG("syscall_flush: direct_file_flush failed!\n");
-        file_table_put_file(process->file_table, process, desc);
+        fs_file_put(desc);
         return res;
     }
 
     struct fs_node *fs_node = fs_file_get_node(desc);
+    fs_file_put(desc);
     if(fs_node == NULL)
     {
-        file_table_put_file(process->file_table, process, desc);
         return -EINVAL;
     }
 
@@ -55,7 +55,6 @@ syscall_flush(fd_t file, unsigned long flags)
     if(res)
     {
         LOG("syscall_flush: failed to flush fs_node!\n");
-        file_table_put_file(process->file_table, process, desc);
         fs_node_put(fs_node);
         return res;
     }
@@ -70,13 +69,11 @@ syscall_flush(fd_t file, unsigned long flags)
         if(res)
         {
             LOG("syscall_flush: failed to sync file mount!\n");
-            file_table_put_file(process->file_table, process, desc);
             fs_node_put(fs_node);
             return res;
         }
     }
 
-    file_table_put_file(process->file_table, process, desc);
     fs_node_put(fs_node);
 
     return 0;

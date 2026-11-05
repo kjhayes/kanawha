@@ -63,7 +63,7 @@ syscall_faccess(fd_t fd, unsigned long fields, unsigned long mode)
         res = -EINVAL;
     }
 
-    file_table_put_file(process->file_table, process, file);
+    fs_file_put(file);
 
     return res;
 }

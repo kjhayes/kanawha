@@ -401,16 +401,6 @@ file_table_get_file(struct file_table *table, struct process *process, fd_t fd)
 }
 
 int
-file_table_put_file(struct file_table *table,
-                    struct process *process,
-                    struct file *desc)
-{
-    int res;
-    fs_file_put(desc);
-    return 0;
-}
-
-int
 file_table_swap(struct file_table *table, fd_t fd0, fd_t fd1)
 {
     int res;

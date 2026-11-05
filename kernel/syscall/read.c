@@ -39,7 +39,7 @@ syscall_read(fd_t file, void __user *dst, size_t size)
     unsigned long aflags = fs_file_get_access_flags(desc);
     if((aflags & FILE_PERM_READ) == 0)
     {
-        file_table_put_file(process->file_table, process, desc);
+        fs_file_put(desc);
         return -EPERM;
     }
 
@@ -80,7 +80,7 @@ syscall_read(fd_t file, void __user *dst, size_t size)
     fs_file_add_to_seek_offset(desc, amount_read);
 
 exit:
-    file_table_put_file(process->file_table, process, desc);
+    fs_file_put(desc);
     kfree(buffer);
 
 #ifdef CONFIG_DEBUG_SYSCALL_READ

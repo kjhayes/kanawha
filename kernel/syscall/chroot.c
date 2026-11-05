@@ -32,10 +32,10 @@ syscall_chroot(fd_t fd)
     if(path == NULL)
     {
         LOG("PID(%ld) chroot(%ld), file has NULL fs_path!\n");
-        file_table_put_file(process->file_table, process, file);
+        fs_file_put(file);
         return -EINVAL;
     }
-    file_table_put_file(process->file_table, process, file);
+    fs_file_put(file);
 
     res = process_set_root_directory(process, path);
     if(res)

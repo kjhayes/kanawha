@@ -174,7 +174,7 @@ syscall_mount(const char __user *src,
             struct fs_node *node = fs_file_get_node(src_desc);
             if(node == NULL)
             {
-                file_table_put_file(process->file_table, process, src_desc);
+                fs_file_put(src_desc);
                 kfree(src_buf);
                 file_table_close(process->file_table, process, src_fd);
                 return -EINVAL;
@@ -182,7 +182,7 @@ syscall_mount(const char __user *src,
 
             res = fs_type_mount_file(type, node, &mnt);
 
-            file_table_put_file(process->file_table, process, src_desc);
+            fs_file_put(src_desc);
             file_table_close(process->file_table, process, src_fd);
             fs_node_put(node);
 
@@ -255,9 +255,9 @@ syscall_mount(const char __user *src,
     }
 
     struct fs_path *dst_path = fs_file_get_path(dst_desc);
+    fs_file_put(dst_desc);
     if(dst_path == NULL) {
         kfree(dst_name_buf);
-        file_table_put_file(process->file_table, process, dst_desc);
         return res;
     }
 
@@ -270,13 +270,11 @@ syscall_mount(const char __user *src,
                 (sl_t)process->id,
                 errnostr(res));
         kfree(dst_name_buf);
-        file_table_put_file(process->file_table, process, dst_desc);
         fs_path_put(dst_path);
         return res;
     }
 
     kfree(dst_name_buf);
-    file_table_put_file(process->file_table, process, dst_desc);
     fs_path_put(dst_path);
 
     return 0;

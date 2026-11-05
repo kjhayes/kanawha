@@ -25,7 +25,7 @@ syscall_fattr(fd_t fd, int attr, size_t __user *user_value)
 
     struct fs_path *path = fs_file_get_path(file);
     if(path == NULL) {
-        file_table_put_file(process->file_table, process, file);
+        fs_file_put(file);
         return -EINVAL;
     }
 
@@ -96,15 +96,11 @@ syscall_fattr(fd_t fd, int attr, size_t __user *user_value)
 
     if(res)
     {
-        file_table_put_file(process->file_table, process, file);
+        fs_file_put(file);
         return res;
     }
 
-    res = file_table_put_file(process->file_table, process, file);
-    if(res)
-    {
-        return res;
-    }
+    fs_file_put(file);
 
     res = process_write_usermem(process, user_value, &value, sizeof(size_t));
     if(res)

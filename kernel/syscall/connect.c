@@ -30,11 +30,10 @@ syscall_connect(fd_t sock_fd, fd_t __user *conn, unsigned long flags)
     }
 
     struct fs_node *sock_node = fs_file_get_node(sock_desc);
+    fs_file_put(sock_desc);
     if(sock_node == NULL) {
-        file_table_put_file(process->file_table, process, sock_desc);
         return -EINVAL;
     }
-    file_table_put_file(process->file_table, process, sock_desc);
 
     size_t conn_inode;
     res = fs_node_connect(sock_node, &conn_inode, connect_flags);

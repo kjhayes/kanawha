@@ -37,7 +37,7 @@ syscall_write(fd_t file, const void __user *src, size_t size)
     {
         LOG("file descriptor (%ld) does not have write permissions!\n",
             desc->table_node.key);
-        file_table_put_file(process->file_table, process, desc);
+        fs_file_put(desc);
         return -EPERM;
     }
 
@@ -78,7 +78,7 @@ syscall_write(fd_t file, const void __user *src, size_t size)
     res = amount_written;
 
 exit:
-    file_table_put_file(process->file_table, process, desc);
+    fs_file_put(desc);
     kfree(buffer);
     LOG("returning 0x%llx\n", (ull_t)res);
     return res;

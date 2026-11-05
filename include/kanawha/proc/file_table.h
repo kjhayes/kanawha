@@ -70,11 +70,6 @@ struct file *
 file_table_get_file(struct file_table *table, struct process *process, fd_t fd);
 
 int
-file_table_put_file(struct file_table *table,
-                    struct process *process,
-                    struct file *file);
-
-int
 file_table_swap(struct file_table *table, fd_t f0, fd_t f1);
 
 int

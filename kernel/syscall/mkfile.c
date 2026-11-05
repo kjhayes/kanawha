@@ -50,7 +50,7 @@ syscall_mkfile(fd_t dir_fd, char __user *name, unsigned long user_flags)
     if(namelen > SYSCALL_MKFILE_MAX_NAMELEN)
     {
         // Path is too long
-        file_table_put_file(process->file_table, process, dir_file);
+        fs_file_put(dir_file);
         eprintk("PID(%ld) syscall_mkfile: name is too long! len=%llu, "
                 "(>%llu)\n",
                 (sl_t)process->id,
@@ -66,7 +66,7 @@ syscall_mkfile(fd_t dir_fd, char __user *name, unsigned long user_flags)
                                namelen);
     if(res)
     {
-        file_table_put_file(process->file_table, process, dir_file);
+        fs_file_put(dir_file);
         eprintk("syscall_mkfile: failed to read file name! "
                 "process_read_usermem(%p) -> %s\n",
                 name,
@@ -83,21 +83,19 @@ syscall_mkfile(fd_t dir_fd, char __user *name, unsigned long user_flags)
     size_t existing_inode;
 
     struct fs_node *fs_node = fs_file_get_node(dir_file);
+    fs_file_put(dir_file);
     if(fs_node == NULL)
     {
-        file_table_put_file(process->file_table, process, dir_file);
         return -EINVAL;
     }
 
     res = fs_node_mkfile(fs_node, namebuf, flags);
     if(res)
     {
-        file_table_put_file(process->file_table, process, dir_file);
         fs_node_put(fs_node);
         return res;
     }
 
-    file_table_put_file(process->file_table, process, dir_file);
     fs_node_put(fs_node);
 
     return 0;

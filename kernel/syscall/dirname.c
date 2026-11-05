@@ -31,34 +31,19 @@ syscall_dirname(fd_t dir_fd, char __user *user_namebuf, size_t user_namebuflen)
     char *name_buf = kmalloc(buf_len, KM_KERNEL);
     if(name_buf == NULL)
     {
-        file_table_put_file(process->file_table, process, file);
+        fs_file_put(file);
         return -ENOMEM;
     }
 
     res = direct_file_dir_readname(file, name_buf, buf_len);
+    fs_file_put(file);
     if(res)
     {
         kfree(name_buf);
-        file_table_put_file(process->file_table, process, file);
         return res;
     }
 
     name_buf[buf_len - 1] = '\0';
-
-#ifdef CONFIG_DEBUG_SYSCALL_DIRNAME
-    const char *__pathname = fs_path_get_name(file->path);
-    LOG("PID(%ld) dirname(%s): returned \"%s\"\n",
-        (sl_t)process->id,
-        __pathname ? __pathname : "NULL",
-        name_buf);
-#endif
-
-    res = file_table_put_file(process->file_table, process, file);
-    if(res)
-    {
-        kfree(name_buf);
-        return res;
-    }
 
     res = process_write_usermem(process, user_namebuf, name_buf, buf_len);
     if(res)

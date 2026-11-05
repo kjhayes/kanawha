@@ -27,14 +27,12 @@ syscall_exec(fd_t file, unsigned long exec_flags)
 
     if(desc == NULL)
     {
-        file_table_put_file(process->file_table, process, desc);
+        fs_file_put(desc);
         return -EINVAL;
     }
 
-    LOG("exec(%ld -> \"%s\")\n", file, fs_path_get_name(desc->path));
-
     res = process_exec(process, desc, exec_flags);
+    fs_file_put(desc);
 
-    file_table_put_file(process->file_table, process, desc);
     return res;
 }
