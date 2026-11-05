@@ -1269,20 +1269,20 @@ mmap_read(struct process *process, uintptr_t offset, void *dst, size_t length)
             return -EINVAL;
         }
 
-        mmap_lock_release(mmap);
+        mmap_region_page_tree_lock_acquire(region);
 
         uintptr_t region_offset = offset - region->tree_node.key;
 
         if((region->mmap_flags & MMAP_PROT_READ) == 0)
         {
             // The process is not allowed to read this page
-            mmap_region_page_tree_lock_release(region);
-            mmap_lock_release(mmap);
             eprintk("mmap_read(process=%ld,offset=0x%llx,len=0x%llx)"
                     " Page is not Mapped as Readable!\n",
                     (sl_t)process->id,
                     (ull_t)offset,
                     (ull_t)length);
+            mmap_region_page_tree_lock_release(region);
+            mmap_lock_release(mmap);
             return -EINVAL;
         }
 
@@ -1373,8 +1373,7 @@ mmap_write(struct process *process, uintptr_t offset, void *src, size_t length)
             return -EINVAL;
         }
 
-        // Huh? -KJH
-        // mmap_lock_release(mmap);
+        mmap_region_page_tree_lock_acquire(region);
 
         uintptr_t region_offset = offset - region->tree_node.key;
 
