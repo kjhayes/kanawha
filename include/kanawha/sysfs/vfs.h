@@ -16,7 +16,10 @@ struct vfs_node
     size_t children_count;
     struct stree children_tree;
 
+    // NULL when this vfs_node is not loaded
+    // (Synced with the vfs_mount->lock)
     struct fs_node *fs_node;
+
     struct fs_node_ops *fs_node_ops;
     struct fs_file_ops *fs_file_ops;
 };
@@ -79,13 +82,18 @@ vfs_mount_insert_and_link(struct vfs_mount *mnt,
                           const char *name,
                           struct vfs_node *parent);
 
-// fs_file_ops
+// fs_node_ops
 int
 vfs_dir_lookup(struct fs_node *fs_node,
                const char *name,
                size_t *inode,
                char *sym_buffer,
                size_t sym_buflen);
+
+#define VFS_NODE_OPS_INITIALIZERS \
+    .lookup = vfs_dir_lookup,
+
+// fs_file_ops
 int
 vfs_dir_begin(struct file *dir);
 int
@@ -94,6 +102,12 @@ int
 vfs_dir_readattr(struct file *file, int attr, size_t *value);
 int
 vfs_dir_readname(struct file *dir, char *name_buf, size_t buf_len);
+
+#define VFS_FILE_OPS_INITIALIZERS \
+    .dir_begin = vfs_dir_begin,\
+    .dir_next = vfs_dir_next,\
+    .dir_readname = vfs_dir_readname,\
+    .dir_readattr = vfs_dir_readattr,
 
 // Find a vfs_node from an fs_node (Dangerous)
 struct vfs_node *

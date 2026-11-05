@@ -197,7 +197,7 @@ input_fs_file_poll(struct file *file, unsigned long in, unsigned long *out)
 }
 
 static struct fs_node_ops input_dev_fs_node_ops = {
-    // ...
+    VFS_NODE_OPS_INITIALIZERS
 };
 FS_NODE_OPS_INIT_UNDEF(input_dev_fs_node_ops);
 
@@ -207,5 +207,7 @@ static struct fs_file_ops input_dev_fs_file_ops = {
     .write = fs_file_eof_write,
     .flush = fs_file_nop_flush,
     .seek = fs_file_seek_pinned_zero,
+
+    VFS_FILE_OPS_INITIALIZERS
 };
 FS_FILE_OPS_INIT_UNDEF(input_dev_fs_file_ops);

@@ -141,6 +141,7 @@ kinfo_fs_file_read(struct file *file,
 
 static struct fs_node_ops kinfo_fs_node_ops = {
     .flush = fs_node_flush_nop,
+    VFS_NODE_OPS_INITIALIZERS
 };
 FS_NODE_OPS_INIT_UNDEF(kinfo_fs_node_ops);
 
@@ -149,6 +150,7 @@ static struct fs_file_ops kinfo_fs_file_ops = {
     .write = fs_file_cannot_write,
     .flush = fs_file_nop_flush,
     .seek = fs_file_seek_any,
+    VFS_FILE_OPS_INITIALIZERS
 };
 FS_FILE_OPS_INIT_UNDEF(kinfo_fs_file_ops);
 

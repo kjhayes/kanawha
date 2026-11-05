@@ -249,6 +249,8 @@ static struct fs_node_ops blk_dev_fs_node_ops = {
 
     .getattr = blk_dev_getattr,
     .setattr = blk_dev_setattr,
+
+    VFS_NODE_OPS_INITIALIZERS
 };
 FS_NODE_OPS_INIT_UNDEF(blk_dev_fs_node_ops);
 
@@ -258,5 +260,7 @@ static struct fs_file_ops blk_dev_fs_file_ops = {
     .seek = fs_file_paged_seek,
 
     .flush = fs_file_paged_flush,
+
+    VFS_FILE_OPS_INITIALIZERS
 };
 FS_FILE_OPS_INIT_UNDEF(blk_dev_fs_file_ops);

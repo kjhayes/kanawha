@@ -256,6 +256,8 @@ pty_file_write(
 static struct fs_node_ops
 pty_node_ops = {
     .flush = fs_node_flush_nop,
+
+    VFS_NODE_OPS_INITIALIZERS
 };
 FS_NODE_OPS_INIT_UNDEF(pty_node_ops);
 
@@ -264,6 +266,8 @@ pty_file_ops = {
     .read = pty_file_read,
     .write = pty_file_write,
     .flush = fs_file_nop_flush,
+
+    VFS_FILE_OPS_INITIALIZERS
 };
 FS_FILE_OPS_INIT_UNDEF(pty_file_ops);
 
@@ -379,11 +383,13 @@ ptmx_node_connect(
 static struct fs_node_ops
 ptmx_node_ops = {
     .connect = ptmx_node_connect,
+    VFS_NODE_OPS_INITIALIZERS
 };
 FS_NODE_OPS_INIT_UNDEF(ptmx_node_ops);
 
 static struct fs_file_ops
 ptmx_file_ops = {
+    VFS_FILE_OPS_INITIALIZERS
 };
 FS_FILE_OPS_INIT_UNDEF(ptmx_file_ops);
 

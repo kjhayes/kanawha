@@ -258,6 +258,7 @@ vfs_mount_create(void)
 
     mnt->root_node.fs_node_ops = &vfs_root_node_ops;
     mnt->root_node.fs_file_ops = &vfs_root_file_ops;
+
     res = vfs_mount_insert_node(mnt, &mnt->root_node, &mnt->root_inode);
     if(res)
     {
@@ -280,6 +281,25 @@ vfs_mount_insert_node(struct vfs_mount *mnt,
                       size_t *inode_index_out)
 {
     int res;
+
+    // Set any NULL vfs-defined ops to the correct value,
+    // or fail if another value was set.
+#define CHECK_OP(__TYPE, __OP, __FUNC)\
+    if(node->fs_##__TYPE##_ops->__OP != __FUNC)\
+    {\
+        wprintk("Tried to insert vfs node with %s_op->%s != %s! (overriding...)\n",\
+                #__TYPE, #__OP, #__FUNC);\
+        node->fs_##__TYPE##_ops->__OP = __FUNC;\
+    }
+
+    CHECK_OP(file, dir_begin, vfs_dir_begin);
+    CHECK_OP(file, dir_next, vfs_dir_next);
+    CHECK_OP(file, dir_readname, vfs_dir_readname);
+    CHECK_OP(file, dir_readattr, vfs_dir_readattr);
+    CHECK_OP(node, lookup, vfs_dir_lookup);
+
+#undef CHECK_OP
+
     irq_lock_acquire(&mnt->lock);
 
     res = ptree_insert_any(&mnt->inode_tree, &node->inode_node);
@@ -288,7 +308,6 @@ vfs_mount_insert_node(struct vfs_mount *mnt,
         irq_lock_release(&mnt->lock);
         return res;
     }
-    dprintk("vfs_mount_insert_node -> %p\n", node->inode_node.key);
 
     irq_lock_init(&node->hierarchy_lock);
     stree_init(&node->children_tree);

@@ -70,6 +70,8 @@ static struct fs_node_ops pci_fs_node_ops = {
     .load_page = fs_node_load_page_read_alloc,
     .unload_page = fs_node_unload_page_free,
     .getattr = pci_cfg_fs_node_getattr,
+
+    .lookup = vfs_dir_lookup,
 };
 FS_NODE_OPS_INIT_UNDEF(pci_fs_node_ops);
 
@@ -78,6 +80,11 @@ static struct fs_file_ops pci_fs_file_ops = {
     .write = fs_file_eof_write,
     .flush = fs_file_nop_flush,
     .seek = fs_file_seek_pinned_zero,
+
+    .dir_begin = vfs_dir_begin,
+    .dir_next = vfs_dir_next,
+    .dir_readname = vfs_dir_readname,
+    .dir_readattr = vfs_dir_readattr,
 };
 FS_FILE_OPS_INIT_UNDEF(pci_fs_file_ops);
 

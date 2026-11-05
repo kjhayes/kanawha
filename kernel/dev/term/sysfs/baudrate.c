@@ -140,6 +140,7 @@ static struct fs_node_ops term_dev_baudrate_fs_node_ops = {
     .setattr = term_dev_baudrate_fs_node_setattr,
     .getattr = term_dev_baudrate_fs_node_getattr,
     // ...
+    VFS_NODE_OPS_INITIALIZERS
 };
 FS_NODE_OPS_INIT_UNDEF(term_dev_baudrate_fs_node_ops);
 
@@ -148,6 +149,7 @@ static struct fs_file_ops term_dev_baudrate_fs_file_ops = {
     .write = term_dev_baudrate_fs_file_write,
     .flush = term_dev_baudrate_fs_file_flush,
     // ...
+    VFS_FILE_OPS_INITIALIZERS
 };
 FS_FILE_OPS_INIT_UNDEF(term_dev_baudrate_fs_file_ops);
 

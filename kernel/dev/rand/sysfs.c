@@ -67,18 +67,17 @@ rand_dev_fs_file_read(struct file *file,
     return amt_read;
 }
 
-static struct fs_node_ops rand_dev_fs_node_ops = {
-    .lookup = vfs_dir_lookup,
+static struct fs_node_ops rand_dev_fs_node_ops =
+{
+    VFS_NODE_OPS_INITIALIZERS
 };
 FS_NODE_OPS_INIT_UNDEF(rand_dev_fs_node_ops);
 
-static struct fs_file_ops rand_dev_fs_file_ops = {
-    .dir_begin = vfs_dir_begin,
-    .dir_next = vfs_dir_next,
-    .dir_readattr = vfs_dir_readattr,
-    .dir_readname = vfs_dir_readname,
-
+static struct fs_file_ops rand_dev_fs_file_ops =
+{
     .read = rand_dev_fs_file_read,
+
+    VFS_FILE_OPS_INITIALIZERS
 };
 FS_FILE_OPS_INIT_UNDEF(rand_dev_fs_file_ops);
 

@@ -172,8 +172,9 @@ eth_dev_fs_file_write(struct file *file,
 }
 
 static struct fs_node_ops eth_dev_fs_node_ops = {
-    .lookup = vfs_dir_lookup,
     .flush = fs_node_flush_nop,
+
+    VFS_NODE_OPS_INITIALIZERS
 };
 FS_NODE_OPS_INIT_UNDEF(eth_dev_fs_node_ops);
 
@@ -182,10 +183,7 @@ static struct fs_file_ops eth_dev_fs_file_ops = {
     .write = eth_dev_fs_file_write,
     .seek = fs_file_seek_pinned_zero,
 
-    .dir_next = vfs_dir_next,
-    .dir_begin = vfs_dir_begin,
-    .dir_readattr = vfs_dir_readattr,
-    .dir_readname = vfs_dir_readname,
+    VFS_FILE_OPS_INITIALIZERS
 };
 FS_FILE_OPS_INIT_UNDEF(eth_dev_fs_file_ops);
 

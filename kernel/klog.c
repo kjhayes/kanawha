@@ -226,6 +226,8 @@ klog_fs_file_read(struct file *file,
 
 static struct fs_node_ops klog_fs_node_ops = {
     .flush = fs_node_flush_nop,
+
+    .lookup = vfs_dir_lookup,
 };
 FS_NODE_OPS_INIT_UNDEF(klog_fs_node_ops);
 
@@ -234,6 +236,11 @@ static struct fs_file_ops klog_fs_file_ops = {
     .write = fs_file_cannot_write,
     .flush = fs_file_nop_flush,
     .seek = fs_file_seek_pinned_zero,
+
+    .dir_begin = vfs_dir_begin,
+    .dir_next = vfs_dir_next,
+    .dir_readname = vfs_dir_readname,
+    .dir_readattr = vfs_dir_readattr,
 };
 FS_FILE_OPS_INIT_UNDEF(klog_fs_file_ops);
 

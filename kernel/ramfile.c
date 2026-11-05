@@ -337,6 +337,8 @@ struct fs_node_ops ramfile_fs_node_ops = {
 
     .getattr = ramfile_node_getattr,
     .setattr = ramfile_node_setattr,
+
+    .lookup = vfs_dir_lookup,
 };
 FS_NODE_OPS_INIT_UNDEF(ramfile_fs_node_ops);
 
@@ -344,8 +346,12 @@ struct fs_file_ops ramfile_fs_file_ops = {
     .read = fs_file_paged_read,
     .write = fs_file_paged_write,
     .seek = fs_file_paged_seek,
-
     .flush = fs_file_paged_flush,
+
+    .dir_begin = vfs_dir_begin,
+    .dir_next = vfs_dir_next,
+    .dir_readname = vfs_dir_readname,
+    .dir_readattr = vfs_dir_readattr,
 };
 FS_FILE_OPS_INIT_UNDEF(ramfile_fs_file_ops);
 

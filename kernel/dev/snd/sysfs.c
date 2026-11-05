@@ -108,7 +108,7 @@ static struct fs_node_ops snd_dev_stream_fs_node_ops = {
     .setattr = snd_dev_stream_setattr,
     .flush = fs_node_flush_nop,
 
-    .lookup = vfs_dir_lookup,
+    VFS_NODE_OPS_INITIALIZERS
 };
 FS_NODE_OPS_INIT_UNDEF(snd_dev_stream_fs_node_ops);
 static struct fs_file_ops snd_dev_stream_fs_file_ops = {
@@ -117,10 +117,7 @@ static struct fs_file_ops snd_dev_stream_fs_file_ops = {
     .flush = fs_file_nop_flush,
     .seek = fs_file_seek_pinned_zero,
 
-    .dir_begin = vfs_dir_begin,
-    .dir_next = vfs_dir_next,
-    .dir_readattr = vfs_dir_readattr,
-    .dir_readname = vfs_dir_readname,
+    VFS_FILE_OPS_INITIALIZERS
 };
 FS_FILE_OPS_INIT_UNDEF(snd_dev_stream_fs_file_ops);
 
@@ -278,6 +275,8 @@ static struct fs_node_ops snd_dev_mode_info_fs_node_ops = {
     .setattr = snd_dev_mode_info_fs_node_setattr,
     .getattr = snd_dev_mode_info_fs_node_getattr,
     .flush = fs_node_flush_nop,
+
+    VFS_NODE_OPS_INITIALIZERS
 };
 FS_NODE_OPS_INIT_UNDEF(snd_dev_mode_info_fs_node_ops);
 
@@ -285,6 +284,8 @@ static struct fs_file_ops snd_dev_mode_info_fs_file_ops = {
     .read = snd_dev_mode_info_fs_file_read,
     .write = snd_dev_mode_info_fs_file_write,
     .seek = fs_file_paged_seek,
+
+    VFS_FILE_OPS_INITIALIZERS
 };
 FS_FILE_OPS_INIT_UNDEF(snd_dev_mode_info_fs_file_ops);
 

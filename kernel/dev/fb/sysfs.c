@@ -356,8 +356,6 @@ fb_dev_buffer_fs_file_flush(struct file *file, unsigned long flags)
 }
 
 static struct fs_node_ops fb_dev_buffer_fs_node_ops = {
-    .lookup = vfs_dir_lookup,
-
     .load_page = fb_dev_buffer_fs_node_load_page,
     .unload_page = fb_dev_buffer_fs_node_unload_page,
     .flush_page = fb_dev_buffer_fs_node_flush_page,
@@ -365,19 +363,18 @@ static struct fs_node_ops fb_dev_buffer_fs_node_ops = {
     .flush = fs_node_flush_nop,
     .getattr = fb_dev_buffer_fs_node_getattr,
     .setattr = fb_dev_buffer_fs_node_setattr,
+
+    VFS_NODE_OPS_INITIALIZERS
 };
 FS_NODE_OPS_INIT_UNDEF(fb_dev_buffer_fs_node_ops);
 
 static struct fs_file_ops fb_dev_buffer_fs_file_ops = {
-    .dir_begin = vfs_dir_begin,
-    .dir_next = vfs_dir_next,
-    .dir_readattr = vfs_dir_readattr,
-    .dir_readname = vfs_dir_readname,
-
     .read = fs_file_paged_read,
     .write = fs_file_paged_write,
     .flush = fb_dev_buffer_fs_file_flush,
     .seek = fs_file_paged_seek,
+
+    VFS_FILE_OPS_INITIALIZERS
 };
 FS_FILE_OPS_INIT_UNDEF(fb_dev_buffer_fs_file_ops);
 
@@ -542,6 +539,8 @@ fb_dev_mode_set_fs_node_setattr(struct fs_node *node, int attr, size_t value)
 static struct fs_node_ops fb_dev_mode_set_fs_node_ops = {
     .setattr = fb_dev_mode_set_fs_node_setattr,
     .flush = fs_node_flush_nop,
+
+    VFS_NODE_OPS_INITIALIZERS
 };
 FS_NODE_OPS_INIT_UNDEF(fb_dev_mode_set_fs_node_ops);
 
@@ -549,6 +548,8 @@ static struct fs_file_ops fb_dev_mode_set_fs_file_ops = {
     .read = fb_dev_mode_set_fs_file_read,
     .write = fb_dev_mode_set_fs_file_write,
     .seek = fs_file_seek_pinned_zero,
+
+    VFS_FILE_OPS_INITIALIZERS
 };
 FS_FILE_OPS_INIT_UNDEF(fb_dev_mode_set_fs_file_ops);
 
@@ -711,6 +712,8 @@ static struct fs_node_ops fb_dev_mode_info_fs_node_ops = {
     .setattr = fb_dev_mode_info_fs_node_setattr,
     .getattr = fb_dev_mode_info_fs_node_getattr,
     .flush = fs_node_flush_nop,
+
+    VFS_NODE_OPS_INITIALIZERS
 };
 FS_NODE_OPS_INIT_UNDEF(fb_dev_mode_info_fs_node_ops);
 
@@ -718,6 +721,8 @@ static struct fs_file_ops fb_dev_mode_info_fs_file_ops = {
     .read = fb_dev_mode_info_fs_file_read,
     .write = fb_dev_mode_info_fs_file_write,
     .seek = fs_file_paged_seek,
+
+    VFS_FILE_OPS_INITIALIZERS
 };
 FS_FILE_OPS_INIT_UNDEF(fb_dev_mode_info_fs_file_ops);
 

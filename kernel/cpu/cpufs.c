@@ -207,13 +207,20 @@ id_file_read(struct file *file,
     return len;
 }
 
-static struct fs_node_ops id_node_ops = {};
+static struct fs_node_ops id_node_ops = {
+    .lookup = vfs_dir_lookup,
+};
 FS_NODE_OPS_INIT_UNDEF(id_node_ops);
 static struct fs_file_ops id_file_ops = {
     .seek = fs_file_seek_pinned_zero,
     .flush = fs_file_nop_flush,
 
     .read = id_file_read,
+
+    .dir_begin = vfs_dir_begin,
+    .dir_next = vfs_dir_next,
+    .dir_readname = vfs_dir_readname,
+    .dir_readattr = vfs_dir_readattr,
 };
 FS_FILE_OPS_INIT_UNDEF(id_file_ops);
 
@@ -256,13 +263,20 @@ bsp_file_read(struct file *file,
     return 1;
 }
 
-static struct fs_node_ops bsp_node_ops = {};
+static struct fs_node_ops bsp_node_ops = {
+    .lookup = vfs_dir_lookup,
+};
 FS_NODE_OPS_INIT_UNDEF(bsp_node_ops);
 static struct fs_file_ops bsp_file_ops = {
     .seek = fs_file_seek_pinned_zero,
     .flush = fs_file_nop_flush,
 
     .read = bsp_file_read,
+
+    .dir_begin = vfs_dir_begin,
+    .dir_next = vfs_dir_next,
+    .dir_readname = vfs_dir_readname,
+    .dir_readattr = vfs_dir_readattr,
 };
 FS_FILE_OPS_INIT_UNDEF(bsp_file_ops);
 
@@ -311,12 +325,19 @@ idle_file_read(struct file *file,
     return len;
 }
 
-static struct fs_node_ops idle_node_ops = {};
+static struct fs_node_ops idle_node_ops = {
+    .lookup = vfs_dir_lookup,
+};
 FS_NODE_OPS_INIT_UNDEF(idle_node_ops);
 static struct fs_file_ops idle_file_ops = {
     .seek = fs_file_seek_pinned_zero,
     .flush = fs_file_nop_flush,
 
     .read = idle_file_read,
+
+    .dir_begin = vfs_dir_begin,
+    .dir_next = vfs_dir_next,
+    .dir_readname = vfs_dir_readname,
+    .dir_readattr = vfs_dir_readattr,
 };
 FS_FILE_OPS_INIT_UNDEF(idle_file_ops);
