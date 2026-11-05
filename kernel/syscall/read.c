@@ -46,6 +46,10 @@ syscall_read(fd_t file, void __user *dst, size_t size)
     size_t buffer_len =
         size > SYSCALL_READ_MAX_CHUNK_SIZE ? SYSCALL_READ_MAX_CHUNK_SIZE : size;
     void *buffer = kmalloc(buffer_len, KM_KERNEL);
+    if(buffer == NULL) {
+        fs_file_put(desc);
+        return -ENOMEM;
+    }
 
     ssize_t amount_to_read = buffer_len > size ? size : buffer_len;
     ssize_t amount_read = amount_to_read;
