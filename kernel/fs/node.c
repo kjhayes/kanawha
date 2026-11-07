@@ -50,53 +50,20 @@ fs_node_create(void)
     fs_node_page_lock_init(fs_node);
     ptree_init(&fs_node->page_cache);
 
-    atomic_set_relaxed(&fs_node->refcount, 1);
-
     return fs_node;
 }
 
 int
 fs_node_get(struct fs_node *node)
 {
-    DEBUG_ASSERT(KERNEL_ADDR(node));
-
-    dprintk("fs_node_get: inode = %p\n", node->cache_node.key);
-
-    int old_count = atomic_fetch_inc(&node->refcount);
-    DEBUG_ASSERT(old_count > 0);
-
+    pcache_node_get(&node->cache_node);
     return 0;
 }
 
 int
 fs_node_put(struct fs_node *node)
 {
-    int res;
-    atomic_val_t val;
-
-    val = atomic_fetch_dec(&node->refcount);
-
-    if(val <= 0)
-    {
-        panic("Invalid fs_node_put!\n");
-    }
-    if(val == 1)
-    {
-        rlock_read_lock(&node->backing_lock);
-        if(node->mount != NULL)
-        {
-            res = fs_mount_on_node_unreferenced(node->mount, node);
-            if(res)
-            {
-                wprintk("Failed to unload fs_node (potentially "
-                        "leaking memory)!\n");
-                rlock_read_unlock(&node->backing_lock);
-                return res;
-            }
-        }
-        rlock_read_unlock(&node->backing_lock);
-        kfree(node);
-    }
+    pcache_node_put(&node->cache_node);
     return 0;
 }
 
@@ -114,7 +81,7 @@ fs_node_get_file_ops(struct fs_node *node)
 size_t
 fs_node_get_inode(struct fs_node *node)
 {
-    return node->cache_node.key;
+    return pcache_node_get_index(&node->cache_node);
 }
 
 // FS-Node Caching

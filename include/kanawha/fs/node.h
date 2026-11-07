@@ -9,6 +9,7 @@
 #include <kanawha/spinlock.h>
 #include <kanawha/stree.h>
 #include <kanawha/types.h>
+#include <kanawha/pcache.h>
 
 struct fs_type;
 struct fs_mount;
@@ -181,7 +182,7 @@ struct fs_node
 
     atomic_t refcount;
 
-    struct ptree_node cache_node;
+    struct pcache_node cache_node;
 };
 
 #define FS_PAGE_FLAG_DIRTY (1ULL << 0)

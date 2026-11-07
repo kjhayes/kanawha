@@ -6,6 +6,7 @@
 #include <kanawha/spinlock.h>
 #include <kanawha/stree.h>
 #include <kanawha/types.h>
+#include <kanawha/pcache.h>
 
 struct fs_type;
 struct fs_mount;
@@ -47,9 +48,7 @@ struct fs_mount_ops
 struct fs_mount
 {
     struct fs_mount_ops *ops;
-
-    spinlock_t cache_lock;
-    struct ptree node_cache;
+    struct pcache node_cache;
 };
 
 struct fs_node *

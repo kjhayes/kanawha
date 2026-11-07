@@ -47,6 +47,7 @@ obj-y += \
 	lock.o \
 	panic.o \
 	kinfo.o \
+	pcache.o \
 
 obj-y += stack.o
 

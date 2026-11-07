@@ -101,7 +101,7 @@ vfs_dir_lookup(struct fs_node *fs_node,
 
     if(strcmp(name, ".") == 0)
     {
-        *inode = fs_node->cache_node.key;
+        *inode = fs_node_get_inode(fs_node);
         return FS_NODE_LOOKUP_HARD;
     }
 
