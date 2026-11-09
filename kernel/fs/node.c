@@ -34,6 +34,143 @@ DEFINE_OP_LIST_WRAPPERS_WITH_PRE_POST(FS_NODE_OP_LIST,
                                       FS_NODE_OP_ACQUIRE_LOCK,
                                       FS_NODE_OP_RELEASE_LOCK)
 
+static int
+fs_node_flush_fs_page_lockless(struct fs_node *node, struct fs_page *page)
+{
+    int res;
+
+    size_t amount = page->size;
+
+    page->flags &= ~FS_PAGE_FLAG_DIRTY;
+
+    unsigned long pfn = pcache_node_get_index(&page->cache_node);
+    res = fs_node_flush_page(node, pfn, 0, page->paddr);
+    if(res)
+    {
+        page->flags |= FS_PAGE_FLAG_DIRTY;
+        return res;
+    }
+    if(amount < page->size)
+    {
+        page->flags |= FS_PAGE_FLAG_DIRTY;
+        return -EAGAIN;
+    }
+
+    return 0;
+}
+
+static int
+fs_node_page_cache_load(
+        struct pcache *cache,
+        size_t index,
+        struct pcache_node **out)
+{
+    int res;
+
+    struct fs_node *node = container_of(cache, struct fs_node, page_cache);
+
+    struct fs_page *page = NULL;
+
+    page = kzmalloc(sizeof(struct fs_page), KM_KERNEL);
+    if(page == NULL)
+    {
+        return -ENOMEM;
+    }
+
+    page->pins = 1;
+
+    order_t order;
+    res = fs_node_page_order(node, &order);
+    if(res)
+    {
+        kfree(page);
+        return res;
+    }
+
+    //unsigned long load_page_flags = flags & FS_NODE_GET_PAGE_MAY_CREATE
+    //                                    ? FS_NODE_LOAD_PAGE_MAY_CREATE
+    //                                    : 0;
+
+    unsigned long load_page_flags = 0;
+
+    res = fs_node_load_page(node, index, load_page_flags, &page->paddr);
+    if(res)
+    {
+        kfree(page);
+        return res;
+    }
+
+    page->order = order;
+    page->size = 1ULL << order;
+    page->flags = 0;
+
+    DEBUG_ASSERT(KERNEL_ADDR(out));
+    *out = &page->cache_node;
+
+    return 0;
+}
+
+static int
+fs_node_page_cache_unload(
+        struct pcache *cache,
+        size_t index,
+        struct pcache_node *pcache_node)
+{
+    int res;
+
+    struct fs_node *node = container_of(cache, struct fs_node, page_cache);
+    struct fs_page *page = container_of(pcache_node, struct fs_page, cache_node);
+
+    if(page->flags & FS_PAGE_FLAG_DIRTY)
+    {
+        res = fs_node_flush_fs_page_lockless(node, page);
+        if(res)
+        {
+            eprintk("fs_node_page_cache_unload failed because "
+                    "fs_node_flush_fs_page_lockless returned "
+                    "(%s) with "
+                    "dirty page!\n",
+                    errnostr(res));
+            return res;
+        }
+    }
+
+    res = fs_node_unload_page(node,
+                              index,
+                              0, // flags
+                              page->paddr);
+    if(res)
+    {
+        eprintk("Failed to unload fs_page backing page order=%ld, "
+                "phys_addr=%p! (err=%s)\n",
+                (sl_t)page->order,
+                page->paddr,
+                errnostr(res));
+    }
+
+    kfree(page);
+
+    return 0;
+}
+
+static int
+fs_node_page_cache_flush(
+        struct pcache *cache,
+        size_t index,
+        struct pcache_node *pcache_node)
+{
+    struct fs_node *node = container_of(cache, struct fs_node, page_cache);
+    struct fs_page *page = container_of(pcache_node, struct fs_page, cache_node);
+    return fs_node_flush_fs_page_lockless(node, page);
+}
+
+static struct pcache_ops
+fs_node_page_pcache_ops = {
+    .load_node = fs_node_page_cache_load,
+    .unload_node = fs_node_page_cache_unload,
+    .flush_node = fs_node_page_cache_flush,
+};
+
 struct fs_node *
 fs_node_create(void)
 {
@@ -47,8 +184,7 @@ fs_node_create(void)
 
     rlock_init(&fs_node->backing_lock);
 
-    fs_node_page_lock_init(fs_node);
-    ptree_init(&fs_node->page_cache);
+    pcache_init(&fs_node->page_cache, &fs_node_page_pcache_ops);
 
     return fs_node;
 }
@@ -106,206 +242,51 @@ struct fs_page *
 fs_node_get_page(struct fs_node *node, uintptr_t pfn, unsigned long flags)
 {
     int res;
-
-    DEBUG_ASSERT(node);
-
-    struct fs_page *page;
-    fs_node_page_lock_acquire(node);
-
-    struct ptree_node *pnode;
-    pnode = ptree_get(&node->page_cache, pfn);
-    if(pnode == NULL)
-    {
-
-        page = kzmalloc(sizeof(struct fs_page), KM_KERNEL);
-        if(page == NULL)
-        {
-            fs_node_page_lock_release(node);
-            return NULL;
-        }
-
-        page->pins = 1;
-
-        order_t order;
-        res = fs_node_page_order(node, &order);
-        if(res)
-        {
-            fs_node_page_lock_release(node);
-            kfree(page);
-            return NULL;
-        }
-
-        unsigned long load_page_flags = flags & FS_NODE_GET_PAGE_MAY_CREATE
-                                            ? FS_NODE_LOAD_PAGE_MAY_CREATE
-                                            : 0;
-
-        res = fs_node_load_page(node, pfn, load_page_flags, &page->paddr);
-        if(res)
-        {
-            fs_node_page_lock_release(node);
-            kfree(page);
-            return NULL;
-        }
-
-        page->order = order;
-        page->size = 1ULL << order;
-        page->flags = 0;
-
-        ptree_insert(&node->page_cache, &page->tree_node, pfn);
+    DEBUG_ASSERT(KERNEL_ADDR(node));
+    struct pcache_node *pcache_node = NULL;
+    res = pcache_lookup_node(
+            &node->page_cache,
+            pfn,
+            &pcache_node);
+    if(res) {
+        return NULL;
     }
-    else
-    {
-        page = container_of(pnode, struct fs_page, tree_node);
-        page->pins++;
-    }
-
-    fs_node_page_lock_release(node);
-    return page;
+    DEBUG_ASSERT(KERNEL_ADDR(pcache_node));
+    return container_of(pcache_node, struct fs_page, cache_node);
 }
 
 int
-fs_page_get(struct fs_node *node, struct fs_page *page)
+fs_page_get(struct fs_page *page)
 {
-    int res;
-    fs_node_page_lock_acquire(node);
-
-    if(page->pins == 0)
-    {
-        res = -EINVAL;
-    }
-    else
-    {
-        page->pins++;
-        res = 0;
-    }
-
-    fs_node_page_lock_release(node);
-    return res;
-}
-
-static int
-fs_node_flush_fs_page_lockless(struct fs_node *node, struct fs_page *page)
-{
-    int res;
-
-    size_t amount = page->size;
-
-    dprintk("fs_node_flush_fs_page_lockless(node=%p, page=%p, page->pfn=%p)\n",
-            node,
-            page,
-            page->tree_node.key);
-
-    res = fs_node_flush_page(node, page->tree_node.key, 0, page->paddr);
-    if(res)
-    {
-        return res;
-    }
-
-    if(amount < page->size)
-    {
-        return -EAGAIN;
-    }
-
+    pcache_node_get(&page->cache_node);
     return 0;
 }
 
 int
-fs_node_put_page(struct fs_node *node, struct fs_page *page, int modified)
+fs_page_put(struct fs_page *page)
 {
-    int res;
+    pcache_node_put(&page->cache_node);
+    return 0;
+}
 
-    dprintk("fs_node_put_page(node=%p, page=%p)\n", node, page);
-
-    fs_node_page_lock_acquire(node);
-
-    uintptr_t pfn = page->tree_node.key;
-
-    if(modified)
-    {
-        page->flags |= FS_PAGE_FLAG_DIRTY;
-    }
-
-    DEBUG_ASSERT(page->pins);
-
-    page->pins--;
-    if(page->pins == 0)
-    {
-        dprintk("freeing fs_page\n");
-        if(page->flags & FS_PAGE_FLAG_DIRTY)
-        {
-            res = fs_node_flush_fs_page_lockless(node, page);
-            if(res)
-            {
-                eprintk("fs_node_put_page failed because "
-                        "fs_node_flush_fs_page_lockless returned "
-                        "(%s) with "
-                        "dirty page!\n",
-                        errnostr(res));
-                page->pins++;
-                fs_node_page_lock_release(node);
-                return res;
-            }
-        }
-        dprintk("fs_page flushed\n");
-
-        struct ptree_node *rem = ptree_remove(&node->page_cache, pfn);
-        DEBUG_ASSERT(rem == &page->tree_node);
-
-        dprintk("removed ptree node\n");
-
-        res = fs_node_unload_page(node,
-                                  pfn,
-                                  0, // flags
-                                  page->paddr);
-        if(res)
-        {
-            eprintk("Failed to unload fs_page backing page order=%ld, "
-                    "phys_addr=%p! (err=%s)\n",
-                    (sl_t)page->order,
-                    page->paddr,
-                    errnostr(res));
-        }
-        dprintk("freed phys page\n");
-
-        kfree(page);
-        dprintk("freed fs_page\n");
-    }
-
-    fs_node_page_lock_release(node);
+int
+fs_page_mark_dirty(
+        struct fs_page *page)
+{
+    page->flags |= FS_PAGE_FLAG_DIRTY;
     return 0;
 }
 
 int
 fs_node_flush_fs_page(struct fs_node *node, struct fs_page *page)
 {
-    int res;
-    fs_node_page_lock_acquire(node);
-    res = fs_node_flush_fs_page_lockless(node, page);
-    fs_node_page_lock_release(node);
-    return res;
+    return fs_node_flush_fs_page_lockless(node, page);
 }
 
 int
 fs_node_flush_all_fs_pages(struct fs_node *node)
 {
-    int res = 0;
-    dprintk("fs_node_flush_all_fs_pages\n");
-    fs_node_page_lock_acquire(node);
-
-    struct ptree_node *pnode = ptree_get_first(&node->page_cache);
-    while(pnode != NULL)
-    {
-        struct fs_page *page = container_of(pnode, struct fs_page, tree_node);
-        res = fs_node_flush_fs_page_lockless(node, page);
-        if(res)
-        {
-            break;
-        }
-        pnode = ptree_get_next(pnode);
-    }
-
-    fs_node_page_lock_release(node);
-    return res;
+    return pcache_flush_all(&node->page_cache);
 }
 
 int
@@ -354,7 +335,7 @@ fs_node_paged_read(struct fs_node *fs_node,
         total_read += to_read;
         offset += to_read;
 
-        fs_node_put_page(fs_node, page, 0);
+        fs_page_put(page);
     }
 
     size_t page_end = offset + buflen;
@@ -434,7 +415,8 @@ fs_node_paged_write(struct fs_node *fs_node,
         total_read += to_read;
         offset += to_read;
 
-        fs_node_put_page(fs_node, page, 1);
+        fs_page_mark_dirty(page);
+        fs_page_put(page);
     }
 
     size_t page_end = offset + buflen;

@@ -369,7 +369,10 @@ mmap_region_reclaim_page(struct mmap_region *region, struct mmap_page *page)
     else
     {
         DEBUG_ASSERT(KERNEL_ADDR(page->fs_page));
-        res = fs_node_put_page(region->fs_node, page->fs_page, modified);
+        if(modified) {
+            fs_page_mark_dirty(page->fs_page);
+        }
+        res = fs_page_put(page->fs_page);
         if(res)
         {
             return res;
@@ -1045,7 +1048,7 @@ mmap_region_load_page(struct mmap_region *region,
         }
         else
         {
-            fs_node_put_page(region->fs_node, page->fs_page, 0);
+            fs_page_put(page->fs_page);
         }
         return -ENOMEM;
     }
@@ -1095,7 +1098,7 @@ mmap_region_load_page(struct mmap_region *region,
         }
         else
         {
-            fs_node_put_page(region->fs_node, page->fs_page, 0);
+            fs_page_put(page->fs_page);
         }
         kfree(page);
         return res;
@@ -1158,16 +1161,12 @@ mmap_page_do_copy_on_write(struct mmap_region *region, struct mmap_page *page)
 
         DEBUG_ASSERT(KERNEL_ADDR(page->fs_page));
 
-        res =
-            fs_node_put_page(fs_node,
-                             page->fs_page,
-                             0); // It can't be dirty, we trapped copy-on-write
-
+        res = fs_page_put(page->fs_page);
         if(res)
         {
             mmap_region_map_page(region, page);
             page_free(page->order, new_page);
-            eprintk("mmap_page_do_copy_on_write: fs_node_put_page "
+            eprintk("mmap_page_do_copy_on_write: fs_page_put "
                     "returned %s\n",
                     errnostr(res));
             return res;
@@ -2059,7 +2058,7 @@ mmap_page_clone(struct mmap_region *from_region,
         struct fs_page *fs_page = from->fs_page;
         DEBUG_ASSERT(KERNEL_ADDR(fs_page));
 
-        res = fs_page_get(from_region->fs_node, fs_page);
+        res = fs_page_get(fs_page);
         if(res)
         {
             kfree(page);
@@ -2093,7 +2092,7 @@ mmap_page_clone(struct mmap_region *from_region,
         }
         else
         {
-            fs_node_put_page(from_region->fs_node, page->fs_page, 0);
+            fs_page_put(page->fs_page);
             kfree(page);
             return res;
         }

@@ -82,4 +82,8 @@ size_t
 pcache_node_get_index(
         struct pcache_node *node);
 
+int
+pcache_flush_all(
+        struct pcache *pcache);
+
 #endif

@@ -143,3 +143,35 @@ pcache_node_get_index(
     return node->cache_node.key;
 }
 
+int
+pcache_flush_all(
+        struct pcache *pcache)
+{
+    int res;
+    pcache_node_tree_lock_acquire(pcache);
+
+    unsigned long num_failures = 0;
+
+    struct ptree_node *iter = ptree_get_first(&pcache->node_tree);
+    while(iter) {
+        struct pcache_node *pnode =
+            container_of(iter, struct pcache_node, cache_node);
+        res = pcache_flush_node(
+                pcache,
+                pcache_node_get_index(pnode),
+                pnode);
+        if(res) {
+            num_failures++;
+        }
+        iter = ptree_get_next(iter);
+    }
+
+    pcache_node_tree_lock_release(pcache);
+
+    if(num_failures != 0) {
+        return -EFAULT;
+    }
+
+    return 0;
+}
+

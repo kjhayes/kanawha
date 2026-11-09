@@ -177,10 +177,7 @@ struct fs_node
 
     struct fs_mount *mount;
 
-    thread_lock_t page_lock;
-    struct ptree page_cache;
-
-    atomic_t refcount;
+    struct pcache page_cache;
 
     struct pcache_node cache_node;
 };
@@ -195,7 +192,8 @@ struct fs_page
     size_t size;
 
     unsigned long flags;
-    struct ptree_node tree_node;
+
+    struct pcache_node cache_node;
 };
 
 struct fs_node;
@@ -226,13 +224,19 @@ fs_node_page_order(struct fs_node *node, order_t *order);
 
 #define FS_NODE_GET_PAGE_MAY_CREATE (1ULL << 0)
 struct fs_page *
-fs_node_get_page(struct fs_node *node, uintptr_t pfn, unsigned long flags);
+fs_node_get_page(
+        struct fs_node *node,
+        uintptr_t pfn,
+        unsigned long flags);
 
 int
-fs_node_put_page(struct fs_node *node, struct fs_page *page, int modified);
+fs_page_get(struct fs_page *page);
+int
+fs_page_put(struct fs_page *page);
 
 int
-fs_page_get(struct fs_node *node, struct fs_page *page);
+fs_page_mark_dirty(
+        struct fs_page *page);
 
 int
 fs_node_flush_fs_page(struct fs_node *node, struct fs_page *page);

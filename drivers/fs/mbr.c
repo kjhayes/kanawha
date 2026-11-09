@@ -592,10 +592,9 @@ mbr_aligned_partition_unload_page(struct fs_node *fs_node,
     DEBUG_ASSERT(page->paddr == addr);
 
     // Two "puts" to undo the "get" done in "mbr_aligned_partition_load_page"
-    fs_node_put_page(mnt->backing_node,
-                     page,
-                     1); // Have to assume the page has been modified
-    fs_node_put_page(mnt->backing_node, page, 0);
+    fs_page_mark_dirty(page);
+    fs_page_put(page);
+    fs_page_put(page);
 
     return 0;
 }

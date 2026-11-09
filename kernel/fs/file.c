@@ -496,7 +496,7 @@ fs_file_paged_read(struct file *file,
 
     memcpy(buf, ((void *)__va(page->paddr)) + page_offset, to_read);
 
-    res = fs_node_put_page(fs_node, page, 0);
+    res = fs_page_put(page);
     if(res)
     {
         fs_node_put(fs_node);
