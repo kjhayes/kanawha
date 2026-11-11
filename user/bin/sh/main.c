@@ -12,6 +12,7 @@
 #include "token.h"
 #include "lex.h"
 #include "parse.h"
+#include "color.h"
 #include "cmd.h"
 
 static inline int
@@ -146,18 +147,12 @@ main(int argc, const char **argv)
             static char cwd_buffer[256];
             getcwd(cwd_buffer, 256);
             cwd_buffer[256 - 1] = '\0';
-            unsigned long cur_proc;
-            res = kanawha_sys_prget(PRINFO_TYPE_SMP,
-                                    PRGET_SMP_CURRENT,
-                                    &cur_proc);
-            if(res)
-            {
-                printf("[%s] ", cwd_buffer);
-            }
-            else
-            {
-                printf("[%lu][%s] ", cur_proc, cwd_buffer);
-            }
+            printf(COLOR_BLUE "["
+                   COLOR_MAGENTA "%s"
+                   COLOR_BLUE "]"
+                   COLOR_RESET " "
+                   ,
+                   cwd_buffer); 
         }
 
         int prev_was_whitespace = 1;
