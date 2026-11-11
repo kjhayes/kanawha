@@ -122,6 +122,31 @@ cmd_invoke_exec_cd(
 }
 
 static int
+cmd_invoke_exec_exec(
+        struct cmd_invoke *i)
+{
+    int argc = cmd_invoke_args_count(i);
+
+    char *argv[argc+1];
+
+    int argi = 0;
+    struct cmd_invoke_arg *arg = cmd_invoke_args_begin(i);
+    while(arg) {
+        argv[argi] = arg->value;
+        argi++;
+        arg = cmd_invoke_args_next(i, arg);
+    }
+    if(argi != argc) {
+        return -EINVAL;
+    }
+    argv[argc] = NULL;
+
+    exit(execvp(argv[0], argv));
+
+    return -EINVAL;
+}
+
+static int
 cmd_invoke_exec_file(
         struct cmd_invoke *i)
 {
@@ -163,6 +188,8 @@ cmd_invoke_exec(
 {
     if(strcmp(i->name, "cd") == 0) {
         return cmd_invoke_exec_cd(i);
+    } else if(strcmp(i->name, "exec") == 0) {
+        return cmd_invoke_exec_exec(i);
     } else {
         return cmd_invoke_exec_file(i);
     }
