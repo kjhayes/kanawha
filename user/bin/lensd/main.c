@@ -6,9 +6,7 @@
 #include "lensd.h"
 
 int lensd_running = 1;
-
-#define INFO(FMT, ...)\
-    printf(FMT, ##__VA_ARGS__)
+int lensd_verbose = 0;
 
 static const char *fb_dev_path = "/dev/fb/";
 static const char *input_dev_path = "/dev/input/";
@@ -68,7 +66,7 @@ static int
 add_display_callback(
         const char *path)
 {
-    printf("lensd: adding display: %s\n", path);
+    INFO("lensd: adding display: %s\n", path);
     add_display(path, 0);
     return 0;
 }
@@ -82,7 +80,7 @@ static int
 add_input_callback(
         const char *path)
 {
-    printf("lensd: adding input: %s\n", path);
+    INFO("lensd: adding input: %s\n", path);
     add_input(path);
     return 0;
 }

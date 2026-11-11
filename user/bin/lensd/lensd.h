@@ -8,6 +8,12 @@
 #include <ilist.h>
 
 extern int lensd_running;
+extern int lensd_verbose;
+
+#define INFO(FMT, ...)\
+    if(lensd_verbose) {\
+        printf(FMT, ##__VA_ARGS__);\
+    }
 
 struct lens_client_ctx
 {

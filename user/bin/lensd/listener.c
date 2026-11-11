@@ -10,7 +10,7 @@ listener_thread(void *_state)
 {
     int res;
 
-    printf("lensd: listener thread!\n");
+    INFO("lensd: listener thread!\n");
 
     while(lensd_running)
     {
