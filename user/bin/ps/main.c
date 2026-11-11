@@ -28,7 +28,7 @@ read_string_file(int dir, const char *file)
     int strfile = openat(dir, file, O_RDONLY);
     if(strfile < 0)
     {
-        fprintf(stderr, "failed to open \"%s\"\n", file);
+        // fprintf(stderr, "failed to open \"%s\"\n", file);
         return "???";
     }
 
@@ -66,7 +66,7 @@ read_int_file(int dir, const char *file)
     int strfile = openat(dir, file, O_RDONLY);
     if(strfile < 0)
     {
-        fprintf(stderr, "failed to open \"%s\"\n", file);
+        // fprintf(stderr, "failed to open \"%s\"\n", file);
         return strfile;
     }
 
