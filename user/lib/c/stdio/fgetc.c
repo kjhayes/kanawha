@@ -1,5 +1,5 @@
 
-#include <elk-libc-internal/__sFILE.h>
+#include <elk-libc-internal/FILE.h>
 #include <kanawha/file.h>
 #include <kanawha/syscall.h>
 
@@ -10,11 +10,8 @@
 int
 fgetc_unlocked(FILE *stream)
 {
-    struct __sFILE *file = (struct __sFILE *)stream;
-
-    assert(file != NULL);
-
-    return __elk_libc_internal__file_getc(file);
+    assert(stream != NULL);
+    return __elk_libc_internal__file_getc(stream);
 }
 
 #undef fgetc

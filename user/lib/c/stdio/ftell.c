@@ -1,5 +1,5 @@
 
-#include "elk-libc-internal/__sFILE.h"
+#include "elk-libc-internal/FILE.h"
 #include "kanawha/syscall.h"
 
 #include <stdio.h>

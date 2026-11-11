@@ -1,11 +1,11 @@
 
-#include <elk-libc-internal/__sFILE.h>
+#include <elk-libc-internal/FILE.h>
 #include <errno.h>
 
 int
 __elk_libc_internal__dofopen(const char *restrict path,
                              const char *restrict mode,
-                             struct __sFILE *file)
+                             FILE *file)
 {
     unsigned long access_flags = 0;
     unsigned long mode_flags = 0;

@@ -1,5 +1,5 @@
 
-#include <elk-libc-internal/__sFILE.h>
+#include <elk-libc-internal/FILE.h>
 #include <errno.h>
 #include <kanawha/file.h>
 #include <kanawha/syscall.h>
@@ -35,14 +35,14 @@ popen(const char *command, const char *mode)
         return NULL;
     }
 
-    struct __sFILE *file = malloc(sizeof(*file));
+    FILE *file = malloc(sizeof(*file));
     if(file == NULL)
     {
         errno = -ENOMEM;
         return NULL;
     }
 
-    __elk_libc_internal__init_sFILE(file);
+    __elk_libc_internal__init_FILE(file);
 
     fd_t pipe_fd[2];
 

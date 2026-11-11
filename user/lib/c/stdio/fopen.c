@@ -1,6 +1,5 @@
 
 #include <elk-libc-internal/FILE.h>
-#include <elk-libc-internal/__sFILE.h>
 #include <elk-libc-internal/dofopen.h>
 
 #include <kanawha/file.h>
@@ -17,19 +16,19 @@ fopen(const char *restrict path, const char *restrict mode)
 {
     int res;
 
-    struct __sFILE *file = malloc(sizeof(struct __sFILE));
+    FILE *file = malloc(sizeof(FILE));
     if(file == NULL)
     {
         errno = -ENOMEM;
         return NULL;
     }
-    memset(file, 0, sizeof(struct __sFILE));
-    __elk_libc_internal__init_sFILE(file);
+    memset(file, 0, sizeof(FILE));
+    __elk_libc_internal__init_FILE(file);
 
     res = __elk_libc_internal__dofopen(path, mode, file);
     if(res)
     {
-        __elk_libc_internal__deinit_sFILE(file);
+        __elk_libc_internal__deinit_FILE(file);
         free(file);
         errno = res;
         return NULL;

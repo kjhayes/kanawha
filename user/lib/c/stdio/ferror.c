@@ -1,6 +1,5 @@
 
 #include <elk-libc-internal/FILE.h>
-#include <elk-libc-internal/__sFILE.h>
 #include <errno.h>
 #include <stdio.h>
 

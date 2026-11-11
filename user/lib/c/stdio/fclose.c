@@ -1,6 +1,5 @@
 
-#include "elk-libc-internal/FILE.h"
-#include "elk-libc-internal/__sFILE.h"
+#include <elk-libc-internal/FILE.h>
 
 #include "kanawha/syscall.h"
 
@@ -10,7 +9,7 @@
 int
 fclose(FILE *stream)
 {
-    struct __sFILE *file = (struct __sFILE *)stream;
+    FILE *file = (FILE *)stream;
 
     int res = kanawha_sys_close(file->__fd);
     if(res)
@@ -18,7 +17,7 @@ fclose(FILE *stream)
         return EOF;
     }
 
-    __elk_libc_internal__deinit_sFILE(file);
+    __elk_libc_internal__deinit_FILE(file);
     free(file);
 
     return 0;

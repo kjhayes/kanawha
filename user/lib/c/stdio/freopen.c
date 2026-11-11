@@ -1,5 +1,5 @@
 
-#include <elk-libc-internal/__sFILE.h>
+#include <elk-libc-internal/FILE.h>
 #include <elk-libc-internal/dofopen.h>
 #include <stdio.h>
 
@@ -22,8 +22,8 @@ freopen(const char *restrict filename,
         fflush(stream);
         kanawha_sys_close(stream->__fd);
 
-        __elk_libc_internal__deinit_sFILE(stream);
-        __elk_libc_internal__init_sFILE(stream);
+        __elk_libc_internal__deinit_FILE(stream);
+        __elk_libc_internal__init_FILE(stream);
 
         res = __elk_libc_internal__dofopen(filename, mode, stream);
         if(res)

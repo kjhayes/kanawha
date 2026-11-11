@@ -1,10 +1,10 @@
 
-#include <elk-libc-internal/__sFILE.h>
+#include <elk-libc-internal/FILE.h>
 #include <stdio.h>
 
-extern struct __sFILE __ELK_stdin;
-extern struct __sFILE __ELK_stdout;
-extern struct __sFILE __ELK_stderr;
+extern FILE __ELK_stdin;
+extern FILE __ELK_stdout;
+extern FILE __ELK_stderr;
 
 FILE *stdin = &__ELK_stdin;
 FILE *stdout = &__ELK_stdout;

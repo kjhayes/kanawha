@@ -1,5 +1,5 @@
 
-#include <elk-libc-internal/__sFILE.h>
+#include <elk-libc-internal/FILE.h>
 #include <semaphore.h>
 #include <stdio.h>
 #include <unistd.h>

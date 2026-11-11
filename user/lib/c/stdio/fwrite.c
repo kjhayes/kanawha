@@ -1,6 +1,5 @@
 
-#include "elk-libc-internal/FILE.h"
-#include "elk-libc-internal/__sFILE.h"
+#include <elk-libc-internal/FILE.h>
 
 #include "kanawha/syscall.h"
 
@@ -11,10 +10,8 @@ size_t
 fwrite_unlocked(const void *restrict ptr,
                 size_t size,
                 size_t nmemb,
-                FILE *restrict stream)
+                FILE * restrict stream)
 {
-    struct __sFILE *file = (struct __sFILE *)stream;
-
     if(size == 0)
     {
         return -EINVAL;

@@ -1,8 +1,6 @@
 
-#include "elk-libc-internal/FILE.h"
-#include "elk-libc-internal/__sFILE.h"
-
-#include "kanawha/syscall.h"
+#include <elk-libc-internal/FILE.h>
+#include <kanawha/syscall.h>
 
 #include <stdio.h>
 
@@ -13,8 +11,6 @@ fread_unlocked(void *restrict ptr,
                size_t nmemb,
                FILE *restrict stream)
 {
-    struct __sFILE *file = (struct __sFILE *)stream;
-
     size_t total_size = size * nmemb;
 
     ssize_t total_read = 0;
@@ -22,7 +18,7 @@ fread_unlocked(void *restrict ptr,
     while(total_size > 0)
     {
         ssize_t read =
-            __elk_libc_internal__file_read(file, ptr + total_read, total_size);
+            __elk_libc_internal__file_read(stream, ptr + total_read, total_size);
         if(read < 0)
         {
             stream->error = (int)read;

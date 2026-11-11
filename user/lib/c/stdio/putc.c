@@ -1,5 +1,5 @@
 
-#include <elk-libc-internal/__sFILE.h>
+#include <elk-libc-internal/FILE.h>
 #include <kanawha/file.h>
 #include <kanawha/syscall.h>
 
@@ -11,11 +11,10 @@ int
 putc_unlocked(int i, FILE *restrict stream)
 {
     ssize_t res;
-    struct __sFILE *file = (struct __sFILE *)stream;
 
     char c = (char)i;
 
-    res = kanawha_sys_write(file->__fd, &c, sizeof(char));
+    res = kanawha_sys_write(stream->__fd, &c, sizeof(char));
     if(res != 1)
     {
         // TODO set FILE error

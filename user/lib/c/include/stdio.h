@@ -1,11 +1,11 @@
 #ifndef __ELK_LIBC__STDIO_H__
 #define __ELK_LIBC__STDIO_H__
 
-#include "elk-libc-internal/FILE.h"
-#include "elk-libc-internal/null.h"
-#include "elk-libc-internal/off_t.h"
-#include "elk-libc-internal/size_t.h"
-#include "elk-libc-internal/ssize_t.h"
+#include <elk-libc-internal/__FILE.h>
+#include <elk-libc-internal/null.h>
+#include <elk-libc-internal/off_t.h>
+#include <elk-libc-internal/size_t.h>
+#include <elk-libc-internal/ssize_t.h>
 
 #include <limits.h>
 
