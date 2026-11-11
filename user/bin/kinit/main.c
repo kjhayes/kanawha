@@ -2,6 +2,7 @@
 #include "config.h"
 #include "daemon.h"
 #include "path.h"
+#include "log.h"
 #include <stdio.h>
 #include <unistd.h>
 
@@ -9,7 +10,7 @@ int main(int argc, const char **argv)
 {
     int res;
 
-    puts("--- Kanawha OS ---\n");
+    MSG_RAW("--- Kanawha OS ---\n");
 
     res = kinit_read_config();
     if(res) {
@@ -19,7 +20,7 @@ int main(int argc, const char **argv)
     {
         res = kinit_activate_root_path();
         if(res) {
-            fprintf(stderr, "kinit: Failed to create root filesystem!\n");
+            ERROR("Failed to create root filesystem!\n");
             return res;
         }
     }
@@ -28,12 +29,12 @@ int main(int argc, const char **argv)
     {
         struct kinit_daemon *d = kinit_daemons_begin();
         while(d) {
-            printf("kinit: Starting daemon \"%s\"\n",
+            INFO("Starting daemon \"%s\"\n",
                     kinit_daemon_get_name(d));
             sleep(1);
             res = kinit_daemon_start_manager(d);
             if(res) {
-                fprintf(stderr, "Failed to start manager for daemon \'%s\'\n",
+                ERROR("Failed to start manager for daemon \'%s\'\n",
                         kinit_daemon_get_name(d));
             }
             d = kinit_daemons_next(d);

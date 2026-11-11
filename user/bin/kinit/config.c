@@ -2,6 +2,7 @@
 #include "config.h"
 #include "daemon.h"
 #include "path.h"
+#include "log.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -44,7 +45,7 @@ kinit_handle_env_config(
 
     struct lassie_obj *obj = lassie_to_obj(env);
     if(obj == NULL) {
-            fprintf(stderr, "kinit_handle_env_config: \"env\" field must be an object!\n");
+        ERROR("kinit_handle_env_config: \"env\" field must be an object!\n");
         return -EINVAL;
     }
     struct lassie_field *iter = lassie_obj_fields_begin(obj);
@@ -56,7 +57,7 @@ kinit_handle_env_config(
         }
         struct lassie_string *vstr = lassie_to_string(g_value);
         if(vstr == NULL) {
-            fprintf(stderr, "kinit_handle_env_config: \"env\" values must be strings!\n");
+            ERROR("kinit_handle_env_config: \"env\" values must be strings!\n");
             return -EINVAL;
         }
         const char *value = lassie_string_get_value(vstr);
@@ -70,7 +71,7 @@ kinit_handle_env_config(
                 strlen(value),
                 ENV_SET);
         if(res) {
-            fprintf(stderr, "kinit_handle_env_config: WARNING failed to set \"%s\"=\"%s\"!\n",
+            ERROR("kinit_handle_env_config: WARNING failed to set \"%s\"=\"%s\"!\n",
                     key,
                     value);
         }
@@ -104,7 +105,7 @@ kinit_handle_mount_path_config(
         struct lassie_string *lstr;
         lstr = lassie_obj_field_string(mnt_obj, "fs");
         if(lstr == NULL) {
-            fprintf(stderr, "kinit_handle_mount_path_config: missing \"fs\" field!\n");
+            ERROR("kinit_handle_mount_path_config: missing \"fs\" field!\n");
             return NULL;
         }
         fs_type = lassie_string_get_value(lstr);
@@ -126,7 +127,7 @@ kinit_handle_mount_path_config(
             fs_type,
             mount_flags);
     if(path == NULL) {
-        fprintf(stderr, "kinit_handle_mount_path_config: failed to create mountpoint kinit_path!\n");
+        ERROR("kinit_handle_mount_path_config: failed to create mountpoint kinit_path!\n");
         return NULL;
     }
 
@@ -164,7 +165,7 @@ kinit_handle_path_config(
         if(mount != NULL) {
             struct lassie_boolean *mount_bool = lassie_to_boolean(mount);
             if(mount_bool == NULL) {
-                fprintf(stderr, "kinit_handle_path_config: path has \"mount\" field but it is not a booelan!\n");
+                ERROR("kinit_handle_path_config: path has \"mount\" field but it is not a booelan!\n");
                 return NULL;
             }
             is_mount = lassie_boolean_get_value(mount_bool);
@@ -198,11 +199,11 @@ kinit_handle_path_config(
         while(subdir) {
             struct kinit_path *subdir_path = kinit_handle_path_config(subdir);
             if(subdir_path == NULL) {
-                fprintf(stderr, "kinit_handle_path_config: Failed to parse subdirectory object! (Ignoring)\n");
+                ERROR("kinit_handle_path_config: Failed to parse subdirectory object! (Ignoring)\n");
             } else {
                 res = kinit_path_append_child(path, subdir_path);
                 if(res) {
-                    fprintf(stderr, "kinit_handle_path_config: Failed to append subdir path! (Ignoring)\n");
+                    ERROR("kinit_handle_path_config: Failed to append subdir path! (Ignoring)\n");
                 }
             }
             subdir = lassie_array_next(subdirs, subdir);
@@ -241,7 +242,7 @@ kinit_handle_daemon_socket_config(
         const char *env = lassie_string_get_value(socket_str);
         res = kinit_daemon_add_socket(daemon, env);
         if(res) {
-            fprintf(stderr, "kinit_handle_daemon_socket_config: failed to add daemon socket \"%s\"!\n",
+            ERROR("kinit_handle_daemon_socket_config: failed to add daemon socket \"%s\"!\n",
                     env);
             return res;
         }
@@ -259,7 +260,7 @@ kinit_handle_daemon_config(
 
     struct lassie_obj *daemon_obj = lassie_to_obj(daemon_cfg);
     if(daemon_obj == NULL) {
-        fprintf(stderr, "kinit: daemon config must be an object!\n");
+        ERROR("Daemon config must be an object!\n");
         return -EINVAL;
     }
 
@@ -289,7 +290,7 @@ kinit_handle_daemon_config(
                         socket,
                         daemon);
                 if(res) {
-                    fprintf(stderr, "kinit_handle_daemon_config: failed to handle \"socket\" array entry!\n");
+                    ERROR("kinit_handle_daemon_config: failed to handle \"socket\" array entry!\n");
                     return res;
                 }
                 socket = lassie_array_next(socket_array, socket);
@@ -313,7 +314,7 @@ kinit_handle_daemon_config(
         while(iter) {
             struct lassie_string *str = lassie_to_string(iter);
             if(str == NULL) {
-                fprintf(stderr, "kinit: daemon config \"exec\" array must only contain strings!\n");
+                ERROR("Daemon config \"exec\" array must only contain strings!\n");
                 return -EINVAL;
             }
             const char *value = lassie_string_get_value(str);
@@ -338,17 +339,17 @@ kinit_handle_config(
 
     struct lassie_obj *cfg_obj = lassie_to_obj(cfg);
     if(cfg_obj == NULL) {
-        fprintf(stderr, "kinit: Config must be an object!\n");
+        ERROR("Config must be an object!\n");
         return -EINVAL;
     }
 
     struct lassie *daemon = lassie_obj_get(cfg_obj, "daemon");
     if(daemon == NULL) {
-        fprintf(stderr, "kinit: WARNING config missing \"daemon\" field!\n");
+        ERROR("WARNING config missing \"daemon\" field!\n");
     } else {
         struct lassie_array *daemon_array = lassie_to_array(daemon);
         if(daemon_array == NULL) {
-            fprintf(stderr, "kinit: ERROR \"daemon\" field in config is not an array!\n");
+            ERROR("\"daemon\" field in config is not an array!\n");
             return -EINVAL;
         }
         struct lassie *daemon = lassie_array_begin(daemon_array);
@@ -363,7 +364,7 @@ kinit_handle_config(
 
     struct lassie *root = lassie_obj_get(cfg_obj, "root");
     if(root == NULL) {
-        fprintf(stderr, "kinit: WARNING config missing \"root\" field!\n");
+        ERROR("WARNING config missing \"root\" field!\n");
     } else {
         res = kinit_handle_root_config(root);
         if(res) {
@@ -389,18 +390,18 @@ kinit_read_config(void)
 
     FILE *cfg_file = kinit_open_root_config();
     if(cfg_file == NULL) {
-        fprintf(stderr, "kinit: Failed to find config file!\n");
+        ERROR("Failed to find config file!\n");
         return -ENXIO;
     }
 
     struct lassie *cfg = lassie_json_read(cfg_file);
     fclose(cfg_file);
     if(cfg == NULL) {
-        fprintf(stderr, "kinit: Failed to read json config file!\n");
+        ERROR("Failed to read json config file!\n");
         return -EINVAL;
     }
 
-    //printf("kinit: Config...\n");
+    //INFO("Config...\n");
     //res = lassie_json_write(stdout, cfg, 0, 0);
     //if(res) {
     //    return res;
@@ -410,7 +411,7 @@ kinit_read_config(void)
     res = kinit_handle_config(cfg);
     lassie_destroy(cfg);
     if(res) {
-        fprintf(stderr, "kinit: failed to handle root config!\n");
+        ERROR("Failed to handle root config!\n");
         return res;
     }
 

@@ -1,5 +1,6 @@
 
 #include "daemon.h"
+#include "log.h"
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
@@ -108,7 +109,7 @@ kinit_daemon_manager_tick_running(
     int stat;
     res = waitpid(d->pid, &stat, 0);
     if(res < 0) {
-        fprintf(stderr, "kinit: daemon manager waitpid returned \"%s\"\n",
+        ERROR("daemon manager waitpid returned \"%s\"\n",
                 strerror(d->pid));
         return;
     }
@@ -123,13 +124,13 @@ kinit_daemon_manager_tick_starting(
         struct kinit_daemon *d)
 {
     if(d->exec_command == NULL) {
-        fprintf(stderr, "kinit: cannot start daemon without exec command!\n");
+        ERROR("cannot start daemon without exec command!\n");
         return;
     }
 
     int fork_pid = fork();
     if(fork_pid < 0) {
-        fprintf(stderr, "kinit: failed to fork daemon!\n");
+        ERROR("Failed to fork daemon!\n");
         return;
     }
     if(fork_pid == 0) {
@@ -204,7 +205,7 @@ kinit_daemon_manager(void *_d)
     }
 
     if(d->manager_status != KINIT_DAEMON_MANAGER_STATUS_STOPPING) {
-        fprintf(stderr, "kinit: daemon was not marked as stopping on manager exit!\n");
+        ERROR("daemon was not marked as stopping on manager exit!\n");
         return -EINVAL;
     }
     d->manager_status = KINIT_DAEMON_MANAGER_STATUS_UNMANAGED;
@@ -316,13 +317,13 @@ kinit_daemon_start_manager(
 {
     int res;
     if(d->manager_status != KINIT_DAEMON_MANAGER_STATUS_INIT) {
-        fprintf(stderr, "kinit_daemon_start_manager: manager_status != INIT\n");
+        ERROR("kinit_daemon_start_manager: manager_status != INIT\n");
         return -EINVAL;
     }
     d->manager_status = KINIT_DAEMON_MANAGER_STATUS_MANAGED;
     res = thrd_create(&d->manager, kinit_daemon_manager, d);
     if(res) {
-        fprintf(stderr, "kinit_daemon_start_manager: thrd_create failed!\n");
+        ERROR("kinit_daemon_start_manager: thrd_create failed!\n");
         return res;
     }
     return 0;
@@ -389,7 +390,7 @@ kinit_daemon_add_socket(
     if(res) {
         free(s->env);
         free(s);
-        fprintf(stderr, "kinit_daemon_add_socket: sock_create_socket returned %d!\n",
+        ERROR("kinit_daemon_add_socket: sock_create_socket returned %d!\n",
                 res);
         return res;
     }
@@ -399,7 +400,7 @@ kinit_daemon_add_socket(
     if(fd_str == NULL) {
         free(s->env);
         free(s);
-        fprintf(stderr, "kinit_daemon_add_socket: failed to read environment variable \"%s\"\n",
+        ERROR("kinit_daemon_add_socket: failed to read environment variable \"%s\"\n",
                 s->env);
         return -EINVAL;
     }

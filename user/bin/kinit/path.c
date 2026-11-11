@@ -1,6 +1,6 @@
 
 #include "path.h"
-
+#include "log.h"
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
@@ -180,7 +180,7 @@ _kinit_realize_path(
             // Create the directory
             res = kanawha_sys_mkdir(parent_fd, path->name, 0);
             if(res) {
-                fprintf(stderr, "kinit: WARNING failed to create directory during path realization!\n");
+                ERROR("WARNING failed to create directory during path realization!\n");
                 if(close_parent_fd) {
                     kanawha_sys_close(parent_fd);
                 }
@@ -197,7 +197,7 @@ _kinit_realize_path(
                 path->mnt.fs_type,
                 path->mnt.flags);
         if(res) {
-            fprintf(stderr, "kinit: Failed to create mountpoint \"%s\" (src=\"%s\",fs=\"%s\")!\n",
+            ERROR("Failed to create mountpoint \"%s\" (src=\"%s\",fs=\"%s\")!\n",
                     path->name,
                     path->mnt.source,
                     path->mnt.fs_type);
@@ -211,7 +211,7 @@ _kinit_realize_path(
     fd_t self_fd = parent_fd;
     res = kanawha_sys_open(path->name, FILE_PERM_READ|FILE_PERM_WRITE, FILE_MODE_OPEN_RELATIVE, &self_fd);
     if(res) {
-        fprintf(stderr, "kinit: Failed to open newly created mountpoint \"%s\"!\n",
+        ERROR("Failed to open newly created mountpoint \"%s\"!\n",
                 path->name);
         if(close_parent_fd) {
             kanawha_sys_close(parent_fd);
@@ -224,7 +224,7 @@ _kinit_realize_path(
     if(path->flags & KINIT_PATH_ROOT) {
         res = kanawha_sys_chroot(path->realized_fd);
         if(res) {
-            fprintf(stderr, "kinit_realize_path: failed to chroot!\n");
+            ERROR("kinit_realize_path: failed to chroot!\n");
             return res;
         }
     }
@@ -232,7 +232,7 @@ _kinit_realize_path(
     if(close_parent_fd) {
         res = kanawha_sys_close(parent_fd);
         if(res) {
-            fprintf(stderr, "kinit: WARNING failed to close parent file descriptor when realizing path!\n");
+            ERROR("WARNING failed to close parent file descriptor when realizing path!\n");
         }
     }
 

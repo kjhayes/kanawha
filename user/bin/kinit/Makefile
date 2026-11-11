@@ -6,3 +6,4 @@ obj-y += \
 	daemon.o \
 	config.o \
 	path.o \
+	log.o \
