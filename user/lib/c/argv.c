@@ -20,8 +20,10 @@ __elk_libc__set_argv(int argc, char **argv)
     }
 
     char *buffer = malloc(len);
-    if(buffer == NULL)
+    if(len > 0 && buffer == NULL)
     {
+        fprintf(stderr, "__elk_libc__set_argv(argc=%d, argv=%p) out of memory! (tried to alloc %lu bytes)\n",
+                argc, argv, len);
         return -ENOMEM;
     }
 

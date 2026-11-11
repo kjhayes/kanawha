@@ -1,6 +1,4 @@
 
-#include "command.h"
-#include "directive.h"
 #include <kanawha/prinfo.h>
 #include <kanawha/syscall.h>
 
@@ -11,54 +9,59 @@
 #include <string.h>
 #include <unistd.h>
 
-static int
-run_line(const char *raw)
+#include "token.h"
+#include "lex.h"
+#include "parse.h"
+#include "cmd.h"
+
+static inline int
+run_line(const char *line)
 {
     int res;
-    struct simple_cmd *simple = parse_simple_cmd(raw);
-    if(simple == NULL)
+
+    struct token_list *token_list = token_list_create();
+    if(token_list == NULL) {
+        return -ENOMEM;
+    }
+
+    res = lex_cmd(line, strlen(line), token_list);
+    if(res)
     {
+        fprintf(stderr, "Failed to tokenize command!\n"
+                        "Parsed Tokens:\n");
+        token_list_dump(stderr, token_list);
+
+        token_list_destroy(token_list);
+        return res;
+    }
+
+    if(token_list_count(token_list) == 0) {
+        return 0;
+    }
+
+    struct cmd *cmd;
+    cmd = parse_cmd(token_list);
+    if(cmd == NULL)
+    {
+        fprintf(stderr, "Failed to parse command!\n"
+                        "Command Tokens:\n");
+        token_list_dump(stderr, token_list);
+
+        token_list_destroy(token_list);
         return -EINVAL;
     }
 
-    if(simple->command == NULL)
-    {
-        // Empty command
-        destroy_simple_cmd(simple);
-        return 0;
+    token_list_destroy(token_list);
+
+    res = cmd_exec(cmd);
+    if(res) {
+        cmd_destroy(cmd);
+        return res;
     }
 
-    if(is_directive(simple))
-    {
-        return run_directive(simple);
-    }
-    else
-    {
-        struct cmd *cmd = parse_cmd(simple);
-        if(cmd == NULL)
-        {
-            return 0;
-        }
+    cmd_destroy(cmd);
 
-        // printf("Executing Command: ");
-        // dump_cmd(cmd);
-        // printf("\n");
-
-        pid_t child;
-        res = fork_cmd(cmd, &child);
-        if(res)
-        {
-            return res;
-        }
-        if(!simple->bg)
-        {
-            int exitcode;
-            while(kanawha_sys_reap(0, &child, &exitcode))
-            {
-            }
-        }
-        return 0;
-    }
+    return 0;
 }
 
 int
@@ -253,9 +256,10 @@ main(int argc, const char **argv)
             }
         }
 
-        int res = run_line(command_buffer);
+        res = run_line(command_buffer);
         if(res)
         {
+            fprintf(stderr, "Failed to run command \"%s\"!\n", command_buffer);
             free(command_buffer);
             if(script_buffer)
             {

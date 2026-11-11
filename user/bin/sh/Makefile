@@ -1,6 +1,8 @@
 
 obj-y += \
 	main.o \
-	command.o \
-	directive.o \
+	cmd.o \
+	token.o \
+	lex.o \
+	parse.o \
 

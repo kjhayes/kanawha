@@ -77,6 +77,7 @@ main(int argc, const char **argv)
     return 0;
 
 err:
+    fprintf(stderr, "Failed to read directory!\n");
     kanawha_sys_close(dir);
     free(name_buf);
     return res;

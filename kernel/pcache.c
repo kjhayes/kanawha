@@ -42,6 +42,15 @@ pcache_node_get_cache(
     return node->pcache;
 }
 
+static inline void
+pcache_node_get_possibly_unreferenced(
+        struct pcache_node *node)
+{
+    atomic_val_t old = atomic_fetch_inc(&node->refcount);
+    if(old == 0) {
+        // printk("Reviving pcache_node!\n");
+    }
+}
 void
 pcache_node_get(
         struct pcache_node *node)
@@ -62,19 +71,19 @@ pcache_node_put(
     atomic_val_t old = atomic_fetch_dec(&node->refcount);
     if(old == 1) {
         // TODO: Add this to a LRU cache instead of immediately freeing
-        struct ptree_node *removed;
-        removed = ptree_remove(&cache->node_tree, index);
-        DEBUG_ASSERT(removed == &node->cache_node);
-        node->pcache = NULL;
+        //struct ptree_node *removed;
+        //removed = ptree_remove(&cache->node_tree, index);
+        //DEBUG_ASSERT(removed == &node->cache_node);
+        //node->pcache = NULL;
 
-        res = pcache_unload_node(
-                cache,
-                index,
-                node);
-        if(res) {
-            eprintk("pcache_node_put: failed to unload node! (err=%e)\n",
-                    res);
-        }
+        //res = pcache_unload_node(
+        //        cache,
+        //        index,
+        //        node);
+        //if(res) {
+        //    eprintk("pcache_node_put: failed to unload node! (err=%e)\n",
+        //            res);
+        //}
     }
     pcache_node_tree_lock_release(cache);
 }
@@ -121,7 +130,7 @@ pcache_lookup_node(
                     candidate_pnode,
                     struct pcache_node,
                     cache_node);
-        pcache_node_get(pcache_node);
+        pcache_node_get_possibly_unreferenced(pcache_node);
     }
 
     if(pcache_node == NULL) {
