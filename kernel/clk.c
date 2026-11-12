@@ -140,8 +140,8 @@ LOCAL_REGISTRY_HOOK(clk_mono_clk_dev_hook,
 //     return clk_source;
 // }
 
-declare_kinfo(clk_mono_ns, "%lu", (ul_t)duration_to_nsec(clk_mono_current()));
-declare_kinfo(clk_mono, "%s",
+declare_kinfo(clk_mono_ns, "%lu\n", (ul_t)duration_to_nsec(clk_mono_current()));
+declare_kinfo(clk_mono, "%s\n",
         ({
            const char *name = "NULL";
            clk_source_lock_acquire();

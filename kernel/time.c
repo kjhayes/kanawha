@@ -45,6 +45,6 @@ start_timestamp_tick(void)
 
 declare_init_desc(late, start_timestamp_tick, "Starting Timestamp Tick Event");
 
-declare_kinfo(uptime_ns, "%luns",
+declare_kinfo(uptime_ns, "%lu\n",
         (ul_t)time_to_nsec(current_timestamp()));
 

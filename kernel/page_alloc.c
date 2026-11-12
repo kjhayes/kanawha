@@ -367,7 +367,7 @@ page_alloc_verify(void)
 }
 
 declare_kinfo(page_alloc_free,
-        "%lu/%lu (%u%%)",
+        "%lu/%lu (%u%%)\n",
         (ul_t)page_alloc_amount_free(),
         (ul_t)page_alloc_amount_total(),
         (u_t)((100*page_alloc_amount_free())/page_alloc_amount_total()));

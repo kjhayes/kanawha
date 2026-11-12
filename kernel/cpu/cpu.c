@@ -125,5 +125,5 @@ cpu_idle_percentage(cpu_id_t cpu)
     return thread_running_percentage(idle);
 }
 
-declare_kinfo(num_cpus, "%lu", (ul_t)total_num_cpus());
+declare_kinfo(num_cpus, "%lu\n", (ul_t)total_num_cpus());
 
