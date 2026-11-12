@@ -116,6 +116,8 @@ cmd_invoke_exec_cd(
     const char *path = arg->value;
     res = chdir(path);
     if(res) {
+        fprintf(stderr, "cd: failed with errno=%s\n",
+                strerror(errno));
         return res;
     }
     return 0;

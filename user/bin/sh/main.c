@@ -254,13 +254,8 @@ main(int argc, const char **argv)
         res = run_line(command_buffer);
         if(res)
         {
-            fprintf(stderr, "Failed to run command \"%s\"!\n", command_buffer);
-            free(command_buffer);
-            if(script_buffer)
-            {
-                free(script_buffer);
-            }
-            return res;
+            // fprintf(stderr, "Failed to run command \"%s\"!\n", command_buffer);
+            continue;
         }
     }
 
