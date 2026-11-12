@@ -11,7 +11,7 @@ ifdef KERNEL_OBJDUMP
 asm: kanawha.asm
 kanawha.asm: $(OUTPUT_DIR)/kanawha.asm
 $(OUTPUT_DIR)/kanawha.asm: $(OUTPUT_DIR)/kanawha.o
-	$(call qinfo, KERNEL_OBJDUMP, $(call rel-dir, $@, $(OUTPUT_DIR)))
+	$(call qinfo, $(OBJDUMP_MSG), $(call rel-dir, $@, $(OUTPUT_DIR)))
 	$(Q)$(KERNEL_OBJDUMP) $(KERNEL_OBJDUMPFLAGS) $< > $@
 endif
 

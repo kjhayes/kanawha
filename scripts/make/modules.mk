@@ -39,7 +39,7 @@ $(1): FORCE | $(CUR_MOD_OUTPUT_DIR)
 endef
 
 %.ko: %.o $(LDDEPS)
-	$(call qinfo, KERNEL_LD, $(call rel-dir, $@, $(OUTPUT_DIR)))
+	$(call qinfo, $(LD_MSG), $(call rel-dir, $@, $(OUTPUT_DIR)))
 	$(Q)$(KERNEL_LD) $(LDFLAGS) -r $< -o $@
 
 $(foreach mod,$(mod-objs),$(eval $(call build_mod_obj_rule,$(mod))))

@@ -16,7 +16,7 @@ $(INITRD_BUILD): $(OUTPUT_DIR) user
 
 initrd: $(OUTPUT_DIR)/initrd
 $(OUTPUT_DIR)/initrd: $(INITRD_BUILD) FORCE
-	$(call qinfo, CPIO, $(call rel-dir, $@, $(OUTPUT_DIR)))
+	$(call qinfo, $(CPIO_MSG), $(call rel-dir, $@, $(OUTPUT_DIR)))
 	ls $< | \
 		cpio -o \
         --no-absolute-filenames \
