@@ -4,11 +4,31 @@
 #include <kanawha/assert.h>
 #include <kanawha/errno.h>
 
+static inline int
+ringbuf_lock_init(
+        struct ringbuf *buf)
+{
+    return thread_lock_init(&buf->lock);
+}
+
+static inline void
+ringbuf_lock_acquire(
+        struct ringbuf *buf)
+{
+    thread_lock_acquire(&buf->lock);
+}
+static inline void
+ringbuf_lock_release(
+        struct ringbuf *buf)
+{
+    thread_lock_release(&buf->lock);
+}
 int
 ringbuf_init(
         struct ringbuf *buf,
         size_t buflen)
 {
+    ringbuf_lock_init(buf);
     buf->head = 0;
     buf->tail = 0;
     buf->buflen = buflen;
@@ -24,28 +44,51 @@ int
 ringbuf_deinit(
         struct ringbuf *buffer)
 {
+    ringbuf_lock_acquire(buffer);
     DEBUG_ASSERT(KERNEL_ADDR(buffer));
     DEBUG_ASSERT(KERNEL_ADDR(buffer->buffer));
     kfree(buffer->buffer);
     return 0;
 }
 
+static inline int
+ringbuf_empty_lockless(
+        struct ringbuf *buf)
+{
+    return (buf->head == buf->tail);
+}
+
 int
 ringbuf_empty(
         struct ringbuf *buf)
 {
+    int res;
+    ringbuf_lock_acquire(buf);
     DEBUG_ASSERT(buf->head < buf->buflen);
     DEBUG_ASSERT(buf->tail < buf->buflen);
-    return buf->head == buf->tail;
+    res = ringbuf_empty_lockless(buf);
+    ringbuf_lock_acquire(buf);
+    return res;
+}
+
+static inline int
+ringbuf_full_lockless(
+        struct ringbuf *buf)
+{
+    return ((buf->head + 1) % buf->buflen) == buf->tail;
 }
 
 int
 ringbuf_full(
         struct ringbuf *buf)
 {
+    int res;
+    ringbuf_lock_acquire(buf);
     DEBUG_ASSERT(buf->head < buf->buflen);
     DEBUG_ASSERT(buf->tail < buf->buflen);
-    return ((buf->head + 1) % buf->buflen) == buf->tail;
+    res = ringbuf_full_lockless(buf);
+    ringbuf_lock_release(buf);
+    return res;
 }
 
 ssize_t
@@ -56,7 +99,9 @@ ringbuf_read(
 {
     ssize_t read = 0;
 
-    while(bufferlen > 0 && !ringbuf_empty(buf))
+    ringbuf_lock_acquire(buf);
+
+    while(bufferlen > 0 && !ringbuf_empty_lockless(buf))
     {
         DEBUG_ASSERT(KERNEL_ADDR(buf));
         DEBUG_ASSERT(buf->head < buf->buflen);
@@ -74,6 +119,9 @@ ringbuf_read(
         bufferlen -= amt;
         buffer += amt;
     }
+
+    ringbuf_lock_release(buf);
+
     return read;
 }
 
@@ -85,7 +133,9 @@ ringbuf_write(
 {
     ssize_t written = 0;
 
-    while(bufferlen > 0 && !ringbuf_full(buf))
+    ringbuf_lock_acquire(buf);
+
+    while(bufferlen > 0 && !ringbuf_full_lockless(buf))
     {
         DEBUG_ASSERT(KERNEL_ADDR(buf));
         DEBUG_ASSERT(buf->head < buf->buflen);
@@ -103,6 +153,8 @@ ringbuf_write(
         bufferlen -= amt;
         buffer += amt;
     }
+
+    ringbuf_lock_release(buf);
 
     return written;
 }

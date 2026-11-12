@@ -2,8 +2,10 @@
 #define __KANAWHA__RINGBUF_H__
 
 #include <kanawha/types.h>
+#include <kanawha/lock.h>
 
 struct ringbuf {
+    thread_lock_t lock;
     size_t head;
     size_t tail;
     size_t buflen;
