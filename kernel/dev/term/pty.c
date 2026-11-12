@@ -153,12 +153,16 @@ pty_term_dev_putc(
         char c)
 {
     int res;
+    ssize_t written;
     struct pty_node *pty = container_of(term_dev, struct pty_node, term_dev);
     thread_lock_acquire(&pty->read_lock);
-    res = ringbuf_write(&pty->read_buffer, &c, 1);
+    written = ringbuf_write(&pty->read_buffer, &c, 1);
     thread_lock_release(&pty->read_lock);
+    if(written == 0) {
+        return -EWOULDBLOCK;
+    }
     wake_single(&pty->read_wq);
-    return res;
+    return 0;
 }
 
 static int 
