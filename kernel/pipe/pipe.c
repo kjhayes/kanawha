@@ -1,6 +1,6 @@
 
 #include <kanawha/pipe/pipe.h>
-#include <kanawha/pipe/ringbuf.h>
+#include <kanawha/ringbuf.h>
 #include <kanawha/fs/file.h>
 #include <kanawha/fs/mount.h>
 #include <kanawha/fs/node.h>
@@ -9,6 +9,8 @@
 #include <kanawha/uapi/poll.h>
 #include <kanawha/uapi/syscall.h>
 #include <kanawha/waitqueue.h>
+
+#define PIPE_RINGBUF_LEN (0x100)
 
 struct pipe_fs_node;
 
@@ -67,7 +69,7 @@ pipe_fs_buffer_file_read(struct file *file,
 
     DEBUG_ASSERT(KERNEL_ADDR(data));
 
-    struct pipe_ringbuf *ringbuf;
+    struct ringbuf *ringbuf;
     struct waitqueue *wait_on_wq;
     struct waitqueue *wake_wq;
 
@@ -104,7 +106,7 @@ pipe_fs_buffer_file_read(struct file *file,
 
     while(read == 0 && amount > 0)
     {
-        ssize_t cur_read = pipe_ringbuf_read(ringbuf, data, amount);
+        ssize_t cur_read = ringbuf_read(ringbuf, data, amount);
         amount -= cur_read;
         data += cur_read;
         read += cur_read;
@@ -214,7 +216,7 @@ pipe_fs_buffer_file_write(struct file *file,
 
     unsigned long iflags = fs_file_get_internal_flags(file);
 
-    struct pipe_ringbuf *ringbuf;
+    struct ringbuf *ringbuf;
     struct waitqueue *wait_on_wq;
     struct waitqueue *wake_wq;
 
@@ -282,7 +284,7 @@ pipe_fs_buffer_file_write(struct file *file,
             return 0;
         }
 
-        ssize_t cur_written = pipe_ringbuf_write(ringbuf, data, amount);
+        ssize_t cur_written = ringbuf_write(ringbuf, data, amount);
         amount -= cur_written;
         data += cur_written;
         written += cur_written;
@@ -352,8 +354,8 @@ pipe_fs_buffer_file_poll(struct file *file,
 
     unsigned long triggered = 0;
 
-    struct pipe_ringbuf *read_ringbuf;
-    struct pipe_ringbuf *write_ringbuf;
+    struct ringbuf *read_ringbuf;
+    struct ringbuf *write_ringbuf;
 
     if(iflags & FILE_INTERNAL_FLAG_SERVER)
     {
@@ -402,14 +404,14 @@ pipe_fs_buffer_file_poll(struct file *file,
 
     if(watching & POLL_WRITE_NONBLOCKING)
     {
-        if(!pipe_ringbuf_full(write_ringbuf))
+        if(!ringbuf_full(write_ringbuf))
         {
             triggered |= POLL_WRITE_NONBLOCKING;
         }
     }
     if(watching & POLL_READ_NONBLOCKING)
     {
-        if(!pipe_ringbuf_empty(read_ringbuf))
+        if(!ringbuf_empty(read_ringbuf))
         {
             triggered |= POLL_READ_NONBLOCKING;
         }
@@ -986,11 +988,11 @@ pipe_fs_mount_destroy_pipe(struct pipe_fs_mount *mnt,
 
     if(buffer->primary_inited)
     {
-        pipe_ringbuf_deinit(&buffer->primary_ringbuf);
+        ringbuf_deinit(&buffer->primary_ringbuf);
     }
     if(buffer->secondary_inited)
     {
-        pipe_ringbuf_deinit(&buffer->secondary_ringbuf);
+        ringbuf_deinit(&buffer->secondary_ringbuf);
     }
 
     kfree(node);
@@ -1009,7 +1011,7 @@ pipe_fs_buffer_ensure_primary_inited(
         waitqueue_name(&buffer->primary_read_wq, "pipe-read-primary");
         waitqueue_init(&buffer->primary_write_wq);
         waitqueue_name(&buffer->primary_write_wq, "pipe-write-primary");
-        res = pipe_ringbuf_init(&buffer->primary_ringbuf);
+        res = ringbuf_init(&buffer->primary_ringbuf, PIPE_RINGBUF_LEN);
         if(res)
         {
             waitqueue_deinit(&buffer->primary_read_wq);
@@ -1032,7 +1034,7 @@ pipe_fs_buffer_ensure_secondary_inited(
         waitqueue_name(&buffer->secondary_read_wq, "pipe-read-secondary");
         waitqueue_init(&buffer->secondary_write_wq);
         waitqueue_name(&buffer->secondary_write_wq, "pipe-write-secondary");
-        res = pipe_ringbuf_init(&buffer->secondary_ringbuf);
+        res = ringbuf_init(&buffer->secondary_ringbuf, PIPE_RINGBUF_LEN);
         if(res)
         {
             waitqueue_deinit(&buffer->secondary_read_wq);

@@ -1,7 +1,7 @@
 #ifndef __KANAWHA__PIPE_H__
 #define __KANAWHA__PIPE_H__
 
-#include <kanawha/pipe/ringbuf.h>
+#include <kanawha/ringbuf.h>
 #include <kanawha/fs/node.h>
 #include <kanawha/waitqueue.h>
 
@@ -73,12 +73,12 @@ struct pipe_fs_buffer
     unsigned primary_inited : 1;
     struct waitqueue primary_write_wq;
     struct waitqueue primary_read_wq;
-    struct pipe_ringbuf primary_ringbuf;
+    struct ringbuf primary_ringbuf;
 
     unsigned secondary_inited : 1;
     struct waitqueue secondary_write_wq;
     struct waitqueue secondary_read_wq;
-    struct pipe_ringbuf secondary_ringbuf;
+    struct ringbuf secondary_ringbuf;
 
     irq_lock_t page_tree_lock;
     struct ptree page_tree;

@@ -47,6 +47,7 @@ obj-y += \
 	panic.o \
 	kinfo.o \
 	pcache.o \
+	ringbuf.o \
 
 obj-y += stack.o
 
