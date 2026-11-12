@@ -62,6 +62,7 @@ obj-y += proc/
 obj-y += net/
 obj-y += sysfs/
 obj-y += gfx/
+obj-y += pipe/
 obj-$(CONFIG_PAGING) += paging/
 obj-$(CONFIG_IDMAP) += idmap.o
 obj-$(CONFIG_KUSER) += kuser.o
