@@ -23,11 +23,11 @@ $(shell mkdir -p $(USER_SYSROOT_BIN_DIR))
 
 uapi: $(CUR_OUTPUT_DIR)/kanawha.api FORCE
 $(CUR_OUTPUT_DIR)/kanawha.api: $(KERNEL_AUTOCONF) $(INCLUDE_DIR)/kanawha/uapi/
-	$(call qinfo, CP, $(call rel-dir, $(USER_SYSROOT_INCLUDE_DIR)/kanawha/\*, $(OUTPUT_DIR)))
+	$(call qinfo, $(CP_MSG), $(call rel-dir, $(USER_SYSROOT_INCLUDE_DIR)/kanawha/\*, $(OUTPUT_DIR)))
 	$(Q)cp -RT $(INCLUDE_DIR)/kanawha/uapi $(USER_SYSROOT_INCLUDE_DIR)/kanawha
-	$(call qinfo, CP, $(call rel-dir, $(USER_SYSROOT_INCLUDE_DIR)/kanawha/kanawha-config.h, $(OUTPUT_DIR)))
+	$(call qinfo, $(CP_MSG), $(call rel-dir, $(USER_SYSROOT_INCLUDE_DIR)/kanawha/kanawha-config.h, $(OUTPUT_DIR)))
 	$(Q)cp $(KERNEL_AUTOCONF) $(USER_SYSROOT_INCLUDE_DIR)/kanawha/kanawha-config.h
-	$(call qinfo, TOUCH, $(call rel-dir, $@, $(OUTPUT_DIR)))
+	$(call qinfo, $(TOUCH_MSG), $(call rel-dir, $@, $(OUTPUT_DIR)))
 	$(Q)touch $@
 
 USER_COMMON_FLAGS += \
@@ -50,7 +50,7 @@ $$(CUR_OUTPUT_DIR)/lib/$(1)/obj.o: uapi userincludes FORCE
 
 userlibs: $$(USER_SYSROOT_LIB_DIR)/lib$(1).a userincludes
 $$(USER_SYSROOT_LIB_DIR)/lib$(1).a: $$(CUR_OUTPUT_DIR)/lib/$(1)/obj.o
-	$$(call qinfo, ULD, $$(call rel-dir, $$@, $$(OUTPUT_DIR)))
+	$$(call qinfo, $$(ULD_MSG), $$(COLOR_BRIGHT)$$(call rel-dir, $$@, $$(OUTPUT_DIR)))$$(COLOR_NORMAL)
 	$$(Q)$$(USER_LD) -r $$(USER_LDFLAGS) $$(LDFLAGS) \
 		$$(CUR_OUTPUT_DIR)/lib/$(1)/obj.o -o $$(USER_SYSROOT_LIB_DIR)/lib$(1).a
 endef
@@ -59,9 +59,9 @@ define include-lib =
 
 userincludes: $$(CUR_OUTPUT_DIR)/lib/$(1).api
 $$(CUR_OUTPUT_DIR)/lib/$(1).api: $$(CUR_SOURCE_DIR)/lib/$(1)/include/
-	$$(call qinfo, CP, $$(call rel-dir, $$(USER_SYSROOT_INCLUDE_DIR)/$(1), $$(OUTPUT_DIR)))
+	$$(call qinfo, $$(CP_MSG), $$(call rel-dir, $$(USER_SYSROOT_INCLUDE_DIR)/$(1), $$(OUTPUT_DIR)))
 	$$(Q)cp -RT $$(CUR_SOURCE_DIR)/lib/$(1)/include $$(USER_SYSROOT_INCLUDE_DIR)
-	$$(call qinfo, TOUCH, $$(call rel-dir, $$@, $$(OUTPUT_DIR)))
+	$$(call qinfo, $$(TOUCH_MSG), $$(call rel-dir, $$@, $$(OUTPUT_DIR)))
 	$$(Q)touch $$@
 
 endef
@@ -73,7 +73,7 @@ $(CUR_OUTPUT_DIR)/bin/$(1)/obj.o: uapi userincludes userlibs FORCE
 
 userbins: $$(USER_SYSROOT_BIN_DIR)/$(1)
 $$(USER_SYSROOT_BIN_DIR)/$(1): $$(CUR_OUTPUT_DIR)/bin/$(1)/obj.o $$(foreach lib,$$(libs),$$(USER_SYSROOT_LIB_DIR)/lib$$(lib).a)
-	$$(call qinfo, ULD, $$(call rel-dir, $$@, $$(OUTPUT_DIR)))
+	$$(call qinfo, $$(ULD_MSG), $$(COLOR_BRIGHT)$$(call rel-dir, $$@, $$(OUTPUT_DIR)))$$(COLOR_NORMAL)
 	$$(Q)$$(USER_LD) $$(USER_LDFLAGS) $$(LDFLAGS) \
 		$$(CUR_OUTPUT_DIR)/bin/$(1)/obj.o -o $$(USER_SYSROOT_BIN_DIR)/$(1) -lcrt -lc
 

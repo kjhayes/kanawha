@@ -9,9 +9,11 @@ QEMU_FLAGS += -d int,cpu_reset
 QEMU_FLAGS += -D $(QEMU_DEBUG_LOG)
 QEMU_FLAGS += -d guest_errors
 
+# QEMU_FLAGS += -display none
+
 # QEMU_FLAGS += -trace "*pl011*"
 
-QEMU_FLAGS += -device virtio-gpu-pci,disable-legacy=on,disable-modern=off
+# QEMU_FLAGS += -device virtio-gpu-pci,disable-legacy=on,disable-modern=off
 
 # QEMU_FLAGS += -drive id=ahcidisk,file=ahci.img,if=none \
 #              -device ahci,id=ahci \
@@ -74,7 +76,7 @@ QEMU_DEPS += $(ISO)
 QEMU_FLAGS += -cdrom $(ISO)
 
 QEMU_FLAGS += -serial stdio
-QEMU_FLAGS += -smp 8
+QEMU_FLAGS += -smp 4
 QEMU_FLAGS += -vga cirrus
 QEMU_FLAGS += -accel kvm 
 QEMU_FLAGS += -machine q35
@@ -111,7 +113,6 @@ QEMU_FLAGS += -drive file=$(OUTPUT_DIR)/initrd,if=none,id=virtio-disk-root,forma
 QEMU_DEPS += $(OUTPUT_DIR)/initrd
 QEMU_FLAGS += -initrd $(OUTPUT_DIR)/initrd
 
-# QEMU_FLAGS += -display none
 
 QEMU_DEPS += $(OUTPUT_DIR)/initrd
 QEMU_DEPS += $(OUTPUT_DIR)/kanawha.bin

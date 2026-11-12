@@ -113,7 +113,7 @@ KERNEL_OBJS := $(foreach DIR,$(KERNEL_SOURCE_DIRS),$(OUTPUT_DIR)/$(call rel-dir,
 KERNEL_MOD_RULES := $(foreach DIR,$(KERNEL_SOURCE_DIRS),$(DIR)/modules)
 
 $(OUTPUT_DIR)/kanawha.o: $(KERNEL_OBJS) $(LDDEPS) | $(OUTPUT_DIR)
-	$(call qinfo, LD, $(call rel-dir, $@, $(OUTPUT_DIR)))
+	$(call qinfo, $(LD_MSG), $(COLOR_BRIGHT)$(call rel-dir, $@, $(OUTPUT_DIR)))$(COLOR_NORMAL)
 	$(Q)$(KERNEL_LD) -T $(LD_SCRIPT) $(KERNEL_OBJS) -o $@ $(LDFLAGS) $(KERNEL_LDFLAGS)
 
 kanawha: $(OUTPUT_DIR)/kanawha.o
@@ -121,7 +121,7 @@ kanawha: $(OUTPUT_DIR)/kanawha.o
 binary: kanawha.bin FORCE
 kanawha.bin: $(OUTPUT_DIR)/kanawha.bin FORCE
 $(OUTPUT_DIR)/kanawha.bin: $(OUTPUT_DIR)/kanawha.o
-	$(call qinfo, OBJCOPY, $(call rel-dir, $@, $(OUTPUT_DIR)))
+	$(call qinfo, $(OBJCOPY_MSG), $(call rel-dir, $@, $(OUTPUT_DIR)))
 	$(Q)$(KERNEL_OBJCOPY) -O binary $< $@
 
 user: $(KERNEL_AUTOCONF) $(LDDEPS) $(USER_DIR) FORCE
@@ -130,7 +130,7 @@ user: $(KERNEL_AUTOCONF) $(LDDEPS) $(USER_DIR) FORCE
 kernel: kanawha
 all: kanawha user FORCE
 
-DEFAULT_BUILD_RULE ?= all
+DEFAULT_BUILD_RULE ?= kernel
 default: $(DEFAULT_BUILD_RULE)
 
 modules: $(KERNEL_MOD_RULES) FORCE
