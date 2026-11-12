@@ -1,3 +1,5 @@
 
-obj-y += pipe.o
+obj-y += \
+	pipe.o \
+	ringbuf.o \
 

@@ -3,7 +3,7 @@
 #include <kanawha/printk.h>
 #include <kanawha/proc/file_table.h>
 #include <kanawha/proc/process.h>
-#include <kanawha/pipe.h>
+#include <kanawha/pipe/pipe.h>
 #include <kanawha/uapi/syscall.h>
 #include <kanawha/uapi/pipe.h>
 

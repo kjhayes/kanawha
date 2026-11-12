@@ -7,7 +7,6 @@
 #include <kanawha/kmalloc.h>
 #include <kanawha/list.h>
 #include <kanawha/lock.h>
-#include <kanawha/pipe.h>
 #include <kanawha/proc/process.h>
 #include <kanawha/stddef.h>
 #include <kanawha/string.h>
