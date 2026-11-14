@@ -35,3 +35,7 @@ obj-$(CONFIG_X64_BOOT_SERIAL) += boot_serial.o
 
 obj-$(CONFIG_X64_TEST_VOLATILITY_THREAD) += volatile_thread.o
 obj-$(CONFIG_PAGING) += paging.o
+
+# obj-$(CONFIG_X64_RAR) += rar.o
+obj-y += rar.o
+

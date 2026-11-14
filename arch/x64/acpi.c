@@ -457,7 +457,7 @@ current_apic_id_from_cpuid(apic_id_t *id)
     int res;
     x64_vendor_t vendor = x64_get_vendor();
 
-    struct x64_cpuid_result result;
+    struct x64_cpuid result;
 
     switch(vendor)
     {

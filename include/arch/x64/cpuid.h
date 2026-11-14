@@ -5,9 +5,8 @@
 #include <kanawha/printk.h>
 
 #define CPUID_VENDOR_ID_STRING 0x0
-#define CPUID_GETFEATURES 0x1
 
-struct __packed x64_cpuid_result
+struct __packed x64_cpuid
 {
     uint32_t eax;
     uint32_t ebx;
@@ -16,19 +15,21 @@ struct __packed x64_cpuid_result
 };
 
 // 0 -> cpuid not supported, else cpuid support is detected
-extern int
+int
 x64_cpuid_supported(void);
 
-extern void
-x64_cpuid(uint32_t eax, struct x64_cpuid_result *result);
+int
+x64_cpuid_ext(
+        uint32_t eax,
+        uint32_t ecx,
+        struct x64_cpuid *id);
 
-static inline uint64_t
-x64_cpuid_features(void)
+static inline int
+x64_cpuid(
+        uint32_t eax,
+        struct x64_cpuid *id)
 {
-    struct x64_cpuid_result result;
-    x64_cpuid(CPUID_GETFEATURES, &result);
-    uint64_t feat = (uint64_t)result.ecx | ((uint64_t)result.edx << 32);
-    return feat;
+    return x64_cpuid_ext(eax, 0, id);
 }
 
 #endif

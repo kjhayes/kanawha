@@ -16,7 +16,7 @@ x64_cpuid_get_vendor_string(char str[X64_VENDOR_STRING_LENGTH])
         return -ENXIO;
     }
 
-    struct x64_cpuid_result result;
+    struct x64_cpuid result;
     x64_cpuid(CPUID_VENDOR_ID_STRING, &result);
 
     ((uint32_t *)str)[0] = result.ebx;
