@@ -5,6 +5,7 @@
 #include <kanawha/syscall.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 int
 main(int argc, const char **argv)
@@ -46,9 +47,12 @@ main(int argc, const char **argv)
     while(res == 0)
     {
         res = kanawha_sys_dirname(dir, name_buf, NAMELEN);
-        if(res)
+        if(res && res != -ENXIO)
         {
             goto err;
+        }
+        if(res == -ENXIO) {
+            break;
         }
 
         name_buf[NAMELEN - 1] = '\0';
@@ -77,7 +81,8 @@ main(int argc, const char **argv)
     return 0;
 
 err:
-    fprintf(stderr, "Failed to read directory!\n");
+    fprintf(stderr, "Failed to read directory! (%s)\n",
+            strerror(res));
     kanawha_sys_close(dir);
     free(name_buf);
     return res;
