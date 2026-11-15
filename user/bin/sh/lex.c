@@ -86,6 +86,8 @@ is_blob_char(char c)
         case '\\':
         case '.':
         case ':':
+        case '-':
+        case '+':
             return 1;
     }
     return 0;
