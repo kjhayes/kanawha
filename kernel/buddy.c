@@ -17,10 +17,10 @@
 #include <kanawha/slab.h>
 #include <kanawha/init.h>
 
-struct buddy_page
+struct buddy_free_page
 {
-    struct buddy_page __phys *next;
-    struct buddy_page __phys *prev;
+    struct buddy_free_page __phys *next;
+    struct buddy_free_page __phys *prev;
 
     // Is this free page the base of the region (making "order" valid)?
     order_t order;
@@ -31,7 +31,7 @@ struct buddy_order
     order_t order;
     size_t num_pages;
 
-    struct buddy_page __phys *page_list;
+    struct buddy_free_page __phys *page_list;
 };
 
 struct buddy_region
@@ -92,26 +92,6 @@ buddy_order_total_free(struct buddy_order *order)
     return (1ULL << order->order) * order->num_pages;
 }
 
-// #ifdef CONFIG_DEBUG_BUDDY_ALLOC
-// static inline void
-// buddy_region_dump_orders(struct buddy_region *region, printk_f *printer)
-// {
-//     size_t num_orders = buddy_region_num_orders(region);
-//     for(size_t i = 0; i < num_orders; i++)
-//     {
-//         struct buddy_order *order = &region->order_lists[i];
-//         size_t total_free = buddy_order_total_free(order);
-// 
-//         (*printer)("order[%d] -> num_pages=0x%lx, page_size=0x%lx, "
-//                    "total_free=0x%lx\n",
-//                    order->order,
-//                    (unsigned long)order->num_pages,
-//                    (1UL << (order->order)),
-//                    (unsigned long)total_free);
-//     }
-// }
-// #endif
-
 size_t
 buddy_region_total_free(struct buddy_region *region)
 {
@@ -135,19 +115,19 @@ static inline int
 buddy_order_push_page(
         struct buddy_region *region,
         order_t order,
-        struct buddy_page __phys *page_phys)
+        struct buddy_free_page __phys *page_phys)
 {
     size_t index = order - region->min_order;
     struct buddy_order __phys *order_phys = region->region_base + region->order_lists_offset + (sizeof(struct buddy_order) * index);
     struct buddy_order *buddy_order = __va(order_phys);
 
-    struct buddy_page *page = __va(page_phys);
+    struct buddy_free_page *page = __va(page_phys);
 
     page->order = order;
 
     // Push the page onto the front of the list
     if(buddy_order->num_pages > 0) {
-        struct buddy_page *old_front = __va(buddy_order->page_list);
+        struct buddy_free_page *old_front = __va(buddy_order->page_list);
         old_front->prev = page_phys;
     }
     page->prev = NULL;
@@ -162,7 +142,7 @@ static inline int
 buddy_order_pop_page(
         struct buddy_region *region,
         order_t order,
-        struct buddy_page __phys **page_out)
+        struct buddy_free_page __phys **page_out)
 {
     size_t index = order - region->min_order;
     struct buddy_order __phys *order_phys = region->region_base + region->order_lists_offset + (sizeof(struct buddy_order) * index);
@@ -174,11 +154,11 @@ buddy_order_pop_page(
     }
 
     // Pop from the front of the list
-    struct buddy_page __phys *page_phys = buddy_order->page_list;
-    struct buddy_page *page = __va(page_phys);
+    struct buddy_free_page __phys *page_phys = buddy_order->page_list;
+    struct buddy_free_page *page = __va(page_phys);
     buddy_order->page_list = page->next;
     if(buddy_order->num_pages > 1) {
-        struct buddy_page *new_front_page = __va(buddy_order->page_list);
+        struct buddy_free_page *new_front_page = __va(buddy_order->page_list);
         new_front_page->prev = NULL;
     }
 
@@ -192,7 +172,7 @@ static inline int
 buddy_order_remove_page(
         struct buddy_region *region,
         order_t order,
-        struct buddy_page __phys *page_phys)
+        struct buddy_free_page __phys *page_phys)
 {
     size_t index = order - region->min_order;
     struct buddy_order __phys *order_phys = region->region_base + region->order_lists_offset + (sizeof(struct buddy_order) * index);
@@ -203,26 +183,26 @@ buddy_order_remove_page(
         return -ENOMEM;
     }
 
-    struct buddy_page *page = __va(page_phys);
+    struct buddy_free_page *page = __va(page_phys);
 
-    struct buddy_page __phys *iter_phys = buddy_order->page_list;
+    struct buddy_free_page __phys *iter_phys = buddy_order->page_list;
     for(size_t i = 0; i < buddy_order->num_pages; i++) {
-        struct buddy_page *iter = __va(iter_phys);
+        struct buddy_free_page *iter = __va(iter_phys);
         if(iter_phys == page_phys) {
             if(i == 0) {
                 // This is the first entry
                 buddy_order->page_list = page->next;
                 if(buddy_order->num_pages > 1) {
-                    struct buddy_page *new_front_page = __va(buddy_order->page_list);
+                    struct buddy_free_page *new_front_page = __va(buddy_order->page_list);
                     new_front_page->prev = NULL;
                 }
             } else {
                 // "page->prev" is valid
-                struct buddy_page *prev = __va(page->prev);
+                struct buddy_free_page *prev = __va(page->prev);
                 prev->next = page->next;
                 if(i < buddy_order->num_pages-1) {
                     // "page->next" is valid
-                    struct buddy_page *next = __va(page->next);
+                    struct buddy_free_page *next = __va(page->next);
                     next->prev = page->prev;
                 }
             }
@@ -245,7 +225,7 @@ buddy_region_free(
         void __phys *page_phys)
 {
     dprintk("Freeing page: %p of order %d\n", page_addr, order);
-    struct buddy_page *page = __va(page_phys);
+    struct buddy_free_page *page = __va(page_phys);
     page->order = order;
     page->next = NULL;
     page->prev = NULL;
@@ -275,8 +255,8 @@ buddy_region_free(
         goto no_buddy;
     }
 
-    struct buddy_page __phys *buddy_phys =
-        (struct buddy_page __phys *)((uintptr_t)page_phys ^ (1ULL << order));
+    struct buddy_free_page __phys *buddy_phys =
+        (struct buddy_free_page __phys *)((uintptr_t)page_phys ^ (1ULL << order));
 
     uintptr_t buddy_region_offset;
     uintptr_t buddy_pages_offset;
@@ -307,7 +287,7 @@ buddy_region_free(
         goto no_buddy;
     }
 
-    struct buddy_page *buddy_page = __va(buddy_phys);
+    struct buddy_free_page *buddy_page = __va(buddy_phys);
     if(buddy_page->order != order)
     {
         dprintk("buddy has wrong order (order=%d, buddy-order=%d)!\n",
@@ -324,7 +304,7 @@ buddy_region_free(
 
     // Figure out which page is the start of the coalesced page (lower)
     size_t lower_min_page_index, higher_min_page_index;
-    struct buddy_page __phys *lower_phys;
+    struct buddy_free_page __phys *lower_phys;
 
     if((void __phys *)page_phys < (void __phys *)buddy_phys)
     {
@@ -375,7 +355,7 @@ buddy_region_alloc(struct buddy_region *region, order_t order, void __phys **out
     }
 
     size_t order_index = order - region->min_order;
-    struct buddy_page __phys *buddy_page_phys;
+    struct buddy_free_page __phys *buddy_page_phys;
     res = buddy_order_pop_page(region, order, &buddy_page_phys);
     if(res)
     {
@@ -414,7 +394,7 @@ buddy_region_alloc(struct buddy_region *region, order_t order, void __phys **out
         // Free the higher half of the larger page, and return the lower
         // half
 
-        struct buddy_page __phys *higher_page_phys = next_order_page_paddr + (1ULL << order);
+        struct buddy_free_page __phys *higher_page_phys = next_order_page_paddr + (1ULL << order);
         res = buddy_region_free(region, order, higher_page_phys);
         if(res)
         {
@@ -458,11 +438,11 @@ buddy_region_init(struct buddy_region *region,
 
     const size_t min_page_size = (1ULL << min_order);
 
-    if(min_page_size < sizeof(struct buddy_page))
+    if(min_page_size < sizeof(struct buddy_free_page))
     {
         // We can't allocate pages this small
         eprintk("Tried to initialize a buddy region with minimum page size "
-                "smaller than sizeof(struct buddy_page)!\n");
+                "smaller than sizeof(struct buddy_free_page)!\n");
         return -EINVAL;
     }
 
@@ -628,22 +608,11 @@ static int
 buddy_page_allocator_debug_dump(void *state, printk_f *printer)
 {
     struct buddy_region *region = (struct buddy_region *)state;
-
     (*printer)("Buddy Region [%p-%p) (orders[%d-%d])\n",
                (uintptr_t)region->region_base,
                (uintptr_t)(region->region_base + region->region_size),
                (int)region->min_order,
                (int)region->max_order);
-//    for(size_t index = 0; index < (region->max_order - region->min_order) + 1;
-//        index++)
-//    {
-//        struct buddy_order *order = &region->order_lists[index];
-//        (*printer)("\tOrder[%d] (num-pages=%lu)\n",
-//                   (int)order->order,
-//                   (ul_t)order->num_pages);
-//        DEBUG_ASSERT(ilist_count(&order->page_list) == order->num_pages);
-//    }
-
     return 0;
 }
 
@@ -651,23 +620,6 @@ static int
 buddy_page_allocator_verify(void *state)
 {
     struct buddy_region *region = (struct buddy_region *)state;
-
-//    for(size_t index = 0; index < (region->max_order - region->min_order) + 1;
-//        index++)
-//    {
-//        struct buddy_order *order = &region->order_lists[index];
-//        ilist_node_t *page_node;
-//        ilist_for_each(page_node, &order->page_list)
-//        {
-//            struct buddy_page *page =
-//                container_of(page_node, struct buddy_page, list_node);
-//            ASSERT(page->order == order->order);
-//            ASSERT((void *)page >= region->region_base);
-//            ASSERT(((void *)page + (1ULL << order->order)) <=
-//                   (region->region_base + region->region_size));
-//        }
-//    }
-
     return 0;
 }
 
