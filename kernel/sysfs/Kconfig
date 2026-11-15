@@ -6,8 +6,8 @@ config PROCFS
       Include the "proc" sysfs directory
 
 config SYSFS_PCI
-    tristate "sysfs PCI"
-    default n
+    bool "PCI sysfs"
+    default y
     depends on PCI
     help
       Include a "pci" sysfs directory

@@ -132,9 +132,12 @@ vfs_dir_lookup(struct fs_node *fs_node,
 int
 vfs_dir_begin(struct file *dir)
 {
-    dprintk("vfs_dir_begin\n");
+    int res;
 
-    fs_file_set_dir_offset(dir, 0);
+    res = fs_file_set_dir_offset(dir, 0);
+    if(res) {
+        return res;
+    }
 
     return 0;
 }
