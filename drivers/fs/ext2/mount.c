@@ -243,7 +243,7 @@ ext2_mount_sync(struct fs_mount *fs_mount)
     struct ext2_mount *mnt =
         container_of(fs_mount, struct ext2_mount, fs_mount);
 
-    int irq_flags = spin_lock_irq_save(&mnt->group_cache_lock);
+    irq_lock_acquire(&mnt->group_cache_lock);
 
     for(size_t i = 0; i < mnt->num_groups; i++)
     {
@@ -260,7 +260,7 @@ ext2_mount_sync(struct fs_mount *fs_mount)
         }
     }
 
-    spin_unlock_irq_restore(&mnt->group_cache_lock, irq_flags);
+    irq_lock_release(&mnt->group_cache_lock);
 
     res = fs_node_flush_all_fs_pages(mnt->backing_node);
     if(res)
@@ -395,7 +395,7 @@ ext2_mount_file(struct fs_type *fs_type,
         goto err3;
     }
 
-    spinlock_init(&mnt->group_cache_lock);
+    irq_lock_init(&mnt->group_cache_lock);
 
     mnt->blks_per_group = superblock.blocks_per_group;
     mnt->inodes_per_group = superblock.inodes_per_group;

@@ -74,7 +74,7 @@ ext2_get_group(struct ext2_mount *mnt, size_t index)
         return NULL;
     }
 
-    spin_lock(&mnt->group_cache_lock);
+    irq_lock_acquire(&mnt->group_cache_lock);
 
     if(mnt->group_cache[index] == NULL)
     {
@@ -82,7 +82,7 @@ ext2_get_group(struct ext2_mount *mnt, size_t index)
             kmalloc(sizeof(struct ext2_group), KM_KERNEL);
         if(group == NULL)
         {
-            spin_unlock(&mnt->group_cache_lock);
+            irq_lock_release(&mnt->group_cache_lock);
             return NULL;
         }
 
@@ -105,7 +105,7 @@ ext2_get_group(struct ext2_mount *mnt, size_t index)
         if(res)
         {
             kfree(group);
-            spin_unlock(&mnt->group_cache_lock);
+            irq_lock_release(&mnt->group_cache_lock);
             return NULL;
         }
 
@@ -130,7 +130,7 @@ ext2_get_group(struct ext2_mount *mnt, size_t index)
         mnt->group_cache[index]->refs++;
     }
 
-    spin_unlock(&mnt->group_cache_lock);
+    irq_lock_release(&mnt->group_cache_lock);
 
     DEBUG_ASSERT(mnt->group_cache[index]->mnt == mnt);
     return mnt->group_cache[index];
@@ -315,7 +315,7 @@ ext2_put_group(struct ext2_mount *mnt, struct ext2_group *group)
 {
     int res;
 
-    spin_lock(&mnt->group_cache_lock);
+    irq_lock_acquire(&mnt->group_cache_lock);
 
     dprintk("ext2_put_group(0x%lx)\n", (ul_t)group->index);
 
@@ -346,7 +346,7 @@ ext2_put_group(struct ext2_mount *mnt, struct ext2_group *group)
         kfree(group);
     }
 
-    spin_unlock(&mnt->group_cache_lock);
+    irq_lock_release(&mnt->group_cache_lock);
 
     return 0;
 }

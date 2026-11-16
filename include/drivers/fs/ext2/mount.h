@@ -12,7 +12,7 @@ struct ext2_mount
     size_t num_inodes;
     size_t resv_inodes;
 
-    spinlock_t group_cache_lock;
+    irq_lock_t group_cache_lock;
     size_t num_groups;
     struct ext2_group **group_cache;
 
