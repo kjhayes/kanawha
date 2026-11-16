@@ -142,9 +142,9 @@ irq_install_direct_link(struct irq_desc *from, struct irq_desc *to)
     from->num_actions++;
     rlock_write_unlock(&from->lock);
 
-    spin_lock(&to->direct_links_lock);
+    irq_lock_acquire(&to->direct_links_lock);
     ilist_push_tail(&to->direct_links, &action->direct_link_data.incoming_node);
-    spin_unlock(&to->direct_links_lock);
+    irq_lock_release(&to->direct_links_lock);
 
     //printk("Installed IRQ Direct Link ");
     //describe_irq_desc(printk_printer(), from);
@@ -442,7 +442,7 @@ mask_irq_desc_chain(struct irq_desc *desc)
         return res;
     }
 
-    int irq_flags = spin_lock_irq_save(&desc->direct_links_lock);
+    irq_lock_acquire(&desc->direct_links_lock);
     ilist_node_t *incoming_node;
     ilist_for_each(incoming_node, &desc->direct_links)
     {
@@ -453,11 +453,11 @@ mask_irq_desc_chain(struct irq_desc *desc)
         res = mask_irq_desc_chain(direct_link->desc);
         if(res)
         {
+            irq_lock_release(&desc->direct_links_lock);
             return res;
-            spin_unlock_irq_restore(&desc->direct_links_lock, irq_flags);
         }
     }
-    spin_unlock_irq_restore(&desc->direct_links_lock, irq_flags);
+    irq_lock_release(&desc->direct_links_lock);
     return 0;
 }
 
@@ -472,7 +472,7 @@ unmask_irq_desc_chain(struct irq_desc *desc)
         return res;
     }
 
-    int irq_flags = spin_lock_irq_save(&desc->direct_links_lock);
+    irq_lock_acquire(&desc->direct_links_lock);
     ilist_node_t *incoming_node;
     ilist_for_each(incoming_node, &desc->direct_links)
     {
@@ -483,11 +483,11 @@ unmask_irq_desc_chain(struct irq_desc *desc)
         res = unmask_irq_desc_chain(direct_link->desc);
         if(res)
         {
-            spin_unlock_irq_restore(&desc->direct_links_lock, irq_flags);
+            irq_lock_release(&desc->direct_links_lock);
             return res;
         }
     }
-    spin_unlock_irq_restore(&desc->direct_links_lock, irq_flags);
+    irq_lock_release(&desc->direct_links_lock);
     return 0;
 }
 
@@ -608,7 +608,7 @@ alloc_irq_domain_linear(hwirq_t base_hwirq, size_t num_irq)
         desc->hwirq = domain->base_hwirq + i;
         desc->num_actions = 0;
         rlock_init(&desc->lock);
-        spinlock_init(&desc->direct_links_lock);
+        irq_lock_init(&desc->direct_links_lock);
         ilist_init(&desc->actions);
         ilist_init(&desc->direct_links);
     }

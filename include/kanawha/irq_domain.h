@@ -51,7 +51,7 @@ struct irq_desc
     // List of incoming direct link actions
     // (child lock must be acquired before parent if multiple are held
     // concurrently)
-    spinlock_t direct_links_lock;
+    irq_lock_t direct_links_lock;
     ilist_t direct_links;
 
     struct irq_domain *domain;
