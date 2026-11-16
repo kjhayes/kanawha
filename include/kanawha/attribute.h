@@ -32,13 +32,4 @@
 #define __percpu __address_space(2) __noderef
 #define __percpu_section __attribute__((section(".kpercpu")))
 
-#define __kuser __address_space(4) __noderef
-#define __kuser_text_section __attribute__((section(".user.text")))
-#define __kuser_data_section __attribute__((section(".user.data")))
-#define __kuser_rodata_section __attribute__((section(".user.rodata")))
-
-#define __kuser_text __kuser_text_section
-#define __kuser_data __kuser_data_section
-#define __kuser_rodata __kuser_rodata_section
-
 #endif

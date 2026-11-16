@@ -76,8 +76,6 @@ SECTIONS
 
   __arm64_kernel_virt_end = .;
 
-#include "kuser.ldh"
-
   __arm64_kernel_phys_end = . - CONFIG_ARM64_KERNEL_VIRTUAL_BASE;
 
   .shstrtab : {

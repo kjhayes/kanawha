@@ -153,7 +153,6 @@ X(AVAIL,     2, ##__VA_ARGS__)\
 X(HEAP,      3, ##__VA_ARGS__)\
 X(MMIO,      4, ##__VA_ARGS__)\
 X(PERCPU,    5, ##__VA_ARGS__)\
-X(KUSER,     6, ##__VA_ARGS__)\
 X(KERNEL,    7, ##__VA_ARGS__)\
 
 enum {

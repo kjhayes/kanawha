@@ -66,7 +66,6 @@ obj-y += gfx/
 obj-y += pipe/
 obj-$(CONFIG_PAGING) += paging/
 obj-$(CONFIG_IDMAP) += idmap.o
-obj-$(CONFIG_KUSER) += kuser.o
 
 obj-y += memdump.o
 

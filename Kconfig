@@ -14,7 +14,6 @@ choice
     select ACPI_REQUIRED
     select BUILD_GRUB_ISOIMAGE
     select HAVE_LEGACY_VGA
-    select KUSER
   config RISCV64
     bool "RISCV64"
     select DEVICETREE
@@ -131,11 +130,6 @@ config MMIO_RESERVE_SIZE_ORDER
   help
     Order which reserved MMIO virtual memory region should be sized as.
 
-config KUSER_VIRTUAL_BASE
-  hex "kuser Virtual Base"
-  depends on KUSER
-  default 0xffffff8000000000
-
 endmenu
 
 menu "Time Options"
@@ -221,8 +215,6 @@ config SMP
     def_bool y
     depends on MAX_CPUS > 1
 config IDMAP
-    def_bool n
-config KUSER
     def_bool n
 
 # Toolchain Support

@@ -68,8 +68,6 @@ SECTIONS
   __x64_kernel_virt_end = .;
   __x64_kernel_phys_end = VA_TO_PA(.);
 
-#include "kuser.ldh"
-
   .shstrtab : {
      *(.shstrtab* .shstrtab.*)
   } :note

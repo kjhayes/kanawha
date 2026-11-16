@@ -74,8 +74,6 @@ SECTIONS
 
   __riscv64_kernel_virt_end = .;
 
-#include "kuser.ldh"
-
   .shstrtab : {
      *(.shstrtab* .shstrtab.*)
   } :note
