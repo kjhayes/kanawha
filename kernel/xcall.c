@@ -12,7 +12,7 @@
 
 struct xcall_state
 {
-    spinlock_t lock;
+    irq_lock_t lock;
 
     ilist_t queue;
 
@@ -36,7 +36,7 @@ xcall_handle_current(void)
     int res = 0;
 
     struct xcall_state *state = percpu_ptr(percpu_addr(xcall_state));
-    int irq_flags = spin_lock_irq_save(&state->lock);
+    irq_lock_acquire(&state->lock);
 
     do
     {
@@ -54,7 +54,7 @@ xcall_handle_current(void)
         kfree(xcall);
     } while(1);
 
-    spin_unlock_irq_restore(&state->lock, irq_flags);
+    irq_lock_release(&state->lock);
     return res;
 }
 
@@ -98,11 +98,11 @@ xcall_queue(cpu_id_t cpu, xcall_f *func, void *arg)
     xcall->arg = arg;
 
     int res = 0;
-    int irq_state = spin_lock_irq_save(&state->lock);
+    irq_lock_acquire(&state->lock);
 
     ilist_push_tail(&state->queue, &xcall->queue_node);
 
-    spin_unlock_irq_restore(&state->lock, irq_state);
+    irq_lock_release(&state->lock);
     return res;
 }
 
@@ -140,7 +140,7 @@ xcall_provide_ipi_irq(cpu_id_t cpu, irq_t irq)
         percpu_ptr_specific(percpu_addr(xcall_state), cpu);
     dprintk("xcall_provide_ipi_irq: state_ptr=%p\n", state);
 
-    int irq_state = spin_lock_irq_save(&state->lock);
+    irq_lock_acquire(&state->lock);
     if(state->ipi != NULL_IRQ && state->action == NULL)
     {
         struct irq_desc *desc = irq_to_desc(irq);
@@ -158,7 +158,7 @@ xcall_provide_ipi_irq(cpu_id_t cpu, irq_t irq)
         state->action = irq_install_handler(desc, NULL, xcall_ipi_handler);
         if(state->action == NULL)
         {
-            spin_unlock_irq_restore(&state->lock, irq_state);
+            irq_lock_release(&state->lock);
             return -EINVAL;
         }
         state->ipi = irq;
@@ -169,7 +169,7 @@ xcall_provide_ipi_irq(cpu_id_t cpu, irq_t irq)
                 (ul_t)irq,
                 (ul_t)cpu);
     }
-    spin_unlock_irq_restore(&state->lock, irq_state);
+    irq_lock_release(&state->lock);
     return 0;
 }
 
@@ -181,7 +181,7 @@ bsp_init_xcalls(void)
         struct xcall_state *state =
             percpu_ptr_specific(percpu_addr(xcall_state), cpu);
         ilist_init(&state->queue);
-        spinlock_init(&state->lock);
+        irq_lock_init(&state->lock);
         state->ipi = IRQ_NONE;
         state->action = NULL;
     }
