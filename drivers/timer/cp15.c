@@ -9,6 +9,7 @@
 #include <kanawha/cpu.h>
 #include <kanawha/xcall.h>
 #include <kanawha/irq_domain.h>
+#include <kanawha/lock.h>
 #include <kanawha/dev/timer.h>
 
 struct cp15_global_timer
@@ -18,7 +19,7 @@ struct cp15_global_timer
 
     freq_t global_freq;
 
-    spinlock_t local_timers_lock;
+    thread_lock_t local_timers_lock;
     struct ptree local_timers;
 };
 
@@ -49,9 +50,9 @@ cp15_global_timer_create_local(
     timer->freq = 0;
     timer->name = NULL;
 
-    spin_lock(&global->local_timers_lock);
+    thread_lock_acquire(&global->local_timers_lock);
     ptree_insert(&global->local_timers, &timer->ptree_node, cpu);
-    spin_unlock(&global->local_timers_lock);
+    thread_lock_release(&global->local_timers_lock);
 
     return timer;
 }
@@ -61,9 +62,9 @@ cp15_global_timer_destroy_local(
         struct cp15_global_timer *global,
         struct cp15_timer *local)
 {
-    spin_lock(&global->local_timers_lock);
+    thread_lock_acquire(&global->local_timers_lock);
     ptree_remove(&global->local_timers, local->ptree_node.key);
-    spin_unlock(&global->local_timers_lock);
+    thread_lock_release(&global->local_timers_lock);
     kfree(local);
     return 0;
 }
@@ -77,9 +78,9 @@ cp15_timer_handler(struct excp_state *excp_state, struct irq_action *action)
 
     struct cp15_timer *timer;
     {
-        spin_lock(&global->local_timers_lock);
+        thread_lock_acquire(&global->local_timers_lock);
         struct ptree_node *pnode = ptree_get(&global->local_timers, current_cpu_id());
-        spin_unlock(&global->local_timers_lock);
+        thread_lock_release(&global->local_timers_lock);
         if(pnode == NULL) {
             wprintk("Could not find local cp15 timer on CPU(%lu)\n",
                     (ul_t)current_cpu_id());
@@ -278,7 +279,7 @@ cp15_dt_init_node(struct dt_driver *driver, struct dt_node *node)
     if(timer == NULL) {
         return -ENOMEM;
     }
-    spinlock_init(&timer->local_timers_lock);
+    thread_lock_init(&timer->local_timers_lock);
     ptree_init(&timer->local_timers);
 
     res = dt_node_read_irq(node, 1, &timer->irq);
