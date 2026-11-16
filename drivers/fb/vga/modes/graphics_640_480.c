@@ -7,7 +7,6 @@
 #include <kanawha/init.h>
 #include <kanawha/kmalloc.h>
 #include <kanawha/page_alloc.h>
-#include <kanawha/spinlock.h>
 #include <kanawha/string.h>
 
 static int
