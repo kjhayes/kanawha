@@ -7,21 +7,21 @@
 static int
 vga_dev_init(struct vga_dev *dev)
 {
-    spinlock_init(&dev->dac_lock);
+    thread_lock_init(&dev->dac_lock);
     dev->dac_order = VGA_DAC_ORDER_RGB;
 
-    spinlock_init(&dev->graphics_lock);
+    thread_lock_init(&dev->graphics_lock);
     dev->graphics_index = vga_read_register(dev, GraphicsControllerAddress);
 
-    spinlock_init(&dev->seq_lock);
+    thread_lock_init(&dev->seq_lock);
     dev->seq_index = vga_read_register(dev, SequencerAddress);
 
-    spinlock_init(&dev->crt_lock);
+    thread_lock_init(&dev->crt_lock);
     dev->crt_index = vga_read_register(dev, CRTCControllerAddress);
 
     vga_write_field(dev, InputOutputAddressSelect, 1);
 
-    spinlock_init(&dev->attribute_lock);
+    thread_lock_init(&dev->attribute_lock);
     // Make sure that the attribute address/data register expects an address
     // next
     vga_read_register(dev, InputStatus1);
@@ -50,7 +50,7 @@ uint8_t
 vga_read_graphics_register_set(struct vga_dev *dev, uint8_t index)
 {
     uint8_t value;
-    spin_lock(&dev->graphics_lock);
+    thread_lock_acquire(&dev->graphics_lock);
 
     if(dev->graphics_index != index)
     {
@@ -59,7 +59,7 @@ vga_read_graphics_register_set(struct vga_dev *dev, uint8_t index)
     }
     value = vga_read_register(dev, GraphicsControllerData);
 
-    spin_unlock(&dev->graphics_lock);
+    thread_lock_release(&dev->graphics_lock);
     return value;
 }
 void
@@ -67,7 +67,7 @@ vga_write_graphics_register_set(struct vga_dev *dev,
                                 uint8_t index,
                                 uint8_t value)
 {
-    spin_lock(&dev->graphics_lock);
+    thread_lock_acquire(&dev->graphics_lock);
 
     if(dev->graphics_index != index)
     {
@@ -76,14 +76,14 @@ vga_write_graphics_register_set(struct vga_dev *dev,
     }
     vga_write_register(dev, GraphicsControllerData, value);
 
-    spin_unlock(&dev->graphics_lock);
+    thread_lock_release(&dev->graphics_lock);
 }
 
 uint8_t
 vga_read_sequencer_register_set(struct vga_dev *dev, uint8_t index)
 {
     uint8_t value;
-    spin_lock(&dev->seq_lock);
+    thread_lock_acquire(&dev->seq_lock);
 
     if(dev->seq_index != index)
     {
@@ -92,7 +92,7 @@ vga_read_sequencer_register_set(struct vga_dev *dev, uint8_t index)
     }
     value = vga_read_register(dev, SequencerData);
 
-    spin_unlock(&dev->seq_lock);
+    thread_lock_release(&dev->seq_lock);
     return value;
 }
 void
@@ -100,7 +100,7 @@ vga_write_sequencer_register_set(struct vga_dev *dev,
                                  uint8_t index,
                                  uint8_t value)
 {
-    spin_lock(&dev->seq_lock);
+    thread_lock_acquire(&dev->seq_lock);
 
     if(dev->seq_index != index)
     {
@@ -109,14 +109,14 @@ vga_write_sequencer_register_set(struct vga_dev *dev,
     }
     vga_write_register(dev, SequencerData, value);
 
-    spin_unlock(&dev->seq_lock);
+    thread_lock_release(&dev->seq_lock);
 }
 
 uint8_t
 vga_read_crt_register_set(struct vga_dev *dev, uint8_t index)
 {
     uint8_t value;
-    spin_lock(&dev->crt_lock);
+    thread_lock_acquire(&dev->crt_lock);
 
     if(dev->crt_index != index)
     {
@@ -125,13 +125,13 @@ vga_read_crt_register_set(struct vga_dev *dev, uint8_t index)
     }
     value = vga_read_register(dev, CRTCControllerData);
 
-    spin_unlock(&dev->crt_lock);
+    thread_lock_release(&dev->crt_lock);
     return value;
 }
 void
 vga_write_crt_register_set(struct vga_dev *dev, uint8_t index, uint8_t value)
 {
-    spin_lock(&dev->crt_lock);
+    thread_lock_acquire(&dev->crt_lock);
 
     if(dev->crt_index != index)
     {
@@ -140,14 +140,14 @@ vga_write_crt_register_set(struct vga_dev *dev, uint8_t index, uint8_t value)
     }
     vga_write_register(dev, CRTCControllerData, value);
 
-    spin_unlock(&dev->crt_lock);
+    thread_lock_release(&dev->crt_lock);
 }
 
 uint8_t
 vga_read_attribute_register_set(struct vga_dev *dev, uint8_t index)
 {
     uint8_t value;
-    spin_lock(&dev->attribute_lock);
+    thread_lock_acquire(&dev->attribute_lock);
 
     vga_read_register(
         dev,
@@ -155,7 +155,7 @@ vga_read_attribute_register_set(struct vga_dev *dev, uint8_t index)
     vga_write_register(dev, AttributeAddressData, (1ULL << 5) | index);
     value = vga_read_register(dev, AttributeDataRead);
 
-    spin_unlock(&dev->attribute_lock);
+    thread_lock_release(&dev->attribute_lock);
     return value;
 }
 void
@@ -163,7 +163,7 @@ vga_write_attribute_register_set(struct vga_dev *dev,
                                  uint8_t index,
                                  uint8_t value)
 {
-    spin_lock(&dev->attribute_lock);
+    thread_lock_acquire(&dev->attribute_lock);
 
     vga_read_register(
         dev,
@@ -171,7 +171,7 @@ vga_write_attribute_register_set(struct vga_dev *dev,
     vga_write_register(dev, AttributeAddressData, (1ULL << 5) | index);
     vga_write_register(dev, AttributeAddressData, value);
 
-    spin_unlock(&dev->attribute_lock);
+    thread_lock_release(&dev->attribute_lock);
 }
 
 void
@@ -419,7 +419,7 @@ vga_dac_set_color(struct vga_dev *dev,
                   uint8_t g,
                   uint8_t b)
 {
-    spin_lock(&dev->dac_lock);
+    thread_lock_acquire(&dev->dac_lock);
 
     vga_write_register(dev, DACAddressWriteMode, index);
 
@@ -460,7 +460,7 @@ vga_dac_set_color(struct vga_dev *dev,
         break;
     }
 
-    spin_unlock(&dev->dac_lock);
+    thread_lock_release(&dev->dac_lock);
 }
 
 void

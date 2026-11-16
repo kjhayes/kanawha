@@ -4,7 +4,7 @@
 #include <kanawha/mmio.h>
 #include <kanawha/pio.h>
 #include <kanawha/registry.h>
-#include <kanawha/spinlock.h>
+#include <kanawha/lock.h>
 
 struct vga_dev;
 
@@ -293,18 +293,18 @@ vga_write_attribute_register_set(struct vga_dev *dev,
 struct vga_dev
 {
     // register access/caching
-    spinlock_t graphics_lock;
+    thread_lock_t graphics_lock;
     uint8_t graphics_index;
 
-    spinlock_t seq_lock;
+    thread_lock_t seq_lock;
     uint8_t seq_index;
 
-    spinlock_t crt_lock;
+    thread_lock_t crt_lock;
     uint8_t crt_index;
 
-    spinlock_t attribute_lock;
+    thread_lock_t attribute_lock;
 
-    spinlock_t dac_lock;
+    thread_lock_t dac_lock;
     unsigned long dac_order;
 
     struct registry_node registry_node;
