@@ -2,7 +2,6 @@
 #define __KANAWHA__MODULE_H__
 
 #include <kanawha/fs/node.h>
-#include <kanawha/refcount.h>
 #include <kanawha/stree.h>
 #include <kanawha/vmem.h>
 
@@ -25,7 +24,7 @@ struct module
     const char *name;
     unsigned long flags;
 
-    refcount_t refcount;
+    atomic_t refcount;
     spinlock_t lock;
 
     size_t symtab_count;

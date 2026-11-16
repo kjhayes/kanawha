@@ -17,6 +17,7 @@
 #include <kanawha/stree.h>
 #include <kanawha/string.h>
 #include <kanawha/symbol.h>
+#include <kanawha/atomic.h>
 #include <kanawha/types.h>
 
 DEFINE_LOCAL_THREAD_LOCK(module_tree_lock);
@@ -49,7 +50,7 @@ __init_module(struct module *module, const char *name, unsigned long flags)
     module->tree_node.key = name;
     module->flags = flags;
 
-    refcount_init(&module->refcount);
+    atomic_set_relaxed(&module->refcount, 0);
     spinlock_init(&module->lock);
 
     module_tree_lock_acquire();
@@ -175,7 +176,7 @@ module_framework_init(void)
     {
         return res;
     }
-    refcount_inc(&__core_kernel_module.refcount);
+    atomic_fetch_inc(&__core_kernel_module.refcount);
 
     res = load_builtin_ksymbols();
     if(res)
@@ -211,12 +212,8 @@ module_get(const char *name)
     }
     mod = container_of(node, struct module, tree_node);
 
-    res = refcount_inc(&mod->refcount);
-    if(res <= 0)
-    {
-        wprintk("Tried to get dead module: \"%s\"\n", name);
-        return NULL;
-    }
+    atomic_fetch_inc(&mod->refcount);
+
     return mod;
 }
 
@@ -224,7 +221,7 @@ int
 module_put(struct module *mod)
 {
     int res;
-    refcount_dec(&mod->refcount);
+    atomic_fetch_dec(&mod->refcount);
     return 0;
 }
 
@@ -954,10 +951,11 @@ unload_module(struct module *mod)
 {
     int res;
 
-    if(refcount_euthanize(&mod->refcount) == 0)
-    {
-        return -EBUSY;
-    }
+    // TODO: I removed "refcount_t" and need to fix this -KJH
+    //if(refcount_euthanize(&mod->refcount) == 0)
+    //{
+    //    return -EBUSY;
+    //}
 
     module_tree_lock_acquire();
     stree_remove(&module_tree, mod->name);
@@ -970,7 +968,8 @@ unload_module(struct module *mod)
     {
         struct module_dependency *dep =
             container_of(pnode, struct module_dependency, tree_node);
-        refcount_dec(&dep->mod->refcount);
+        // TODO: I removed "refcount_t" and need to fix this -KJH
+        //refcount_dec(&dep->mod->refcount);
     }
 
     // Delete all of the dependency structs

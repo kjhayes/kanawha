@@ -23,15 +23,8 @@ ksymbol_get(const char *symbol)
     struct ksymbol *sym;
     sym = container_of(node, struct ksymbol, symbol_node);
 
-    int refs = refcount_inc(&sym->mod->refcount);
+    atomic_fetch_inc(&sym->mod->refcount);
     symbol_tree_lock_release();
-
-    if(refs == 0)
-    {
-        // We couldn't get a reference to the symbol's
-        // module (it might be in the process of being unloaded)
-        return NULL;
-    }
 
     return sym;
 }
@@ -39,7 +32,7 @@ ksymbol_get(const char *symbol)
 int
 ksymbol_put(struct ksymbol *symbol)
 {
-    refcount_dec(&symbol->mod->refcount);
+    atomic_fetch_dec(&symbol->mod->refcount);
     return 0;
 }
 
@@ -60,11 +53,12 @@ unregister_kernel_symbol(struct ksymbol *symbol)
 {
     dprintk("Trying to Unregister Kernel Symbol: \"%s\"\n", symbol->symbol);
 
-    if(!refcount_reapable(&symbol->mod->refcount))
-    {
-        // Cannot unload the symbol of a module which is not reapable
-        return -EINVAL;
-    }
+    // TODO: I removed refcount_t and need to fix this -KJH
+    // if(!refcount_reapable(&symbol->mod->refcount))
+    // {
+    //     // Cannot unload the symbol of a module which is not reapable
+    //     return -EINVAL;
+    // }
 
     int res = 0;
     symbol_tree_lock_acquire();
