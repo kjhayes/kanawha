@@ -5,14 +5,15 @@
 #include <drivers/virtio/request.h>
 #include <drivers/virtio/virtio.h>
 #include <kanawha/dev/fb.h>
-#include <kanawha/id.h>
 #include <kanawha/init.h>
 #include <kanawha/irq.h>
 #include <kanawha/kmalloc.h>
 #include <kanawha/stddef.h>
 #include <kanawha/string.h>
+#include <kanawha/ptree.h>
 
-DEFINE_LOCAL_ID_RANGE(virtio_gpu_id_range, 0);
+DEFINE_LOCAL_IRQ_LOCK(virtio_gpu_tree_lock);
+DECLARE_PTREE(virtio_gpu_tree);
 
 static struct fb_mode_info virtio_gpu_mode_0_info = {
     .buffer_size = 640 * 480 * 4,
@@ -351,14 +352,20 @@ virtio_gpu_init_device(struct virtio_driver *driver,
         }
     }
 
-    unsigned long dev_index;
-    dev_index = id_range_alloc(&virtio_gpu_id_range);
+    virtio_gpu_tree_lock_acquire();
+    res = ptree_insert_any(&virtio_gpu_tree, &gpu->global_node);
+    virtio_gpu_tree_lock_release();
+
+    unsigned long dev_index = gpu->global_node.key;
 
     gpu->name = fmt_kstrdup(KM_KERNEL, "virtio-gpu-%ld", dev_index);
     if(gpu->name == NULL)
     {
         virtio_queue_disable(gpu->control_queue);
         virtio_queue_disable(gpu->cursor_queue);
+        virtio_gpu_tree_lock_acquire();
+        ptree_remove(&virtio_gpu_tree, dev_index);
+        virtio_gpu_tree_lock_release();
         kfree(gpu);
         return res;
     }
@@ -371,6 +378,9 @@ virtio_gpu_init_device(struct virtio_driver *driver,
         virtio_queue_disable(gpu->control_queue);
         virtio_queue_disable(gpu->cursor_queue);
         kfree(gpu->name);
+        virtio_gpu_tree_lock_acquire();
+        ptree_remove(&virtio_gpu_tree, dev_index);
+        virtio_gpu_tree_lock_release();
         kfree(gpu);
         return res;
     }
@@ -388,6 +398,10 @@ virtio_gpu_deinit_device(struct virtio_driver *driver,
     int res;
 
     struct virtio_gpu *gpu = device->driver_priv;
+
+    virtio_gpu_tree_lock_acquire();
+    ptree_remove(&virtio_gpu_tree, gpu->global_node.key);
+    virtio_gpu_tree_lock_release();
 
     res = unregister_fb_dev(&gpu->fb_dev);
     if(res)

@@ -202,6 +202,8 @@ struct virtio_gpu_resource
 
 struct virtio_gpu
 {
+    struct ptree_node global_node;
+
     struct fb_dev fb_dev;
     char *name;
     struct virtio_queue *control_queue;
