@@ -3,7 +3,7 @@
 
 #include <drivers/fs/ext2/ext2.h>
 #include <drivers/fs/ext2/mount.h>
-#include <kanawha/spinlock.h>
+#include <kanawha/lock.h>
 
 struct ext2_group
 {
@@ -13,16 +13,16 @@ struct ext2_group
 
     size_t index;
 
-    spinlock_t desc_lock;
+    thread_lock_t desc_lock;
     struct ext2_group_desc desc;
     unsigned desc_dirty : 1;
 
-    spinlock_t blk_lock;
+    thread_lock_t blk_lock;
     // Can be NULL if the blk_bitmap hasn't been accessed yet
     unsigned long *blk_bitmap;
     unsigned blk_dirty : 1;
 
-    spinlock_t inode_lock;
+    thread_lock_t inode_lock;
     // Can be NULL if the inode_bitmap hasn't been accessed yet
     unsigned long *inode_bitmap;
     unsigned inode_dirty : 1;

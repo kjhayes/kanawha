@@ -306,9 +306,9 @@ size_t
 ext2_fs_node_inode_size(struct ext2_fs_node *node)
 {
     size_t size;
-    spin_lock(&node->lock);
+    thread_lock_acquire(&node->lock);
     size = __ext2_fs_node_inode_size_lockless(node);
-    spin_unlock(&node->lock);
+    thread_lock_release(&node->lock);
     return size;
 }
 
@@ -325,9 +325,9 @@ int
 ext2_fs_node_set_inode_size(struct ext2_fs_node *node, size_t size)
 {
     int res;
-    spin_lock(&node->lock);
+    thread_lock_acquire(&node->lock);
     res = __ext2_fs_node_set_inode_size_lockless(node, size);
-    spin_unlock(&node->lock);
+    thread_lock_release(&node->lock);
     return res;
 }
 
@@ -335,7 +335,7 @@ int
 ext2_fs_node_resize(struct ext2_fs_node *node, size_t size)
 {
     int res;
-    spin_lock(&node->lock);
+    thread_lock_acquire(&node->lock);
 
     size_t inode_size = __ext2_fs_node_inode_size_lockless(node);
 
@@ -343,7 +343,7 @@ ext2_fs_node_resize(struct ext2_fs_node *node, size_t size)
 
     if(inode_size == size)
     {
-        spin_unlock(&node->lock);
+        thread_lock_release(&node->lock);
         return 0;
     }
 
@@ -355,7 +355,7 @@ ext2_fs_node_resize(struct ext2_fs_node *node, size_t size)
     res = __ext2_fs_node_set_inode_size_lockless(node, size);
     if(res)
     {
-        spin_unlock(&node->lock);
+        thread_lock_release(&node->lock);
         return res;
     }
 
@@ -363,7 +363,7 @@ ext2_fs_node_resize(struct ext2_fs_node *node, size_t size)
     // all we need to do to increase the size
     if(current_blocks <= blocks_needed)
     {
-        spin_unlock(&node->lock);
+        thread_lock_release(&node->lock);
         return 0;
     }
 
@@ -464,6 +464,6 @@ ext2_fs_node_resize(struct ext2_fs_node *node, size_t size)
 
     // TODO Doubly and Triply Indirect Blocks
 
-    spin_unlock(&node->lock);
+    thread_lock_release(&node->lock);
     return 0;
 }

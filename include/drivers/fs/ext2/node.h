@@ -10,8 +10,8 @@ struct ext2_fs_node
 {
     struct ext2_mount *mount;
 
-    spinlock_t lock;
-    spinlock_t dir_lock;
+    thread_lock_t lock;
+    thread_lock_t dir_lock;
 
     size_t inode_index;
 

@@ -85,7 +85,7 @@ ext2_dir_add_linked_entry(struct fs_node *backing_node,
         return -EINVAL;
     }
 
-    spin_lock(&parent_node->dir_lock);
+    thread_lock_acquire(&parent_node->dir_lock);
 
     size_t namelen = strlen(name);
 
@@ -185,7 +185,7 @@ ext2_dir_add_linked_entry(struct fs_node *backing_node,
         return res;
     }
 
-    spin_unlock(&parent_node->dir_lock);
+    thread_lock_release(&parent_node->dir_lock);
     return 0;
 }
 

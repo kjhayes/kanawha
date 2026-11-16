@@ -4,7 +4,7 @@
 #include <drivers/fs/ext2/mount.h>
 #include <kanawha/bitmap.h>
 #include <kanawha/kmalloc.h>
-#include <kanawha/spinlock.h>
+#include <kanawha/lock.h>
 #include <kanawha/string.h>
 
 static int
@@ -94,9 +94,9 @@ ext2_get_group(struct ext2_mount *mnt, size_t index)
         group->blk_dirty = 0;
         group->inode_dirty = 0;
 
-        spinlock_init(&group->desc_lock);
-        spinlock_init(&group->blk_lock);
-        spinlock_init(&group->inode_lock);
+        thread_lock_init(&group->desc_lock);
+        thread_lock_init(&group->blk_lock);
+        thread_lock_init(&group->inode_lock);
 
         group->blk_bitmap = NULL;
         group->inode_bitmap = NULL;
@@ -146,18 +146,18 @@ ext2_group_populate_blk_bitmap(struct ext2_group *grp)
         return 0;
     }
 
-    spin_lock(&grp->blk_lock);
+    thread_lock_acquire(&grp->blk_lock);
 
     if(grp->blk_bitmap != NULL)
     {
-        spin_unlock(&grp->blk_lock);
+        thread_lock_release(&grp->blk_lock);
         return 0;
     }
 
     grp->blk_bitmap = kmalloc(grp->mnt->block_size, KM_KERNEL);
     if(grp->blk_bitmap == NULL)
     {
-        spin_unlock(&grp->blk_lock);
+        thread_lock_release(&grp->blk_lock);
         return -ENOMEM;
     }
 
@@ -173,7 +173,7 @@ ext2_group_populate_blk_bitmap(struct ext2_group *grp)
     {
         kfree(grp->blk_bitmap);
         grp->blk_bitmap = NULL;
-        spin_unlock(&grp->blk_lock);
+        thread_lock_release(&grp->blk_lock);
         return res;
     }
 
@@ -183,7 +183,7 @@ ext2_group_populate_blk_bitmap(struct ext2_group *grp)
 
     grp->blk_dirty = 0;
 
-    spin_unlock(&grp->blk_lock);
+    thread_lock_release(&grp->blk_lock);
     return 0;
 }
 
@@ -197,11 +197,11 @@ ext2_group_flush_blk_bitmap(struct ext2_group *grp)
         return 0;
     }
 
-    spin_lock(&grp->blk_lock);
+    thread_lock_acquire(&grp->blk_lock);
 
     if(grp->blk_bitmap == NULL)
     {
-        spin_unlock(&grp->blk_lock);
+        thread_lock_release(&grp->blk_lock);
         return 0;
     }
 
@@ -215,13 +215,13 @@ ext2_group_flush_blk_bitmap(struct ext2_group *grp)
                               0);
     if(res)
     {
-        spin_unlock(&grp->blk_lock);
+        thread_lock_release(&grp->blk_lock);
         return res;
     }
 
     grp->blk_dirty = 0;
 
-    spin_unlock(&grp->blk_lock);
+    thread_lock_release(&grp->blk_lock);
     return 0;
 }
 
@@ -235,18 +235,18 @@ ext2_group_populate_inode_bitmap(struct ext2_group *grp)
         return 0;
     }
 
-    spin_lock(&grp->inode_lock);
+    thread_lock_acquire(&grp->inode_lock);
 
     if(grp->inode_bitmap != NULL)
     {
-        spin_unlock(&grp->inode_lock);
+        thread_lock_release(&grp->inode_lock);
         return 0;
     }
 
     grp->inode_bitmap = kmalloc(grp->mnt->block_size, KM_KERNEL);
     if(grp->inode_bitmap == NULL)
     {
-        spin_unlock(&grp->inode_lock);
+        thread_lock_release(&grp->inode_lock);
         return -ENOMEM;
     }
 
@@ -262,13 +262,13 @@ ext2_group_populate_inode_bitmap(struct ext2_group *grp)
     {
         kfree(grp->inode_bitmap);
         grp->inode_bitmap = NULL;
-        spin_unlock(&grp->inode_lock);
+        thread_lock_release(&grp->inode_lock);
         return res;
     }
 
     grp->inode_dirty = 0;
 
-    spin_unlock(&grp->inode_lock);
+    thread_lock_release(&grp->inode_lock);
     return 0;
 }
 
@@ -282,11 +282,11 @@ ext2_group_flush_inode_bitmap(struct ext2_group *grp)
         return 0;
     }
 
-    spin_lock(&grp->inode_lock);
+    thread_lock_acquire(&grp->inode_lock);
 
     if(grp->inode_bitmap == NULL)
     {
-        spin_unlock(&grp->inode_lock);
+        thread_lock_release(&grp->inode_lock);
         return 0;
     }
 
@@ -300,13 +300,13 @@ ext2_group_flush_inode_bitmap(struct ext2_group *grp)
                               0);
     if(res)
     {
-        spin_unlock(&grp->inode_lock);
+        thread_lock_release(&grp->inode_lock);
         return res;
     }
 
     grp->inode_dirty = 0;
 
-    spin_unlock(&grp->inode_lock);
+    thread_lock_release(&grp->inode_lock);
     return 0;
 }
 
@@ -414,10 +414,10 @@ ext2_flush_group(struct ext2_mount *mnt, struct ext2_group *group)
 //        return res;
 //    }
 //
-//    spin_lock(&group->blk_lock);
+//    thread_lock_acquire(&group->blk_lock);
 //    DEBUG_ASSERT(KERNEL_ADDR(group->blk_bitmap));
 //    *value = bitmap_check(group->blk_bitmap, rel_index);
-//    spin_unlock(&group->blk_lock);
+//    thread_lock_release(&group->blk_lock);
 //
 //    return 0;
 //}
@@ -445,9 +445,9 @@ ext2_group_inode_bitmap_check(struct ext2_group *group,
     }
     DEBUG_ASSERT(KERNEL_ADDR(group->inode_bitmap));
 
-    spin_lock(&group->inode_lock);
+    thread_lock_acquire(&group->inode_lock);
     *value = bitmap_check(group->inode_bitmap, rel_index);
-    spin_unlock(&group->inode_lock);
+    thread_lock_release(&group->inode_lock);
 
     dprintk("ext2_group_inode_bitmap_check DONE\n");
     return 0;
@@ -536,7 +536,7 @@ ext2_group_alloc_inode(struct ext2_group *group, size_t *inode_out)
         return res;
     }
 
-    spin_lock(&group->inode_lock);
+    thread_lock_acquire(&group->inode_lock);
 
     int found = 0;
 
@@ -567,7 +567,7 @@ ext2_group_alloc_inode(struct ext2_group *group, size_t *inode_out)
     {
         // Invalid inode number (to be safe)
         *inode_out = 0;
-        spin_unlock(&group->inode_lock);
+        thread_lock_release(&group->inode_lock);
         return -ENOMEM;
     }
 
@@ -578,7 +578,7 @@ ext2_group_alloc_inode(struct ext2_group *group, size_t *inode_out)
     res = ext2_group_read_inode(group, bit, &inode);
     if(res)
     {
-        spin_unlock(&group->inode_lock);
+        thread_lock_release(&group->inode_lock);
         return res;
     }
 
@@ -588,16 +588,16 @@ ext2_group_alloc_inode(struct ext2_group *group, size_t *inode_out)
     res = ext2_group_write_inode(group, bit, &inode);
     if(res)
     {
-        spin_unlock(&group->inode_lock);
+        thread_lock_release(&group->inode_lock);
         return res;
     }
 
-    spin_unlock(&group->inode_lock);
+    thread_lock_release(&group->inode_lock);
 
-    spin_lock(&group->desc_lock);
+    thread_lock_acquire(&group->desc_lock);
     group->desc.free_inodes_count--;
     group->desc_dirty = 1;
-    spin_unlock(&group->desc_lock);
+    thread_lock_release(&group->desc_lock);
 
     return 0;
 }
@@ -619,15 +619,15 @@ ext2_group_free_inode(struct ext2_group *group, size_t inode)
         return res;
     }
 
-    spin_lock(&group->inode_lock);
+    thread_lock_acquire(&group->inode_lock);
     bitmap_clear(group->inode_bitmap, rel_index);
     group->inode_dirty = 1;
-    spin_unlock(&group->inode_lock);
+    thread_lock_release(&group->inode_lock);
 
-    spin_lock(&group->desc_lock);
+    thread_lock_acquire(&group->desc_lock);
     group->desc.free_inodes_count++;
     group->desc_dirty = 1;
-    spin_unlock(&group->desc_lock);
+    thread_lock_release(&group->desc_lock);
 
     return 0;
 }
@@ -642,7 +642,7 @@ ext2_group_alloc_block(struct ext2_group *group, size_t *blk_out)
         return res;
     }
 
-    spin_lock(&group->blk_lock);
+    thread_lock_acquire(&group->blk_lock);
 
     // TODO: ensure this is little endian
     size_t bit = bitmap_find_clear_range(group->blk_bitmap,
@@ -650,19 +650,19 @@ ext2_group_alloc_block(struct ext2_group *group, size_t *blk_out)
                                          1);
     if(bit < 0 || bit >= group->mnt->blks_per_group)
     {
-        spin_unlock(&group->blk_lock);
+        thread_lock_release(&group->blk_lock);
         return -ENOMEM;
     }
 
     bitmap_set(group->blk_bitmap, bit);
     *blk_out = (group->index * group->mnt->blks_per_group) + bit;
 
-    spin_unlock(&group->blk_lock);
+    thread_lock_release(&group->blk_lock);
 
-    spin_lock(&group->desc_lock);
+    thread_lock_acquire(&group->desc_lock);
     group->desc.free_blocks_count--;
     group->desc_dirty = 1;
-    spin_unlock(&group->desc_lock);
+    thread_lock_release(&group->desc_lock);
 
     return 0;
 }
@@ -685,15 +685,15 @@ ext2_group_free_block(struct ext2_group *group, size_t block_index)
         return res;
     }
 
-    spin_lock(&group->blk_lock);
+    thread_lock_acquire(&group->blk_lock);
     bitmap_clear(group->blk_bitmap, rel_index);
     group->blk_dirty = 1;
-    spin_unlock(&group->blk_lock);
+    thread_lock_release(&group->blk_lock);
 
-    spin_lock(&group->desc_lock);
+    thread_lock_acquire(&group->desc_lock);
     group->desc.free_blocks_count++;
     group->desc_dirty = 1;
-    spin_unlock(&group->desc_lock);
+    thread_lock_release(&group->desc_lock);
 
     return 0;
 }
