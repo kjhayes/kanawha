@@ -7,7 +7,7 @@
 #include <kanawha/irq_domain.h>
 #include <kanawha/kmalloc.h>
 #include <kanawha/pio.h>
-#include <kanawha/spinlock.h>
+#include <kanawha/lock.h>
 #include <kanawha/string.h>
 #include <kanawha/vmem.h>
 
@@ -20,7 +20,7 @@ struct ps2_8042_port;
 
 struct ps2_8042
 {
-    spinlock_t lock;
+    thread_lock_t lock;
 
     pio_t data_port;
     pio_t command_port;
@@ -72,15 +72,15 @@ static int
 ps2_8042_cmd(struct ps2_8042 *ps2, uint8_t cmd)
 {
     int res;
-    spin_lock(&ps2->lock);
+    thread_lock_acquire(&ps2->lock);
     res = ps2_8042_wait_input_buf(ps2);
     if(res)
     {
-        spin_unlock(&ps2->lock);
+        thread_lock_release(&ps2->lock);
         return res;
     }
     outb(ps2->command_port, cmd);
-    spin_unlock(&ps2->lock);
+    thread_lock_release(&ps2->lock);
     return 0;
 }
 
@@ -88,15 +88,15 @@ static int
 ps2_8042_data(struct ps2_8042 *ps2, uint8_t data)
 {
     int res;
-    spin_lock(&ps2->lock);
+    thread_lock_acquire(&ps2->lock);
     res = ps2_8042_wait_input_buf(ps2);
     if(res)
     {
-        spin_unlock(&ps2->lock);
+        thread_lock_release(&ps2->lock);
         return res;
     }
     outb(ps2->data_port, data);
-    spin_unlock(&ps2->lock);
+    thread_lock_release(&ps2->lock);
     return 0;
 }
 
@@ -104,22 +104,22 @@ static int
 ps2_8042_cmd_data(struct ps2_8042 *ps2, uint8_t cmd, uint8_t data)
 {
     int res;
-    spin_lock(&ps2->lock);
+    thread_lock_acquire(&ps2->lock);
     res = ps2_8042_wait_input_buf(ps2);
     if(res)
     {
-        spin_unlock(&ps2->lock);
+        thread_lock_release(&ps2->lock);
         return res;
     }
     outb(ps2->command_port, cmd);
     res = ps2_8042_wait_input_buf(ps2);
     if(res)
     {
-        spin_unlock(&ps2->lock);
+        thread_lock_release(&ps2->lock);
         return res;
     }
     outb(ps2->data_port, data);
-    spin_unlock(&ps2->lock);
+    thread_lock_release(&ps2->lock);
     return 0;
 }
 
@@ -127,22 +127,22 @@ static int
 ps2_8042_cmd_resp(struct ps2_8042 *ps2, uint8_t cmd, uint8_t *resp)
 {
     int res;
-    spin_lock(&ps2->lock);
+    thread_lock_acquire(&ps2->lock);
     res = ps2_8042_wait_input_buf(ps2);
     if(res)
     {
-        spin_unlock(&ps2->lock);
+        thread_lock_release(&ps2->lock);
         return res;
     }
     outb(ps2->command_port, cmd);
     res = ps2_8042_wait_output_buf(ps2);
     if(res)
     {
-        spin_unlock(&ps2->lock);
+        thread_lock_release(&ps2->lock);
         return res;
     }
     *resp = inb(ps2->data_port);
-    spin_unlock(&ps2->lock);
+    thread_lock_release(&ps2->lock);
     return 0;
 }
 
@@ -153,29 +153,29 @@ ps2_8042_cmd_data_resp(struct ps2_8042 *ps2,
                        uint8_t *resp)
 {
     int res;
-    spin_lock(&ps2->lock);
+    thread_lock_acquire(&ps2->lock);
     res = ps2_8042_wait_input_buf(ps2);
     if(res)
     {
-        spin_unlock(&ps2->lock);
+        thread_lock_release(&ps2->lock);
         return res;
     }
     outb(ps2->command_port, cmd);
     res = ps2_8042_wait_input_buf(ps2);
     if(res)
     {
-        spin_unlock(&ps2->lock);
+        thread_lock_release(&ps2->lock);
         return res;
     }
     outb(ps2->data_port, data);
     res = ps2_8042_wait_output_buf(ps2);
     if(res)
     {
-        spin_unlock(&ps2->lock);
+        thread_lock_release(&ps2->lock);
         return res;
     }
     *resp = inb(ps2->data_port);
-    spin_unlock(&ps2->lock);
+    thread_lock_release(&ps2->lock);
     return 0;
 }
 
@@ -221,14 +221,14 @@ static int
 ps2_8042_flush_output_buf(struct ps2_8042 *ps2)
 {
     int res;
-    spin_lock(&ps2->lock);
+    thread_lock_acquire(&ps2->lock);
     uint8_t status;
     status = inb(ps2->status_port);
     if(status & 0b01)
     {
         uint8_t val = inb(ps2->data_port);
     }
-    spin_unlock(&ps2->lock);
+    thread_lock_release(&ps2->lock);
     return 0;
 }
 
@@ -288,7 +288,7 @@ ps2_8042_probe(void)
         goto err0;
     }
 
-    spinlock_init(&ps2->lock);
+    thread_lock_init(&ps2->lock);
     ps2->data_port = PS2_8042_STANDARD_DATA_PORT;
     ps2->command_port = PS2_8042_STANDARD_COMMAND_PORT;
     ps2->status_port = PS2_8042_STANDARD_STATUS_PORT;

@@ -4,15 +4,15 @@
 #include <kanawha/clk.h>
 #include <kanawha/errno.h>
 #include <kanawha/list.h>
-#include <kanawha/spinlock.h>
+#include <kanawha/lock.h>
 #include <kanawha/stddef.h>
 
-static DECLARE_SPINLOCK(ps2_global_lock);
+DEFINE_LOCAL_THREAD_LOCK(ps2_global_lock);
 static DECLARE_ILIST(ps2_driver_list);
 static DECLARE_ILIST(ps2_open_port_list);
 static DECLARE_ILIST(ps2_driven_port_list);
 
-static DECLARE_SPINLOCK(ps2_timeout_lock);
+DEFINE_LOCAL_THREAD_LOCK(ps2_timeout_lock);
 
 // All of the "recv_timeout" related data and functions need
 // to be used with the ps2_global_lock held
@@ -110,7 +110,7 @@ ps2_reset(struct ps2_port *port)
         return res;
     }
 
-    spin_lock(&ps2_timeout_lock);
+    ps2_timeout_lock_acquire();
     ps2_recv_callback_f *old_callback = port->callback;
     port->callback = ps2_port_recv_timeout_callback;
 
@@ -176,13 +176,13 @@ ps2_reset(struct ps2_port *port)
     } while(1);
 
     port->callback = old_callback;
-    spin_unlock(&ps2_timeout_lock);
+    ps2_timeout_lock_release();
 
     return 0;
 
 err0:
     port->callback = old_callback;
-    spin_unlock(&ps2_timeout_lock);
+    ps2_timeout_lock_release();
     return res;
 }
 
@@ -198,7 +198,7 @@ ps2_identify(struct ps2_port *port, uint8_t *buffer, size_t *buflen_out_idlen)
         return res;
     }
 
-    spin_lock(&ps2_timeout_lock);
+    ps2_timeout_lock_acquire();
 
     size_t buflen = *buflen_out_idlen;
 
@@ -274,12 +274,12 @@ ps2_identify(struct ps2_port *port, uint8_t *buffer, size_t *buflen_out_idlen)
     *buflen_out_idlen = id_len;
 
     port->callback = old_callback;
-    spin_unlock(&ps2_timeout_lock);
+    ps2_timeout_lock_release();
     return 0;
 
 err0:
     port->callback = old_callback;
-    spin_unlock(&ps2_timeout_lock);
+    ps2_timeout_lock_release();
     return res;
 }
 
@@ -345,7 +345,7 @@ ps2_register_port(struct ps2_port *port)
     }
 #undef IDBUFSIZE
 
-    spin_lock(&ps2_global_lock);
+    ps2_global_lock_acquire();
 
     ilist_node_t *driver_node;
     ilist_for_each(driver_node, &ps2_driver_list)
@@ -374,7 +374,7 @@ ps2_register_port(struct ps2_port *port)
         ilist_push_tail(&ps2_open_port_list, &port->global_node);
     }
 
-    spin_unlock(&ps2_global_lock);
+    ps2_global_lock_release();
 
     return 0;
 }
@@ -382,7 +382,7 @@ ps2_register_port(struct ps2_port *port)
 int
 ps2_unregister_port(struct ps2_port *port)
 {
-    spin_lock(&ps2_global_lock);
+    ps2_global_lock_acquire();
 
     if(port->driver)
     {
@@ -396,7 +396,7 @@ ps2_unregister_port(struct ps2_port *port)
         ilist_remove(&ps2_open_port_list, &port->global_node);
     }
 
-    spin_unlock(&ps2_global_lock);
+    ps2_global_lock_release();
     return 0;
 }
 
@@ -405,7 +405,7 @@ ps2_register_driver(struct ps2_driver *driver)
 {
     int res;
 
-    spin_lock(&ps2_global_lock);
+    ps2_global_lock_acquire();
 
     ilist_push_tail(&ps2_driver_list, &driver->global_node);
 
@@ -450,13 +450,13 @@ ps2_register_driver(struct ps2_driver *driver)
         ilist_push_tail(&ps2_driven_port_list, &port->global_node);
     }
 
-    spin_unlock(&ps2_global_lock);
+    ps2_global_lock_release();
     return 0;
 }
 int
 ps2_unregister_driver(struct ps2_driver *driver)
 {
-    spin_lock(&ps2_global_lock);
+    ps2_global_lock_acquire();
 
     ilist_remove(&ps2_driver_list, &driver->global_node);
 
@@ -494,7 +494,7 @@ ps2_port_enable_scanning(struct ps2_port *port)
 {
     int res;
 
-    spin_lock(&ps2_timeout_lock);
+    ps2_timeout_lock_acquire();
     ps2_recv_callback_f *old_callback = port->callback;
     port->callback = ps2_port_recv_timeout_callback;
 
@@ -534,12 +534,12 @@ ps2_port_enable_scanning(struct ps2_port *port)
     } while(1);
 
     port->callback = old_callback;
-    spin_unlock(&ps2_timeout_lock);
+    ps2_timeout_lock_release();
     return 0;
 
 err0:
     port->callback = old_callback;
-    spin_unlock(&ps2_timeout_lock);
+    ps2_timeout_lock_release();
     return res;
 }
 
@@ -548,7 +548,7 @@ ps2_port_disable_scanning(struct ps2_port *port)
 {
     int res;
 
-    spin_lock(&ps2_timeout_lock);
+    ps2_timeout_lock_acquire();
     ps2_recv_callback_f *old_callback = port->callback;
     port->callback = ps2_port_recv_timeout_callback;
 
@@ -588,11 +588,11 @@ ps2_port_disable_scanning(struct ps2_port *port)
     } while(1);
 
     port->callback = old_callback;
-    spin_unlock(&ps2_timeout_lock);
+    ps2_timeout_lock_release();
     return 0;
 
 err0:
     port->callback = old_callback;
-    spin_unlock(&ps2_timeout_lock);
+    ps2_timeout_lock_release();
     return res;
 }

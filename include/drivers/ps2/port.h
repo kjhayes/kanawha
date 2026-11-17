@@ -4,7 +4,6 @@
 #include <drivers/ps2/driver.h>
 #include <kanawha/list.h>
 #include <kanawha/ops.h>
-#include <kanawha/spinlock.h>
 #include <kanawha/time.h>
 
 struct ps2_port;
