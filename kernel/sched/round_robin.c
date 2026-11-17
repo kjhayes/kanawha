@@ -10,6 +10,7 @@
 #include <kanawha/time.h>
 #include <kanawha/vmem.h>
 #include <kanawha/xcall.h>
+#include <kanawha/lock.h>
 
 #define DEFAULT_MIGRATION_THRESHOLD 4
 
@@ -29,7 +30,7 @@ struct rr_scheduler
 
     unsigned long migration_threshold;
 
-    spinlock_t list_lock;
+    irq_lock_t list_lock;
     size_t num_threads;
     ilist_t thread_list;
 
@@ -77,7 +78,7 @@ rr_sched_alloc_instance(struct scheduler_type *type)
     sched->num_threads = 0;
     sched->migration_threshold = DEFAULT_MIGRATION_THRESHOLD;
     ilist_init(&sched->thread_list);
-    spinlock_init(&sched->list_lock);
+    irq_lock_init(&sched->list_lock);
 
     struct periodic_event *event = create_periodic_event(
         msec_to_duration(CONFIG_ROUND_ROBIN_SCHED_TIMESLICE_MS),
@@ -115,11 +116,11 @@ rr_sched_hard_resched(struct scheduler *sched)
     struct rr_scheduler *rr_sched =
         container_of(sched, struct rr_scheduler, sched);
 
-    int irq_flags = spin_lock_irq_save(&rr_sched->list_lock);
+    irq_lock_acquire(&rr_sched->list_lock);
 
     if(rr_sched->num_threads == 0)
     {
-        spin_unlock_irq_restore(&rr_sched->list_lock, irq_flags);
+        irq_lock_release(&rr_sched->list_lock);
         dprintk("rr_sched_hard_resched without any threads!\n");
         return 0;
     }
@@ -148,7 +149,7 @@ rr_sched_hard_resched(struct scheduler *sched)
         if(next == running)
         {
             *current_ptr = NULL; // we are not running any rr_thread
-            spin_unlock_irq_restore(&rr_sched->list_lock, irq_flags);
+            irq_lock_release(&rr_sched->list_lock);
             return -EINVAL;
         }
 
@@ -190,7 +191,7 @@ rr_sched_hard_resched(struct scheduler *sched)
             current->last_run_cpu,
             ilist_count(&rr_sched->thread_list));
 
-    spin_unlock_irq_restore(&rr_sched->list_lock, irq_flags);
+    irq_lock_release(&rr_sched->list_lock);
 
     return 0;
 }
@@ -238,10 +239,10 @@ rr_sched_add_thread(struct scheduler *sched, struct thread_state *state)
     thread->last_run_cpu = current_cpu_id();
 
     thread->state = state;
-    int irq_flags = spin_lock_irq_save(&rr_sched->list_lock);
+    irq_lock_acquire(&rr_sched->list_lock);
     ilist_push_tail(&rr_sched->thread_list, &thread->list_node);
     rr_sched->num_threads++;
-    spin_unlock_irq_restore(&rr_sched->list_lock, irq_flags);
+    irq_lock_release(&rr_sched->list_lock);
 
     return 0;
 }
@@ -254,7 +255,7 @@ rr_sched_remove_thread(struct scheduler *sched, struct thread_state *state)
     struct rr_scheduler *rr_sched =
         container_of(sched, struct rr_scheduler, sched);
 
-    int irq_flags = spin_lock_irq_save(&rr_sched->list_lock);
+    irq_lock_acquire(&rr_sched->list_lock);
 
     ilist_node_t *node;
     ilist_for_each(node, &rr_sched->thread_list)
@@ -271,11 +272,11 @@ rr_sched_remove_thread(struct scheduler *sched, struct thread_state *state)
             {
                 *current_ptr = NULL;
             }
-            spin_unlock_irq_restore(&rr_sched->list_lock, irq_flags);
+            irq_lock_release(&rr_sched->list_lock);
             return 0;
         }
     }
-    spin_unlock_irq_restore(&rr_sched->list_lock, irq_flags);
+    irq_lock_release(&rr_sched->list_lock);
 
     return -ENXIO;
 }
@@ -285,7 +286,7 @@ rr_sched_debug_dump(struct scheduler *scheduler, printk_f *printer)
 {
     struct rr_scheduler *sched =
         container_of(scheduler, struct rr_scheduler, sched);
-    spin_lock(&sched->list_lock);
+    irq_lock_acquire(&sched->list_lock);
     ilist_node_t *node;
     ilist_for_each(node, &sched->thread_list)
     {
@@ -293,7 +294,7 @@ rr_sched_debug_dump(struct scheduler *scheduler, printk_f *printer)
             container_of(node, struct rr_thread, list_node);
         (*printer)("RR-THREAD(%ld)\n", (sl_t)thread->state->id);
     }
-    spin_unlock(&sched->list_lock);
+    irq_lock_release(&sched->list_lock);
     return 0;
 }
 
