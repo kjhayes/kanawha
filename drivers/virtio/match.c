@@ -3,8 +3,10 @@
 #include <drivers/virtio/virtio.h>
 #include <kanawha/list.h>
 #include <kanawha/stddef.h>
+#include <kanawha/lock.h>
+#include <kanawha/errno.h>
 
-static DECLARE_SPINLOCK(virtio_match_lock);
+DEFINE_LOCAL_THREAD_LOCK(virtio_match_lock);
 static DECLARE_ILIST(virtio_unmatched_device_list);
 static DECLARE_ILIST(virtio_matched_device_list);
 static DECLARE_ILIST(virtio_driver_list);
@@ -114,7 +116,7 @@ register_virtio_device(struct virtio_device *device)
         return res;
     }
 
-    spin_lock(&virtio_match_lock);
+    virtio_match_lock_acquire();
 
     int matched = 0;
     ilist_node_t *node;
@@ -140,7 +142,7 @@ register_virtio_device(struct virtio_device *device)
         ilist_push_tail(&virtio_unmatched_device_list, &device->global_node);
     }
 
-    spin_unlock(&virtio_match_lock);
+    virtio_match_lock_release();
     return 0;
 }
 
@@ -151,7 +153,7 @@ register_virtio_driver(struct virtio_driver *driver)
 
     ilist_init(&driver->device_list);
 
-    spin_lock(&virtio_match_lock);
+    virtio_match_lock_acquire();
 
     ilist_push_tail(&virtio_driver_list, &driver->global_node);
 
@@ -182,7 +184,7 @@ register_virtio_driver(struct virtio_driver *driver)
         }
     }
 
-    spin_unlock(&virtio_match_lock);
+    virtio_match_lock_release();
 
     return 0;
 }
