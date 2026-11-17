@@ -84,7 +84,7 @@ struct virtio_net_hdr
 #define VIRTIO_NET_F_STANDBY (62)
 #define VIRTIO_NET_F_SPEED_DUPLEX (63)
 
-static DECLARE_SPINLOCK(virtio_net_count_lock);
+DEFINE_LOCAL_THREAD_LOCK(virtio_net_count_lock);
 static unsigned long virtio_net_count = 0;
 
 struct virtio_net_queue_pair
@@ -608,10 +608,10 @@ virtio_net_init_device(struct virtio_driver *driver,
 
     // Register the device
     unsigned long dev_index;
-    spin_lock(&virtio_net_count_lock);
+    virtio_net_count_lock_acquire();
     dev_index = virtio_net_count;
     virtio_net_count++;
-    spin_unlock(&virtio_net_count_lock);
+    virtio_net_count_lock_release();
 
     net->name = fmt_kstrdup(KM_KERNEL, "virtio-net-%ld", dev_index);
     if(net->name == NULL)
