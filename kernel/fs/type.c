@@ -1,7 +1,6 @@
 
 #include <kanawha/fs/type.h>
 #include <kanawha/lock.h>
-#include <kanawha/spinlock.h>
 #include <kanawha/stddef.h>
 #include <kanawha/stree.h>
 
