@@ -74,7 +74,7 @@ struct scheduler
     struct scheduler_type *type;
 
     // Fields managed by higher level scheduler API
-    spinlock_t lock;
+    irq_lock_t lock;
     size_t num_cpus;
     char *name;
     ilist_node_t instance_list_node;

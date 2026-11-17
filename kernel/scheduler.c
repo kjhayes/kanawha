@@ -67,7 +67,7 @@ create_scheduler(const char *type_name, const char *sched_name)
     {
         scheduler_type_free_instance(type, sched);
     }
-    spinlock_init(&sched->lock);
+    irq_lock_init(&sched->lock);
 
     sched_instance_list_lock_acquire();
     ilist_push_tail(&sched_instance_list, &sched->instance_list_node);
@@ -90,20 +90,21 @@ assign_cpu_scheduler(struct scheduler *sched, cpu_id_t cpu)
     if(existing != NULL)
     {
         // The locking here is questionable
-        int flags = spin_lock_pair_irq_save(&existing->lock, &sched->lock);
+        irq_lock_acquire_pair(&existing->lock, &sched->lock);
         existing->num_cpus--;
         sched->num_cpus++;
         (*(struct scheduler **)
              percpu_ptr_specific(percpu_addr(current_scheduler), cpu)) = sched;
-        spin_unlock_pair_irq_restore(&existing->lock, &sched->lock, flags);
+        irq_lock_release(&existing->lock);
+        irq_lock_release(&sched->lock);
     }
     else
     {
-        int flags = spin_lock_irq_save(&sched->lock);
+        irq_lock_acquire(&sched->lock);
         sched->num_cpus++;
         (*(struct scheduler **)
              percpu_ptr_specific(percpu_addr(current_scheduler), cpu)) = sched;
-        spin_unlock_irq_restore(&sched->lock, flags);
+        irq_lock_release(&sched->lock);
     }
 
     return 0;
