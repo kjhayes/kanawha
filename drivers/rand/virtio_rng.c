@@ -9,7 +9,7 @@
 #include <kanawha/kmalloc.h>
 #include <kanawha/string.h>
 
-static DECLARE_SPINLOCK(virtio_rng_count_lock);
+DEFINE_LOCAL_THREAD_LOCK(virtio_rng_count_lock);
 static unsigned long virtio_rng_count = 0;
 
 #define VIRTIO_RNG_BUFSIZE 0x1000
@@ -173,10 +173,10 @@ virtio_rng_init_device(struct virtio_driver *driver,
     rng->data_avail = 0;
 
     unsigned long dev_index;
-    spin_lock(&virtio_rng_count_lock);
+    virtio_rng_count_lock_acquire();
     dev_index = virtio_rng_count;
     virtio_rng_count++;
-    spin_unlock(&virtio_rng_count_lock);
+    virtio_rng_count_lock_release();
 
     rng->name = fmt_kstrdup(KM_KERNEL, "virtio-rng-%ld", dev_index);
     if(rng->name == NULL)
