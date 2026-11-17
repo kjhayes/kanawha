@@ -5,7 +5,7 @@
 #include <kanawha/irq.h>
 #include <kanawha/kmalloc.h>
 #include <kanawha/mbarrier.h>
-#include <kanawha/spinlock.h>
+#include <kanawha/lock.h>
 #include <kanawha/stddef.h>
 #include <kanawha/string.h>
 
@@ -25,9 +25,9 @@ virtio_queue_init_struct(struct virtio_queue *queue,
 
     queue->last_used_idx = 0;
 
-    spinlock_init(&queue->req_lock);
-    spinlock_init(&queue->avail_lock);
-    spinlock_init(&queue->used_lock);
+    irq_lock_init(&queue->req_lock);
+    thread_lock_init(&queue->avail_lock);
+    irq_lock_init(&queue->used_lock);
     ilist_init(&queue->unlaunched_reqs);
     ilist_init(&queue->launched_reqs);
 
@@ -158,19 +158,19 @@ virtio_queue_free_desc_chain(struct virtio_queue *queue, uint16_t root_desc)
 int
 virtio_queue_alloc_desc(struct virtio_queue *queue, uint16_t *index_out)
 {
-    spin_lock(&queue->desc_lock);
+    thread_lock_acquire(&queue->desc_lock);
 
     size_t bit =
         bitmap_find_clear_range(queue->desc_bitmap, queue->queue_size, 1);
     if(bit >= queue->queue_size)
     {
-        spin_unlock(&queue->desc_lock);
+        thread_lock_release(&queue->desc_lock);
         return -ENOMEM;
     }
 
     bitmap_set(queue->desc_bitmap, bit);
 
-    spin_unlock(&queue->desc_lock);
+    thread_lock_release(&queue->desc_lock);
 
     *index_out = bit;
 
@@ -242,14 +242,14 @@ virtio_queue_try_push_avail_ring(struct virtio_queue *queue,
 
     struct virtio_queue_avail *avail_ring = queue->avail_ring;
 
-    spin_lock(&queue->avail_lock);
+    thread_lock_acquire(&queue->avail_lock);
 
     size_t idx = avail_ring->idx;
     req->avail_slot = avail_ring->idx % queue->queue_size;
 
     if(bitmap_check(queue->avail_bitmap, req->avail_slot))
     {
-        spin_unlock(&queue->avail_lock);
+        thread_lock_release(&queue->avail_lock);
         return -EBUSY;
     }
 
@@ -265,7 +265,7 @@ virtio_queue_try_push_avail_ring(struct virtio_queue *queue,
             idx + 1,
             req->avail_slot);
 
-    spin_unlock(&queue->avail_lock);
+    thread_lock_release(&queue->avail_lock);
 
     return 0;
 }
@@ -275,11 +275,11 @@ virtio_queue_launch_request(struct virtio_queue *queue,
                             struct virtio_request *req)
 {
     int res;
-    int irq_flags = spin_lock_irq_save(&queue->req_lock);
+    irq_lock_acquire(&queue->req_lock);
 
     if(!(req->state == VIRTIO_REQUEST_UNLAUNCHED || req->state == VIRTIO_REQUEST_COMPLETED))
     {
-        spin_unlock_irq_restore(&queue->req_lock, irq_flags);
+        irq_lock_release(&queue->req_lock);
         return -EINVAL;
     }
 
@@ -294,11 +294,11 @@ virtio_queue_launch_request(struct virtio_queue *queue,
         ilist_remove(&queue->launched_reqs, &req->queue_node);
         req->state = VIRTIO_REQUEST_UNLAUNCHED;
         ilist_push_tail(&queue->unlaunched_reqs, &req->queue_node);
-        spin_unlock_irq_restore(&queue->req_lock, irq_flags);
+        irq_lock_release(&queue->req_lock);
         return res;
     }
 
-    spin_unlock_irq_restore(&queue->req_lock, irq_flags);
+    irq_lock_release(&queue->req_lock);
 
     virtio_queue_notify(queue);
 
@@ -310,17 +310,17 @@ virtio_queue_try_finish_request(struct virtio_queue *queue,
                                 struct virtio_request *req)
 {
     int res;
-    int irq_flags = spin_lock_irq_save(&queue->req_lock);
+    irq_lock_acquire(&queue->req_lock);
 
     if(req->state != VIRTIO_REQUEST_COMPLETED)
     {
-        spin_unlock_irq_restore(&queue->req_lock, irq_flags);
+        irq_lock_release(&queue->req_lock);
         return -EINVAL;
     }
 
     req->state = VIRTIO_REQUEST_UNLAUNCHED;
 
-    spin_unlock_irq_restore(&queue->req_lock, irq_flags);
+    irq_lock_release(&queue->req_lock);
     return 0;
 }
 
@@ -359,7 +359,7 @@ virtio_queue_handle_used_notification(struct virtio_queue *queue)
 
     DEBUG_ASSERT(KERNEL_ADDR(queue));
 
-    int irq_flags = spin_lock_irq_save(&queue->used_lock);
+    irq_lock_acquire(&queue->used_lock);
 
     struct virtio_queue_used *used_ring = queue->used_ring;
 
@@ -387,7 +387,7 @@ virtio_queue_handle_used_notification(struct virtio_queue *queue)
         le32_t id = elem->id;
         le32_t len = elem->len;
 
-        spin_lock(&queue->req_lock);
+        irq_lock_acquire(&queue->req_lock);
         struct virtio_request *req =
             virtio_queue_find_launched_req_by_desc(queue, id);
         if(req == NULL)
@@ -406,11 +406,11 @@ virtio_queue_handle_used_notification(struct virtio_queue *queue)
         req->len_written = len;
         req->state = VIRTIO_REQUEST_COMPLETED;
         ilist_push_tail(&queue->unlaunched_reqs, &req->queue_node);
-        spin_unlock(&queue->req_lock);
+        irq_lock_release(&queue->req_lock);
 
-        spin_lock(&queue->avail_lock);
+        thread_lock_acquire(&queue->avail_lock);
         bitmap_clear(queue->avail_bitmap, avail_slot);
-        spin_unlock(&queue->avail_lock);
+        thread_lock_release(&queue->avail_lock);
 
         if(req->complete_callback)
         {
@@ -421,7 +421,7 @@ virtio_queue_handle_used_notification(struct virtio_queue *queue)
     // Update the last seen used ring index
     queue->last_used_idx = idx;
 
-    spin_unlock_irq_restore(&queue->used_lock, irq_flags);
+    irq_lock_release(&queue->used_lock);
 
     return 0;
 }

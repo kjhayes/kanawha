@@ -23,9 +23,9 @@ virtio_request_create(struct virtio_queue *queue)
     request->complete_callback = NULL;
     request->complete_callback_state = NULL;
 
-    int irq_flags = spin_lock_irq_save(&queue->req_lock);
+    irq_lock_acquire(&queue->req_lock);
     ilist_push_tail(&queue->unlaunched_reqs, &request->queue_node);
-    spin_unlock_irq_restore(&queue->req_lock, irq_flags);
+    irq_lock_release(&queue->req_lock);
     return request;
 }
 
@@ -39,18 +39,18 @@ virtio_request_destroy(struct virtio_request *request)
     if(queue != NULL)
     {
 
-        int irq_flags = spin_lock_irq_save(&queue->req_lock);
+        irq_lock_acquire(&queue->req_lock);
 
         // We can only destroy unlaunched requests
         if(request->state != VIRTIO_REQUEST_UNLAUNCHED)
         {
-            spin_unlock_irq_restore(&queue->req_lock, irq_flags);
+            irq_lock_release(&queue->req_lock);
             return -EINVAL;
         }
 
         ilist_remove(&queue->unlaunched_reqs, &request->queue_node);
 
-        spin_unlock_irq_restore(&queue->req_lock, irq_flags);
+        irq_lock_release(&queue->req_lock);
 
         if(request->num_buffers > 0)
         {

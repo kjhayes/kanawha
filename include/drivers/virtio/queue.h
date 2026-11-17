@@ -4,6 +4,7 @@
 #include <kanawha/dma.h>
 #include <kanawha/endian.h>
 #include <kanawha/ops.h>
+#include <kanawha/lock.h>
 
 struct virtio_queue_desc
 {
@@ -93,19 +94,19 @@ struct virtio_queue
     dma_addr_t dma_region;
     size_t dma_size;
 
-    spinlock_t desc_lock;
+    thread_lock_t desc_lock;
     struct virtio_queue_desc *desc_table;
     unsigned long *desc_bitmap;
 
-    spinlock_t avail_lock;
+    thread_lock_t avail_lock;
     struct virtio_queue_avail *avail_ring;
     unsigned long *avail_bitmap;
 
-    spinlock_t used_lock;
+    irq_lock_t used_lock;
     size_t last_used_idx;
     struct virtio_queue_used *used_ring;
 
-    spinlock_t req_lock;
+    irq_lock_t req_lock;
     ilist_t unlaunched_reqs;
     ilist_t launched_reqs;
 };
