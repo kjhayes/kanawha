@@ -6,7 +6,7 @@
 #include <kanawha/lock.h>
 #include <kanawha/page_alloc.h>
 #include <kanawha/parse.h>
-#include <kanawha/spinlock.h>
+#include <kanawha/lock.h>
 #include <kanawha/stree.h>
 #include <kanawha/string.h>
 #include <kanawha/vmem.h>
@@ -25,7 +25,7 @@ struct fb_dev_fs_node
 {
     struct fb_dev *dev;
 
-    spinlock_t buffer_lock;
+    thread_lock_t buffer_lock;
     ssize_t buffer_mode;
     struct fb_mode_info *buffer_info;
     size_t buffer_pages_loaded;
@@ -59,19 +59,19 @@ fb_dev_buffer_fs_node_load_page(struct fs_node *fs_node,
     DEBUG_ASSERT(KERNEL_ADDR(fbfs));
     DEBUG_ASSERT(KERNEL_ADDR(fbfs->dev));
 
-    spin_lock(&fbfs->buffer_lock);
+    thread_lock_acquire(&fbfs->buffer_lock);
     if(fbfs->buffer_pages_loaded == 0)
     {
         fbfs->buffer_mode = fb_dev_get_mode(fbfs->dev);
         if(fbfs->buffer_mode < 0)
         {
-            spin_unlock(&fbfs->buffer_lock);
+            thread_lock_release(&fbfs->buffer_lock);
             return fbfs->buffer_mode;
         }
         fbfs->buffer_info = fb_dev_get_mode_info(fbfs->dev, fbfs->buffer_mode);
         if(fbfs->buffer_info == NULL)
         {
-            spin_unlock(&fbfs->buffer_lock);
+            thread_lock_release(&fbfs->buffer_lock);
             return -ENXIO;
         }
 
@@ -81,7 +81,7 @@ fb_dev_buffer_fs_node_load_page(struct fs_node *fs_node,
             if(res)
             {
                 fb_dev_put_mode_info(fbfs->dev, fbfs->buffer_mode);
-                spin_unlock(&fbfs->buffer_lock);
+                thread_lock_release(&fbfs->buffer_lock);
                 return res;
             }
             fbfs->buffer_tail_pfn =
@@ -96,7 +96,7 @@ fb_dev_buffer_fs_node_load_page(struct fs_node *fs_node,
         if(res)
         {
             fb_dev_put_mode_info(fbfs->dev, fbfs->buffer_mode);
-            spin_unlock(&fbfs->buffer_lock);
+            thread_lock_release(&fbfs->buffer_lock);
             return res;
         }
 
@@ -125,7 +125,7 @@ fb_dev_buffer_fs_node_load_page(struct fs_node *fs_node,
     }
 
     fbfs->buffer_pages_loaded++;
-    spin_unlock(&fbfs->buffer_lock);
+    thread_lock_release(&fbfs->buffer_lock);
 
     size_t page_offset = (pfn << VMEM_MIN_PAGE_ORDER);
 
@@ -161,7 +161,7 @@ fb_dev_buffer_fs_node_unload_page(struct fs_node *fs_node,
     DEBUG_ASSERT(KERNEL_ADDR(fbfs));
     DEBUG_ASSERT(KERNEL_ADDR(fbfs->dev));
 
-    spin_lock(&fbfs->buffer_lock);
+    thread_lock_acquire(&fbfs->buffer_lock);
     fbfs->buffer_pages_loaded--;
     if(fbfs->buffer_pages_loaded == 0)
     {
@@ -169,7 +169,7 @@ fb_dev_buffer_fs_node_unload_page(struct fs_node *fs_node,
         if(res)
         {
             fbfs->buffer_pages_loaded++;
-            spin_unlock(&fbfs->buffer_lock);
+            thread_lock_release(&fbfs->buffer_lock);
             return res;
         }
         if(fbfs->buffer_tail_pfn >= 0)
@@ -188,7 +188,7 @@ fb_dev_buffer_fs_node_unload_page(struct fs_node *fs_node,
         fbfs->buffer_info = NULL;
         res = fb_dev_put_mode_info(fbfs->dev, fbfs->buffer_mode);
     }
-    spin_unlock(&fbfs->buffer_lock);
+    thread_lock_release(&fbfs->buffer_lock);
 
     return 0;
 }
@@ -206,7 +206,7 @@ fb_dev_buffer_fs_node_flush_page(struct fs_node *fs_node,
     DEBUG_ASSERT(KERNEL_ADDR(fbfs));
     DEBUG_ASSERT(KERNEL_ADDR(fbfs->dev));
 
-    spin_lock(&fbfs->buffer_lock);
+    thread_lock_acquire(&fbfs->buffer_lock);
 
     if(pfn == fbfs->buffer_tail_pfn)
     {
@@ -226,7 +226,7 @@ fb_dev_buffer_fs_node_flush_page(struct fs_node *fs_node,
         memcpy(buffer + tail_page_offset, tail_page, tail_page_data_size);
     }
 
-    spin_unlock(&fbfs->buffer_lock);
+    thread_lock_release(&fbfs->buffer_lock);
 
     // TODO This is ridiculuously inefficient (flushing full buffer on every
     // page flush)
@@ -248,7 +248,7 @@ fb_dev_buffer_fs_node_getattr(struct fs_node *fs_node, int attr, size_t *value)
     DEBUG_ASSERT(KERNEL_ADDR(fbfs));
     DEBUG_ASSERT(KERNEL_ADDR(fbfs->dev));
 
-    spin_lock(&fbfs->buffer_lock);
+    thread_lock_acquire(&fbfs->buffer_lock);
 
     size_t mode;
     struct fb_mode_info *info;
@@ -265,7 +265,7 @@ fb_dev_buffer_fs_node_getattr(struct fs_node *fs_node, int attr, size_t *value)
 
     if(info == NULL)
     {
-        spin_unlock(&fbfs->buffer_lock);
+        thread_lock_release(&fbfs->buffer_lock);
         res = -EINVAL;
         goto exit;
     }
@@ -289,7 +289,7 @@ exit:
     {
         fb_dev_put_mode_info(fbfs->dev, mode);
     }
-    spin_unlock(&fbfs->buffer_lock);
+    thread_lock_release(&fbfs->buffer_lock);
 
     return res;
 }
@@ -409,14 +409,14 @@ fb_dev_mode_set_fs_file_write(struct file *file,
 
     unsigned long long value = parse_unsigned_long_long(str_buf, 0);
 
-    spin_lock(&fbfs->buffer_lock);
+    thread_lock_acquire(&fbfs->buffer_lock);
 
     if(fbfs->buffer_pages_loaded > 0)
     {
         if(fb_dev_get_mode(fbfs->dev) != value)
         {
             // Cannot change modes while the buffer is loaded
-            spin_unlock(&fbfs->buffer_lock);
+            thread_lock_release(&fbfs->buffer_lock);
             fs_node_put(fs_node);
             return -EBUSY;
         }
@@ -424,7 +424,7 @@ fb_dev_mode_set_fs_file_write(struct file *file,
     res = fb_dev_set_mode(fbfs->dev, value);
     if(res)
     {
-        spin_unlock(&fbfs->buffer_lock);
+        thread_lock_release(&fbfs->buffer_lock);
         fs_node_put(fs_node);
         return res;
     }
@@ -475,7 +475,7 @@ fb_dev_mode_set_fs_file_write(struct file *file,
 fail_display_logo:
 #endif
 
-    spin_unlock(&fbfs->buffer_lock);
+    thread_lock_release(&fbfs->buffer_lock);
     fs_node_put(fs_node);
 
     return buflen;
@@ -746,7 +746,7 @@ fb_dev_fs_receive_fb_dev(struct fb_dev *dev)
 
     fbfs->dev = dev;
 
-    spinlock_init(&fbfs->buffer_lock);
+    thread_lock_init(&fbfs->buffer_lock);
     fbfs->buffer_pages_loaded = 0;
     fbfs->mode_info_vfs_current_mode = 0;
 
