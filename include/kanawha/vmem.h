@@ -2,6 +2,7 @@
 #define __KANAWHA__VMEM_H__
 
 #include <kanawha/excp.h>
+#include <kanawha/lock.h>
 
 #if defined(CONFIG_X64)
 #include <arch/x64/vmem.h>
@@ -21,7 +22,6 @@
 #include <kanawha/pointer.h>
 #include <kanawha/printk.h>
 #include <kanawha/ptree.h>
-#include <kanawha/spinlock.h>
 #include <kanawha/types.h>
 
 _Static_assert((!KERNEL_ADDR(NULL)),
@@ -37,7 +37,7 @@ struct vmem_map
 {
     struct arch_vmem_map arch_state;
 
-    spinlock_t lock;
+    irq_lock_t lock;
 
     size_t active_on;
 
@@ -82,7 +82,7 @@ typedef int(page_fault_f)(struct excp_state *state,
 
 struct vmem_region
 {
-    spinlock_t lock;
+    irq_lock_t lock;
     size_t num_refs;
     ilist_t ref_list;
 

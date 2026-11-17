@@ -143,7 +143,7 @@ vmem_map_create(void)
         return map;
     }
 
-    spinlock_init(&map->lock);
+    irq_lock_init(&map->lock);
     ptree_init(&map->mapping_root);
 
     res = arch_vmem_map_init(map);
@@ -209,7 +209,7 @@ vmem_region_create_direct(void __phys *paddr, size_t size, unsigned long flags)
     region->direct.phys_base = paddr;
     region->direct.flags = flags;
 
-    spinlock_init(&region->lock);
+    irq_lock_init(&region->lock);
     region->num_refs = 0;
     ilist_init(&region->ref_list);
 
@@ -255,7 +255,7 @@ vmem_region_create_paged(size_t size,
         fault_handler ? fault_handler : default_page_fault_handler;
     region->paged.priv_state = priv_state;
 
-    spinlock_init(&region->lock);
+    irq_lock_init(&region->lock);
     region->num_refs = 0;
     ilist_init(&region->ref_list);
 
@@ -341,8 +341,8 @@ vmem_map_map_region(struct vmem_map *map,
     DEBUG_ASSERT(KERNEL_ADDR(map));
     DEBUG_ASSERT(KERNEL_ADDR(region));
 
-    spin_lock(&region->lock);
-    spin_lock(&map->lock);
+    irq_lock_acquire(&region->lock);
+    irq_lock_acquire(&map->lock);
 
     order_t region_align_order = vmem_region_alignment(region);
     if(ptr_orderof(base) < region_align_order)
@@ -350,8 +350,8 @@ vmem_map_map_region(struct vmem_map *map,
         eprintk("vmem_map_map_region: vaddr=%p is not aligned to the region's required alignment order (%d)!\n",
                 (void*)base,
                 (int)region_align_order);
-        spin_unlock(&map->lock);
-        spin_unlock(&region->lock);
+        irq_lock_release(&map->lock);
+        irq_lock_release(&region->lock);
         return -EINVAL;
     }
 
@@ -409,8 +409,8 @@ vmem_map_map_region(struct vmem_map *map,
         goto err2;
     }
 
-    spin_unlock(&map->lock);
-    spin_unlock(&region->lock);
+    irq_lock_release(&map->lock);
+    irq_lock_release(&region->lock);
 
     res = arch_vmem_map_map_region(map, ref);
     if(res)
@@ -429,8 +429,8 @@ err2:
 err1:
     region->num_refs--;
 err0:
-    spin_unlock(&map->lock);
-    spin_unlock(&region->lock);
+    irq_lock_release(&map->lock);
+    irq_lock_release(&region->lock);
     return res;
 }
 
@@ -445,8 +445,8 @@ vmem_map_unmap_region(struct vmem_map *map, struct vmem_region_ref *ref)
         return res;
     }
 
-    spin_lock(&ref->region->lock);
-    spin_lock(&map->lock);
+    irq_lock_acquire(&ref->region->lock);
+    irq_lock_acquire(&map->lock);
 
     struct vmem_region *region = ref->region;
 
@@ -457,8 +457,8 @@ vmem_map_unmap_region(struct vmem_map *map, struct vmem_region_ref *ref)
     region->num_refs--;
     ilist_remove(&region->ref_list, &ref->region_node);
 
-    spin_unlock(&map->lock);
-    spin_unlock(&ref->region->lock);
+    irq_lock_release(&map->lock);
+    irq_lock_release(&ref->region->lock);
 
     free_vmem_region_ref(ref);
 
@@ -469,9 +469,9 @@ int
 vmem_flush_map(struct vmem_map *map)
 {
     int res;
-    spin_lock(&map->lock);
+    irq_lock_acquire(&map->lock);
     res = arch_vmem_map_flush(map);
-    spin_unlock(&map->lock);
+    irq_lock_release(&map->lock);
     return res;
 }
 
@@ -479,7 +479,7 @@ int
 vmem_flush_region(struct vmem_region *region)
 {
     int res;
-    spin_lock(&region->lock);
+    irq_lock_acquire(&region->lock);
     ilist_node_t *node;
     ilist_for_each(node, &region->ref_list)
     {
@@ -488,11 +488,11 @@ vmem_flush_region(struct vmem_region *region)
         res = vmem_flush_map(ref->map);
         if(res)
         {
-            spin_unlock(&region->lock);
+            irq_lock_release(&region->lock);
             return res;
         }
     }
-    spin_unlock(&region->lock);
+    irq_lock_release(&region->lock);
     return 0;
 }
 
@@ -505,46 +505,24 @@ vmem_map_activate(struct vmem_map *map)
 
     DEBUG_ASSERT(KERNEL_ADDR(map));
 
-    struct vmem_map **current_map = percpu_ptr(percpu_addr(current_vmem_map));
+    int irq_flags = disable_save_irqs();
 
-    if(*current_map == map)
+    struct vmem_map **current_map = percpu_ptr(percpu_addr(current_vmem_map));
+    struct vmem_map *old_map = *current_map;
+
+    if(old_map == map)
     {
+        enable_restore_irqs(irq_flags);
         return 0;
     }
 
-    struct vmem_map *lesser, *greater;
-    lesser = (uintptr_t)*current_map < (uintptr_t)map ? *current_map : map;
-    greater = (uintptr_t)*current_map < (uintptr_t)map ? map : *current_map;
-
     // Acquiring both locks is tricky because this section of
     // code can be run both from interrupt context and regular thread context.
-    int irq_flags = disable_save_irqs();
-    while(1)
-    {
-        irq_flags = disable_save_irqs();
-        if(lesser)
-        {
-            int acq = spin_try_lock(&lesser->lock);
-            if(!acq)
-            {
-                enable_restore_irqs(irq_flags);
-                continue;
-            }
-        }
-        if(greater)
-        {
-            int acq = spin_try_lock(&greater->lock);
-            if(!acq)
-            {
-                if(lesser)
-                {
-                    spin_unlock(&lesser->lock);
-                }
-                enable_restore_irqs(irq_flags);
-                continue;
-            }
-        }
-        break;
+
+    if(old_map != NULL) {
+        irq_lock_acquire_pair(&old_map->lock, &map->lock);
+    } else {
+        irq_lock_acquire(&map->lock);
     }
 
     dprintk("Activating vmem_map %p on CPU %ld\n", map, (sl_t)current_cpu_id());
@@ -552,14 +530,11 @@ vmem_map_activate(struct vmem_map *map)
     res = arch_vmem_map_activate(map);
     if(res)
     {
-        if(greater)
-        {
-            spin_unlock(&greater->lock);
+        if(old_map) {
+            irq_lock_release(&old_map->lock);
         }
-        if(lesser)
-        {
-            spin_unlock(&lesser->lock);
-        }
+        irq_lock_release(&map->lock);
+        enable_restore_irqs(irq_flags);
         return res;
     }
 
@@ -570,17 +545,12 @@ vmem_map_activate(struct vmem_map *map)
     }
     *current_map = map;
 
-    if(greater)
-    {
-        spin_unlock(&greater->lock);
+    if(old_map) {
+        irq_lock_release(&old_map->lock);
     }
-    if(lesser)
-    {
-        spin_unlock(&lesser->lock);
-    }
+    irq_lock_release(&map->lock);
 
     enable_restore_irqs(irq_flags);
-
     return 0;
 }
 
@@ -596,12 +566,12 @@ vmem_map_deactivate(void)
 
     struct vmem_map *map = *current_map_slot;
 
-    spin_lock(&map->lock);
+    irq_lock_acquire(&map->lock);
     if(map != NULL && map != default_map)
     {
         res = vmem_map_activate(default_map);
     }
-    spin_unlock(&map->lock);
+    irq_lock_release(&map->lock);
 
     return res;
 }
