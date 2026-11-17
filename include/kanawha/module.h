@@ -4,6 +4,7 @@
 #include <kanawha/fs/node.h>
 #include <kanawha/stree.h>
 #include <kanawha/vmem.h>
+#include <kanawha/lock.h>
 
 #define MODULE_FLAG_FIXED (1ULL << 0) // This module cannot be unloaded
 
@@ -25,7 +26,7 @@ struct module
     unsigned long flags;
 
     atomic_t refcount;
-    spinlock_t lock;
+    thread_lock_t lock;
 
     size_t symtab_count;
     struct ksymbol *symtab;

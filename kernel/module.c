@@ -12,7 +12,7 @@
 #include <kanawha/lock.h>
 #include <kanawha/module.h>
 #include <kanawha/printk.h>
-#include <kanawha/spinlock.h>
+#include <kanawha/lock.h>
 #include <kanawha/stddef.h>
 #include <kanawha/stree.h>
 #include <kanawha/string.h>
@@ -51,7 +51,7 @@ __init_module(struct module *module, const char *name, unsigned long flags)
     module->flags = flags;
 
     atomic_set_relaxed(&module->refcount, 0);
-    spinlock_init(&module->lock);
+    thread_lock_init(&module->lock);
 
     module_tree_lock_acquire();
     {
@@ -128,7 +128,7 @@ module_link_symbol(struct module *mod, const char *name)
 
     struct module *owner = sym->mod;
 
-    spin_lock(&mod->lock);
+    thread_lock_acquire(&mod->lock);
     struct ptree_node *dep_node =
         ptree_get(&mod->dependency_tree, (uintptr_t)owner);
 
@@ -163,7 +163,7 @@ module_link_symbol(struct module *mod, const char *name)
                          (uintptr_t)owner);
         }
     }
-    spin_unlock(&mod->lock);
+    thread_lock_release(&mod->lock);
     return sym;
 }
 
