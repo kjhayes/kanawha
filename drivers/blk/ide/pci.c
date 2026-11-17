@@ -59,10 +59,10 @@ ide_pci_init_device(struct pci_driver *driver, struct pci_func *func)
     int primary_avail = 1;
     int secondary_avail = 1;
 
-    pio_t primary_io;
-    pio_t primary_ctrl;
-    pio_t secondary_io;
-    pio_t secondary_ctrl;
+    pio_t primary_io = 0;
+    pio_t primary_ctrl = 0;
+    pio_t secondary_io = 0;
+    pio_t secondary_ctrl = 0;
 
     uint8_t progif = func->prog_if_id;
 

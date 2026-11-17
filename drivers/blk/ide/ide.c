@@ -468,7 +468,7 @@ ide_dev_probe(struct ide_dev *dev)
     for(int drive = 0; drive < 2; drive++)
     {
 
-        struct ide_command cmd;
+        struct ide_command cmd = {0};
         cmd.command = 0xEC;
         ide_command_enable_lba(&cmd);
         if(drive == 0)
@@ -776,7 +776,7 @@ ide_primary_blk_dev_write(struct blk_dev *blk_dev,
 
         size_t sec = lba_base + sector_offset;
 
-        struct ide_command cmd;
+        struct ide_command cmd = {0};
         if(dev->flags & IDE_DEV_FLAG_LBA48)
         {
             cmd.command = 0x34; // Write Ext.
@@ -796,7 +796,7 @@ ide_primary_blk_dev_write(struct blk_dev *blk_dev,
         cmd.drq_write = 1;
         cmd.ignore_rdy = 0;
 
-        cmd.drive_head_reg = 0xF0;
+        cmd.drive_head_reg &= 0xF0;
         if(!(dev->flags & IDE_DEV_FLAG_LBA48))
         {
             cmd.drive_head_reg |= ((sec >> 24) & 0xF);
@@ -879,7 +879,7 @@ ide_primary_blk_dev_read(struct blk_dev *blk_dev,
 
         size_t sec = lba_base + sector_offset;
 
-        struct ide_command cmd;
+        struct ide_command cmd = {0};
         if(dev->flags & IDE_DEV_FLAG_LBA48)
         {
             cmd.command = 0x24; // Read Ext.
