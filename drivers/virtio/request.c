@@ -3,7 +3,6 @@
 #include <drivers/virtio/request.h>
 #include <kanawha/irq.h>
 #include <kanawha/kmalloc.h>
-#include <kanawha/spinlock.h>
 #include <kanawha/stddef.h>
 #include <kanawha/string.h>
 
