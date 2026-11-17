@@ -28,7 +28,7 @@ virtio_gpu_create_resource_2d(struct virtio_gpu *gpu,
     resource->height = height;
     resource->gpu = gpu;
 
-    spin_lock(&gpu->resource_lock);
+    thread_lock_acquire(&gpu->resource_lock);
 
     int res_id = 0;
     for(size_t i = 1; i < 1ULL << 31; i++)
@@ -44,7 +44,7 @@ virtio_gpu_create_resource_2d(struct virtio_gpu *gpu,
     {
         wprintk("virtio_gpu_create_resource_2d: could not allocate a resource "
                 "id!\n");
-        spin_unlock(&gpu->resource_lock);
+        thread_lock_release(&gpu->resource_lock);
         kfree(resource);
         return NULL;
     }
@@ -57,7 +57,7 @@ virtio_gpu_create_resource_2d(struct virtio_gpu *gpu,
         wprintk("virtio_gpu_create_resource_2d: could not insert "
                 "resource into "
                 "GPU resource tree!\n");
-        spin_unlock(&gpu->resource_lock);
+        thread_lock_release(&gpu->resource_lock);
         kfree(resource);
         return NULL;
     }
@@ -85,7 +85,7 @@ virtio_gpu_create_resource_2d(struct virtio_gpu *gpu,
     {
         wprintk("virtio_gpu_create_resource_2d: virtio transaction failed!\n");
         ptree_remove(&gpu->resource_tree, res_id);
-        spin_unlock(&gpu->resource_lock);
+        thread_lock_release(&gpu->resource_lock);
         kfree(resource);
         return NULL;
     }
@@ -97,12 +97,12 @@ virtio_gpu_create_resource_2d(struct virtio_gpu *gpu,
                 "(resp_code=0x%lx)!\n",
                 (ul_t)resp_code);
         ptree_remove(&gpu->resource_tree, res_id);
-        spin_unlock(&gpu->resource_lock);
+        thread_lock_release(&gpu->resource_lock);
         kfree(resource);
         return NULL;
     }
 
-    spin_unlock(&gpu->resource_lock);
+    thread_lock_release(&gpu->resource_lock);
 
     return resource;
 }
@@ -114,19 +114,19 @@ virtio_gpu_destroy_resource_2d(struct virtio_gpu_resource *resource)
 
     struct virtio_gpu *gpu = resource->gpu;
 
-    spin_lock(&gpu->resource_lock);
+    thread_lock_acquire(&gpu->resource_lock);
 
     struct ptree_node *pnode;
     pnode = ptree_remove(&gpu->resource_tree, resource->id);
     if(pnode == NULL)
     {
-        spin_unlock(&gpu->resource_lock);
+        thread_lock_release(&gpu->resource_lock);
         return -ENXIO;
     }
 
     DEBUG_ASSERT(pnode == &resource->tree_node);
 
-    spin_unlock(&gpu->resource_lock);
+    thread_lock_release(&gpu->resource_lock);
 
     DEBUG_ASSERT(resource->type == VIRTIO_GPU_RESOURCE_TYPE_2D);
 

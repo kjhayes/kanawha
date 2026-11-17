@@ -296,7 +296,7 @@ virtio_gpu_init_device(struct virtio_driver *driver,
         return -ENOMEM;
     }
 
-    spinlock_init(&gpu->resource_lock);
+    thread_lock_init(&gpu->resource_lock);
     ptree_init(&gpu->resource_tree);
 
     gpu->control_queue = device->queues[0];

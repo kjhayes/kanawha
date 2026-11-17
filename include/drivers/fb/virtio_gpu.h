@@ -6,6 +6,7 @@
 #include <kanawha/dev/fb.h>
 #include <kanawha/endian.h>
 #include <kanawha/types.h>
+#include <kanawha/lock.h>
 
 #define VIRTIO_GPU_EVENT_DISPLAY (1 << 0)
 
@@ -213,7 +214,7 @@ struct virtio_gpu
     size_t num_enabled_scanouts;
     struct virtio_gpu_scanout *scanouts;
 
-    spinlock_t resource_lock;
+    thread_lock_t resource_lock;
     struct ptree resource_tree;
 
     size_t current_mode;
