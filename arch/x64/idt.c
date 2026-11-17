@@ -38,8 +38,7 @@ struct x64_idt
 };
 
 struct x64_idt default_x64_idt = {
-    DECLARE_FIELD_ILIST(default_x64_idt, cpu_list),
-    .idt64 = {0},
+    DECLARE_FIELD_ILIST(default_x64_idt, cpu_list)
 };
 
 static void
