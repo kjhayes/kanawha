@@ -14,12 +14,13 @@
 #include <kanawha/sysfs/vfs.h>
 #include <kanawha/types.h>
 #include <kanawha/vmem.h>
+#include <kanawha/lock.h>
 
 struct fs_node_ops;
 
 struct ramfile
 {
-    spinlock_t lock;
+    thread_lock_t lock;
     struct vfs_node vfs_node;
 
     size_t page_refs;
@@ -53,7 +54,7 @@ ramfile_read_page(struct fs_node *fs_node,
         return res;
     }
 
-    spin_lock(&ramfile->lock);
+    thread_lock_acquire(&ramfile->lock);
 
     uintptr_t offset = pfn << order;
     uintptr_t page_end_offset = offset + (1ULL << order);
@@ -75,7 +76,7 @@ ramfile_read_page(struct fs_node *fs_node,
     ssize_t room_left = (1ULL << order) - copy_size;
     memset(buffer + copy_size, 0, room_left);
 
-    spin_unlock(&ramfile->lock);
+    thread_lock_release(&ramfile->lock);
 
     return 0;
 }
@@ -99,7 +100,7 @@ ramfile_write_page(struct fs_node *fs_node,
         return res;
     }
 
-    spin_lock(&ramfile->lock);
+    thread_lock_acquire(&ramfile->lock);
 
     uintptr_t offset = pfn << order;
     uintptr_t page_end_offset = offset + (1ULL << order);
@@ -116,7 +117,7 @@ ramfile_write_page(struct fs_node *fs_node,
 
     memcpy_vp(ramfile->paddr + offset, buffer, copy_size);
 
-    spin_unlock(&ramfile->lock);
+    thread_lock_release(&ramfile->lock);
 
     return 0;
 }
@@ -138,7 +139,7 @@ ramfile_load_page(struct fs_node *fs_node,
         return res;
     }
 
-    spin_lock(&ramfile->lock);
+    thread_lock_acquire(&ramfile->lock);
 
     uintptr_t offset = pfn << order;
     uintptr_t page_end_offset = offset + (1ULL << order);
@@ -150,7 +151,7 @@ ramfile_load_page(struct fs_node *fs_node,
         res = page_alloc(order, &page, 0);
         if(res)
         {
-            spin_unlock(&ramfile->lock);
+            thread_lock_release(&ramfile->lock);
             return res;
         }
 
@@ -169,7 +170,7 @@ ramfile_load_page(struct fs_node *fs_node,
 
     *addr_out = page;
 
-    spin_unlock(&ramfile->lock);
+    thread_lock_release(&ramfile->lock);
 
     return 0;
 }
@@ -191,7 +192,7 @@ ramfile_unload_page(struct fs_node *fs_node,
         return res;
     }
 
-    spin_lock(&ramfile->lock);
+    thread_lock_acquire(&ramfile->lock);
 
     uintptr_t offset = pfn << order;
     uintptr_t page_end_offset = offset + (1ULL << order);
@@ -207,7 +208,7 @@ ramfile_unload_page(struct fs_node *fs_node,
         res = page_free(order, addr);
         if(res)
         {
-            spin_unlock(&ramfile->lock);
+            thread_lock_release(&ramfile->lock);
             return res;
         }
     }
@@ -216,7 +217,7 @@ ramfile_unload_page(struct fs_node *fs_node,
         // Nothing to be done
     }
 
-    spin_unlock(&ramfile->lock);
+    thread_lock_release(&ramfile->lock);
 
     return 0;
 }
@@ -239,7 +240,7 @@ ramfile_flush_page(struct fs_node *fs_node,
         return res;
     }
 
-    spin_lock(&ramfile->lock);
+    thread_lock_acquire(&ramfile->lock);
 
     uintptr_t offset = pfn << order;
     uintptr_t page_end_offset = offset + (1ULL << order);
@@ -256,7 +257,7 @@ ramfile_flush_page(struct fs_node *fs_node,
         // Nothing to be done
     }
 
-    spin_unlock(&ramfile->lock);
+    thread_lock_release(&ramfile->lock);
 
     return 0;
 }
@@ -376,7 +377,7 @@ create_ramfile(const char *ramfile_name, void __phys *paddr, size_t size)
     ramfile->size = size;
     ramfile->paddr = paddr;
     ramfile->page_order = 12;
-    spinlock_init(&ramfile->lock);
+    thread_lock_init(&ramfile->lock);
 
     order_t base_order = ptr_orderof(paddr);
     order_t end_order = ptr_orderof(paddr + size);
