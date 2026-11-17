@@ -200,12 +200,7 @@ wait_on(struct waitqueue *queue)
     return wait_on_with_callback(queue, NULL, NULL);
 }
 
-static void
-wait_on_spin_unlock_callback(void *__lock)
-{
-    spinlock_t *lock = __lock;
-    spin_unlock(lock);
-}
+
 static void
 wait_on_thread_lock_release_callback(void *__lock)
 {
@@ -226,13 +221,6 @@ wait_on_irq_lock_release_callback(void *__data)
     data->irq_flags = irq_lock_release_no_enable_irqs(data->lock);
 }
 
-int
-wait_on_spin_unlock(struct waitqueue *queue, spinlock_t *to_unlock)
-{
-    return wait_on_with_callback(queue,
-                                 wait_on_spin_unlock_callback,
-                                 to_unlock);
-}
 int
 wait_on_thread_lock_release(struct waitqueue *queue, thread_lock_t *to_unlock)
 {

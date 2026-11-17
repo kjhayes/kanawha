@@ -48,8 +48,6 @@ wait_on(struct waitqueue *queue);
 // After placing ourselves on
 // the queue, unlock a lock.
 int
-wait_on_spin_unlock(struct waitqueue *queue, spinlock_t *to_unlock);
-int
 wait_on_thread_lock_release(struct waitqueue *queue, thread_lock_t *to_unlock);
 int
 wait_on_irq_lock_release(struct waitqueue *queue,
