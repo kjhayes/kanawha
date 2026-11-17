@@ -4,7 +4,6 @@
 #include <kanawha/percpu.h>
 #include <kanawha/printk.h>
 #include <kanawha/registry.h>
-#include <kanawha/spinlock.h>
 #include <kanawha/stddef.h>
 #include <kanawha/string.h>
 #include <kanawha/thread.h>
