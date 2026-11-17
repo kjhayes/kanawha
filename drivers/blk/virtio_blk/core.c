@@ -30,7 +30,7 @@ struct virtio_blk_req
     le64_t sector;
 };
 
-static DECLARE_SPINLOCK(virtio_blk_count_lock);
+DEFINE_LOCAL_THREAD_LOCK(virtio_blk_count_lock);
 static unsigned long virtio_blk_count = 0;
 
 struct virtio_blk
@@ -231,10 +231,10 @@ virtio_blk_init_device(struct virtio_driver *driver,
     }
 
     unsigned long dev_index;
-    spin_lock(&virtio_blk_count_lock);
+    virtio_blk_count_lock_acquire();
     dev_index = virtio_blk_count;
     virtio_blk_count++;
-    spin_unlock(&virtio_blk_count_lock);
+    virtio_blk_count_lock_release();
 
     blk->name = fmt_kstrdup(KM_KERNEL, "virtio-blk-%ld", dev_index);
     if(blk->name == NULL)
