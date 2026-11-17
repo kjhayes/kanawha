@@ -332,7 +332,7 @@ dma_alloc(size_t size,
         goto exit;
     }
 
-    order_t size_order = ((sizeof(size_t) * 8) - 1) - __builtin_clzll(size);
+    order_t size_order = ((sizeof(size_t) * 8) - 1) - clzul(size);
 
     order_t region_order;
     if(size_order < DMA_MIN_REGION_ORDER)

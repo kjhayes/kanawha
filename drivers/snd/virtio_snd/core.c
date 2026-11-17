@@ -413,7 +413,7 @@ virtio_snd_stream_mode_pcm_info(struct virtio_snd_stream *stream,
     {
         DEBUG_ASSERT(format_bitmap != 0);
         format_bitmap &=
-            ~(1UL << (63 - __builtin_clzl((unsigned long)format_bitmap)));
+            ~(1UL << (63 - clzul((unsigned long)format_bitmap)));
         format_index--;
     }
     DEBUG_ASSERT(format_bitmap != 0);
@@ -421,13 +421,13 @@ virtio_snd_stream_mode_pcm_info(struct virtio_snd_stream *stream,
     {
         DEBUG_ASSERT(rate_bitmap != 0);
         rate_bitmap &=
-            ~(1UL << (63 - __builtin_clzl((unsigned long)rate_bitmap)));
+            ~(1UL << (63 - clzul((unsigned long)rate_bitmap)));
         rate_index--;
     }
     DEBUG_ASSERT(rate_bitmap != 0);
 
-    size_t format_bit = 63 - __builtin_clzl((unsigned long)format_bitmap);
-    size_t rate_bit = 63 - __builtin_clzl((unsigned long)rate_bitmap);
+    size_t format_bit = 63 - clzul((unsigned long)format_bitmap);
+    size_t rate_bit = 63 - clzul((unsigned long)rate_bitmap);
 
     *format = format_bit;
     *rate = rate_bit;

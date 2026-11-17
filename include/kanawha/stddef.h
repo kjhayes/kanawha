@@ -8,12 +8,12 @@ popcountul(unsigned long x)
 {
 #if defined(CONFIG_TOOLCHAIN_SUPPORTS_BUILTIN_POPCOUNT) \
     && defined(__has_builtin) \
-    && __has_builtin(__builtin_popcountll)
+    && __has_builtin(__builtin_popcountl)
 
     if(x == 0) {
         return 0;
     }
-    return __builtin_popcountll(x);
+    return __builtin_popcountl(x);
 
 #else
 
@@ -24,6 +24,56 @@ popcountul(unsigned long x)
         x &= (x-1);
     }
     return popcount;
+
+#endif
+}
+
+static inline int
+clzul(unsigned long x)
+{
+#if defined(CONFIG_TOOLCHAIN_SUPPORTS_BUILTIN_CLZ) \
+    && defined(__has_builtin) \
+    && __has_builtin(__builtin_clzl)
+
+    if(x == 0) {
+        return 8 * sizeof(x);
+    }
+    return __builtin_clzl(x);
+
+#else
+
+    int bits = 8 * sizeof(x);
+
+    if(x == 0) {
+        return bits;
+    }
+
+    int count = 0;
+    while(x && bits) { // Loop while "x" has any set bit
+
+        int half_bits = bits >> 1;
+
+        // We only consider the least-significant
+        // "bits" bits of "x" during each iteration
+        if(x >> half_bits) {
+            // There is a set bit in the left half of
+            // the bits we are considering, shift "x"
+            // to focus on that half, and subtract out
+            // the right half from the number of possible
+            // leading bits
+            x >>= half_bits;
+        } else {
+            // The left hand side is all zeros, add them
+            // into the count
+            count += half_bits;
+        }
+
+        // We are considering a smaller region
+        // in the next iteration
+        bits = half_bits;
+    }
+
+    return count;
 
 #endif
 }
@@ -63,12 +113,12 @@ _Static_assert(sizeof(void *) == sizeof(unsigned int) ||
 
 // Gives the minimum power of two which is larger than the provided value
 #define round_up_order(x)                                                      \
-    ((((uintptr_t)x) == 0)                                                     \
+    ((((unsigned long)x) == 0)                                                 \
          ? (0)                                                                 \
-         : ((popcountu64((uintptr_t)x) == 1)                            \
-                ? (__builtin_ctzll((unsigned long long)(uintptr_t)x))          \
-                : (((sizeof(unsigned long long) * 8ULL)) -                     \
-                   __builtin_clzll((unsigned long long)(uintptr_t)x))))
+         : ((popcountul((unsigned long)x) == 1)                                \
+                ? (clzul((unsigned long)x))                                    \
+                : (((sizeof(unsigned long) * 8ULL)) -                          \
+                   clzul((unsigned long)x))))
 
 #define MIN(x, y) (x > y ? y : x)
 #define MAX(x, y) (x < y ? y : x)

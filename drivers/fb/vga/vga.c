@@ -36,7 +36,7 @@ __vga_fb_set_buffer_size(struct vga_fb *fb, size_t size)
         return -EINVAL;
     }
 
-    order_t new_buffer_order = 64 - __builtin_clzl(size);
+    order_t new_buffer_order = 64 - clzul(size);
     void __phys *new_buffer;
     res = page_alloc(new_buffer_order, &new_buffer, 0);
     if(res)
