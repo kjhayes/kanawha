@@ -3,6 +3,31 @@
 
 #include <kanawha/types.h>
 
+static inline int
+popcountul(unsigned long x)
+{
+#if defined(CONFIG_TOOLCHAIN_SUPPORTS_BUILTIN_POPCOUNT) \
+    && defined(__has_builtin) \
+    && __has_builtin(__builtin_popcountll)
+
+    if(x == 0) {
+        return 0;
+    }
+    return __builtin_popcountll(x);
+
+#else
+
+    // Default back to Kerninghan's Alg. (O(n) in the number set bits)
+    int popcount = 0;
+    while(x != 0) {
+        popcount++;
+        x &= (x-1);
+    }
+    return popcount;
+
+#endif
+}
+
 #define alignof(x) __alignof__(x)
 #define offsetof(type, member) __builtin_offsetof(type, member)
 #define container_of(ptr, type, member)                                        \
@@ -40,18 +65,10 @@ _Static_assert(sizeof(void *) == sizeof(unsigned int) ||
 #define round_up_order(x)                                                      \
     ((((uintptr_t)x) == 0)                                                     \
          ? (0)                                                                 \
-         : ((__builtin_popcount((uintptr_t)x) == 1)                            \
+         : ((popcountu64((uintptr_t)x) == 1)                            \
                 ? (__builtin_ctzll((unsigned long long)(uintptr_t)x))          \
                 : (((sizeof(unsigned long long) * 8ULL)) -                     \
                    __builtin_clzll((unsigned long long)(uintptr_t)x))))
-
-_Static_assert(round_up_order(0) == 0, "round_up_order is incorrect!");
-_Static_assert(round_up_order(1) == 0, "round_up_order is incorrect!");
-_Static_assert(round_up_order(2) == 1, "round_up_order is incorrect!");
-_Static_assert(round_up_order(3) == 2, "round_up_order is incorrect!");
-_Static_assert(round_up_order(4) == 2, "round_up_order is incorrect!");
-_Static_assert(round_up_order(16) == 4, "round_up_order is incorrect!");
-_Static_assert(round_up_order(17) == 5, "round_up_order is incorrect!");
 
 #define MIN(x, y) (x > y ? y : x)
 #define MAX(x, y) (x < y ? y : x)

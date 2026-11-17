@@ -1152,7 +1152,7 @@ thread_running_percentage(struct thread_state *thread)
     }
     else
     {
-        size_t num = __builtin_popcountl(thread->running_tracker);
+        size_t num = popcountul(thread->running_tracker);
         size_t den = sizeof(thread->running_tracker) * 8;
         ssize_t percent = ((num * 100) / den);
         dprintk("tracker=0x%lx, num=%ld, den=%ld, percent=%ld\n",
