@@ -3,7 +3,7 @@
 
 ![Logo](images/logo.png)
 
-A simple hobby kernel I'm ([Kevin](https://kjhayes.github.io)) writing in my free time.
+A simple hobby kernel I'm ([Kevin](https://kjhayes.org)) writing in my free time.
 
 ## Running the Kernel
 
