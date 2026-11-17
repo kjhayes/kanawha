@@ -1,6 +1,7 @@
 
 #include <kanawha/bitmap.h>
 #include <kanawha/printk.h>
+#include <kanawha/stddef.h>
 
 size_t
 bitmap_find_first_set(unsigned long *bitmap, size_t num_entries)
@@ -17,7 +18,7 @@ bitmap_find_first_set(unsigned long *bitmap, size_t num_entries)
             // All zeros
             continue;
         }
-        size_t index_in_long = __builtin_ctzl(val);
+        size_t index_in_long = ctzul(val);
         bit = (long_index * BITS_PER_LONG) + index_in_long;
         break;
     }
@@ -43,7 +44,7 @@ bitmap_find_first_clear(unsigned long *bitmap, size_t num_entries)
             // All ones
             continue;
         }
-        size_t index_in_long = __builtin_ctzl(~val);
+        size_t index_in_long = ctzul(~val);
         bit = (long_index * BITS_PER_LONG) + index_in_long;
         dprintk("bitmap_find_first_clear: bit=0x%llx, long_index=0x%llx, "
                 "index_in_long=0x%llx, val=0x%llx, ~val=0x%llx\n",

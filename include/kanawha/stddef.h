@@ -78,6 +78,56 @@ clzul(unsigned long x)
 #endif
 }
 
+static inline int
+ctzul(unsigned long x)
+{
+#if defined(CONFIG_TOOLCHAIN_SUPPORTS_BUILTIN_CTZ) \
+    && defined(__has_builtin) \
+    && __has_builtin(__builtin_ctzl)
+
+    if(x == 0) {
+        return 8 * sizeof(x);
+    }
+    return __builtin_ctzl(x);
+
+#else
+
+    int bits = 8 * sizeof(x);
+
+    if(x == 0) {
+        return bits;
+    }
+
+    int count = 0;
+    while(x && bits) { // Loop while "x" has any set bit
+
+        int half_bits = bits >> 1;
+
+        // We only consider the most-significant
+        // "bits" bits of "x" during each iteration
+        if(x << half_bits) {
+            // There is a set bit in the left half of
+            // the bits we are considering, shift "x"
+            // to focus on that half, and subtract out
+            // the right half from the number of possible
+            // leading bits
+            x <<= half_bits;
+        } else {
+            // The right hand side is all zeros, add them
+            // into the count
+            count += half_bits;
+        }
+
+        // We are considering a smaller region
+        // in the next iteration
+        bits = half_bits;
+    }
+
+    return count;
+
+#endif
+}
+
 #define alignof(x) __alignof__(x)
 #define offsetof(type, member) __builtin_offsetof(type, member)
 #define container_of(ptr, type, member)                                        \
@@ -93,17 +143,10 @@ _Static_assert(sizeof(void *) == sizeof(unsigned int) ||
                "Pointer size is not equal to any available integral type!");
 
 // Gives the maximum alignment order of a pointer
-#define ptr_orderof(ptr)                                                       \
-    (((uintptr_t)ptr == 0)                                                     \
-         ? (sizeof(void *) * 8)                                                \
-         : (sizeof(void *) == sizeof(unsigned int)                             \
-                ? __builtin_ctz((unsigned int)(uintptr_t)ptr)                  \
-                : (sizeof(void *) == sizeof(unsigned long)                     \
-                       ? __builtin_ctzl((unsigned long)(uintptr_t)ptr)         \
-                       : (sizeof(void *) == sizeof(unsigned long long)         \
-                              ? __builtin_ctzll(                               \
-                                    (unsigned long long)(uintptr_t)ptr)        \
-                              : 0))))
+#define ptr_orderof(ptr) ctzul((unsigned long)(ptr))
+
+// Currently ptr_orderof requires this assertion to be true
+_Static_assert(sizeof(void*) == sizeof(unsigned long), "sizeof(void*) != sizeof(unsigned long) (need to change ptr_orderof to compensate!)");
 
 // Similar to alignof but returns the "order" not the "size"
 // e.g.

@@ -40,6 +40,7 @@ choice
     select TOOLCHAIN_SUPPORTS_NORETURN_ATTRIBUTE
     select TOOLCHAIN_SUPPORTS_BUILTIN_POPCOUNT
     select TOOLCHAIN_SUPPORTS_BUILTIN_CLZ
+    select TOOLCHAIN_SUPPORTS_BUILTIN_CTZ
   config GCC
     bool "GCC"
 endchoice
@@ -231,6 +232,8 @@ config TOOLCHAIN_SUPPORTS_NORETURN_ATTRIBUTE
 config TOOLCHAIN_SUPPORTS_BUILTIN_POPCOUNT
     def_bool n
 config TOOLCHAIN_SUPPORTS_BUILTIN_CLZ
+    def_bool n
+config TOOLCHAIN_SUPPORTS_BUILTIN_CTZ
     def_bool n
 
 # Various build flags depending on architecture
