@@ -3,7 +3,7 @@
 
 #include <kanawha/pointer.h>
 #include <kanawha/printk.h>
-#include <kanawha/spinlock.h>
+#include <kanawha/lock.h>
 #include <kanawha/types.h>
 
 void __phys *
@@ -27,7 +27,7 @@ struct mem_flags
 {
     size_t max_entries;
     size_t num_entries;
-    spinlock_t lock;
+    thread_lock_t lock;
     struct mem_flags_entry *entries;
 
     unsigned long flags;

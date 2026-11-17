@@ -19,7 +19,7 @@ mem_flags_init(struct mem_flags *mem_flags,
 {
     int res;
 
-    spinlock_init(&mem_flags->lock);
+    thread_lock_init(&mem_flags->lock);
     mem_flags->max_entries = static_buflen;
     mem_flags->num_entries = 0;
     mem_flags->flags = 0;
@@ -117,7 +117,7 @@ mem_flags_get_overlapping_regions(struct mem_flags *map,
     size_t base_entry_index = -1;
     size_t num_found = 0;
 
-    spin_lock(&map->lock);
+    thread_lock_acquire(&map->lock);
 
     for(size_t i = 0; i < map->num_entries; i++)
     {
@@ -143,7 +143,7 @@ mem_flags_get_overlapping_regions(struct mem_flags *map,
         }
     }
 
-    spin_unlock(&map->lock);
+    thread_lock_release(&map->lock);
 
     *base_index = base_entry_index;
     *num_entries = num_found;
@@ -154,7 +154,7 @@ mem_flags_get_overlapping_regions(struct mem_flags *map,
 int
 mem_flags_clear_all(struct mem_flags *map, unsigned long empty_flags)
 {
-    spin_lock(&map->lock);
+    thread_lock_acquire(&map->lock);
     if(map->max_entries <= 0)
     {
         return -EINVAL;
@@ -164,7 +164,7 @@ mem_flags_clear_all(struct mem_flags *map, unsigned long empty_flags)
     map->entries[0].size = -1;
     map->entries[0].base = 0;
     map->entries[0].flags = empty_flags;
-    spin_unlock(&map->lock);
+    thread_lock_release(&map->lock);
     return 0;
 }
 
@@ -377,9 +377,9 @@ mem_flags_set_flags(struct mem_flags *map,
                     unsigned long to_set)
 {
     int res;
-    spin_lock(&map->lock);
+    thread_lock_acquire(&map->lock);
     res = __mem_flags_set_flags(map, base, size, to_set);
-    spin_unlock(&map->lock);
+    thread_lock_release(&map->lock);
     return res;
 }
 
@@ -403,9 +403,9 @@ mem_flags_clear_flags(struct mem_flags *map,
                       unsigned long to_clear)
 {
     int res;
-    spin_lock(&map->lock);
+    thread_lock_acquire(&map->lock);
     res = __mem_flags_clear_flags(map, base, size, to_clear);
-    spin_unlock(&map->lock);
+    thread_lock_release(&map->lock);
     return res;
 }
 
@@ -428,14 +428,14 @@ unsigned long
 mem_flags_read(struct mem_flags *map, uintptr_t addr)
 {
     struct mem_flags_entry *entry;
-    spin_lock(&map->lock);
+    thread_lock_acquire(&map->lock);
     entry = __mem_flags_read_entry(map, addr);
     if(entry == NULL)
     {
-        spin_unlock(&map->lock);
+        thread_lock_release(&map->lock);
         return 0;
     }
-    spin_unlock(&map->lock);
+    thread_lock_release(&map->lock);
     return entry->flags;
 }
 
@@ -450,7 +450,7 @@ mem_flags_find_and_reserve(struct mem_flags *map,
                            uintptr_t *base_out)
 {
     int res;
-    spin_lock(&map->lock);
+    thread_lock_acquire(&map->lock);
     for(size_t i = 0; i < map->num_entries; i++)
     {
         struct mem_flags_entry *entry = &map->entries[i];
@@ -490,21 +490,21 @@ mem_flags_find_and_reserve(struct mem_flags *map,
         res = __mem_flags_set_flags(map, base, size, to_set);
         if(res)
         {
-            spin_unlock(&map->lock);
+            thread_lock_release(&map->lock);
             return res;
         }
         res = __mem_flags_clear_flags(map, base, size, to_clear);
         if(res)
         {
-            spin_unlock(&map->lock);
+            thread_lock_release(&map->lock);
             return res;
         }
 
-        spin_unlock(&map->lock);
+        thread_lock_release(&map->lock);
         *base_out = base;
         return 0;
     }
-    spin_unlock(&map->lock);
+    thread_lock_release(&map->lock);
     return -ENOMEM;
 }
 
@@ -596,7 +596,7 @@ mem_flags_size_matching(
         unsigned long must_be_clear)
 {
     ssize_t count = 0;
-    spin_lock(&map->lock);
+    thread_lock_acquire(&map->lock);
     for(size_t i = 0; i < map->num_entries; i++) {
         struct mem_flags_entry *e = &map->entries[i];
         if(e->flags & must_be_clear) {
@@ -607,7 +607,7 @@ mem_flags_size_matching(
         }
         count += e->size;
     }
-    spin_unlock(&map->lock);
+    thread_lock_release(&map->lock);
     return count;
 }
 
@@ -617,7 +617,7 @@ mem_flags_print(struct mem_flags *map,
                 void (*flag_printer)(struct printer *printer, unsigned long flags))
 {
     int res;
-    spin_lock(&map->lock);
+    thread_lock_acquire(&map->lock);
     for(size_t i = 0; i < map->num_entries; i++)
     {
         struct mem_flags_entry *entry = &map->entries[i];
@@ -627,13 +627,13 @@ mem_flags_print(struct mem_flags *map,
                    end,
                    (unsigned long)entry->size);
         if(res) {
-            spin_unlock(&map->lock);
+            thread_lock_release(&map->lock);
             return res;
         }
         (*flag_printer)(printer, (unsigned long)entry->flags);
         printer_puts(printer, "\n");
     }
-    spin_unlock(&map->lock);
+    thread_lock_release(&map->lock);
     return 0;
 }
 
