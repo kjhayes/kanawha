@@ -138,6 +138,7 @@ irq_lock_init(irq_lock_t *lock)
     return 0;
 }
 
+// Returns 0 on lock acquisition
 static inline int
 irq_lock_try_acquire(irq_lock_t *lock)
 {

@@ -15,7 +15,7 @@
 #include <kanawha/ptree.h>
 #include <kanawha/scheduler.h>
 #include <kanawha/slab.h>
-#include <kanawha/spinlock.h>
+#include <kanawha/lock.h>
 #include <kanawha/string.h>
 #include <kanawha/tasklet.h>
 #include <kanawha/thread.h>
@@ -102,8 +102,6 @@ thread_set_status(struct thread_state *thread, thread_status_t status)
                  (status == THREAD_STATUS_READY) ||
                  (status == THREAD_STATUS_RUNNING) ||
                  (status == THREAD_STATUS_SCHEDULED));
-    DEBUG_ASSERT(thread->status == THREAD_STATUS_PREPARING ||
-                 spin_try_lock(&thread->lock) != 0);
     DEBUG_ASSERT(thread->status != THREAD_STATUS_ABANDONED);
 
 #ifdef CONFIG_DEBUG_LOG_THREAD_STATE_CHANGES
@@ -207,7 +205,7 @@ int
 pin_thread(struct thread_state *thread)
 {
     int res;
-    int irq_state = spin_lock_irq_save(&thread->lock);
+    irq_lock_acquire(&thread->lock);
     if(thread->pin_refs > 0)
     {
         thread->pin_refs++;
@@ -222,7 +220,7 @@ pin_thread(struct thread_state *thread)
     {
         res = -EINVAL;
     }
-    spin_unlock_irq_restore(&thread->lock, irq_state);
+    irq_lock_release(&thread->lock);
     return res;
 }
 
@@ -230,7 +228,7 @@ int
 unpin_thread(struct thread_state *thread)
 {
     int res;
-    int irq_state = spin_lock_irq_save(&thread->lock);
+    irq_lock_acquire(&thread->lock);
     if(thread->pin_refs > 0)
     {
         thread->pin_refs--;
@@ -244,7 +242,7 @@ unpin_thread(struct thread_state *thread)
     {
         thread->pinned_to = NULL_CPU_ID;
     }
-    spin_unlock_irq_restore(&thread->lock, irq_state);
+    irq_lock_release(&thread->lock);
     return res;
 }
 
@@ -252,7 +250,7 @@ int
 pin_thread_specific(struct thread_state *state, cpu_id_t cpu)
 {
     int res;
-    int irq_state = spin_lock_irq_save(&state->lock);
+    irq_lock_acquire(&state->lock);
     if(state->pin_refs > 0)
     {
         if(state->pinned_to != cpu)
@@ -271,7 +269,7 @@ pin_thread_specific(struct thread_state *state, cpu_id_t cpu)
         state->pin_refs++;
         res = 0;
     }
-    spin_unlock_irq_restore(&state->lock, irq_state);
+    irq_lock_release(&state->lock);
     return res;
 }
 
@@ -324,7 +322,7 @@ thread_init(struct thread_state *state,
         return -ENOMEM;
     }
 
-    spinlock_init(&state->lock);
+    irq_lock_init(&state->lock);
 
     TIMER_START(thread_init_map_critical_perf_timer);
     thread_tree_lock_acquire();
@@ -452,11 +450,11 @@ thread_schedule(struct thread_state *state)
         DEBUG_ASSERT(state->pinned_to == current_cpu_id());
         // If it's the idle thread, then we should have exclusive access
         enable_restore_irqs(irq_flags);
-        irq_flags = spin_lock_irq_save(&state->lock);
+        irq_lock_acquire(&state->lock);
     }
     else
     {
-        if(spin_try_lock(&state->lock))
+        if(irq_lock_try_acquire(&state->lock))
         {
             enable_restore_irqs(irq_flags);
             return -EBUSY;
@@ -472,13 +470,13 @@ thread_schedule(struct thread_state *state)
                 current_cpu_id(),
                 thread_status_to_string(state->status));
         }
-        spin_unlock_irq_restore(&state->lock, irq_flags);
+        irq_lock_release(&state->lock);
         return -EINVAL;
     }
 
     if(state->pin_refs && state->pinned_to != current_cpu_id())
     {
-        spin_unlock_irq_restore(&state->lock, irq_flags);
+        irq_lock_release(&state->lock);
         eprintk("Tried to schedule thread %lld on CPU(%ld) but thread is "
                 "pinned to CPU (%ld)\n",
                 state->id,
@@ -495,7 +493,7 @@ thread_schedule(struct thread_state *state)
     //         (sl_t)state->id,
     //         (sl_t)cur_thread->id);
 
-    spin_unlock_irq_restore(&state->lock, irq_flags);
+    irq_lock_release(&state->lock);
     return 0;
 }
 
@@ -548,8 +546,8 @@ __thread_switch_threadless(void *in)
     DEBUG_ASSERT(KERNEL_ADDR(switching_to->mem_map));
     vmem_map_activate(switching_to->mem_map);
 
-    spin_unlock(&switching_from->lock);
-    spin_unlock(&switching_to->lock);
+    irq_lock_release(&switching_from->lock);
+    irq_lock_release(&switching_to->lock);
 
     dprintk("running new thread\n");
 
@@ -573,8 +571,9 @@ thread_yield(void)
         return 0;
     }
 
-    int irq_flags =
-        spin_lock_pair_irq_save(&cur_thread->lock, &scheduled->lock);
+    int irq_flags = disable_save_irqs();
+
+    irq_lock_acquire_pair(&cur_thread->lock, &scheduled->lock);
     dprintk("thread_yield %p -> %p\n", cur_thread, scheduled);
 
     DEBUG_ASSERT(scheduled->status == THREAD_STATUS_SCHEDULED);
@@ -620,7 +619,7 @@ thread_switch(void)
 
     DEBUG_ASSERT(current_thread_is_rescheduled());
 
-    spin_lock_pair(&cur_thread->lock, &scheduled->lock);
+    irq_lock_acquire_pair(&cur_thread->lock, &scheduled->lock);
     dprintk("thread_switch %p -> %p\n", cur_thread, scheduled);
 
     DEBUG_ASSERT(scheduled->status == THREAD_STATUS_SCHEDULED);
@@ -641,7 +640,7 @@ thread_switch(void)
 int
 thread_tire(struct thread_state *thread)
 {
-    int irq_flags = spin_lock_irq_save(&thread->lock);
+    irq_lock_acquire(&thread->lock);
 
     switch(thread->status)
     {
@@ -656,11 +655,11 @@ thread_tire(struct thread_state *thread)
         // We're already in the right state
         break;
     default:
-        spin_unlock_irq_restore(&thread->lock, irq_flags);
+        irq_lock_release(&thread->lock);
         return -EINVAL;
     }
 
-    spin_unlock_irq_restore(&thread->lock, irq_flags);
+    irq_lock_release(&thread->lock);
 
     return 0;
 }
@@ -668,7 +667,7 @@ thread_tire(struct thread_state *thread)
 int
 thread_wake(struct thread_state *thread)
 {
-    int irq_flags = spin_lock_irq_save(&thread->lock);
+    irq_lock_acquire(&thread->lock);
 
     switch(thread->status)
     {
@@ -683,11 +682,11 @@ thread_wake(struct thread_state *thread)
         // We're already in the right state
         break;
     default:
-        spin_unlock_irq_restore(&thread->lock, irq_flags);
+        irq_lock_release(&thread->lock);
         return -EINVAL;
     }
 
-    spin_unlock_irq_restore(&thread->lock, irq_flags);
+    irq_lock_release(&thread->lock);
 
     return 0;
 }
@@ -724,7 +723,7 @@ thread_abandon(void)
     DEBUG_ASSERT(KERNEL_ADDR(cur_thread->mem_map));
     DEBUG_ASSERT(cur_thread->tree_node.key == cur_thread->id);
 
-    spin_lock(&cur_thread->lock);
+    irq_lock_acquire(&cur_thread->lock);
     if(cur_thread->flags & THREAD_FLAG_IDLE)
     {
         panic("Tried to abandon CPU (%ld) idle thread!\n",
@@ -740,9 +739,9 @@ thread_abandon(void)
     default:
         panic("thread_abandon: switching from suspended thread!\n");
     }
-    spin_unlock(&cur_thread->lock);
+    irq_lock_release(&cur_thread->lock);
 
-    spin_lock(&scheduled->lock);
+    irq_lock_acquire(&scheduled->lock);
     switch(scheduled->status)
     {
     case THREAD_STATUS_SCHEDULED:
@@ -750,13 +749,13 @@ thread_abandon(void)
         scheduled->running_on = current_cpu_id();
         break;
     default:
-        spin_unlock(&scheduled->lock);
+        irq_lock_release(&scheduled->lock);
         panic("CPU (%ld) new thread %p was not SCHEDULED during "
               "thread_abandon!\n",
               (sl_t)current_cpu_id(),
               scheduled);
     }
-    spin_unlock(&scheduled->lock);
+    irq_lock_release(&scheduled->lock);
 
     set_current_thread(scheduled);
     DEBUG_ASSERT(current_thread() == scheduled);
@@ -829,12 +828,12 @@ cpu_start_threading(thread_f *func, void *state)
     struct thread_state **idle = percpu_ptr(percpu_addr(__idle_thread));
     *idle = current;
 
-    spin_lock(&current->lock);
+    irq_lock_acquire(&current->lock);
     thread_set_status(current, THREAD_STATUS_RUNNING);
     current->running_on = current_cpu_id();
     set_current_thread(current);
     DEBUG_ASSERT(current_thread() == current);
-    spin_unlock(&current->lock);
+    irq_lock_release(&current->lock);
 
     dprintk("cpu_start_threading: Activating Thread Virtual Memory Mapping\n");
     vmem_map_activate(current->mem_map);

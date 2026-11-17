@@ -6,7 +6,7 @@
 #include <kanawha/percpu.h>
 #include <kanawha/printk.h>
 #include <kanawha/ptree.h>
-#include <kanawha/spinlock.h>
+#include <kanawha/lock.h>
 #include <kanawha/types.h>
 #include <kanawha/vmem.h>
 
@@ -85,7 +85,7 @@ struct thread_state
 {
     struct arch_thread_state arch_state;
 
-    spinlock_t lock;
+    irq_lock_t lock;
     struct ptree_node tree_node;
 
     struct waitqueue *waitqueue;
