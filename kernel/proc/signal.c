@@ -2,7 +2,6 @@
 #include <kanawha/irq.h>
 #include <kanawha/proc/process.h>
 #include <kanawha/proc/signal.h>
-#include <kanawha/spinlock.h>
 #include <kanawha/strace.h>
 #include <kanawha/string.h>
 #include <kanawha/uapi/signal.h>
