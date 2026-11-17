@@ -11,7 +11,6 @@
 #include <kanawha/kmalloc.h>
 #include <kanawha/lock.h>
 #include <kanawha/mem_flags.h>
-#include <kanawha/spinlock.h>
 #include <kanawha/stddef.h>
 #include <kanawha/string.h>
 #include <kanawha/vmem.h>
