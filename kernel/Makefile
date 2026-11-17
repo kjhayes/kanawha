@@ -37,7 +37,6 @@ obj-y += \
 	time.o \
 	event.o \
 	sleep.o \
-	spinlock.o \
 	clk.o \
 	kbd.o \
 	strace.o \
