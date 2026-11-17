@@ -2,6 +2,7 @@
 #include <kanawha/init.h>
 #include <kanawha/mem_flags.h>
 #include <kanawha/vmem.h>
+#include <kanawha/errno.h>
 
 #ifndef CONFIG_IDMAP_SELECT_VIRTUAL_BASE_STATIC
 #ifndef CONFIG_IDMAP_SELECT_VIRTUAL_BASE_DYNAMIC

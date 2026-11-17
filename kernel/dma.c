@@ -6,6 +6,7 @@
 #include <kanawha/page_alloc.h>
 #include <kanawha/stddef.h>
 #include <kanawha/vmem.h>
+#include <kanawha/errno.h>
 
 static DECLARE_ILIST(dma_region_list);
 DEFINE_LOCAL_IRQ_LOCK(dma_region_list_lock);

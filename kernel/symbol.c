@@ -4,6 +4,7 @@
 #include <kanawha/module.h>
 #include <kanawha/stddef.h>
 #include <kanawha/symbol.h>
+#include <kanawha/errno.h>
 
 static DECLARE_STREE(symbol_tree);
 DEFINE_LOCAL_THREAD_LOCK(symbol_tree_lock);

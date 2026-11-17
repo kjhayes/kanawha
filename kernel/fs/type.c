@@ -3,6 +3,7 @@
 #include <kanawha/lock.h>
 #include <kanawha/stddef.h>
 #include <kanawha/stree.h>
+#include <kanawha/errno.h>
 
 static DECLARE_STREE(fs_type_tree);
 DEFINE_LOCAL_THREAD_LOCK(fs_type_tree_lock);

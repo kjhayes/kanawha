@@ -10,6 +10,7 @@
 #include <kanawha/string.h>
 #include <kanawha/tasklet.h>
 #include <kanawha/types.h>
+#include <kanawha/errno.h>
 
 static size_t num_enabled_periodic_events = 0;
 static DECLARE_ILIST(periodic_event_list);

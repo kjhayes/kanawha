@@ -2,6 +2,7 @@
 #define __KANAWHA__DEV_H__
 
 #include <kanawha/registry.h>
+#include <kanawha/errno.h>
 
 struct dev
 {

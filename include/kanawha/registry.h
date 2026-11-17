@@ -9,6 +9,7 @@
 #include <kanawha/printk.h>
 #include <kanawha/stddef.h>
 #include <kanawha/stree.h>
+#include <kanawha/errno.h>
 
 /*
  * Declarations

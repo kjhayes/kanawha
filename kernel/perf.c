@@ -1,5 +1,6 @@
 
 #include <kanawha/perf.h>
+#include <kanawha/errno.h>
 
 static void
 perf_counter_display(struct perf_metric *metric, printk_f *printer)

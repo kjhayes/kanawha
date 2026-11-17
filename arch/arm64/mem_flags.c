@@ -2,6 +2,7 @@
 #include <kanawha/init.h>
 #include <kanawha/mem_flags.h>
 #include <kanawha/vmem.h>
+#include <kanawha/errno.h>
 
 extern uint8_t __arm64_kernel_virt_start[];
 extern uint8_t __arm64_kernel_virt_end[];

@@ -9,6 +9,7 @@
 #include <kanawha/string.h>
 #include <kanawha/sysfs/sysfs.h>
 #include <kanawha/vmem.h>
+#include <kanawha/errno.h>
 
 DEFINE_LOCAL_THREAD_LOCK(sysfs_mount_lock);
 static DECLARE_STREE(sysfs_mount_tree);

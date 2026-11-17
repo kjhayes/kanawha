@@ -4,6 +4,7 @@
 #include <kanawha/irq.h>
 #include <kanawha/paging/paging.h>
 #include <kanawha/vmem.h>
+#include <kanawha/errno.h>
 
 #define NUM_LEVELS 4
 

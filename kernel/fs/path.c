@@ -11,6 +11,7 @@
 #include <kanawha/stddef.h>
 #include <kanawha/string.h>
 #include <kanawha/vmem.h>
+#include <kanawha/errno.h>
 
 #define FS_PATH_MAX_NAMELEN 256
 #define SYMLINK_BUFLEN 128

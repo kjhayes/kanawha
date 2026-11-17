@@ -7,7 +7,7 @@
 #include <kanawha/kmalloc.h>
 #include <kanawha/string.h>
 
-static DECLARE_SPINLOCK(virtio_pci_device_list_lock);
+DEFINE_LOCAL_THREAD_LOCK(virtio_pci_device_list_lock);
 static DECLARE_ILIST(virtio_pci_device_list);
 
 #define VIRTIO_PCI_CAP_COMMON_CFG 0x1
@@ -251,13 +251,13 @@ virtio_pci_init_device(struct pci_driver *driver, struct pci_func *func)
         // This is cap is optional
     }
 
-    spin_lock(&virtio_pci_device_list_lock);
+    virtio_pci_device_list_lock_acquire();
 
     dprintk("virito_pci: registering virito_device\n");
     res = register_virtio_device(&vpci_dev->virtio_dev);
     if(res)
     {
-        spin_unlock(&virtio_pci_device_list_lock);
+        virtio_pci_device_list_lock_release();
         virtio_pci_deinit_capabilities(vpci_dev);
         kfree(vpci_dev);
         return res;
@@ -265,7 +265,7 @@ virtio_pci_init_device(struct pci_driver *driver, struct pci_func *func)
 
     ilist_push_tail(&virtio_pci_device_list, &vpci_dev->global_node);
 
-    spin_unlock(&virtio_pci_device_list_lock);
+    virtio_pci_device_list_lock_release();
 
     return 0;
 }

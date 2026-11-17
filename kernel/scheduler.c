@@ -7,6 +7,7 @@
 #include <kanawha/stddef.h>
 #include <kanawha/stree.h>
 #include <kanawha/string.h>
+#include <kanawha/errno.h>
 
 static DECLARE_STREE(sched_type_tree);
 DEFINE_LOCAL_THREAD_LOCK(sched_type_tree_lock);

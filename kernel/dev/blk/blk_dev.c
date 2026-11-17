@@ -2,6 +2,7 @@
 #include <kanawha/dev/blk.h>
 #include <kanawha/init.h>
 #include <kanawha/page_alloc.h>
+#include <kanawha/errno.h>
 
 static int
 blk_dev_init(struct blk_dev *dev)

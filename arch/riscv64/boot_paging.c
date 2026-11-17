@@ -7,6 +7,7 @@
 #include <kanawha/section.h>
 #include <kanawha/types.h>
 #include <kanawha/vmem.h>
+#include <kanawha/errno.h>
 #include <kanawha/mem_flags.h>
 
 #ifdef CONFIG_RISCV64_SV57

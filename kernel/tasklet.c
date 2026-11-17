@@ -10,6 +10,7 @@
 #include <kanawha/tasklet.h>
 #include <kanawha/thread.h>
 #include <kanawha/waitqueue.h>
+#include <kanawha/errno.h>
 
 DEFINE_LOCAL_THREAD_LOCK(tasklet_list_lock);
 static DECLARE_ILIST(tasklet_list);

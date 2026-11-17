@@ -2,6 +2,7 @@
 #define __KANAWHA__LOCK_H__
 
 #include <kanawha/atomic.h>
+#include <kanawha/assert.h>
 #include <kanawha/attribute.h>
 #include <kanawha/common.h>
 #include <kanawha/irq.h>

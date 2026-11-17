@@ -5,6 +5,7 @@
 #include <kanawha/paging/paging.h>
 #include <kanawha/paging/pagetable.h>
 #include <kanawha/vmem.h>
+#include <kanawha/errno.h>
 
 #define RISCV64_MAX_NUM_PAGING_LEVELS 5
 

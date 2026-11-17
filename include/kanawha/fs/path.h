@@ -4,6 +4,7 @@
 #include <kanawha/assert.h>
 #include <kanawha/fs/node.h>
 #include <kanawha/list.h>
+#include <kanawha/errno.h>
 
 struct process;
 struct fs_mount;

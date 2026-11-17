@@ -6,6 +6,7 @@
 #include <kanawha/init.h>
 #include <kanawha/lock.h>
 #include <kanawha/stddef.h>
+#include <kanawha/errno.h>
 
 static DECLARE_PTREE(reloc_tree);
 DEFINE_LOCAL_THREAD_LOCK(reloc_tree_lock);

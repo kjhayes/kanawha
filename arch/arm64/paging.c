@@ -5,6 +5,7 @@
 #include <kanawha/paging/paging.h>
 #include <kanawha/vmem.h>
 #include <kanawha/init.h>
+#include <kanawha/errno.h>
 
 // "TTBR0/1" (two entries) -> L0 (root) -> L3 (4KiB leaf)
 #define NUM_LEVELS (5)

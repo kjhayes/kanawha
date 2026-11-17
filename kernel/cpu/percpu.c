@@ -12,6 +12,7 @@
 #include <kanawha/string.h>
 #include <kanawha/thread.h>
 #include <kanawha/vmem.h>
+#include <kanawha/errno.h>
 
 static size_t percpu_data_size = 0;
 static DECLARE_ILIST(percpu_heap_list);

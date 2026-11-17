@@ -8,6 +8,7 @@
 #include <kanawha/printk.h>
 #include <kanawha/rwlock.h>
 #include <kanawha/printer.h>
+#include <kanawha/errno.h>
 
 struct irq_domain;
 struct irq_desc;

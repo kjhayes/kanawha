@@ -3,6 +3,7 @@
 #include <kanawha/ops.h>
 #include <kanawha/atomic.h>
 #include <kanawha/stddef.h>
+#include <kanawha/errno.h>
 
 #define pcache_node_tree_lock_init(__cache)\
     irq_lock_init(&(__cache)->node_tree_lock)

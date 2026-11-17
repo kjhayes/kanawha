@@ -5,6 +5,7 @@
 #include <kanawha/kmalloc.h>
 #include <kanawha/page_alloc.h>
 #include <kanawha/stddef.h>
+#include <kanawha/errno.h>
 
 static int
 pagetable_entry_pushdown(
