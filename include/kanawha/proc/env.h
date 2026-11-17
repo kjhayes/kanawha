@@ -2,7 +2,7 @@
 #define __KANAWHA__ENV_H__
 
 #include <kanawha/list.h>
-#include <kanawha/spinlock.h>
+#include <kanawha/lock.h>
 #include <kanawha/stree.h>
 #include <kanawha/types.h>
 #include <kanawha/usermode.h>
@@ -47,7 +47,7 @@ struct envvar
 
 struct environment
 {
-    spinlock_t lock;
+    thread_lock_t lock;
     struct stree env_table;
     ilist_t process_list;
 };
