@@ -24,7 +24,7 @@ struct ps2_mouse
 
     char name_buf[PS2_MOUSE_NAME_BUFLEN];
 
-    spinlock_t recv_lock;
+    thread_lock_t recv_lock;
     unsigned recv_count;
     uint8_t recv_buffer[2];
 
@@ -39,7 +39,7 @@ ps2_mouse_recv_callback(struct ps2_port *port, void *priv_data, uint8_t recv)
     struct ps2_mouse *mouse = (struct ps2_mouse *)priv_data;
     if(mouse->registered)
     {
-        spin_lock(&mouse->recv_lock);
+        thread_lock_acquire(&mouse->recv_lock);
         if(mouse->recv_count >= 2)
         {
             mouse->recv_count = 0;
@@ -47,7 +47,7 @@ ps2_mouse_recv_callback(struct ps2_port *port, void *priv_data, uint8_t recv)
             uint8_t x_raw = mouse->recv_buffer[1];
             uint8_t y_raw = recv;
             mbarrier();
-            spin_unlock(&mouse->recv_lock);
+            thread_lock_release(&mouse->recv_lock);
 
             int delta_x = (int)x_raw - (((int)flags << 4) & 0x100);
             int delta_y = (int)y_raw - (((int)flags << 3) & 0x100);
@@ -99,7 +99,7 @@ ps2_mouse_recv_callback(struct ps2_port *port, void *priv_data, uint8_t recv)
         {
             mouse->recv_buffer[mouse->recv_count] = recv;
             mouse->recv_count++;
-            spin_unlock(&mouse->recv_lock);
+            thread_lock_release(&mouse->recv_lock);
         }
     }
 }
@@ -123,7 +123,7 @@ ps2_mouse_attach(struct ps2_driver *driver, struct ps2_port *port)
     mouse->port = port;
     mouse->registered = 0;
 
-    spinlock_init(&mouse->recv_lock);
+    thread_lock_init(&mouse->recv_lock);
     mouse->recv_count = 0;
 
     ps2_port_set_callback(port, ps2_mouse_recv_callback, (void *)mouse);
