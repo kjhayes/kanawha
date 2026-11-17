@@ -3,7 +3,6 @@
 
 #include <kanawha/list.h>
 #include <kanawha/ptree.h>
-#include <kanawha/spinlock.h>
 #include <kanawha/types.h>
 
 #include <devtree/node.h>

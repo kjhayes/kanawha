@@ -4,6 +4,7 @@
 #include <devtree/types.h>
 #include <kanawha/irq.h>
 #include <kanawha/list.h>
+#include <kanawha/lock.h>
 #include <kanawha/pointer.h>
 #include <kanawha/ptree.h>
 
@@ -30,7 +31,7 @@ struct dt_node
     struct ptree_node phandle_node;
 
     // Formatted Name
-    spinlock_t name_lock;
+    irq_lock_t name_lock;
     char *name;
 };
 

@@ -17,7 +17,7 @@ const char *
 dt_node_get_name(struct dt_node *node)
 {
     const char *name;
-    int irq_flags = spin_lock_irq_save(&node->name_lock);
+    irq_lock_acquire(&node->name_lock);
     if(node->name == NULL)
     {
         struct fdt *fdt = devtree_get_fdt(node->dt);
@@ -32,7 +32,7 @@ dt_node_get_name(struct dt_node *node)
         char *name_buf = kmalloc(len + 1, KM_KERNEL);
         if(name_buf == NULL)
         {
-            spin_unlock_irq_restore(&node->name_lock, irq_flags);
+            irq_lock_release(&node->name_lock);
             return NULL;
         }
 
@@ -42,7 +42,7 @@ dt_node_get_name(struct dt_node *node)
         node->name = name_buf;
     }
     name = node->name;
-    spin_unlock_irq_restore(&node->name_lock, irq_flags);
+    irq_lock_release(&node->name_lock);
     return name;
 }
 

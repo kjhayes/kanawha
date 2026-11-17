@@ -5,7 +5,6 @@
 #include <devtree/match.h>
 #include <kanawha/list.h>
 #include <kanawha/lock.h>
-#include <kanawha/spinlock.h>
 #include <kanawha/string.h>
 
 // Driver/Node Matching

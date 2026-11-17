@@ -126,7 +126,7 @@ alloc_dt_node_struct(void)
     }
     memset(node, 0, sizeof(struct dt_node));
 
-    spinlock_init(&node->name_lock);
+    irq_lock_init(&node->name_lock);
     node->name = NULL;
 
     return node;
@@ -135,11 +135,13 @@ alloc_dt_node_struct(void)
 __maybe_unused static inline void
 free_dt_node_struct(struct dt_node *node)
 {
-    spin_lock(&node->name_lock);
+    irq_lock_acquire(&node->name_lock);
     if(node->name)
     {
         kfree(node->name);
+        node->name = NULL;
     }
+    irq_lock_release(&node->name_lock);
     kfree(node);
 }
 
