@@ -7,7 +7,7 @@
 #include <kanawha/dma.h>
 #include <kanawha/init.h>
 #include <kanawha/kmalloc.h>
-#include <kanawha/spinlock.h>
+#include <kanawha/lock.h>
 #include <kanawha/stddef.h>
 #include <kanawha/string.h>
 
@@ -37,7 +37,7 @@ struct virtio_console_port
 
     ilist_node_t list_node;
 
-    spinlock_t lock;
+    thread_lock_t lock;
     struct term_dev term_dev;
 
     char *name;
@@ -154,7 +154,7 @@ virtio_console_init_device(struct virtio_driver *driver,
         port->device = cdev;
         port->xmit_queue = xmit_queue;
         port->recv_queue = recv_queue;
-        spinlock_init(&port->lock);
+        thread_lock_init(&port->lock);
 
         res = virtio_queue_enable(port->recv_queue);
         if(res)
@@ -262,69 +262,69 @@ declare_init_desc(device,
                   register_virtio_console_driver,
                   "Registering Virtio Console Driver");
 
-static ssize_t
-virtio_console_term_dev_read(struct term_dev *dev, void *buffer, size_t amount)
-{
-    int res;
-
-    struct virtio_console_port *port =
-        container_of(dev, struct virtio_console_port, term_dev);
-
-    spin_lock(&port->lock);
-
-    dma_addr_t dma_buffer;
-    res = dma_alloc(amount, 0, DMA_PHYS_64, &dma_buffer);
-    if(res)
-    {
-        spin_unlock(&port->lock);
-        return res;
-    }
-
-    struct virtio_request *req = virtio_request_create(port->recv_queue);
-    if(req == NULL)
-    {
-        spin_unlock(&port->lock);
-        dma_free(dma_buffer, amount);
-        return -ENOMEM;
-    }
-
-    res = virtio_request_append_output(req, dma_phys_addr(dma_buffer), amount);
-    if(res)
-    {
-        virtio_request_destroy(req);
-        spin_unlock(&port->lock);
-        dma_free(dma_buffer, amount);
-        return res;
-    }
-
-    res = virtio_request_launch(req);
-    if(res)
-    {
-        virtio_request_destroy(req);
-        spin_unlock(&port->lock);
-        dma_free(dma_buffer, amount);
-        return res;
-    }
-
-    res = virtio_request_await(req);
-    if(res)
-    {
-        virtio_request_destroy(req);
-        spin_unlock(&port->lock);
-        dma_free(dma_buffer, amount);
-        return res;
-    }
-
-    memcpy(buffer, dma_virt_addr(dma_buffer), req->len_written);
-    amount = req->len_written;
-
-    virtio_request_destroy(req);
-    spin_unlock(&port->lock);
-
-    dma_free(dma_buffer, amount);
-
-    return amount;
-}
+//static ssize_t
+//virtio_console_term_dev_read(struct term_dev *dev, void *buffer, size_t amount)
+//{
+//    int res;
+//
+//    struct virtio_console_port *port =
+//        container_of(dev, struct virtio_console_port, term_dev);
+//
+//    thread_lock_acquire(&port->lock);
+//
+//    dma_addr_t dma_buffer;
+//    res = dma_alloc(amount, 0, DMA_PHYS_64, &dma_buffer);
+//    if(res)
+//    {
+//        thread_lock_release(&port->lock);
+//        return res;
+//    }
+//
+//    struct virtio_request *req = virtio_request_create(port->recv_queue);
+//    if(req == NULL)
+//    {
+//        thread_lock_release(&port->lock);
+//        dma_free(dma_buffer, amount);
+//        return -ENOMEM;
+//    }
+//
+//    res = virtio_request_append_output(req, dma_phys_addr(dma_buffer), amount);
+//    if(res)
+//    {
+//        virtio_request_destroy(req);
+//        thread_lock_release(&port->lock);
+//        dma_free(dma_buffer, amount);
+//        return res;
+//    }
+//
+//    res = virtio_request_launch(req);
+//    if(res)
+//    {
+//        virtio_request_destroy(req);
+//        thread_lock_release(&port->lock);
+//        dma_free(dma_buffer, amount);
+//        return res;
+//    }
+//
+//    res = virtio_request_await(req);
+//    if(res)
+//    {
+//        virtio_request_destroy(req);
+//        thread_lock_release(&port->lock);
+//        dma_free(dma_buffer, amount);
+//        return res;
+//    }
+//
+//    memcpy(buffer, dma_virt_addr(dma_buffer), req->len_written);
+//    amount = req->len_written;
+//
+//    virtio_request_destroy(req);
+//    thread_lock_release(&port->lock);
+//
+//    dma_free(dma_buffer, amount);
+//
+//    return amount;
+//}
 
 static ssize_t
 virtio_console_term_dev_write(struct term_dev *dev, void *buffer, size_t amount)
@@ -334,13 +334,13 @@ virtio_console_term_dev_write(struct term_dev *dev, void *buffer, size_t amount)
     struct virtio_console_port *port =
         container_of(dev, struct virtio_console_port, term_dev);
 
-    spin_lock(&port->lock);
+    thread_lock_acquire(&port->lock);
 
     dma_addr_t dma_buffer;
     res = dma_alloc(amount, 0, DMA_PHYS_64, &dma_buffer);
     if(res)
     {
-        spin_unlock(&port->lock);
+        thread_lock_release(&port->lock);
         return res;
     }
 
@@ -349,7 +349,7 @@ virtio_console_term_dev_write(struct term_dev *dev, void *buffer, size_t amount)
     struct virtio_request *req = virtio_request_create(port->xmit_queue);
     if(req == NULL)
     {
-        spin_unlock(&port->lock);
+        thread_lock_release(&port->lock);
         dma_free(dma_buffer, amount);
         return -ENOMEM;
     }
@@ -358,7 +358,7 @@ virtio_console_term_dev_write(struct term_dev *dev, void *buffer, size_t amount)
     if(res)
     {
         virtio_request_destroy(req);
-        spin_unlock(&port->lock);
+        thread_lock_release(&port->lock);
         dma_free(dma_buffer, amount);
         return res;
     }
@@ -367,7 +367,7 @@ virtio_console_term_dev_write(struct term_dev *dev, void *buffer, size_t amount)
     if(res)
     {
         virtio_request_destroy(req);
-        spin_unlock(&port->lock);
+        thread_lock_release(&port->lock);
         dma_free(dma_buffer, amount);
         return res;
     }
@@ -376,16 +376,29 @@ virtio_console_term_dev_write(struct term_dev *dev, void *buffer, size_t amount)
     if(res)
     {
         virtio_request_destroy(req);
-        spin_unlock(&port->lock);
+        thread_lock_release(&port->lock);
         dma_free(dma_buffer, amount);
         return res;
     }
 
     virtio_request_destroy(req);
-    spin_unlock(&port->lock);
+    thread_lock_release(&port->lock);
     dma_free(dma_buffer, amount);
 
     return amount;
+}
+
+static int
+virtio_console_putc(
+        struct term_dev *term_dev,
+        char c)
+{
+    int res;
+    res = virtio_console_term_dev_write(term_dev, &c, 1);
+    if(res != 1) {
+        return -EINVAL;
+    }
+    return 0;
 }
 
 static int
@@ -401,8 +414,10 @@ virtio_console_term_dev_flush(struct term_dev *dev)
     return 0;
 }
 
-static struct term_driver virtio_console_port_term_driver = {
-    .read = virtio_console_term_dev_read,
-    .write = virtio_console_term_dev_write,
+static struct term_driver
+virtio_console_port_term_driver = {
+    .putc=  virtio_console_putc,
+    .get_baudrate = term_dev_cannot_get_baudrate,
+    .set_baudrate = term_dev_cannot_set_baudrate,
     .flush = virtio_console_term_dev_flush,
 };
