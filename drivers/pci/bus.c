@@ -2,7 +2,6 @@
 #include <drivers/pci/cfg.h>
 #include <kanawha/kmalloc.h>
 #include <kanawha/list.h>
-#include <kanawha/spinlock.h>
 #include <kanawha/stddef.h>
 
 static struct pci_bus *

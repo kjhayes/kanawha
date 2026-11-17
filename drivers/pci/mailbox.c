@@ -1,11 +1,11 @@
 
 #include <drivers/pci/mailbox.h>
 #include <kanawha/list.h>
-#include <kanawha/spinlock.h>
+#include <kanawha/lock.h>
 #include <kanawha/stddef.h>
 
 static DECLARE_ILIST(pci_mailbox_list);
-static DECLARE_SPINLOCK(pci_mailbox_list_lock);
+DEFINE_LOCAL_THREAD_LOCK(pci_mailbox_list_lock);
 
 static struct pci_mailbox *
 find_and_advance_pci_mailbox(void)
@@ -14,7 +14,7 @@ find_and_advance_pci_mailbox(void)
 
     struct pci_mailbox *mb;
 
-    spin_lock(&pci_mailbox_list_lock);
+    pci_mailbox_list_lock_acquire();
 
     if(current_pci_mailbox != NULL)
     {
@@ -42,7 +42,7 @@ find_and_advance_pci_mailbox(void)
         }
     }
 
-    spin_unlock(&pci_mailbox_list_lock);
+    pci_mailbox_list_lock_release();
 
     return mb;
 }
@@ -51,9 +51,9 @@ int
 register_pci_mailbox(struct pci_mailbox *mb, struct pci_mailbox_ops *ops)
 {
     mb->ops = ops;
-    spin_lock(&pci_mailbox_list_lock);
+    pci_mailbox_list_lock_acquire();
     ilist_push_tail(&pci_mailbox_list, &mb->list_node);
-    spin_unlock(&pci_mailbox_list_lock);
+    pci_mailbox_list_lock_release();
     return 0;
 }
 
@@ -254,15 +254,15 @@ pci_mailbox_find_msix(size_t num_req,
 
 int pci_mailbox_available_for_msi(void)
 {
-    spin_lock(&pci_mailbox_list_lock);
+    pci_mailbox_list_lock_acquire();
     size_t num_mailboxes = ilist_count(&pci_mailbox_list);
-    spin_unlock(&pci_mailbox_list_lock);
+    pci_mailbox_list_lock_release();
     return num_mailboxes > 0;
 }
 int pci_mailbox_available_for_msix(void)
 {
-    spin_lock(&pci_mailbox_list_lock);
+    pci_mailbox_list_lock_acquire();
     size_t num_mailboxes = ilist_count(&pci_mailbox_list);
-    spin_unlock(&pci_mailbox_list_lock);
+    pci_mailbox_list_lock_release();
     return num_mailboxes > 0;
 }

@@ -4,7 +4,6 @@
 #include <kanawha/kmalloc.h>
 #include <kanawha/list.h>
 #include <kanawha/rwlock.h>
-#include <kanawha/spinlock.h>
 #include <kanawha/stddef.h>
 
 DEFINE_LOCAL_THREAD_LOCK(pci_segment_tree_lock);
