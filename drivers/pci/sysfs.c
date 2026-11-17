@@ -137,7 +137,7 @@ pci_init_fs_mount(void)
 
     pci_fs_mount = mnt;
 
-    spin_lock(&pci_match_lock);
+    pci_match_lock_acquire();
 
     ilist_node_t *node;
     ilist_for_each(node, &pci_matched_func_list)
@@ -148,7 +148,7 @@ pci_init_fs_mount(void)
         res = insert_func_with_match_lock(func);
         if(res)
         {
-            spin_unlock(&pci_match_lock);
+            pci_match_lock_release();
             return res;
         }
     }
@@ -159,12 +159,12 @@ pci_init_fs_mount(void)
         res = insert_func_with_match_lock(func);
         if(res)
         {
-            spin_unlock(&pci_match_lock);
+            pci_match_lock_release();
             return res;
         }
     }
 
-    spin_unlock(&pci_match_lock);
+    pci_match_lock_release();
 
     res = sysfs_register_mount(&pci_fs_mount->fs_mount, "pci");
     if(res)

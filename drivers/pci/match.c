@@ -1,13 +1,14 @@
 
 #include <drivers/pci/cfg.h>
 #include <drivers/pci/pci.h>
+#include <kanawha/lock.h>
 #include <kanawha/stddef.h>
 
 #ifdef CONFIG_SYSFS_PCI
 #include <drivers/pci/sysfs.h>
 #endif
 
-DECLARE_SPINLOCK(pci_match_lock);
+DEFINE_GLOBAL_THREAD_LOCK(pci_match_lock);
 DECLARE_ILIST(pci_driver_list);
 DECLARE_ILIST(pci_unmatched_func_list);
 DECLARE_ILIST(pci_matched_func_list);
@@ -104,7 +105,7 @@ register_pci_driver(struct pci_driver *driver)
 
     ilist_init(&driver->devices);
 
-    spin_lock(&pci_match_lock);
+    pci_match_lock_acquire();
 
     ilist_push_tail(&pci_driver_list, &driver->global_node);
 
@@ -128,7 +129,7 @@ register_pci_driver(struct pci_driver *driver)
         ilist_push_tail(&pci_matched_func_list, &func->global_node);
     }
 
-    spin_unlock(&pci_match_lock);
+    pci_match_lock_release();
     return 0;
 }
 
@@ -137,7 +138,7 @@ register_pci_func(struct pci_func *func)
 {
     int res;
 
-    spin_lock(&pci_match_lock);
+    pci_match_lock_acquire();
 
     ilist_push_tail(&pci_unmatched_func_list, &func->global_node);
 
@@ -164,7 +165,7 @@ register_pci_func(struct pci_func *func)
     }
 #endif
 
-    spin_unlock(&pci_match_lock);
+    pci_match_lock_release();
     return 0;
 }
 
