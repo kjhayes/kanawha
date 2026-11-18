@@ -31,8 +31,11 @@ execvp(const char *file_name, char *const __argv[])
     if(res)
     {
         kanawha_sys_close(exec_file);
-        return res;
+        errno = res;
+        return -1;
     }
 
-    return kanawha_sys_exec(exec_file, 0);
+    res = kanawha_sys_exec(exec_file, 0);
+    errno = res;
+    return -1;
 }
