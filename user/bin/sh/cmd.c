@@ -127,6 +127,8 @@ static int
 cmd_invoke_exec_exec(
         struct cmd_invoke *i)
 {
+    int res;
+
     int argc = cmd_invoke_args_count(i);
 
     char *argv[argc+1];
@@ -143,9 +145,11 @@ cmd_invoke_exec_exec(
     }
     argv[argc] = NULL;
 
-    exit(execvp(argv[0], argv));
-
-    return -EINVAL;
+    res = execvp(argv[0], argv);
+    fprintf(stderr, "sh: failed to execute command \"%s\"! (%s)\n",
+            argv[0], strerror(errno));
+    fflush(stderr);
+    exit(res);
 }
 
 static int
