@@ -6,7 +6,9 @@
 clock_t
 clock(void)
 {
+    // This is wrong, we should be returning the CPU time,
+    // not the real time.
     ssize_t time = kanawha_sys_time(TIME_PROC | TIME_DURATION_MSEC);
 
-    return (time * CLOCKS_PER_SEC) / 1000;
+    return (clock_t)time;
 }

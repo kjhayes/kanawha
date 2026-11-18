@@ -18,7 +18,8 @@ struct tm
     int tm_isdst; // daylight savings flag
 };
 
-#define CLOCKS_PER_SEC (1000000UL)
+// Millisecond Resolution
+#define CLOCKS_PER_SEC (1000UL)
 
 char *
 asctime(const struct tm *);
