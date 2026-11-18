@@ -18,6 +18,9 @@ A simple hobby kernel I'm ([Kevin](https://kjhayes.org)) writing in my free time
         - Physical Buddy Allocator (`page_alloc`)
         - Virtual Memory Freelist Heap (`kmalloc`)
     - Virtual Filesystem and sysfs
+    - Firmware
+        - ACPI with a Custom AML Interpreter (Incomplete)
+        - Device Tree
 
 - Drivers
     - Filesystems
