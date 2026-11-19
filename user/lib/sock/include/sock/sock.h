@@ -4,6 +4,7 @@
 #include <sock/msg.h>
 #include <sock/conn.h>
 
+struct sock_conn;
 struct sock_socket;
 struct sock_msg;
 

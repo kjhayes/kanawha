@@ -6,33 +6,7 @@
 #include <threads.h>
 
 struct sock_msg_buffer;
-
-struct sock_conn
-{
-    struct sock_msg_buffer *recv_buffer;
-    struct sock_msg_buffer *send_buffer;
-
-    sem_t read_lock;
-    sem_t write_lock;
-
-    thrd_t read_thread;
-    thrd_t write_thread;
-
-    int conn_fd;
-
-    unsigned autopoll : 1;
-
-    int(*recv_callback)(struct sock_conn *conn,
-                        struct sock_msg *msg,
-                        void *state);
-    void *recv_callback_state;
-
-
-    enum {
-        SOCK_CONNECTION_CONNECTED,
-        SOCK_CONNECTION_DISCONNECTED,
-    } status;
-};
+struct sock_conn;
 
 int
 sock_conn_init(
