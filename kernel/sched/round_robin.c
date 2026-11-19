@@ -299,7 +299,7 @@ rr_sched_debug_dump(struct scheduler *scheduler, printk_f *printer)
 }
 
 static struct scheduler_type rr_sched_type = {
-    .name = "rr_sched",
+    .name = "rr",
     .type_ops.alloc_instance = rr_sched_alloc_instance,
     .type_ops.free_instance = rr_sched_free_instance,
 

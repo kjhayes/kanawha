@@ -145,7 +145,7 @@ CONFIG_SYSFS_PCI=y
 #
 # Schedulers
 #
-CONFIG_DEFAULT_SCHEDULER="rr_sched"
+CONFIG_DEFAULT_SCHEDULER="rr"
 CONFIG_ROUND_ROBIN_SCHED=y
 # end of Schedulers
 
