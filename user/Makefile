@@ -24,4 +24,5 @@ bins += \
 	ps \
     rm \
     sh \
+	bench \
 
