@@ -2,7 +2,7 @@
 #define __KANAWHA__SOCK_SOCK_H__
 
 #include <sock/msg.h>
-#include <sock/connection.h>
+#include <sock/conn.h>
 
 struct sock_socket;
 struct sock_msg;
@@ -17,22 +17,22 @@ sock_close_socket(struct sock_socket *sock);
 
 // Client
 int
-sock_open_client_connection(
+sock_open_client_conn(
         struct sock_socket *socket,
-        struct sock_connection *conn
+        struct sock_conn *conn
         );
 int
-sock_close_client_connection(
-        struct sock_connection *conn);
+sock_close_client_conn(
+        struct sock_conn *conn);
 
 // Server
 int
-sock_open_server_connection(
+sock_open_server_conn(
         struct sock_socket *socket,
-        struct sock_connection *conn
+        struct sock_conn *conn
         );
 int
-sock_close_server_connection(
-        struct sock_connection *conn);
+sock_close_server_conn(
+        struct sock_conn *conn);
 
 #endif

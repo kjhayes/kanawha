@@ -4,7 +4,7 @@
 #include <lens/lens.h>
 #include <lens/window.h>
 #include <lens/input_buffer.h>
-#include <sock/connection.h>
+#include <sock/conn.h>
 
 enum {
     _LENS_MSG_BASE = -1,
@@ -23,7 +23,7 @@ _Static_assert(_LENS_NUM_MSG_TYPES <= SOCK_MSG_ID_LIMIT,
         "liblens: number of message types is greater than SOCK_MSG_ID_LIMIT!");
 
 struct lens_window {
-    struct sock_connection conn;
+    struct sock_conn conn;
     unsigned int gfx_info_req : 1;
 
     unsigned long flush_req_count;
@@ -36,7 +36,7 @@ struct lens_window {
 };
 
 struct lens_client {
-    struct sock_connection conn;
+    struct sock_conn conn;
     unsigned int flush_req : 1;
 
     sem_t gfx_lock;

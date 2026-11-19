@@ -1,5 +1,5 @@
 
 obj-y += \
 	sock.o \
-	connection.o \
+	conn.o \
 

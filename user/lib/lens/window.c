@@ -42,7 +42,7 @@ lens_window_handle_notify_gfx_info(
 
     if(window->gfx_info) {
         if(window->gfx_info->frame_size > 0) {
-            sock_connection_unmap_shmem(
+            sock_conn_unmap_shmem(
                     &window->conn,
                     0,
                     window->gfx_info->frame_size,
@@ -52,7 +52,7 @@ lens_window_handle_notify_gfx_info(
     }
 
     if(info->frame_size > 0) {
-        res = sock_connection_map_shmem(
+        res = sock_conn_map_shmem(
                 &window->conn,
                 0,
                 info->frame_size,
@@ -72,7 +72,7 @@ lens_window_handle_notify_gfx_info(
 
 static int
 lens_window_on_recv(
-        struct sock_connection *conn,
+        struct sock_conn *conn,
         struct sock_msg *msg,
         void *state)
 {
@@ -141,7 +141,7 @@ lens_open_window(void)
         return NULL;
     }
 
-    res = sock_open_client_connection(
+    res = sock_open_client_conn(
             __lens_socket,
             &window->conn);
     if(res) {
@@ -151,8 +151,8 @@ lens_open_window(void)
         return NULL;
     }
 
-    sock_connection_set_callback(&window->conn, lens_window_on_recv, NULL);
-    sock_connection_start_autopoll(&window->conn);
+    sock_conn_set_callback(&window->conn, lens_window_on_recv, NULL);
+    sock_conn_start_autopoll(&window->conn);
 
     return window;
 }
@@ -164,7 +164,7 @@ lens_close_window(
     sem_destroy(&window->gfx_lock);
     if(window->gfx_info != NULL) {
         if(window->gfx_info->frame_size > 0) {
-            sock_connection_unmap_shmem(
+            sock_conn_unmap_shmem(
                     &window->conn,
                     0,
                     window->gfx_info->frame_size,
@@ -174,7 +174,7 @@ lens_close_window(
         window->gfx_info = NULL;
         window->gfx_frame = NULL;
     }
-    sock_close_client_connection(&window->conn);
+    sock_close_client_conn(&window->conn);
     lens_destroy_input_buffer(window->input_buffer);
     free(window);
     return 0;
@@ -191,7 +191,7 @@ lens_window_flush(
     if(old > 0) {
         return 0;
     }
-    res = sock_connection_send_msg(
+    res = sock_conn_send_msg(
             &window->conn,
             LENS_MSG_FLUSH_REQ,
             0,
@@ -209,7 +209,7 @@ lens_window_poll(
         struct lens_window *window)
 {
     int res;
-    res = sock_connection_poll(&window->conn);
+    res = sock_conn_poll(&window->conn);
     if(res) {
         return res;
     }

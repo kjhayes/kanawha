@@ -60,9 +60,9 @@ sock_close_socket(struct sock_socket *socket)
 }
 
 int
-sock_open_client_connection(
+sock_open_client_conn(
         struct sock_socket *socket,
-        struct sock_connection *conn
+        struct sock_conn *conn
         )
 {
     int res;
@@ -73,7 +73,7 @@ sock_open_client_connection(
         return res;
     }
 
-    res = sock_connection_init(
+    res = sock_conn_init(
             conn,
             conn_fd);
     if(res) {
@@ -84,19 +84,19 @@ sock_open_client_connection(
 }
 
 int
-sock_close_client_connection(
-        struct sock_connection *conn)
+sock_close_client_conn(
+        struct sock_conn *conn)
 {
     int fd = conn->conn_fd;
-    sock_connection_deinit(conn);
+    sock_conn_deinit(conn);
     close(fd);
     return 0;
 }
 
 int
-sock_open_server_connection(
+sock_open_server_conn(
         struct sock_socket *socket,
-        struct sock_connection *conn
+        struct sock_conn *conn
         )
 {
     int res;
@@ -111,7 +111,7 @@ retry:
         return res;
     }
 
-    res = sock_connection_init(
+    res = sock_conn_init(
             conn,
             conn_fd);
     if(res) {
@@ -121,11 +121,11 @@ retry:
     return 0;
 }
 int
-sock_close_server_connection(
-        struct sock_connection *conn)
+sock_close_server_conn(
+        struct sock_conn *conn)
 {
     int fd = conn->conn_fd;
-    sock_connection_deinit(conn);
+    sock_conn_deinit(conn);
     close(fd);
     return 0;
 }

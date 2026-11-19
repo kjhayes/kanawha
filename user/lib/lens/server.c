@@ -11,7 +11,7 @@
 
 static int
 lens_server_on_recv(
-        struct sock_connection *conn,
+        struct sock_conn *conn,
         struct sock_msg *msg,
         void *state)
 {
@@ -50,7 +50,7 @@ lens_server_wait_for_client(void)
     client->gfx_info = NULL;
     client->gfx_frame = NULL;
 
-    res = sock_open_server_connection(
+    res = sock_open_server_conn(
             __lens_socket,
             &client->conn);
     if(res) {
@@ -58,8 +58,8 @@ lens_server_wait_for_client(void)
         return NULL;
     }
 
-    sock_connection_set_callback(&client->conn, lens_server_on_recv, NULL);
-    sock_connection_start_autopoll(&client->conn);
+    sock_conn_set_callback(&client->conn, lens_server_on_recv, NULL);
+    sock_conn_start_autopoll(&client->conn);
 
     return client;
 }
@@ -71,7 +71,7 @@ lens_server_close_client(
     sem_destroy(&client->gfx_lock);
     if(client->gfx_info) {
         if(client->gfx_info->frame_size > 0) {
-            sock_connection_unmap_shmem(
+            sock_conn_unmap_shmem(
                     &client->conn,
                     0,
                     client->gfx_info->frame_size,
@@ -81,7 +81,7 @@ lens_server_close_client(
         client->gfx_frame = 0;
         client->gfx_info_desync = 0;
     }
-    sock_close_server_connection(&client->conn);
+    sock_close_server_conn(&client->conn);
     free(client);
     return 0;
 }
@@ -90,7 +90,7 @@ int
 lens_server_poll_client(
         struct lens_client *client)
 {
-    return sock_connection_poll(&client->conn);
+    return sock_conn_poll(&client->conn);
 }
 
 int
@@ -108,7 +108,7 @@ lens_client_ack_flush(
         return 0;
     }
 
-    res = sock_connection_send_msg(
+    res = sock_conn_send_msg(
             &client->conn,
             LENS_MSG_FLUSH_ACK,
             0,
@@ -153,7 +153,7 @@ lens_client_sync_gfx_info(
         info = &default_gfx_info;
     }
 
-    res = sock_connection_send_msg(
+    res = sock_conn_send_msg(
             &client->conn,
             LENS_MSG_NOTIFY_GFX_INFO,
             0,
@@ -176,7 +176,7 @@ lens_client_send_input_event(
         struct lens_client *client,
         struct input_event *evt)
 {
-    return sock_connection_send_msg(
+    return sock_conn_send_msg(
             &client->conn,
             LENS_MSG_INPUT_EVT,
             0,
@@ -194,7 +194,7 @@ lens_client_set_gfx_info(
 
     if(client->gfx_info) {
         if(client->gfx_info->frame_size > 0) {
-            sock_connection_unmap_shmem(
+            sock_conn_unmap_shmem(
                     &client->conn,
                     0,
                     client->gfx_info->frame_size,
@@ -218,7 +218,7 @@ lens_client_set_gfx_info(
     memcpy(new, info, info_len);
 
     if(info->frame_size > 0) {
-        res = sock_connection_map_shmem(
+        res = sock_conn_map_shmem(
                 &client->conn,
                 0,
                 info->frame_size,

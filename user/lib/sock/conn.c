@@ -1,5 +1,5 @@
 
-#include <sock/connection.h>
+#include <sock/conn.h>
 #include <sock/sock.h>
 #include <sock/msg.h>
 
@@ -149,20 +149,20 @@ sock_msg_buffer_destroy(
 // Connections
 
 static int
-sock_connection_read_thread(void *_conn)
+sock_conn_read_thread(void *_conn)
 {
     int res;
-    struct sock_connection *conn = _conn;
+    struct sock_conn *conn = _conn;
     while(conn->status == SOCK_CONNECTION_CONNECTED) {
-        res = sock_connection_await_msg(conn);
+        res = sock_conn_await_msg(conn);
         if(res) {
-            sock_connection_check_for_disconnect(conn);
+            sock_conn_check_for_disconnect(conn);
             continue;
         }
         if(conn->autopoll) {
-            res = sock_connection_poll(conn);
+            res = sock_conn_poll(conn);
             if(res) {
-                sock_connection_check_for_disconnect(conn);
+                sock_conn_check_for_disconnect(conn);
                 continue;
             }
         }
@@ -171,14 +171,14 @@ sock_connection_read_thread(void *_conn)
 }
 
 static int
-sock_connection_write_thread(void *_conn)
+sock_conn_write_thread(void *_conn)
 {
     int res;
-    struct sock_connection *conn = _conn;
+    struct sock_conn *conn = _conn;
     while(conn->status == SOCK_CONNECTION_CONNECTED) {
-        res = sock_connection_flush_msg(conn);
+        res = sock_conn_flush_msg(conn);
         if(res) {
-            sock_connection_check_for_disconnect(conn);
+            sock_conn_check_for_disconnect(conn);
         }
         // Writes are non-blocking for now...
         usleep(10000); // 10ms sleep
@@ -187,8 +187,8 @@ sock_connection_write_thread(void *_conn)
 }
 
 int
-sock_connection_init(
-        struct sock_connection *conn,
+sock_conn_init(
+        struct sock_conn *conn,
         int conn_fd)
 {
     int res;
@@ -229,7 +229,7 @@ sock_connection_init(
 
     conn->status = SOCK_CONNECTION_CONNECTED;
 
-    res = thrd_create(&conn->read_thread, sock_connection_read_thread, conn);
+    res = thrd_create(&conn->read_thread, sock_conn_read_thread, conn);
     if(res) {
         sem_destroy(&conn->read_lock);
         sem_destroy(&conn->write_lock);
@@ -237,7 +237,7 @@ sock_connection_init(
         sock_msg_buffer_destroy(conn->send_buffer);
         return res;
     }
-    res = thrd_create(&conn->write_thread, sock_connection_write_thread, conn);
+    res = thrd_create(&conn->write_thread, sock_conn_write_thread, conn);
     if(res) {
         int read_exit;
         thrd_join(conn->read_thread, &read_exit);
@@ -252,8 +252,8 @@ sock_connection_init(
 }
 
 int
-sock_connection_deinit(
-        struct sock_connection *conn)
+sock_conn_deinit(
+        struct sock_conn *conn)
 {
     conn->status = SOCK_CONNECTION_DISCONNECTED;
     int read_exit, write_exit;
@@ -267,8 +267,8 @@ sock_connection_deinit(
 }
 
 int
-sock_connection_check_for_disconnect(
-        struct sock_connection *conn)
+sock_conn_check_for_disconnect(
+        struct sock_conn *conn)
 {
     int res;
     unsigned long connected;
@@ -284,8 +284,8 @@ sock_connection_check_for_disconnect(
 }
 
 int
-sock_connection_send_msg(
-        struct sock_connection *conn,
+sock_conn_send_msg(
+        struct sock_conn *conn,
         uint8_t type,
         uint8_t index,
         void *data,
@@ -315,9 +315,9 @@ sock_connection_send_msg(
 }
 
 int
-sock_connection_set_callback(
-        struct sock_connection *conn,
-        int(*on_recv)(struct sock_connection *conn,
+sock_conn_set_callback(
+        struct sock_conn *conn,
+        int(*on_recv)(struct sock_conn *conn,
                       struct sock_msg *msg,
                       void *state),
         void *state)
@@ -333,24 +333,24 @@ sock_connection_set_callback(
 }
 
 int
-sock_connection_start_autopoll(
-        struct sock_connection *conn)
+sock_conn_start_autopoll(
+        struct sock_conn *conn)
 {
     conn->autopoll = 1;
     return 0;
 }
 
 int
-sock_connection_stop_autopoll(
-        struct sock_connection *conn)
+sock_conn_stop_autopoll(
+        struct sock_conn *conn)
 {
     conn->autopoll = 0;
     return 0;
 }
 
 int
-sock_connection_poll(
-        struct sock_connection *conn)
+sock_conn_poll(
+        struct sock_conn *conn)
 {
     int res;
 
@@ -374,8 +374,8 @@ sock_connection_poll(
 }
 
 int
-sock_connection_await_msg(
-        struct sock_connection *conn)
+sock_conn_await_msg(
+        struct sock_conn *conn)
 {
     int res;
 
@@ -438,8 +438,8 @@ sock_connection_await_msg(
 }
 
 int
-sock_connection_flush_msg(
-        struct sock_connection *conn)
+sock_conn_flush_msg(
+        struct sock_conn *conn)
 {
     int res;
 
@@ -475,8 +475,8 @@ sock_connection_flush_msg(
 }
 
 int
-sock_connection_map_shmem(
-        struct sock_connection *conn,
+sock_conn_map_shmem(
+        struct sock_conn *conn,
         size_t offset,
         size_t size,
         void **base_out)
@@ -496,8 +496,8 @@ sock_connection_map_shmem(
 }
 
 int
-sock_connection_unmap_shmem(
-        struct sock_connection *conn,
+sock_conn_unmap_shmem(
+        struct sock_conn *conn,
         size_t offset,
         size_t size,
         void *base)
