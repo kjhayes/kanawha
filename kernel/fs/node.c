@@ -40,7 +40,7 @@ fs_node_flush_fs_page_lockless(struct fs_node *node, struct fs_page *page)
 {
     int res;
 
-    size_t amount = page->size;
+    size_t amount = 1UL<<page->order;
 
     page->flags &= ~FS_PAGE_FLAG_DIRTY;
 
@@ -51,7 +51,7 @@ fs_node_flush_fs_page_lockless(struct fs_node *node, struct fs_page *page)
         page->flags |= FS_PAGE_FLAG_DIRTY;
         return res;
     }
-    if(amount < page->size)
+    if(amount < 1UL<<page->order)
     {
         page->flags |= FS_PAGE_FLAG_DIRTY;
         return -EAGAIN;
@@ -78,8 +78,6 @@ fs_node_page_cache_load(
         return -ENOMEM;
     }
 
-    page->pins = 1;
-
     order_t order;
     res = fs_node_page_order(node, &order);
     if(res)
@@ -102,7 +100,6 @@ fs_node_page_cache_load(
     }
 
     page->order = order;
-    page->size = 1ULL << order;
     page->flags = 0;
 
     DEBUG_ASSERT(KERNEL_ADDR(out));

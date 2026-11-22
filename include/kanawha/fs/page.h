@@ -8,11 +8,8 @@
 #define FS_PAGE_FLAG_DIRTY (1UL << 0)
 struct fs_page
 {
-    size_t pins;
-
     void __phys *paddr;
     order_t order;
-    size_t size;
 
     unsigned long flags;
 
