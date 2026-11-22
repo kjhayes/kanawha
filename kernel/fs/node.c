@@ -8,11 +8,11 @@
 #include <kanawha/fs/file.h>
 #include <kanawha/fs/mount.h>
 #include <kanawha/irq.h>
-#include <kanawha/kmalloc.h>
 #include <kanawha/page_alloc.h>
 #include <kanawha/stddef.h>
 #include <kanawha/string.h>
 #include <kanawha/vmem.h>
+#include <kanawha/kmalloc.h>
 
 #define fs_node_page_lock_init(__node_ptr)                                     \
     thread_lock_init(&__node_ptr->page_lock)
@@ -70,19 +70,13 @@ fs_node_page_cache_load(
 
     struct fs_node *node = container_of(cache, struct fs_node, page_cache);
 
-    struct fs_page *page = NULL;
-
-    page = kzmalloc(sizeof(struct fs_page), KM_KERNEL);
-    if(page == NULL)
-    {
-        return -ENOMEM;
-    }
-
     order_t order;
+    void __phys *paddr;
+    unsigned long page_flags = 0;
+
     res = fs_node_page_order(node, &order);
     if(res)
     {
-        kfree(page);
         return res;
     }
 
@@ -90,17 +84,27 @@ fs_node_page_cache_load(
     //                                    ? FS_NODE_LOAD_PAGE_MAY_CREATE
     //                                    : 0;
 
-    unsigned long load_page_flags = 0;
 
-    res = fs_node_load_page(node, index, load_page_flags, &page->paddr);
+    unsigned long load_page_flags = 0;
+    res = fs_node_load_page(node, index, load_page_flags, &paddr);
     if(res)
     {
-        kfree(page);
         return res;
     }
 
-    page->order = order;
-    page->flags = 0;
+    struct fs_page *page;
+    page = fs_page_raw_alloc(
+            paddr,
+            order,
+            page_flags);
+    if(page == NULL) {
+        fs_node_unload_page(
+                node,
+                index,
+                0,
+                paddr);
+        return -ENOMEM;
+    }
 
     DEBUG_ASSERT(KERNEL_ADDR(out));
     *out = &page->cache_node;
@@ -146,7 +150,7 @@ fs_node_page_cache_unload(
                 errnostr(res));
     }
 
-    kfree(page);
+    fs_page_raw_free(page);
 
     return 0;
 }

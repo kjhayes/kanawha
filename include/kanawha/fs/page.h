@@ -16,4 +16,14 @@ struct fs_page
     struct pcache_node cache_node;
 };
 
+struct fs_page *
+fs_page_raw_alloc(
+        void __phys *paddr,
+        order_t order,
+        unsigned long flags);
+
+int
+fs_page_raw_free(
+        struct fs_page *);
+
 #endif
