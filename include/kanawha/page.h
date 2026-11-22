@@ -72,4 +72,14 @@ int
 page_nop_flush(
         struct page *page);
 
+// Anonymous Pages
+
+// Returns an anonymous page of zeros,
+// with one reference.
+// When all references are "put" the page
+// will be freed.
+struct page *
+page_get_anonymous(
+        order_t order);
+
 #endif
