@@ -47,7 +47,7 @@ obj-y += \
 	kinfo.o \
 	pcache.o \
 	ringbuf.o \
-	page.o \
+	mpage.o \
 
 obj-y += stack.o
 

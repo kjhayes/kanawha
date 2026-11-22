@@ -7,6 +7,7 @@
 #include <kanawha/uapi/mmap.h>
 #include <kanawha/uapi/syscall.h>
 #include <kanawha/pcache.h>
+#include <kanawha/mpage.h>
 
 struct process;
 struct mmap_region;
@@ -21,7 +22,7 @@ struct mmap_region;
 struct mmap_page
 {
     unsigned long flags;
-    struct page *backing_page;
+    struct mpage *backing_page;
     struct ptree_node tree_node;
 };
 

@@ -5,7 +5,7 @@
 
 struct fs_node;
 
-static struct page_ops fs_page_page_ops;
+static struct mpage_ops fs_page_mpage_ops;
 
 struct fs_page *
 fs_page_raw_alloc(
@@ -23,11 +23,11 @@ fs_page_raw_alloc(
     }
     page->flags = flags;
     page->fs_node = fs_node;
-    res = page_init(
-            &page->page,
+    res = mpage_init(
+            &page->mpage,
             paddr,
             order,
-            &fs_page_page_ops);
+            &fs_page_mpage_ops);
     if(res) {
         kfree(page);
         return NULL;
@@ -39,7 +39,7 @@ int
 fs_page_raw_free(
         struct fs_page *page)
 {
-    page_deinit(&page->page);
+    mpage_deinit(&page->mpage);
     kfree(page);
     return 0;
 }
@@ -81,49 +81,49 @@ fs_page_is_dirty(
 
 // page_ops
 static inline int
-fs_page_page_flush(
-        struct page *page)
+fs_page_mpage_flush(
+        struct mpage *page)
 {
     struct fs_page *fs_page =
-        container_of(page, struct fs_page, page);
+        container_of(page, struct fs_page, mpage);
     return fs_node_flush_fs_page(fs_page->fs_node, fs_page);
 }
 
 static inline int
-fs_page_page_get(
-        struct page *page)
+fs_page_mpage_get(
+        struct mpage *page)
 {
     struct fs_page *fs_page =
-        container_of(page, struct fs_page, page);
+        container_of(page, struct fs_page, mpage);
     return fs_page_get(fs_page);
 }
 
 static inline int
-fs_page_page_put(
-        struct page *page)
+fs_page_mpage_put(
+        struct mpage *page)
 {
     struct fs_page *fs_page =
-        container_of(page, struct fs_page, page);
+        container_of(page, struct fs_page, mpage);
     return fs_page_put(fs_page);
 }
 
 static inline int
-fs_page_page_mark(
-        struct page *page,
+fs_page_mpage_mark(
+        struct mpage *page,
         unsigned long status)
 {
     struct fs_page *fs_page =
-        container_of(page, struct fs_page, page);
-    if(status & PAGE_MARK_DIRTY) {
+        container_of(page, struct fs_page, mpage);
+    if(status & MPAGE_MARK_DIRTY) {
         fs_page_mark_dirty(fs_page);
     }
     return 0;
 }
 
-static struct page_ops fs_page_page_ops = {
-    .flush = fs_page_page_flush,
-    .get = fs_page_page_get,
-    .put = fs_page_page_put,
-    .mark = fs_page_page_mark,
+static struct mpage_ops fs_page_mpage_ops = {
+    .flush = fs_page_mpage_flush,
+    .get = fs_page_mpage_get,
+    .put = fs_page_mpage_put,
+    .mark = fs_page_mpage_mark,
 };
 
