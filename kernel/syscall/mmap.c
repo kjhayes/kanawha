@@ -55,8 +55,7 @@ syscall_mmap(fd_t file,
 
     uint8_t type = mmap_flags & 0b11;
 
-    // Mis-aligned/Mis-sized
-
+    // Mis-aligned/Mis-sized Checks
     if(type != MMAP_ANON && (ptr_orderof(file_offset) < VMEM_MIN_PAGE_ORDER))
     {
         wprintk("syscall_mmap: file_offset is not aligned to the minimum vmem "
@@ -65,10 +64,15 @@ syscall_mmap(fd_t file,
     }
     if(ptr_orderof(size) < VMEM_MIN_PAGE_ORDER)
     {
-        wprintk("syscall_mmap: size is not a multiple of the minimum "
-                "vmem page "
-                "size!\n");
-        return -EINVAL;
+        if(mmap_flags & MMAP_EXACT) {
+            wprintk("syscall_mmap: size is not a multiple of the minimum "
+                    "vmem page size with MMAP_EXACT set!\n");
+            return -EINVAL;
+        } else {
+            // Round up to the minimum page size
+            size_t mask = ((1ULL<<VMEM_MIN_PAGE_ORDER))-1;
+            size = (size + mask) & ~mask;
+        }
     }
 
     if(mmap_flags & MMAP_EXACT)
