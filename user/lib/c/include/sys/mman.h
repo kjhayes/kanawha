@@ -32,7 +32,7 @@ mlock(const void *, size_t);
 int
 mlockall(int);
 void *
-mmap(void *, size_t, int, int, int, off_t);
+mmap(void *addr, size_t length, int prot, int flags, int fd, off_t offset);
 int
 mprotect(void *, size_t, int);
 int

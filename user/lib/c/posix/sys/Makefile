@@ -6,4 +6,5 @@ obj-y += \
 	statfs/ \
 	resource/ \
 	time/ \
+	mman/ \
 
