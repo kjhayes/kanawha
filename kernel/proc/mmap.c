@@ -254,8 +254,8 @@ mmap_region_map_page(struct mmap_region *region, struct mmap_page *page)
     DEBUG_ASSERT(KERNEL_ADDR(region->mmap->vmem_region));
     res = vmem_paged_region_map(region->mmap->vmem_region,
                                 region->tree_node.key + page->tree_node.key,
-                                page->phys_addr,
-                                1ULL << page->order,
+                                page_get_phys(page->backing_page),
+                                page_get_size(page->backing_page),
                                 vmem_flags);
     if(res)
     {
@@ -271,7 +271,7 @@ mmap_region_map_page(struct mmap_region *region, struct mmap_page *page)
     page->flags |= MMAP_PAGE_MAPPED;
     dprintk("mmap_region_map_page: mapped page region-offset=[%p-%p)\n",
             page->tree_node.key,
-            page->tree_node.key + (1ULL << page->order));
+            page->tree_node.key + page_get_size(page->backing_page));
 
     return 0;
 }
@@ -288,7 +288,7 @@ mmap_region_unmap_page(struct mmap_region *region, struct mmap_page *page)
 
     res = vmem_paged_region_unmap(region->mmap->vmem_region,
                                   region->tree_node.key + page->tree_node.key,
-                                  1ULL << page->order);
+                                  page_get_size(page->backing_page));
     if(res)
     {
         return res;
@@ -298,24 +298,6 @@ mmap_region_unmap_page(struct mmap_region *region, struct mmap_page *page)
 
     return 0;
 }
-
-// static int
-// mmap_region_flush_page(
-//         struct mmap_region *region,
-//         struct mmap_page *page)
-//{
-//     unsigned long mmap_type = page->flags & 0b11;
-//     if(mmap_type == MMAP_PAGE_ANON) {
-//         return 0;
-//     }
-//
-//     struct fs_node *node = region->fs_node;
-//     return fs_node_flush_page(
-//             node,
-//             page->tree_node.key,
-//             0,
-//             page->phys_addr);
-// }
 
 // Unmap, and unload the page
 static int
@@ -341,42 +323,14 @@ mmap_region_reclaim_page(struct mmap_region *region, struct mmap_page *page)
         modified = 0;
     }
 
-    if(page->flags & MMAP_PAGE_ANON)
-    {
-        int can_free = 1;
-        if(page->flags & MMAP_PAGE_COPY_ON_WRITE)
-        {
-            atomic_t *sharing_level = page->anon_sharing_level;
-            atomic_t new_level = atomic_fetch_dec(sharing_level) - 1;
-            if(new_level != 0)
-            {
-                can_free = 0;
-            }
-            else
-            {
-                kfree(page->anon_sharing_level);
-            }
-        }
-        if(can_free)
-        {
-            res = page_free(page->order, page->phys_addr);
-            if(res)
-            {
-                return res;
-            }
-        }
+    DEBUG_ASSERT(KERNEL_ADDR(page->backing_page));
+    if(modified) {
+        page_mark(page->backing_page, PAGE_MARK_DIRTY);
     }
-    else
+    res = page_put(page->backing_page);
+    if(res)
     {
-        DEBUG_ASSERT(KERNEL_ADDR(page->backing_page));
-        if(modified) {
-            page_mark(page->backing_page, PAGE_MARK_DIRTY);
-        }
-        res = page_put(page->backing_page);
-        if(res)
-        {
-            return res;
-        }
+        return res;
     }
 
     // Our backing memory should be free now
@@ -951,24 +905,21 @@ mmap_region_load_page(struct mmap_region *region,
     int res;
 
     struct page *backing_page = NULL;
-    void __phys *paddr = 0;
-    order_t order = 0;
     unsigned long page_flags = 0;
 
     unsigned long mmap_type = region->mmap_flags & 0b11;
 
     if(mmap_type == MMAP_ANONYMOUS)
     {
-        order = VMEM_MIN_PAGE_ORDER;
-        res = page_alloc(order, &paddr, 0);
-        if(res)
-        {
-            return res;
+        order_t order = VMEM_MIN_PAGE_ORDER;
+        backing_page = page_get_anonymous(order);
+        if(backing_page == NULL) {
+            return -ENOMEM;
         }
 
         // Clear the page
-        void *page_data = (void *)__va(paddr);
-        memset(page_data, 0, 1ULL << order);
+        void *page_data = (void *)__va(page_get_phys(backing_page));
+        memset(page_data, 0, page_get_size(backing_page));
 
         // Align our page offset to the base of the page
         page_offset &= ~((1ULL << order) - 1);
@@ -984,6 +935,7 @@ mmap_region_load_page(struct mmap_region *region,
                          region->mmap_flags,
                          region->tree_node.key);
 
+        order_t order;
         res = fs_node_page_order(region->fs_node, &order);
         if(res)
         {
@@ -1035,8 +987,6 @@ mmap_region_load_page(struct mmap_region *region,
         {
             page_flags |= MMAP_PAGE_COPY_ON_WRITE;
         }
-
-        paddr = page_get_phys(backing_page);
     }
     else
     {
@@ -1050,64 +1000,26 @@ mmap_region_load_page(struct mmap_region *region,
     struct mmap_page *page = kzmalloc(sizeof(struct mmap_page), KM_KERNEL);
     if(page == NULL)
     {
-        if(page_flags & MMAP_PAGE_ANON)
-        {
-            page_free(order, paddr);
-        }
-        else
-        {
-            page_put(page->backing_page);
-        }
+        page_put(page->backing_page);
         return -ENOMEM;
     }
 
-    page->order = order;
     page->flags = page_flags;
-    page->phys_addr = paddr;
-    if(page->flags & MMAP_ANON)
-    {
-        if(page->flags & MMAP_PAGE_COPY_ON_WRITE)
-        {
-            // This should never happen but stay consistent if our
-            // caller is weird
-            page->anon_sharing_level = kmalloc(sizeof(atomic_t), KM_KERNEL);
-            if(page->anon_sharing_level == NULL)
-            {
-                page_free(order, paddr);
-                kfree(page);
-                return -ENOMEM;
-            }
-            *page->anon_sharing_level = 1;
-        }
-        else
-        {
-            page->anon_sharing_level = NULL;
-        }
-    }
-    else
-    {
-        page->backing_page = backing_page;
-    }
+    DEBUG_ASSERT(KERNEL_ADDR(backing_page));
+    page->backing_page = backing_page;
 
-    DEBUG_ASSERT(ptr_orderof(page->phys_addr) >= VMEM_MIN_PAGE_ORDER);
+    DEBUG_ASSERT(ptr_orderof(page_get_phys(page->backing_page)) >= VMEM_MIN_PAGE_ORDER);
 
     dprintk("mmap_region page_tree insert: region=%p, page=%p, "
-            "page->region_offset=%p, page->order=%ld\n",
+            "page->region_offset=%p, order=%ld\n",
             region,
             page,
             page->tree_node.key,
-            page->order);
+            page_get_order(page->backing_page));
     res = ptree_insert(&region->page_tree, &page->tree_node, page_offset);
     if(res)
     {
-        if(page_flags & MMAP_PAGE_ANON)
-        {
-            page_free(order, paddr);
-        }
-        else
-        {
-            page_put(page->backing_page);
-        }
+        page_put(page->backing_page);
         kfree(page);
         return res;
     }
@@ -1135,14 +1047,14 @@ mmap_page_do_copy_on_write(struct mmap_region *region, struct mmap_page *page)
                 errnostr(res));
         return res;
     }
-
-    // The process tried to write to a "copy-on-write" page
-    void __phys *new_page;
-
     dprintk("unmapped page\n");
 
-    res = page_alloc(page->order, &new_page, 0);
-    if(res)
+    DEBUG_ASSERT(KERNEL_ADDR(page->backing_page));
+
+    // The process tried to write to a "copy-on-write" page,
+    // allocate a new anonymous page for the copy.
+    struct page *new_backing_page = page_get_anonymous(page_get_order(page->backing_page));
+    if(new_backing_page == NULL)
     {
         eprintk("mmap_page_do_copy_on_write: page_alloc returned %s\n",
                 errnostr(res));
@@ -1150,64 +1062,29 @@ mmap_page_do_copy_on_write(struct mmap_region *region, struct mmap_page *page)
         return res;
     }
 
-    void *new_data = (void *)__va(new_page);
-    void *old_data = (void *)__va(page->phys_addr);
+    // Copy the data over
+    void *new_data = (void *)__va(page_get_phys(new_backing_page));
+    void *old_data = (void *)__va(page_get_phys(page->backing_page));
+    memcpy(new_data, old_data, page_get_size(page->backing_page));
 
-    memcpy(new_data, old_data, 1ULL << page->order);
+    DEBUG_ASSERT(KERNEL_ADDR(region));
 
-    dprintk("copied data\n");
-
-    // Clean-Up
-    if((page->flags & MMAP_PAGE_ANON) == 0)
+    res = page_put(page->backing_page);
+    if(res)
     {
-        // File-Backed
-
-        DEBUG_ASSERT(KERNEL_ADDR(region));
-        DEBUG_ASSERT(KERNEL_ADDR(region->fs_node));
-
-        struct fs_node *fs_node = region->fs_node;
-
-        DEBUG_ASSERT(KERNEL_ADDR(page->backing_page));
-
-        res = page_put(page->backing_page);
-        if(res)
-        {
-            mmap_region_map_page(region, page);
-            page_free(page->order, new_page);
-            eprintk("mmap_page_do_copy_on_write: page_put "
-                    "returned %s\n",
-                    errnostr(res));
-            return res;
-        }
-        dprintk("put page\n");
+        mmap_region_map_page(region, page);
+        page_put(new_backing_page);
+        eprintk("mmap_page_do_copy_on_write: page_put "
+                "returned %s\n",
+                errnostr(res));
+        return res;
     }
-    else
-    {
-        dprintk("Handling Anonymous Copy-On-Write Page Fault...\n");
-        // Anonymous
-        atomic_t *sharing_level = page->anon_sharing_level;
-        DEBUG_ASSERT(KERNEL_ADDR(sharing_level));
-
-        // Need this synchronization because
-        atomic_t new_level = atomic_fetch_dec(sharing_level) - 1;
-
-        dprintk("Set Sharing Level to %d\n", new_level);
-
-        if(new_level == 0)
-        {
-            // Free the old page (Really we should just use the old one
-            // TODO)
-            dprintk("Freeing Page!\n");
-            page_free(page->order, page->phys_addr);
-            kfree(sharing_level);
-        }
-    }
+    dprintk("put page\n");
 
     // Set up our page as if it is just a standard anonymous page
     page->flags &= ~MMAP_PAGE_COPY_ON_WRITE;
     page->flags |= MMAP_PAGE_ANON;
-    page->phys_addr = new_page;
-    page->anon_sharing_level = NULL;
+    page->backing_page = new_backing_page;
 
     dprintk("populated page flags\n");
 
@@ -1298,7 +1175,7 @@ mmap_read(struct process *process, uintptr_t offset, void *dst, size_t length)
         struct mmap_page *page =
             container_of(pnode, struct mmap_page, tree_node);
         if((pnode == NULL) ||
-           (region_offset >= pnode->key + (1ULL << page->order)))
+           (region_offset >= pnode->key + page_get_size(page->backing_page)))
         {
             res = mmap_region_load_page(region, region_offset, &page);
             if(res)
@@ -1316,11 +1193,11 @@ mmap_read(struct process *process, uintptr_t offset, void *dst, size_t length)
             return -EINVAL;
         }
 
-        void __phys *page_paddr = page->phys_addr;
+        void __phys *page_paddr = page_get_phys(page->backing_page);
         void *page_data = (void *)__va(page_paddr);
 
         uintptr_t page_offset = page->tree_node.key;
-        size_t page_size = 1ULL << page->order;
+        size_t page_size = page_get_size(page->backing_page);
         size_t page_relative_offset = region_offset - page_offset;
         size_t room_avail = page_size - page_relative_offset;
         if(length <= room_avail)
@@ -1402,7 +1279,7 @@ mmap_write(struct process *process, uintptr_t offset, void *src, size_t length)
         struct mmap_page *page =
             container_of(pnode, struct mmap_page, tree_node);
         if((pnode == NULL) ||
-           (region_offset >= pnode->key + (1ULL << page->order)))
+           (region_offset >= pnode->key + page_get_size(page->backing_page)))
         {
             res = mmap_region_load_page(region, region_offset, &page);
             if(res)
@@ -1438,11 +1315,11 @@ mmap_write(struct process *process, uintptr_t offset, void *src, size_t length)
             return -EINVAL;
         }
 
-        void __phys *page_paddr = page->phys_addr;
+        void __phys *page_paddr = page_get_phys(page->backing_page);
         void *page_data = (void *)__va(page_paddr);
 
         uintptr_t page_offset = page->tree_node.key;
-        size_t page_size = 1ULL << page->order;
+        size_t page_size = page_get_size(page->backing_page);
         size_t page_relative_offset = region_offset - page_offset;
         size_t room_avail = page_size - page_relative_offset;
 
@@ -1528,7 +1405,7 @@ mmap_memset(struct process *process,
         struct mmap_page *page =
             container_of(pnode, struct mmap_page, tree_node);
         if((pnode == NULL) ||
-           (region_offset >= pnode->key + (1ULL << page->order)))
+           (region_offset >= pnode->key + page_get_size(page->backing_page)))
         {
             res = mmap_region_load_page(region, region_offset, &page);
             if(res)
@@ -1564,11 +1441,11 @@ mmap_memset(struct process *process,
             return -EINVAL;
         }
 
-        void __phys *page_paddr = page->phys_addr;
+        void __phys *page_paddr = page_get_phys(page->backing_page);
         void *page_data = (void *)__va(page_paddr);
 
         uintptr_t page_offset = page->tree_node.key;
-        size_t page_size = 1ULL << page->order;
+        size_t page_size = page_get_size(page->backing_page);
         size_t page_relative_offset = region_offset - page_offset;
         size_t room_avail = page_size - page_relative_offset;
 
@@ -1662,7 +1539,7 @@ mmap_user_strlen(struct process *process,
         struct mmap_page *page =
             container_of(pnode, struct mmap_page, tree_node);
         if((pnode == NULL) ||
-           (region_offset >= (pnode->key + (1ULL << page->order))))
+           (region_offset >= (pnode->key + page_get_size(page->backing_page))))
         {
             dprintk("loading page (offset=%p)\n", region_offset);
             res = mmap_region_load_page(region, region_offset, &page);
@@ -1683,11 +1560,6 @@ mmap_user_strlen(struct process *process,
         {
             struct mmap_page *iter_page =
                 container_of(iter, struct mmap_page, tree_node);
-            dprintk("page=%p, phys_addr=%p, order=%ld, page=%p\n",
-                    iter_page,
-                    iter_page->phys_addr,
-                    (sl_t)iter_page->order,
-                    iter_page->backing_page);
         }
 
         if(page == NULL)
@@ -1697,13 +1569,12 @@ mmap_user_strlen(struct process *process,
             return -EINVAL;
         }
 
-        DEBUG_ASSERT(ptr_orderof(page->phys_addr) >= VMEM_MIN_PAGE_ORDER);
-
-        void __phys *page_paddr = page->phys_addr;
+        void __phys *page_paddr = page_get_phys(page->backing_page);
+        DEBUG_ASSERT(ptr_orderof(page_paddr) >= VMEM_MIN_PAGE_ORDER);
         void *page_data = (void *)__va(page_paddr);
 
         uintptr_t page_offset = page->tree_node.key;
-        size_t page_size = 1ULL << page->order;
+        size_t page_size = page_get_size(page->backing_page);
         size_t page_relative_offset = region_offset - page_offset;
         size_t room_avail = page_size - page_relative_offset;
         DEBUG_ASSERT(room_avail > 0);
@@ -1763,7 +1634,7 @@ mmap_not_present_page_fault_handler(struct mmap *mmap,
 
     struct mmap_page *page = container_of(pnode, struct mmap_page, tree_node);
 
-    if(pnode == NULL || ((pnode->key + (1ULL << page->order)) <= region_offset))
+    if(pnode == NULL || ((pnode->key + page_get_size(page->backing_page)) <= region_offset))
     {
         res = mmap_region_load_page(region, region_offset, &page);
         if(res)
@@ -2010,58 +1881,13 @@ mmap_page_clone(struct mmap_region *from_region,
     }
 
     page->flags = from->flags;
-    page->order = from->order;
     page->flags &= ~MMAP_PAGE_MAPPED;
 
-    // Set phys_addr and page/anon_sharing_level
-    if(from->flags & MMAP_PAGE_ANON)
-    {
-        if(from->flags & MMAP_PAGE_COPY_ON_WRITE)
-        {
-            // This page is already being shared between mmap's as
-            // copy-on-write
-            page->anon_sharing_level = from->anon_sharing_level;
-            atomic_t old_sharing_level =
-                atomic_fetch_inc(from->anon_sharing_level);
-            if(old_sharing_level <= 0)
-            {
-                // We caught this page in the middle of freeing it?
-                // (shouldn't be possible)
-                kfree(page);
-                return -EINVAL;
-            }
-            page->phys_addr = from->phys_addr;
-        }
-        else
-        {
-            // We need to make this a shared anonymous copy-on-write
-            // page
-
-            page->flags |= MMAP_PAGE_COPY_ON_WRITE;
-            page->anon_sharing_level = kzmalloc(sizeof(atomic_t), KM_KERNEL);
-            if(page->anon_sharing_level == NULL)
-            {
-                kfree(page);
-                return -ENOMEM;
-            }
-            *page->anon_sharing_level = 2;
-
-            // I'm fairly confident this is safe: these is accesses are
-            // questionable though
-            res = mmap_region_unmap_page(from_region, from);
-            if(res)
-            {
-                kfree(page->anon_sharing_level);
-                kfree(page);
-                return res;
-            }
-            from->flags |= MMAP_PAGE_COPY_ON_WRITE;
-            from->anon_sharing_level = page->anon_sharing_level;
-
-            page->phys_addr = from->phys_addr;
-        }
+    if(from_region->mmap_flags & (MMAP_PRIVATE|MMAP_ANON)) {
+        page->flags |= MMAP_PAGE_COPY_ON_WRITE;
+        from->flags |= MMAP_PAGE_COPY_ON_WRITE;
     }
-    else
+
     {
         struct page *backing_page = from->backing_page;
         DEBUG_ASSERT(KERNEL_ADDR(backing_page));
@@ -2074,36 +1900,14 @@ mmap_page_clone(struct mmap_region *from_region,
         }
 
         page->backing_page = backing_page;
-        page->phys_addr = from->phys_addr;
     }
 
     res = ptree_insert(&to->page_tree, &page->tree_node, from->tree_node.key);
     if(res)
     {
-        if(page->flags & MMAP_PAGE_ANON)
-        {
-            // Anonymous
-            atomic_t *sharing_level = page->anon_sharing_level;
-            DEBUG_ASSERT(KERNEL_ADDR(sharing_level));
-
-            // Need this synchronization because
-            atomic_t new_level = atomic_fetch_dec(sharing_level) - 1;
-
-            if(new_level == 0)
-            {
-                // Free the old page (Really we should just use the old one TODO)
-                page_free(page->order, page->phys_addr);
-                kfree(sharing_level);
-            }
-            kfree(page);
-            return res;
-        }
-        else
-        {
-            page_put(page->backing_page);
-            kfree(page);
-            return res;
-        }
+        page_put(page->backing_page);
+        kfree(page);
+        return res;
     }
 
     return 0;
@@ -2245,8 +2049,8 @@ dump_mmap_page(struct printer *printer,
     fmt_print(printer, "\t\tPage [%p-%p] -> %p %s%s%s\n",
                region->tree_node.key + page->tree_node.key,
                region->tree_node.key + page->tree_node.key +
-                   (1ULL << page->order),
-               page->phys_addr,
+                   page_get_size(page->backing_page),
+               page_get_phys(page->backing_page),
                page->flags & MMAP_PAGE_ANON ? "[ANON]" : "",
                page->flags & MMAP_PAGE_MAPPED ? "[MAPPED]" : "",
                page->flags & MMAP_PAGE_COPY_ON_WRITE ? "[COW]" : "");

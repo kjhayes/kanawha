@@ -111,6 +111,10 @@ page_get_anonymous(
 
     struct anon_page *anon;
     anon = kzmalloc(sizeof(*anon), KM_KERNEL);
+    if(anon == NULL) {
+        return NULL;
+    }
+
     atomic_set_relaxed(&anon->refcount, 1);
 
     void __phys *paddr;

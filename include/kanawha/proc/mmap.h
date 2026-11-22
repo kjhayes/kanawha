@@ -19,16 +19,9 @@ struct mmap_region;
 #define MMAP_PAGE_COPY_ON_WRITE (1ULL << 2)
 struct mmap_page
 {
-    void __phys *phys_addr;
-    order_t order;
-
     unsigned long flags;
 
-    // Non-anonymous page
     struct page *backing_page;
-
-    // Anonymous page (NULL if not copy-on-write)
-    atomic_t *anon_sharing_level;
 
     struct ptree_node tree_node;
 };
