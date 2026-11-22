@@ -15,6 +15,7 @@
 #include <kanawha/types.h>
 #include <kanawha/vmem.h>
 #include <kanawha/panic.h>
+#include <kanawha/pwait.h>
 
 static inline void
 mmap_lock_init(struct mmap *mmap)
@@ -1062,6 +1063,73 @@ mmap_page_do_copy_on_write(struct mmap_region *region, struct mmap_page *page)
     return 0;
 }
 
+static struct mpage *
+mmap_get_mpage_containing(
+        struct mmap *mmap,
+        uintptr_t offset)
+{
+    int res;
+
+    DEBUG_ASSERT(KERNEL_ADDR(mmap));
+
+    mmap_lock_acquire(mmap);
+
+    if(offset >= mmap->vmem_region->size)
+    {
+        mmap_lock_release(mmap);
+        return NULL;
+    }
+
+    struct ptree_node *pnode;
+    pnode = ptree_get_max_less_or_eq(&mmap->region_tree, offset);
+
+    struct mmap_region *region =
+        container_of(pnode, struct mmap_region, tree_node);
+
+    if((pnode == NULL) || (offset >= region->size + pnode->key))
+    {
+        mmap_lock_release(mmap);
+        return NULL;
+    }
+
+    mmap_region_page_tree_lock_acquire(region);
+
+    uintptr_t region_offset = offset - region->tree_node.key;
+
+    // Get or load the page
+    pnode = ptree_get_max_less_or_eq(&region->page_tree, region_offset);
+    struct mmap_page *page =
+        container_of(pnode, struct mmap_page, tree_node);
+    if((pnode == NULL) ||
+       (region_offset >= pnode->key + mpage_get_size(page->backing_page)))
+    {
+        res = mmap_region_load_page(region, region_offset, &page);
+        if(res)
+        {
+            mmap_region_page_tree_lock_release(region);
+            mmap_lock_release(mmap);
+            return NULL;
+        }
+    }
+
+    if(page == NULL)
+    {
+        mmap_region_page_tree_lock_release(region);
+        mmap_lock_release(mmap);
+        return NULL;
+    }
+
+    DEBUG_ASSERT(KERNEL_ADDR(page->backing_page));
+
+    struct mpage *mpage = page->backing_page;
+    mpage_get(mpage);
+
+    mmap_region_page_tree_lock_release(region);
+    mmap_lock_release(mmap);
+
+    return mpage;
+}
+
 #define MMAP_DIRECT_ACCESS_WRITE (0)
 #define MMAP_DIRECT_ACCESS_READ  (1)
 int
@@ -1646,21 +1714,45 @@ mmap_wait_on(
         struct mmap *mmap,
         uintptr_t offset)
 {
-    return -EINTR;
+    int res;
+    struct mpage *page = mmap_get_mpage_containing(mmap, offset);
+    if(page == NULL) {
+        return -EINTR;
+    }
+    void __phys *paddr = mpage_get_phys(page);
+    res = pwait_on(paddr);
+    mpage_put(page);
+    return res;
 }
 int
 mmap_wake_single(
         struct mmap *mmap,
         uintptr_t offset)
 {
-    return 0;
+    int res;
+    struct mpage *page = mmap_get_mpage_containing(mmap, offset);
+    if(page == NULL) {
+        return -EINTR;
+    }
+    void __phys *paddr = mpage_get_phys(page);
+    res = pwake_single(paddr);
+    mpage_put(page);
+    return res;
 }
 int
 mmap_wake_all(
         struct mmap *mmap,
         uintptr_t offset)
 {
-    return 0;
+    int res;
+    struct mpage *page = mmap_get_mpage_containing(mmap, offset);
+    if(page == NULL) {
+        return -EINTR;
+    }
+    void __phys *paddr = mpage_get_phys(page);
+    res = pwake_all(paddr);
+    mpage_put(page);
+    return res;
 }
 
 // Cloning

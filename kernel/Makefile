@@ -48,6 +48,7 @@ obj-y += \
 	pcache.o \
 	ringbuf.o \
 	mpage.o \
+	pwait.o \
 
 obj-y += stack.o
 
