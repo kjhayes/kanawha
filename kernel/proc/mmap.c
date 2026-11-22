@@ -368,11 +368,11 @@ mmap_region_reclaim_page(struct mmap_region *region, struct mmap_page *page)
     }
     else
     {
-        DEBUG_ASSERT(KERNEL_ADDR(page->fs_page));
+        DEBUG_ASSERT(KERNEL_ADDR(page->backing_page));
         if(modified) {
-            fs_page_mark_dirty(page->fs_page);
+            page_mark(page->backing_page, PAGE_MARK_DIRTY);
         }
-        res = fs_page_put(page->fs_page);
+        res = page_put(page->backing_page);
         if(res)
         {
             return res;
@@ -950,7 +950,7 @@ mmap_region_load_page(struct mmap_region *region,
 {
     int res;
 
-    struct fs_page *fs_page = NULL;
+    struct page *backing_page = NULL;
     void __phys *paddr = 0;
     order_t order = 0;
     unsigned long page_flags = 0;
@@ -1016,11 +1016,19 @@ mmap_region_load_page(struct mmap_region *region,
 
         pfn += (region->file_offset >> order);
 
-        fs_page =
-            fs_node_get_page(region->fs_node, pfn, FS_NODE_GET_PAGE_MAY_CREATE);
-        if(fs_page == NULL)
         {
-            return -EINVAL;
+            struct fs_page *fs_page =
+                fs_node_get_fs_page(region->fs_node, pfn, FS_NODE_GET_PAGE_MAY_CREATE);
+            if(fs_page == NULL)
+            {
+                return -EINVAL;
+            }
+
+            backing_page = fs_page_get_as_page(fs_page);
+            fs_page_put(fs_page);
+            if(backing_page == NULL) {
+                return -EINVAL;
+            }
         }
 
         if(mmap_type == MMAP_PRIVATE)
@@ -1028,7 +1036,7 @@ mmap_region_load_page(struct mmap_region *region,
             page_flags |= MMAP_PAGE_COPY_ON_WRITE;
         }
 
-        paddr = fs_page_phys(fs_page);
+        paddr = page_get_phys(backing_page);
     }
     else
     {
@@ -1048,7 +1056,7 @@ mmap_region_load_page(struct mmap_region *region,
         }
         else
         {
-            fs_page_put(page->fs_page);
+            page_put(page->backing_page);
         }
         return -ENOMEM;
     }
@@ -1078,7 +1086,7 @@ mmap_region_load_page(struct mmap_region *region,
     }
     else
     {
-        page->fs_page = fs_page;
+        page->backing_page = backing_page;
     }
 
     DEBUG_ASSERT(ptr_orderof(page->phys_addr) >= VMEM_MIN_PAGE_ORDER);
@@ -1098,7 +1106,7 @@ mmap_region_load_page(struct mmap_region *region,
         }
         else
         {
-            fs_page_put(page->fs_page);
+            page_put(page->backing_page);
         }
         kfree(page);
         return res;
@@ -1159,19 +1167,19 @@ mmap_page_do_copy_on_write(struct mmap_region *region, struct mmap_page *page)
 
         struct fs_node *fs_node = region->fs_node;
 
-        DEBUG_ASSERT(KERNEL_ADDR(page->fs_page));
+        DEBUG_ASSERT(KERNEL_ADDR(page->backing_page));
 
-        res = fs_page_put(page->fs_page);
+        res = page_put(page->backing_page);
         if(res)
         {
             mmap_region_map_page(region, page);
             page_free(page->order, new_page);
-            eprintk("mmap_page_do_copy_on_write: fs_page_put "
+            eprintk("mmap_page_do_copy_on_write: page_put "
                     "returned %s\n",
                     errnostr(res));
             return res;
         }
-        dprintk("put fs_page\n");
+        dprintk("put page\n");
     }
     else
     {
@@ -1675,11 +1683,11 @@ mmap_user_strlen(struct process *process,
         {
             struct mmap_page *iter_page =
                 container_of(iter, struct mmap_page, tree_node);
-            dprintk("page=%p, phys_addr=%p, order=%ld, fs_page=%p\n",
+            dprintk("page=%p, phys_addr=%p, order=%ld, page=%p\n",
                     iter_page,
                     iter_page->phys_addr,
                     (sl_t)iter_page->order,
-                    iter_page->fs_page);
+                    iter_page->backing_page);
         }
 
         if(page == NULL)
@@ -2005,7 +2013,7 @@ mmap_page_clone(struct mmap_region *from_region,
     page->order = from->order;
     page->flags &= ~MMAP_PAGE_MAPPED;
 
-    // Set phys_addr and fs_page/anon_sharing_level
+    // Set phys_addr and page/anon_sharing_level
     if(from->flags & MMAP_PAGE_ANON)
     {
         if(from->flags & MMAP_PAGE_COPY_ON_WRITE)
@@ -2055,17 +2063,17 @@ mmap_page_clone(struct mmap_region *from_region,
     }
     else
     {
-        struct fs_page *fs_page = from->fs_page;
-        DEBUG_ASSERT(KERNEL_ADDR(fs_page));
+        struct page *backing_page = from->backing_page;
+        DEBUG_ASSERT(KERNEL_ADDR(backing_page));
 
-        res = fs_page_get(fs_page);
+        res = page_get(backing_page);
         if(res)
         {
             kfree(page);
             return res;
         }
 
-        page->fs_page = fs_page;
+        page->backing_page = backing_page;
         page->phys_addr = from->phys_addr;
     }
 
@@ -2092,7 +2100,7 @@ mmap_page_clone(struct mmap_region *from_region,
         }
         else
         {
-            fs_page_put(page->fs_page);
+            page_put(page->backing_page);
             kfree(page);
             return res;
         }

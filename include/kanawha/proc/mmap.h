@@ -24,14 +24,11 @@ struct mmap_page
 
     unsigned long flags;
 
-    union
-    {
-        // Non-anonymous page
-        struct fs_page *fs_page;
+    // Non-anonymous page
+    struct page *backing_page;
 
-        // Anonymous page (NULL if not copy-on-write)
-        atomic_t *anon_sharing_level;
-    };
+    // Anonymous page (NULL if not copy-on-write)
+    atomic_t *anon_sharing_level;
 
     struct ptree_node tree_node;
 };
@@ -140,10 +137,14 @@ mmap_region_load_page(struct mmap_region *region,
                       struct mmap_page **out);
 
 int
-mmap_region_map_page(struct mmap_region *region, struct mmap_page *page);
+mmap_region_map_page(
+        struct mmap_region *region,
+        struct mmap_page *page);
 
 int
-mmap_page_do_copy_on_write(struct mmap_region *region, struct mmap_page *page);
+mmap_page_do_copy_on_write(
+        struct mmap_region *region,
+        struct mmap_page *page);
 
 int
 mmap_page_fault_handler(struct excp_state *state,

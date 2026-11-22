@@ -485,7 +485,7 @@ fs_file_paged_read(struct file *file,
     uintptr_t page_offset = seek_loc & ((1ULL << order) - 1);
     uintptr_t room_left = (1ULL << order) - page_offset;
 
-    struct fs_page *page = fs_node_get_page(fs_node, seek_pfn, 0);
+    struct fs_page *page = fs_node_get_fs_page(fs_node, seek_pfn, 0);
     if(page == NULL)
     {
         fs_node_put(fs_node);

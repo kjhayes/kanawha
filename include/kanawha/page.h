@@ -14,11 +14,25 @@ struct page {
     struct page_ops *ops;
 };
 
+#define PAGE_GET_SIG(RET,ARG,...)\
+RET(int)
+
+#define PAGE_PUT_SIG(RET,ARG,...)\
+RET(int)
+
 #define PAGE_FLUSH_SIG(RET,ARG,...)\
 RET(int)
 
+#define PAGE_MARK_DIRTY (1UL<<0)
+#define PAGE_MARK_SIG(RET,ARG,...)\
+RET(int)\
+ARG(unsigned long, status)
+
 #define PAGE_OP_LIST(OP,...)\
 OP(flush, PAGE_FLUSH_SIG, ##__VA_ARGS__)\
+OP(get, PAGE_GET_SIG, ##__VA_ARGS__)\
+OP(put, PAGE_PUT_SIG, ##__VA_ARGS__)\
+OP(mark, PAGE_MARK_SIG, ##__VA_ARGS__)\
 
 struct page_ops {
 DECLARE_OP_LIST_PTRS(PAGE_OP_LIST, struct page *);

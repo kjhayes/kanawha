@@ -28,6 +28,29 @@ int
 fs_page_raw_free(
         struct fs_page *);
 
+int
+fs_page_get(struct fs_page *page);
+int
+fs_page_put(struct fs_page *page);
+int
+fs_page_mark_dirty(
+        struct fs_page *page);
+int
+fs_page_mark_clean(
+        struct fs_page *page);
+int
+fs_page_is_dirty(
+        struct fs_page *page);
+
+static inline struct page *
+fs_page_get_as_page(
+        struct fs_page *fs_page)
+{
+    struct page *page = &fs_page->page;
+    page_get(page);
+    return page;
+}
+
 static inline void __phys *
 fs_page_phys(
         struct fs_page *page)

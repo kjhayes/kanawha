@@ -44,6 +44,42 @@ fs_page_raw_free(
     return 0;
 }
 
+int
+fs_page_get(struct fs_page *page)
+{
+    pcache_node_get(&page->cache_node);
+    return 0;
+}
+
+int
+fs_page_put(struct fs_page *page)
+{
+    pcache_node_put(&page->cache_node);
+    return 0;
+}
+
+int
+fs_page_mark_dirty(
+        struct fs_page *page)
+{
+    page->flags |= FS_PAGE_FLAG_DIRTY;
+    return 0;
+}
+int
+fs_page_mark_clean(
+        struct fs_page *page)
+{
+    page->flags &= ~FS_PAGE_FLAG_DIRTY;
+    return 0;
+}
+int
+fs_page_is_dirty(
+        struct fs_page *page)
+{
+    return page->flags & FS_PAGE_FLAG_DIRTY;
+}
+
+// page_ops
 static inline int
 fs_page_page_flush(
         struct page *page)
@@ -53,7 +89,41 @@ fs_page_page_flush(
     return fs_node_flush_fs_page(fs_page->fs_node, fs_page);
 }
 
+static inline int
+fs_page_page_get(
+        struct page *page)
+{
+    struct fs_page *fs_page =
+        container_of(page, struct fs_page, page);
+    return fs_page_get(fs_page);
+}
+
+static inline int
+fs_page_page_put(
+        struct page *page)
+{
+    struct fs_page *fs_page =
+        container_of(page, struct fs_page, page);
+    return fs_page_put(fs_page);
+}
+
+static inline int
+fs_page_page_mark(
+        struct page *page,
+        unsigned long status)
+{
+    struct fs_page *fs_page =
+        container_of(page, struct fs_page, page);
+    if(status & PAGE_MARK_DIRTY) {
+        fs_page_mark_dirty(fs_page);
+    }
+    return 0;
+}
+
 static struct page_ops fs_page_page_ops = {
     .flush = fs_page_page_flush,
+    .get = fs_page_page_get,
+    .put = fs_page_page_put,
+    .mark = fs_page_page_mark,
 };
 

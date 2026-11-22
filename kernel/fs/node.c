@@ -42,18 +42,18 @@ fs_node_flush_fs_page_lockless(struct fs_node *node, struct fs_page *page)
 
     size_t amount = fs_page_size(page);
 
-    page->flags &= ~FS_PAGE_FLAG_DIRTY;
+    fs_page_mark_clean(page);
 
     unsigned long pfn = pcache_node_get_index(&page->cache_node);
     res = fs_node_flush_page(node, pfn, 0, fs_page_phys(page));
     if(res)
     {
-        page->flags |= FS_PAGE_FLAG_DIRTY;
+        fs_page_mark_dirty(page);
         return res;
     }
     if(amount < fs_page_size(page))
     {
-        page->flags |= FS_PAGE_FLAG_DIRTY;
+        fs_page_mark_dirty(page);
         return -EAGAIN;
     }
 
@@ -124,7 +124,7 @@ fs_node_page_cache_unload(
     struct fs_node *node = container_of(cache, struct fs_node, page_cache);
     struct fs_page *page = container_of(pcache_node, struct fs_page, cache_node);
 
-    if(page->flags & FS_PAGE_FLAG_DIRTY)
+    if(fs_page_is_dirty(page))
     {
         res = fs_node_flush_fs_page_lockless(node, page);
         if(res)
@@ -242,7 +242,7 @@ fs_node_page_order(struct fs_node *node, order_t *order)
 }
 
 struct fs_page *
-fs_node_get_page(struct fs_node *node, uintptr_t pfn, unsigned long flags)
+fs_node_get_fs_page(struct fs_node *node, uintptr_t pfn, unsigned long flags)
 {
     int res;
     DEBUG_ASSERT(KERNEL_ADDR(node));
@@ -256,28 +256,6 @@ fs_node_get_page(struct fs_node *node, uintptr_t pfn, unsigned long flags)
     }
     DEBUG_ASSERT(KERNEL_ADDR(pcache_node));
     return container_of(pcache_node, struct fs_page, cache_node);
-}
-
-int
-fs_page_get(struct fs_page *page)
-{
-    pcache_node_get(&page->cache_node);
-    return 0;
-}
-
-int
-fs_page_put(struct fs_page *page)
-{
-    pcache_node_put(&page->cache_node);
-    return 0;
-}
-
-int
-fs_page_mark_dirty(
-        struct fs_page *page)
-{
-    page->flags |= FS_PAGE_FLAG_DIRTY;
-    return 0;
 }
 
 int
@@ -323,7 +301,7 @@ fs_node_paged_read(struct fs_node *fs_node,
         uintptr_t room_left = (1ULL << order) - page_offset;
 
         struct fs_page *page =
-            fs_node_get_page(fs_node, offset_pfn, get_page_flags);
+            fs_node_get_fs_page(fs_node, offset_pfn, get_page_flags);
         if(page == NULL)
         {
             return -ENXIO;
@@ -403,7 +381,7 @@ fs_node_paged_write(struct fs_node *fs_node,
         uintptr_t room_left = (1ULL << order) - page_offset;
 
         struct fs_page *page =
-            fs_node_get_page(fs_node, offset_pfn, get_page_flags);
+            fs_node_get_fs_page(fs_node, offset_pfn, get_page_flags);
         if(page == NULL)
         {
             return -EINVAL;

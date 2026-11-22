@@ -559,7 +559,7 @@ mbr_aligned_partition_load_page(struct fs_node *fs_node,
     size_t pfn_base =
         (part->sector_offset << mnt->sector_order) >> mnt->page_order;
     struct fs_page *page =
-        fs_node_get_page(mnt->backing_node, pfn_base + pfn, 0);
+        fs_node_get_fs_page(mnt->backing_node, pfn_base + pfn, 0);
     if(page == NULL)
     {
         return -ENXIO;
@@ -583,7 +583,7 @@ mbr_aligned_partition_unload_page(struct fs_node *fs_node,
     size_t pfn_base =
         (part->sector_offset << mnt->sector_order) >> mnt->page_order;
     struct fs_page *page =
-        fs_node_get_page(mnt->backing_node, pfn_base + pfn, 0);
+        fs_node_get_fs_page(mnt->backing_node, pfn_base + pfn, 0);
     if(page == NULL)
     {
         return -ENXIO;
