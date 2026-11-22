@@ -565,7 +565,7 @@ mbr_aligned_partition_load_page(struct fs_node *fs_node,
         return -ENXIO;
     }
 
-    *addr_out = page->paddr;
+    *addr_out = fs_page_phys(page);
 
     return 0;
 }
@@ -589,7 +589,7 @@ mbr_aligned_partition_unload_page(struct fs_node *fs_node,
         return -ENXIO;
     }
 
-    DEBUG_ASSERT(page->paddr == addr);
+    DEBUG_ASSERT(fs_page_phys(page) == addr);
 
     // Two "puts" to undo the "get" done in "mbr_aligned_partition_load_page"
     fs_page_mark_dirty(page);

@@ -494,7 +494,7 @@ fs_file_paged_read(struct file *file,
 
     ssize_t to_read = buflen < room_left ? buflen : room_left;
 
-    memcpy(buf, ((void *)__va(page->paddr)) + page_offset, to_read);
+    memcpy(buf, ((void *)__va(fs_page_phys(page))) + page_offset, to_read);
 
     res = fs_page_put(page);
     if(res)

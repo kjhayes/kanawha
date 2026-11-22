@@ -1028,7 +1028,7 @@ mmap_region_load_page(struct mmap_region *region,
             page_flags |= MMAP_PAGE_COPY_ON_WRITE;
         }
 
-        paddr = fs_page->paddr;
+        paddr = fs_page_phys(fs_page);
     }
     else
     {

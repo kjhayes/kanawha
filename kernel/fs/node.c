@@ -40,18 +40,18 @@ fs_node_flush_fs_page_lockless(struct fs_node *node, struct fs_page *page)
 {
     int res;
 
-    size_t amount = 1UL<<page->order;
+    size_t amount = fs_page_size(page);
 
     page->flags &= ~FS_PAGE_FLAG_DIRTY;
 
     unsigned long pfn = pcache_node_get_index(&page->cache_node);
-    res = fs_node_flush_page(node, pfn, 0, page->paddr);
+    res = fs_node_flush_page(node, pfn, 0, fs_page_phys(page));
     if(res)
     {
         page->flags |= FS_PAGE_FLAG_DIRTY;
         return res;
     }
-    if(amount < 1UL<<page->order)
+    if(amount < fs_page_size(page))
     {
         page->flags |= FS_PAGE_FLAG_DIRTY;
         return -EAGAIN;
@@ -96,6 +96,7 @@ fs_node_page_cache_load(
     page = fs_page_raw_alloc(
             paddr,
             order,
+            node,
             page_flags);
     if(page == NULL) {
         fs_node_unload_page(
@@ -140,13 +141,13 @@ fs_node_page_cache_unload(
     res = fs_node_unload_page(node,
                               index,
                               0, // flags
-                              page->paddr);
+                              fs_page_phys(page));
     if(res)
     {
         eprintk("Failed to unload fs_page backing page order=%ld, "
                 "phys_addr=%p! (err=%s)\n",
-                (sl_t)page->order,
-                page->paddr,
+                (sl_t)fs_page_order(page),
+                fs_page_phys(page),
                 errnostr(res));
     }
 
@@ -330,7 +331,7 @@ fs_node_paged_read(struct fs_node *fs_node,
 
         ssize_t to_read = buflen < room_left ? buflen : room_left;
 
-        memcpy(buffer, (void *)__va(page->paddr) + page_offset, to_read);
+        memcpy(buffer, (void *)__va(fs_page_phys(page)) + page_offset, to_read);
 
         buffer += to_read;
         buflen -= to_read;
@@ -410,7 +411,7 @@ fs_node_paged_write(struct fs_node *fs_node,
 
         ssize_t to_read = buflen < room_left ? buflen : room_left;
 
-        memcpy((void *)__va(page->paddr) + page_offset, buffer, to_read);
+        memcpy((void *)__va(fs_page_phys(page)) + page_offset, buffer, to_read);
 
         buffer += to_read;
         buflen -= to_read;
