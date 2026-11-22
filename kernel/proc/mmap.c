@@ -1105,24 +1105,31 @@ mmap_page_do_copy_on_write(struct mmap_region *region, struct mmap_page *page)
     return 0;
 }
 
+#define MMAP_DIRECT_ACCESS_WRITE (0)
+#define MMAP_DIRECT_ACCESS_READ  (1)
 int
-mmap_read(struct process *process, uintptr_t offset, void *dst, size_t length)
+mmap_direct_access(
+        struct process *process,
+        uintptr_t offset,
+        void *data,
+        size_t length,
+        unsigned int mode)
 {
     int res;
 
     struct mmap *mmap = process->mmap;
     DEBUG_ASSERT(KERNEL_ADDR(mmap));
 
-    dprintk("mmap_read(pid=%ld, offset=%p, dst=%p, length=0x%llx)\n",
+    dprintk("mmap_direct_access(pid=%ld, offset=%p, data=%p, length=0x%llx)\n",
             (sl_t)process->id,
             offset,
-            dst,
+            data,
             (ull_t)length);
 
     // Overflow checking
     if(~(uintptr_t)(0) - offset < length)
     {
-        eprintk("mmap_read(process=%ld,offset=0x%llx,len=0x%llx) Overflow "
+        eprintk("mmap_direct_access(process=%ld,offset=0x%llx,len=0x%llx) Overflow "
                 "detected!\n",
                 (sl_t)process->id,
                 (ull_t)offset,
@@ -1157,10 +1164,10 @@ mmap_read(struct process *process, uintptr_t offset, void *dst, size_t length)
 
         uintptr_t region_offset = offset - region->tree_node.key;
 
-        if((region->mmap_flags & MMAP_PROT_READ) == 0)
+        if(mode == MMAP_DIRECT_ACCESS_READ && (region->mmap_flags & MMAP_PROT_READ) == 0)
         {
             // The process is not allowed to read this page
-            eprintk("mmap_read(process=%ld,offset=0x%llx,len=0x%llx)"
+            eprintk("mmap_direct_access(process=%ld,offset=0x%llx,len=0x%llx,READ)"
                     " Page is not Mapped as Readable!\n",
                     (sl_t)process->id,
                     (ull_t)offset,
@@ -1169,104 +1176,12 @@ mmap_read(struct process *process, uintptr_t offset, void *dst, size_t length)
             mmap_lock_release(mmap);
             return -EINVAL;
         }
-
-        // Get or load the page
-        pnode = ptree_get_max_less_or_eq(&region->page_tree, region_offset);
-        struct mmap_page *page =
-            container_of(pnode, struct mmap_page, tree_node);
-        if((pnode == NULL) ||
-           (region_offset >= pnode->key + page_get_size(page->backing_page)))
-        {
-            res = mmap_region_load_page(region, region_offset, &page);
-            if(res)
-            {
-                mmap_region_page_tree_lock_release(region);
-                mmap_lock_release(mmap);
-                return res;
-            }
-        }
-
-        if(page == NULL)
-        {
-            mmap_region_page_tree_lock_release(region);
-            mmap_lock_release(mmap);
-            return -EINVAL;
-        }
-
-        void __phys *page_paddr = page_get_phys(page->backing_page);
-        void *page_data = (void *)__va(page_paddr);
-
-        uintptr_t page_offset = page->tree_node.key;
-        size_t page_size = page_get_size(page->backing_page);
-        size_t page_relative_offset = region_offset - page_offset;
-        size_t room_avail = page_size - page_relative_offset;
-        if(length <= room_avail)
-        {
-            memcpy(dst, page_data + page_relative_offset, length);
-            length = 0;
-        }
-        else
-        {
-            memcpy(dst, page_data + page_relative_offset, room_avail);
-            length -= room_avail;
-            dst += room_avail;
-            offset += room_avail;
-        }
-
-        mmap_region_page_tree_lock_release(region);
-    }
-
-    mmap_lock_release(mmap);
-    return 0;
-}
-
-int
-mmap_write(struct process *process, uintptr_t offset, void *src, size_t length)
-{
-    int res;
-
-    struct mmap *mmap = process->mmap;
-    DEBUG_ASSERT(KERNEL_ADDR(mmap));
-
-    // Overflow checking
-    if(~(uintptr_t)(0) - offset < length)
-    {
-        return -EINVAL;
-    }
-
-    mmap_lock_acquire(mmap);
-
-    if(offset + length > mmap->vmem_region->size)
-    {
-        mmap_lock_release(mmap);
-        return -EINVAL;
-    }
-
-    while(length > 0)
-    {
-
-        struct ptree_node *pnode;
-        pnode = ptree_get_max_less_or_eq(&mmap->region_tree, offset);
-
-        struct mmap_region *region =
-            container_of(pnode, struct mmap_region, tree_node);
-
-        if((pnode == NULL) || (offset >= region->size + pnode->key))
-        {
-            mmap_lock_release(mmap);
-            return -EINVAL;
-        }
-
-        mmap_region_page_tree_lock_acquire(region);
-
-        uintptr_t region_offset = offset - region->tree_node.key;
-
-        if((region->mmap_flags & MMAP_PROT_WRITE) == 0)
+        if(mode == MMAP_DIRECT_ACCESS_WRITE && (region->mmap_flags & MMAP_PROT_WRITE) == 0)
         {
             // The process is not allowed to write this page
             mmap_region_page_tree_lock_release(region);
             mmap_lock_release(mmap);
-            eprintk("mmap_write(process=%ld,offset=0x%llx,len=0x%llx)"
+            eprintk("mmap_direct_access(process=%ld,offset=0x%llx,len=0x%llx,WRITE)"
                     " Page is not Mapped as Writable!\n",
                     (sl_t)process->id,
                     (ull_t)offset,
@@ -1297,22 +1212,23 @@ mmap_write(struct process *process, uintptr_t offset, void *src, size_t length)
             return -EINVAL;
         }
 
-        if(page->flags & MMAP_PAGE_COPY_ON_WRITE)
-        {
-            res = mmap_page_do_copy_on_write(region, page);
-            if(res)
+        if(mode == MMAP_DIRECT_ACCESS_WRITE) {
+            if(page->flags & MMAP_PAGE_COPY_ON_WRITE)
+            {
+                res = mmap_page_do_copy_on_write(region, page);
+                if(res)
+                {
+                    mmap_region_page_tree_lock_release(region);
+                    mmap_lock_release(mmap);
+                    return res;
+                }
+            }
+            if(page->flags & MMAP_PAGE_COPY_ON_WRITE)
             {
                 mmap_region_page_tree_lock_release(region);
                 mmap_lock_release(mmap);
-                return res;
+                return -EINVAL;
             }
-        }
-
-        if(page->flags & MMAP_PAGE_COPY_ON_WRITE)
-        {
-            mmap_region_page_tree_lock_release(region);
-            mmap_lock_release(mmap);
-            return -EINVAL;
         }
 
         void __phys *page_paddr = page_get_phys(page->backing_page);
@@ -1323,19 +1239,35 @@ mmap_write(struct process *process, uintptr_t offset, void *src, size_t length)
         size_t page_relative_offset = region_offset - page_offset;
         size_t room_avail = page_size - page_relative_offset;
 
-        if(length <= room_avail)
-        {
-            //printk("mmap_write: memcpy (length=0x%lx)\n", length);
-            memcpy(page_data + page_relative_offset, src, length);
-            length = 0;
+        if(mode == MMAP_DIRECT_ACCESS_READ) {
+            if(length <= room_avail)
+            {
+                memcpy(data, page_data + page_relative_offset, length);
+                length = 0;
+            }
+            else
+            {
+                memcpy(data, page_data + page_relative_offset, room_avail);
+                length -= room_avail;
+                data += room_avail;
+                offset += room_avail;
+            }
         }
-        else
-        {
-            //printk("mmap_write: memcpy (length=0x%lx)\n", room_avail);
-            memcpy(page_data + page_relative_offset, src, room_avail);
-            length -= room_avail;
-            src += room_avail;
-            offset += room_avail;
+        else if(mode == MMAP_DIRECT_ACCESS_WRITE) {
+            if(length <= room_avail)
+            {
+                //printk("mmap_write: memcpy (length=0x%lx)\n", length);
+                memcpy(page_data + page_relative_offset, data, length);
+                length = 0;
+            }
+            else
+            {
+                //printk("mmap_write: memcpy (length=0x%lx)\n", room_avail);
+                memcpy(page_data + page_relative_offset, data, room_avail);
+                length -= room_avail;
+                data += room_avail;
+                offset += room_avail;
+            }
         }
 
         mmap_region_page_tree_lock_release(region);
@@ -1343,6 +1275,18 @@ mmap_write(struct process *process, uintptr_t offset, void *src, size_t length)
 
     mmap_lock_release(mmap);
     return 0;
+}
+
+int
+mmap_read(struct process *process, uintptr_t offset, void *dst, size_t length)
+{
+    return mmap_direct_access(process, offset, dst, length, MMAP_DIRECT_ACCESS_READ);
+}
+
+int
+mmap_write(struct process *process, uintptr_t offset, void *src, size_t length)
+{
+    return mmap_direct_access(process, offset, src, length, MMAP_DIRECT_ACCESS_WRITE);
 }
 
 int
