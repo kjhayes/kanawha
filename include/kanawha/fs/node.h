@@ -10,9 +10,12 @@
 #include <kanawha/types.h>
 #include <kanawha/pcache.h>
 
+#include <kanawha/fs/page.h>
+
 struct fs_type;
 struct fs_mount;
 struct fs_node;
+struct fs_page;
 
 #define FS_NODE_READ_PAGE_MAY_CREATE (1ULL << 0)
 
@@ -177,20 +180,6 @@ struct fs_node
     struct fs_mount *mount;
 
     struct pcache page_cache;
-
-    struct pcache_node cache_node;
-};
-
-#define FS_PAGE_FLAG_DIRTY (1ULL << 0)
-struct fs_page
-{
-    size_t pins;
-
-    void __phys *paddr;
-    order_t order;
-    size_t size;
-
-    unsigned long flags;
 
     struct pcache_node cache_node;
 };

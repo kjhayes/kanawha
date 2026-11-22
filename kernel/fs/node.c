@@ -2,6 +2,7 @@
 #define KEEP_FS_NODE_OP_LIST
 
 #include <kanawha/fs/node.h>
+#include <kanawha/fs/page.h>
 
 #include <kanawha/assert.h>
 #include <kanawha/fs/file.h>
