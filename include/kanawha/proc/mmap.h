@@ -6,6 +6,7 @@
 #include <kanawha/syscall.h>
 #include <kanawha/uapi/mmap.h>
 #include <kanawha/uapi/syscall.h>
+#include <kanawha/pcache.h>
 
 struct process;
 struct mmap_region;
@@ -20,16 +21,8 @@ struct mmap_region;
 struct mmap_page
 {
     unsigned long flags;
-
     struct page *backing_page;
-
     struct ptree_node tree_node;
-};
-
-struct mmap_waitqueue {
-    struct ptree_node ptree_node;
-    struct waitqueue waitqueue;
-    atomic_t refs;
 };
 
 struct mmap_region
@@ -45,9 +38,6 @@ struct mmap_region
 
     irq_lock_t page_tree_lock;
     struct ptree page_tree;
-
-    irq_lock_t waitqueue_tree_lock;
-    struct ptree waitqueue_tree;
 
     struct ptree_node tree_node;
 

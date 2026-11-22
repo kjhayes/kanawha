@@ -16,14 +16,6 @@
 #include <kanawha/vmem.h>
 #include <kanawha/panic.h>
 
-static inline struct mmap_waitqueue *
-mmap_get_waitqueue(
-        struct mmap *mmap,
-        uintptr_t offset);
-static inline int
-mmap_put_waitqueue(
-        struct mmap_waitqueue *wq);
-
 static inline void
 mmap_lock_init(struct mmap *mmap)
 {
@@ -54,24 +46,6 @@ static inline void
 mmap_region_page_tree_lock_release(struct mmap_region *region)
 {
     irq_lock_release(&region->page_tree_lock);
-}
-
-static inline void
-mmap_waitqueue_tree_lock_init(struct mmap_region *region)
-{
-    irq_lock_init(&region->waitqueue_tree_lock);
-}
-__maybe_unused
-static inline void
-mmap_waitqueue_tree_lock_acquire(struct mmap_region *region)
-{
-    irq_lock_acquire(&region->waitqueue_tree_lock);
-}
-__maybe_unused
-static inline void
-mmap_waitqueue_tree_lock_release(struct mmap_region *region)
-{
-    irq_lock_release(&region->waitqueue_tree_lock);
 }
 
 static int
@@ -571,9 +545,6 @@ mmap_map_region(struct process *process,
     mmap_region_page_tree_lock_init(region);
     ptree_init(&region->page_tree);
 
-    mmap_waitqueue_tree_lock_init(region);
-    ptree_init(&region->waitqueue_tree);
-
     mmap_lock_acquire(mmap);
 
     // This will find us a valid offset
@@ -692,9 +663,6 @@ mmap_map_region_exact(struct process *process,
             region->tree_node.key,
             region->tree_node.key + region->size);
     ptree_init(&region->page_tree);
-
-    mmap_waitqueue_tree_lock_init(region);
-    ptree_init(&region->waitqueue_tree);
 
     uintptr_t end_offset = mmap_offset + size;
 
@@ -840,17 +808,6 @@ mmap_unmap_region_lockless(struct mmap *mmap, struct mmap_region *region)
     }
 
     mmap_region_page_tree_lock_release(region);
-
-    mmap_waitqueue_tree_lock_acquire(region);
-    struct ptree_node *waitqueue_node = ptree_get_first(&region->waitqueue_tree);
-    while(waitqueue_node != NULL) {
-        struct mmap_waitqueue *wq = container_of(waitqueue_node, struct mmap_waitqueue, ptree_node);
-        struct ptree_node *rem = ptree_remove(&region->waitqueue_tree, wq->ptree_node.key);
-        mmap_put_waitqueue(wq);
-        DEBUG_ASSERT(rem == &wq->ptree_node);
-        waitqueue_node = ptree_get_first(&region->waitqueue_tree);
-    }
-    mmap_waitqueue_tree_lock_release(region);
 
     kfree(region);
 
@@ -1684,128 +1641,26 @@ mmap_page_fault_handler(struct excp_state *state,
 
 // Waiting
 
-static inline struct mmap_waitqueue *
-mmap_get_waitqueue(
-        struct mmap *mmap,
-        uintptr_t offset)
-{
-    int res;
-
-    mmap_lock_acquire(mmap);
-
-    struct mmap_region *region;
-    {
-        struct ptree_node *pnode;
-        pnode = ptree_get_max_less_or_eq(&mmap->region_tree, offset);
-        if(pnode == NULL)
-        {
-            mmap_lock_release(mmap);
-            return NULL;
-        }
-        region = container_of(pnode, struct mmap_region, tree_node);
-    }
-
-    mmap_waitqueue_tree_lock_acquire(region);
-
-    struct mmap_waitqueue *wq = NULL;
-
-    {
-        struct ptree_node *pnode = ptree_get(&region->waitqueue_tree, offset);
-        if(pnode == NULL) {
-            wq = kzmalloc(sizeof(*wq), KM_KERNEL);
-            if(wq == NULL) {
-                mmap_waitqueue_tree_lock_release(region);
-                mmap_lock_release(mmap);
-                return NULL;
-            }
-            wq->refs = 1; // The region itself maintains a reference
-            res = waitqueue_init(&wq->waitqueue);
-            if(res) {
-                kfree(wq);
-                mmap_waitqueue_tree_lock_release(region);
-                mmap_lock_release(mmap);
-                return NULL;
-            }
-            char buffer[32];
-            snprintk(buffer, 32, "mwait-%p", (uintptr_t)offset);
-            buffer[31] = '\0';
-            waitqueue_name(&wq->waitqueue, buffer);
-            ptree_insert(&region->waitqueue_tree, &wq->ptree_node, offset);
-        } else {
-            wq = container_of(pnode, struct mmap_waitqueue, ptree_node);
-            // We only increment while holding the waitqueue_tree lock,
-            // but we might decrement without the lock, so make it atomic.
-        }
-    }
-    atomic_val_t old = atomic_fetch_inc(&wq->refs);
-    DEBUG_ASSERT(old >= 1);
-
-    mmap_waitqueue_tree_lock_release(region);
-    mmap_lock_release(mmap);
-    return wq;
-}
-
-static inline int
-mmap_put_waitqueue(
-        struct mmap_waitqueue *wq)
-{
-    atomic_val_t old = atomic_fetch_dec(&wq->refs);
-    DEBUG_ASSERT(old >= 1);
-    if(old == 1) {
-        // This is the final reference to the waitqueue
-        waitqueue_deinit(&wq->waitqueue);
-        kfree(wq);
-    }
-    return 0;
-}
-
 int
 mmap_wait_on(
         struct mmap *mmap,
         uintptr_t offset)
 {
-    int res, wait_res;
-    struct mmap_waitqueue *wq;
-    wq = mmap_get_waitqueue(mmap, offset);
-    if(wq == NULL) {
-        return -ENOMEM;
-    }
-    dprintk("PID(%P) mmap_wait\n");
-    wait_res = wait_on(&wq->waitqueue);
-    dprintk("PID(%P) mmap woke up (%e)\n", wait_res);
-    mmap_put_waitqueue(wq);
-    return wait_res;
+    return -EINTR;
 }
 int
 mmap_wake_single(
         struct mmap *mmap,
         uintptr_t offset)
 {
-    int res, wake_res;
-    struct mmap_waitqueue *wq;
-    wq = mmap_get_waitqueue(mmap, offset);
-    if(wq == NULL) {
-        return -ENOMEM;
-    }
-    //printk("mmap_wake_single: %lu\n", wq->waitqueue.num_threads);
-    wake_res = wake_single(&wq->waitqueue);
-    mmap_put_waitqueue(wq);
-    return wake_res;
+    return 0;
 }
 int
 mmap_wake_all(
         struct mmap *mmap,
         uintptr_t offset)
 {
-    int res, wake_res;
-    struct mmap_waitqueue *wq;
-    wq = mmap_get_waitqueue(mmap, offset);
-    if(wq == NULL) {
-        return -ENOMEM;
-    }
-    wake_res = wake_all(&wq->waitqueue);
-    mmap_put_waitqueue(wq);
-    return wake_res;
+    return 0;
 }
 
 // Cloning
@@ -1885,9 +1740,6 @@ mmap_region_clone(struct mmap_region *from, struct mmap *to)
     }
     mmap_region_page_tree_lock_init(region);
     ptree_init(&region->page_tree);
-
-    mmap_waitqueue_tree_lock_init(region);
-    ptree_init(&region->waitqueue_tree);
 
     size_t region_offset = from->tree_node.key;
 
