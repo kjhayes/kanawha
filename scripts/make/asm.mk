@@ -13,6 +13,7 @@ kanawha.asm: $(OUTPUT_DIR)/kanawha.asm
 $(OUTPUT_DIR)/kanawha.asm: $(OUTPUT_DIR)/kanawha.o
 	$(call qinfo, $(OBJDUMP_MSG), $(call rel-dir, $@, $(OUTPUT_DIR)))
 	$(Q)$(KERNEL_OBJDUMP) $(KERNEL_OBJDUMPFLAGS) $< > $@
+
 endif
 
 endif

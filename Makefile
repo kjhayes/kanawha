@@ -112,32 +112,20 @@ $(foreach DIR,$(KERNEL_SOURCE_DIRS), $(eval $(call build_module_directory,$(DIR)
 KERNEL_OBJS := $(foreach DIR,$(KERNEL_SOURCE_DIRS),$(OUTPUT_DIR)/$(call rel-dir, $(DIR), $(ROOT_DIR))/obj.o)
 KERNEL_MOD_RULES := $(foreach DIR,$(KERNEL_SOURCE_DIRS),$(DIR)/modules)
 
+kernel: kanawha
+kanawha: $(OUTPUT_DIR)/kanawha.o
 $(OUTPUT_DIR)/kanawha.o: $(KERNEL_OBJS) $(LDDEPS) | $(OUTPUT_DIR)
 	$(call qinfo, $(LD_MSG), $(COLOR_BRIGHT)$(call rel-dir, $@, $(OUTPUT_DIR)))$(COLOR_NORMAL)
 	$(Q)$(KERNEL_LD) -T $(LD_SCRIPT) $(KERNEL_OBJS) -o $@ $(LDFLAGS) $(KERNEL_LDFLAGS)
-
-kanawha: $(OUTPUT_DIR)/kanawha.o
-
-binary: kanawha.bin FORCE
-kanawha.bin: $(OUTPUT_DIR)/kanawha.bin FORCE
-$(OUTPUT_DIR)/kanawha.bin: $(OUTPUT_DIR)/kanawha.o
-	$(call qinfo, $(OBJCOPY_MSG), $(call rel-dir, $@, $(OUTPUT_DIR)))
-	$(Q)$(KERNEL_OBJCOPY) -O binary $< $@
-
-user: $(KERNEL_AUTOCONF) $(LDDEPS) $(USER_DIR) FORCE
-	$(Q)$(MAKE) -C $(USER_DIR) -f $(MK_SCRIPTS_DIR)/user.mk
-
-kernel: kanawha
-all: kanawha user FORCE
-
-DEFAULT_BUILD_RULE ?= kernel
-default: $(DEFAULT_BUILD_RULE)
 
 modules: $(KERNEL_MOD_RULES) FORCE
 
 -include $(MK_SCRIPTS_DIR)/asm.mk
 -include $(MK_SCRIPTS_DIR)/initrd.mk
 -include $(MK_SCRIPTS_DIR)/isoimage.mk
+-include $(MK_SCRIPTS_DIR)/binary.mk
+-include $(MK_SCRIPTS_DIR)/sysroot.mk
+-include $(MK_SCRIPTS_DIR)/user.mk
 -include $(MK_SCRIPTS_DIR)/uImage.mk
 -include $(MK_SCRIPTS_DIR)/qemu.mk
 -include $(MK_SCRIPTS_DIR)/loc.mk
@@ -151,8 +139,10 @@ clean: FORCE
 	$(Q)rm $(KERNEL_AUTOCONF) $(QPIPE) $(QIGNORE)
 	$(Q)rm -r $(OUTPUT_DIR) $(QPIPE) $(QIGNORE)
 
+all: kanawha user FORCE
+
+DEFAULT_BUILD_RULE ?= kernel
+default: $(DEFAULT_BUILD_RULE)
+
 endif
 endif
-
-.SUFFIXES:
-

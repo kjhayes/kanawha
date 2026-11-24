@@ -4,7 +4,7 @@ DTC ?= $(shell command -v dtc 2> /dev/null)
 QEMU_PREFIX :=
 # QEMU_PREFIX := ~/qemu/qemu/build/
 
-QEMU_DEBUG_LOG ?= qemu.log
+QEMU_DEBUG_LOG ?= $(OUTPUT_DIR)/qemu.log
 QEMU_FLAGS += -d int,cpu_reset
 QEMU_FLAGS += -D $(QEMU_DEBUG_LOG)
 QEMU_FLAGS += -d guest_errors
@@ -123,13 +123,13 @@ qemu: $(QEMU_DEPS)
 	$(QEMU) $(QEMU_FLAGS) \
 		-no-reboot \
 		-no-shutdown \
-		| tee output.txt
+		| tee $(OUTPUT_DIR)/output.txt
 qemu-gdb: $(QEMU_DEPS)
 	$(QEMU) $(QEMU_FLAGS) -gdb tcp::1234 \
 		-S \
 		-no-reboot \
 		-no-shutdown \
-		| tee output.txt
+		| tee $(OUTPUT_DIR)/output.txt
 
 ifdef CONFIG_DEVICETREE
 qemu-dtb: ${OUTPUT_DIR}/qemu.dtb

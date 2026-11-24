@@ -1,5 +1,5 @@
 
-libs += \
+lib-y += \
 	crt \
 	c \
 	m \
@@ -11,7 +11,7 @@ libs += \
 	lassie \
 	paint \
 
-bins += \
+bin-y += \
     cat \
     cp \
     term \
