@@ -1,91 +1,77 @@
-#ifndef __KANAWHA__SOCK_CONNECTION_H__
-#define __KANAWHA__SOCK_CONNECTION_H__
+#ifndef __SOCK__CONN_H__
+#define __SOCK__CONN_H__
 
-#include <semaphore.h>
-#include <sock/msg.h>
-#include <threads.h>
+#define SOCK_CONN_MAX_BUFFERS (16)
+#define SOCK_BUFFER_ALIGN_ORDER (12)
 
-struct sock_msg_buffer;
 struct sock_conn;
 
+struct sock_conn *
+sock_open_server_conn(
+        int fd);
+struct sock_conn *
+sock_open_client_conn(
+        int fd);
 int
-sock_conn_init(
-        struct sock_conn *conn,
-        int conn_fd);
+sock_close_conn(
+        struct sock_conn *);
 
 int
-sock_conn_deinit(
-        struct sock_conn *conn);
+sock_configure_buffer(
+        struct sock_conn *,
+        unsigned long index,
+        unsigned long length);
 
-// Queues the message in the send_buffer
-int
-sock_conn_send_msg(
-        struct sock_conn *conn,
-        uint8_t type,
-        uint8_t index,
-        void *data,
-        size_t datalen);
-
-int
-sock_conn_set_callback(
-        struct sock_conn *conn,
-        int(*on_recv)(struct sock_conn *conn,
-                      struct sock_msg *msg,
-                      void *state),
-        void *state);
-
-// Automatically call any registered callback when a msg is
-// received, if no callback is registered, silently drops
-// all incoming messages...
+// Invoked by the server to notify the client
+// the configuration is fixed now
 //
-// If the callback is blocking, note: messages are handled fully
-// sequentially e.g. the callback for a previous message must
-// be processed before the next message's callback will begin.
+// (the client waits until this call before
+// it returns from "sock_open_client_conn")
 int
-sock_conn_start_autopoll(
-        struct sock_conn *conn);
-int
-sock_conn_stop_autopoll(
+sock_conn_finalize_config(
         struct sock_conn *conn);
 
-// Polls the receive buffer and handles a single
-// msg if any are available (non-blocking
-// if the registered callback is non-blocking)
-int
-sock_conn_poll(
-        struct sock_conn *conn);
+struct sock_buffer;
 
-// Read from the conn until a msg arrives
-// and save the message into the conn recv_buffer.
+struct sock_buffer *
+sock_open_buffer(
+        struct sock_conn *,
+        unsigned long index);
 int
-sock_conn_await_msg(
-        struct sock_conn *conn);
-
-// Write one message from the send buffer
-// out to the conn fully.
-int
-sock_conn_flush_msg(
-        struct sock_conn *conn);
-
-// Map a region of the conn's shared
-// memory address space into the current process.
-int
-sock_conn_map_shmem(
-        struct sock_conn *conn,
-        size_t offset,
-        size_t size,
-        void **base_out);
-// Must be called with the same offset/size
-// as "map_shmem" was called with.
-int
-sock_conn_unmap_shmem(
-        struct sock_conn *conn,
-        size_t offset,
-        size_t size,
-        void *base);
+sock_close_buffer(
+        struct sock_buffer *);
 
 int
-sock_conn_check_for_disconnect(
-        struct sock_conn *conn);
+sock_lock_buffer(
+        struct sock_buffer *);
+int
+sock_unlock_buffer(
+        struct sock_buffer *);
+
+void *
+sock_buffer_raw_view(
+        struct sock_buffer *);
+unsigned long
+sock_buffer_raw_length(
+        struct sock_buffer *);
+
+int
+sock_buffer_read(
+        struct sock_buffer *,
+        unsigned long offset,
+        void *buffer,
+        unsigned long len);
+int
+sock_buffer_write(
+        struct sock_buffer *,
+        unsigned long offset,
+        void *buffer,
+        unsigned long len);
+int
+sock_buffer_memset(
+        struct sock_buffer *,
+        unsigned long offset,
+        int c,
+        unsigned long len);
 
 #endif

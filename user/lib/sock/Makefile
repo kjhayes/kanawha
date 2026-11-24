@@ -1,5 +1,7 @@
 
 obj-y += \
-	sock.o \
+	socket.o \
 	conn.o \
+	stream.o \
+	msgbuf.o \
 

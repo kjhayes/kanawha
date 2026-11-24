@@ -7,16 +7,13 @@ lib-y += \
 	lua \
 	kfb \
 	sock \
-	lens \
 	lassie \
 	paint \
 
 bin-y += \
     cat \
     cp \
-    term \
 	kinit \
-	lensd \
     ls \
 	lua \
 	luac \

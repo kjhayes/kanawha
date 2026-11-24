@@ -1,543 +1,337 @@
 
 #include <sock/conn.h>
-#include <sock/sock.h>
-#include <sock/msg.h>
-
-#include <kanawha/syscall.h>
-
-#include <unistd.h>
-#include <errno.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <string.h>
+#include <errno.h>
+#include <sys/mman.h>
+#include <semaphore.h>
 
-struct sock_conn
-{
-    struct sock_msg_buffer *recv_buffer;
-    struct sock_msg_buffer *send_buffer;
-
-    sem_t read_lock;
-    sem_t write_lock;
-
-    thrd_t read_thread;
-    thrd_t write_thread;
-
-    int conn_fd;
-
-    unsigned autopoll : 1;
-
-    int(*recv_callback)(struct sock_conn *conn,
-                        struct sock_msg *msg,
-                        void *state);
-    void *recv_callback_state;
-
-
+struct conn_ctrl {
     enum {
-        SOCK_CONNECTION_CONNECTED,
-        SOCK_CONNECTION_DISCONNECTED,
+        SOCK_CONN_UNINIT = 0,
+        SOCK_CONN_INIT   = 0x50CC,
     } status;
+
+    struct {
+        sem_t lock;
+        unsigned long offset;
+        unsigned long length;
+    } buffers[SOCK_CONN_MAX_BUFFERS];
 };
 
-#define PAGE_ORDER 12
-
-// Message Buffers
-struct sock_buffered_msg {
-    struct sock_buffered_msg *next;
-    struct sock_msg msg;
+struct sock_conn {
+    int fd;
+    struct conn_ctrl *ctrl;
 };
 
-static inline struct sock_buffered_msg *
-sock_buffered_msg_alloc(
-        size_t datalen)
+static inline struct sock_conn *
+sock_raw_open_conn(int fd)
 {
-    return malloc(sizeof(struct sock_buffered_msg) + datalen);
+    struct sock_conn *conn = malloc(sizeof(*conn));
+    if(conn == NULL) {
+        return NULL;
+    }
+    memset(conn, 0, sizeof(*conn));
+    conn->fd = fd;
+    conn->ctrl = mmap(
+            NULL,
+            sizeof(*conn->ctrl),
+            PROT_READ|PROT_WRITE,
+            MMAP_SHARED,
+            conn->fd,
+            0);
+    if(conn->ctrl == MAP_FAILED) {
+        free(conn);
+        return NULL;
+    }
+
+    // Should be done by the kernel, but lets be extra safe...
+    memset(conn->ctrl, 0, sizeof(struct conn_ctrl));
+
+    return conn;
 }
-
-struct sock_msg_buffer {
-    sem_t lock;
-    sem_t enqueued_count;
-    struct sock_buffered_msg *head;
-    struct sock_buffered_msg *tail;
-};
-
 static inline int
-sock_buffered_msg_free(
-        struct sock_buffered_msg *msg)
+sock_raw_close_conn(
+        struct sock_conn *conn)
 {
-    free(msg);
+    munmap(conn->ctrl, sizeof(*conn->ctrl));
+    close(conn->fd);
+    free(conn);
     return 0;
 }
 
-static inline struct sock_buffered_msg *
-sock_msg_buffer_pop_head(
-        struct sock_msg_buffer *buf)
+struct sock_conn *
+sock_open_server_conn(
+        int fd)
 {
-    struct sock_buffered_msg *msg;
-    while(sem_wait(&buf->enqueued_count));
-    sem_wait(&buf->lock);
-    msg = buf->head;
-    if(msg != NULL) {
-        buf->head = msg->next;
-        if(buf->head == NULL) {
-            buf->tail = NULL;
-        }
+    struct sock_conn *conn;
+    conn = sock_raw_open_conn(fd);
+    if(conn == NULL) {
+        return NULL;
     }
-    sem_post(&buf->lock);
-    return msg;
-}
 
-static inline struct sock_buffered_msg *
-sock_msg_buffer_try_pop_head(
-        struct sock_msg_buffer *buf)
+    // Should already be set, just double check
+    conn->ctrl->status = SOCK_CONN_UNINIT;
+
+    // Initialize each buffer
+    for(size_t i = 0; i < SOCK_CONN_MAX_BUFFERS; i++) {
+        sem_init(&conn->ctrl->buffers[i].lock, 1, 1);
+        conn->ctrl->buffers[i].offset = 0;
+        conn->ctrl->buffers[i].length = 0;
+    }
+
+    return conn;
+}
+struct sock_conn *
+sock_open_client_conn(
+        int fd)
+{
+    struct sock_conn *conn;
+    conn = sock_raw_open_conn(fd);
+    if(conn == NULL) {
+        return NULL;
+    }
+
+    while(conn->ctrl->status == SOCK_CONN_UNINIT) {
+        // Busy wait for the server to setup
+        // the "conn_ctrl" header region
+    }
+
+    if(conn->ctrl->status != SOCK_CONN_INIT) {
+        sock_raw_close_conn(conn);
+        return NULL;
+    }
+
+    return conn;
+}
+int
+sock_close_conn(
+        struct sock_conn *conn)
 {
     int res;
-    struct sock_buffered_msg *msg;
-    res = sem_trywait(&buf->enqueued_count);
+    res = sock_raw_close_conn(conn);
     if(res) {
-        return NULL;
-    }
-    // We have claimed an entry
-    sem_wait(&buf->lock);
-    msg = buf->head;
-    if(msg != NULL) {
-        // This should not block
-        buf->head = msg->next;
-        if(buf->head == NULL) {
-            buf->tail = NULL;
-        }
-    } else {
-        // This shouldn't be possible...
-        fprintf(stderr, "sock: failed to get claimed socket msg! (shouldn't be possible!)\n");
-    }
-    sem_post(&buf->lock);
-    return msg;
-}
-
-static inline int
-sock_msg_buffer_push_tail(
-        struct sock_msg_buffer *buf,
-        struct sock_buffered_msg *msg)
-{
-    sem_wait(&buf->lock);
-    msg->next = NULL;
-    if(buf->head == NULL) {
-        buf->head = msg;
-    } else {
-        buf->tail->next = msg;
-    }
-    buf->tail = msg;
-    sem_post(&buf->enqueued_count);
-    sem_post(&buf->lock);
-    return 0;
-}
-
-static inline struct sock_msg_buffer *
-sock_msg_buffer_create(void)
-{
-    int res;
-    struct sock_msg_buffer *buf = malloc(sizeof(*buf));
-    if(buf == NULL) {
-        return NULL;
-    }
-    res = sem_init(&buf->lock, 1, 1);
-    if(res) {
-        free(buf);
-        return NULL;
-    }
-    res = sem_init(&buf->enqueued_count, 1, 0);
-    if(res) {
-        sem_destroy(&buf->lock);
-        free(buf);
-        return NULL;
-    }
-    buf->head = NULL;
-    buf->tail = NULL;
-    return buf;
-}
-
-static inline int
-sock_msg_buffer_destroy(
-        struct sock_msg_buffer *buf)
-{
-    struct sock_buffered_msg *msg;
-    while(1) {
-        msg = sock_msg_buffer_pop_head(buf);
-        if(msg == NULL) {
-            break;
-        }
-        sock_buffered_msg_free(msg);
-    }
-
-    sem_destroy(&buf->enqueued_count);
-    sem_destroy(&buf->lock);
-    free(buf);
-    return 0;
-}
-
-// Connections
-
-static int
-sock_conn_read_thread(void *_conn)
-{
-    int res;
-    struct sock_conn *conn = _conn;
-    while(conn->status == SOCK_CONNECTION_CONNECTED) {
-        res = sock_conn_await_msg(conn);
-        if(res) {
-            sock_conn_check_for_disconnect(conn);
-            continue;
-        }
-        if(conn->autopoll) {
-            res = sock_conn_poll(conn);
-            if(res) {
-                sock_conn_check_for_disconnect(conn);
-                continue;
-            }
-        }
-    }
-    return 0;
-}
-
-static int
-sock_conn_write_thread(void *_conn)
-{
-    int res;
-    struct sock_conn *conn = _conn;
-    while(conn->status == SOCK_CONNECTION_CONNECTED) {
-        res = sock_conn_flush_msg(conn);
-        if(res) {
-            sock_conn_check_for_disconnect(conn);
-        }
-        // Writes are non-blocking for now...
-        usleep(10000); // 10ms sleep
+        return res;
     }
     return 0;
 }
 
 int
-sock_conn_init(
+sock_configure_buffer(
         struct sock_conn *conn,
-        int conn_fd)
+        unsigned long index,
+        unsigned long length)
 {
-    int res;
-
-    conn->conn_fd = conn_fd;
-
-    res = kanawha_sys_faccess(
-            conn->conn_fd,
-            FACCESS_NON_BLOCKING,
-            FACCESS_MODE_CLEAR);
-    if(res) {
-        return res;
+    if(conn->ctrl->status != SOCK_CONN_UNINIT) {
+        return -EINVAL;
     }
-            
-    res = sem_init(&conn->read_lock, 1, 1);
-    if(res) {
-        return res;
+    if(index >= SOCK_CONN_MAX_BUFFERS) {
+        return -EINVAL;
     }
-    res = sem_init(&conn->write_lock, 1, 1);
-    if(res) {
-        sem_destroy(&conn->read_lock);
-        return res;
-    }
-
-    conn->recv_buffer = sock_msg_buffer_create();
-    if(conn->recv_buffer == NULL) {
-        sem_destroy(&conn->read_lock);
-        sem_destroy(&conn->write_lock);
-        return -ENOMEM;
-    }
-    conn->send_buffer = sock_msg_buffer_create();
-    if(conn->send_buffer == NULL) {
-        sem_destroy(&conn->read_lock);
-        sem_destroy(&conn->write_lock);
-        sock_msg_buffer_destroy(conn->recv_buffer);
-        return -ENOMEM;
-    }
-
-    conn->status = SOCK_CONNECTION_CONNECTED;
-
-    res = thrd_create(&conn->read_thread, sock_conn_read_thread, conn);
-    if(res) {
-        sem_destroy(&conn->read_lock);
-        sem_destroy(&conn->write_lock);
-        sock_msg_buffer_destroy(conn->recv_buffer);
-        sock_msg_buffer_destroy(conn->send_buffer);
-        return res;
-    }
-    res = thrd_create(&conn->write_thread, sock_conn_write_thread, conn);
-    if(res) {
-        int read_exit;
-        thrd_join(conn->read_thread, &read_exit);
-        sem_destroy(&conn->read_lock);
-        sem_destroy(&conn->write_lock);
-        sock_msg_buffer_destroy(conn->recv_buffer);
-        sock_msg_buffer_destroy(conn->send_buffer);
-        return res;
-    }
-
+    conn->ctrl->buffers[index].offset = 0;
+    conn->ctrl->buffers[index].length = length;
     return 0;
 }
 
 int
-sock_conn_deinit(
+sock_conn_finalize_config(
         struct sock_conn *conn)
 {
-    conn->status = SOCK_CONNECTION_DISCONNECTED;
-    int read_exit, write_exit;
-    thrd_join(conn->read_thread, &read_exit);
-    thrd_join(conn->write_thread, &write_exit);
-    sem_destroy(&conn->read_lock);
-    sem_destroy(&conn->write_lock);
-    sock_msg_buffer_destroy(conn->recv_buffer);
-    sock_msg_buffer_destroy(conn->send_buffer);
-    return 0;
-}
-
-int
-sock_conn_check_for_disconnect(
-        struct sock_conn *conn)
-{
-    int res;
-    unsigned long connected;
-    res = kanawha_sys_fattr(conn->conn_fd, FILE_ATTR_CONNECTED, &connected);
-    if(res)
-    {
-        return res;
-    }
-    if(!connected) {
-        conn->status = SOCK_CONNECTION_DISCONNECTED;
-    }
-    return 0;
-}
-
-int
-sock_conn_send_msg(
-        struct sock_conn *conn,
-        uint8_t type,
-        uint8_t index,
-        void *data,
-        size_t datalen)
-{
-    int res;
-
-    struct sock_buffered_msg *msg;
-    msg = sock_buffered_msg_alloc(datalen);
-    if(msg == NULL) {
-        return -ENOMEM;
-    }
-    msg->msg.type = type;
-    msg->msg.index = index;
-    msg->msg.length = datalen;
-    memcpy(msg->msg.data, data, datalen);
-
-    res = sock_msg_buffer_push_tail(
-            conn->send_buffer,
-            msg);
-    if(res) {
-        sock_buffered_msg_free(msg);
-        return res;
-    }
-
-    return 0;
-}
-
-int
-sock_conn_set_callback(
-        struct sock_conn *conn,
-        int(*on_recv)(struct sock_conn *conn,
-                      struct sock_msg *msg,
-                      void *state),
-        void *state)
-{
-    if(conn->recv_callback != NULL) {
-        conn->recv_callback = NULL;
-    }
-    asm ("" ::: "memory");
-    conn->recv_callback_state = state;
-    asm ("" ::: "memory");
-    conn->recv_callback = on_recv;
-    return 0;
-}
-
-int
-sock_conn_start_autopoll(
-        struct sock_conn *conn)
-{
-    conn->autopoll = 1;
-    return 0;
-}
-
-int
-sock_conn_stop_autopoll(
-        struct sock_conn *conn)
-{
-    conn->autopoll = 0;
-    return 0;
-}
-
-int
-sock_conn_poll(
-        struct sock_conn *conn)
-{
-    int res;
-
-    struct sock_buffered_msg *msg;
-    msg = sock_msg_buffer_try_pop_head(
-            conn->recv_buffer);
-    if(msg == NULL) {
-        return 0;
-    }
-
-    if(conn->recv_callback != NULL) {
-        res = (*conn->recv_callback)(conn,
-                   &msg->msg,
-                   conn->recv_callback_state);
-    } else {
-        res = 0;
-    }
-    sock_buffered_msg_free(msg);
-
-    return res;
-}
-
-int
-sock_conn_await_msg(
-        struct sock_conn *conn)
-{
-    int res;
-
-    if(conn->status != SOCK_CONNECTION_CONNECTED) {
+    if(conn->ctrl->status != SOCK_CONN_UNINIT) {
         return -EINVAL;
     }
 
-    struct sock_msg msg;
-    sem_wait(&conn->read_lock);
-
-    { // Read a sock_msg header
-        ssize_t total = 0;
-        while(total < sizeof(msg)) {
-            ssize_t amt = read(conn->conn_fd, ((void*)&msg) + total, sizeof(msg) - total);
-            //printf("PID(%d) read %ld bytes from socket!\n", getpid(), amt);
-            if(amt <= 0) {
-                sem_post(&conn->read_lock);
-                return -EFAULT;
-            }
-            total += amt;
+    // Allocate offsets for each buffer
+    unsigned long offset = sizeof(struct conn_ctrl);
+    for(size_t i = 0; i < SOCK_CONN_MAX_BUFFERS; i++) {
+        unsigned long length = conn->ctrl->buffers[i].length;
+        if(length == 0) {
+            continue;
         }
+
+        // Align up to a "page"
+        unsigned long mask = (1UL<<SOCK_BUFFER_ALIGN_ORDER)-1;
+        offset += mask;
+        offset &= ~mask;
+
+        conn->ctrl->buffers[i].offset = offset;
+        offset += length;
     }
 
-    struct sock_buffered_msg *buffer =
-        sock_buffered_msg_alloc(msg.length);
-    if(buffer == NULL) {
-        sem_post(&conn->read_lock);
-        return -ENOMEM;
-    }
-
-    memcpy(&buffer->msg, &msg, sizeof(msg));
-
-    { // Read in the rest of the data
-
-        ssize_t total = 0;
-        while(total < msg.length) {
-            ssize_t amt = read(conn->conn_fd, buffer->msg.data + total, msg.length - total);
-            if(amt <= 0) {
-                sem_post(&conn->read_lock);
-                free(buffer);
-                return -EINVAL;
-            }
-            total += amt;
-        }
-    }
-
-    //printf("PID(%d) pushing sock msg!\n", getpid());
-    res = sock_msg_buffer_push_tail(
-            conn->recv_buffer,
-            buffer);
-    if(res) {
-        sem_post(&conn->read_lock);
-        sock_buffered_msg_free(buffer);
-        return res;
-    }
-
-    sem_post(&conn->read_lock);
-
+    conn->ctrl->status = SOCK_CONN_INIT;
     return 0;
 }
 
-int
-sock_conn_flush_msg(
-        struct sock_conn *conn)
-{
-    int res;
-
-    sem_wait(&conn->write_lock);
-
-    struct sock_buffered_msg *buffer;
-    buffer = sock_msg_buffer_pop_head(
-            conn->send_buffer);
-    if(buffer == NULL) {
-        sem_post(&conn->write_lock);
-        return 0;
-    }
-
-    struct sock_msg *msg = &buffer->msg;
-
-    ssize_t amt;
-    ssize_t total = 0;
-    ssize_t desired = sizeof(struct sock_msg) + buffer->msg.length;
-
-    while(total < desired)
-    {
-        amt = write(conn->conn_fd,((void*)msg)+total,desired-total);
-        if(amt < 0) {
-            sem_post(&conn->write_lock);
-            return amt;
-        }
-        total += amt;
-    }
-
-    sem_post(&conn->write_lock);
-
-    return 0;
-}
-
-int
-sock_conn_map_shmem(
+static inline int
+sock_conn_lock_buffer(
         struct sock_conn *conn,
-        size_t offset,
-        size_t size,
-        void **base_out)
+        unsigned long index)
 {
-    int res;
-    size +=  ((1ULL<<PAGE_ORDER)-1);
-    size &= ~((1ULL<<PAGE_ORDER)-1);
-    res = kanawha_sys_mmap(conn->conn_fd,
-                           offset,
-                           base_out,
-                           size,
-                           MMAP_SHARED | MMAP_PROT_READ | MMAP_PROT_WRITE);
-    if(res) {
-        return res;
+    if(index >= SOCK_CONN_MAX_BUFFERS) {
+        return -EINVAL;
+    }
+    while(sem_wait(&conn->ctrl->buffers[index].lock)) {}
+}
+static inline int
+sock_conn_unlock_buffer(
+        struct sock_conn *conn,
+        unsigned long index)
+{
+    if(index >= SOCK_CONN_MAX_BUFFERS) {
+        return -EINVAL;
+    }
+    while(sem_post(&conn->ctrl->buffers[index].lock)) {}
+}
+
+struct sock_buffer
+{
+    struct sock_conn *conn;
+    unsigned long index;
+    void *mmap_region;
+    unsigned long offset;
+    unsigned long length;
+};
+
+struct sock_buffer *
+sock_open_buffer(
+        struct sock_conn *conn,
+        unsigned long index)
+{
+    if(conn->ctrl->status != SOCK_CONN_INIT) {
+        return NULL;
+    }
+    if(index >= SOCK_CONN_MAX_BUFFERS) {
+        return NULL;
+    }
+    unsigned long length = conn->ctrl->buffers[index].length;
+    unsigned long offset = conn->ctrl->buffers[index].offset;
+    int fd = conn->fd;
+
+    struct sock_buffer *buffer = malloc(sizeof(*buffer));
+    if(buffer == NULL) {
+        return NULL;
+    }
+
+    buffer->conn = conn;
+    buffer->index = index;
+    buffer->offset = offset;
+    buffer->length = length;
+
+    buffer->mmap_region = mmap(
+            NULL,
+            buffer->length,
+            PROT_READ|PROT_WRITE,
+            MMAP_SHARED,
+            fd,
+            buffer->offset);
+    if(buffer->mmap_region == MAP_FAILED) {
+        free(buffer);
+        return NULL;
+    }
+    return buffer;
+}
+int
+sock_close_buffer(
+        struct sock_buffer *buffer)
+{
+    munmap(buffer->mmap_region, buffer->length);
+    free(buffer);
+    return 0;
+}
+
+int
+sock_lock_buffer(
+        struct sock_buffer *buffer)
+{
+    return sock_conn_lock_buffer(
+            buffer->conn,
+            buffer->index);
+}
+int
+sock_unlock_buffer(
+        struct sock_buffer *buffer)
+{
+    return sock_conn_unlock_buffer(
+            buffer->conn,
+            buffer->index);
+}
+
+void *
+sock_buffer_raw_view(
+        struct sock_buffer *buffer)
+{
+    return buffer->mmap_region;
+}
+unsigned long
+sock_buffer_raw_length(
+        struct sock_buffer *buffer)
+{
+    return buffer->length;
+}
+
+static inline int
+sock_buffer_bounds_check(
+        struct sock_buffer *buffer,
+        unsigned long offset,
+        unsigned long len)
+{
+    if(offset + len > buffer->length) {
+        return -EINVAL;
     }
     return 0;
 }
 
 int
-sock_conn_unmap_shmem(
-        struct sock_conn *conn,
-        size_t offset,
-        size_t size,
-        void *base)
+sock_buffer_read(
+        struct sock_buffer *buffer,
+        unsigned long offset,
+        void *data,
+        unsigned long len)
 {
     int res;
-
-    size +=  ((1ULL<<PAGE_ORDER)-1);
-    size &= ~((1ULL<<PAGE_ORDER)-1);
-
-    res = kanawha_sys_munmap(base);
+    res = sock_buffer_bounds_check(buffer, offset, len);
     if(res) {
         return res;
     }
+
+    memcpy(data, buffer->mmap_region + offset, len);
+
+    return 0;
+}
+int
+sock_buffer_write(
+        struct sock_buffer *buffer,
+        unsigned long offset,
+        void *data,
+        unsigned long len)
+{
+    int res;
+    res = sock_buffer_bounds_check(buffer, offset, len);
+    if(res) {
+        return res;
+    }
+
+    memcpy(buffer->mmap_region + offset, data, len);
+
+    return 0;
+}
+
+int
+sock_buffer_memset(
+        struct sock_buffer *buffer,
+        unsigned long offset,
+        int c,
+        unsigned long len)
+{
+    int res;
+    res = sock_buffer_bounds_check(buffer, offset, len);
+    if(res) {
+        return res;
+    }
+
+    memset(buffer->mmap_region + offset, c, len);
+
     return 0;
 }
 

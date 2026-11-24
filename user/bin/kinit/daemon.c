@@ -6,7 +6,7 @@
 #include <errno.h>
 #include <threads.h>
 #include <unistd.h>
-#include <sock/sock.h>
+#include <sock/socket.h>
 #include <sys/wait.h>
 #include <elk/list.h>
 
@@ -386,11 +386,19 @@ kinit_daemon_add_socket(
         return -ENOMEM;
     }
 
-    res = sock_create_socket(env);
+    struct sock_socket *sock = sock_create_socket();
+    if(sock == NULL) {
+        free(s->env);
+        free(s);
+        ERROR("kinit_daemon_add_socket: sock_create_socket returned NULL!\n");
+        return -EINVAL;
+    }
+
+    res = sock_set_env_socket(sock, env);
     if(res) {
         free(s->env);
         free(s);
-        ERROR("kinit_daemon_add_socket: sock_create_socket returned %d!\n",
+        ERROR("kinit_daemon_add_socket: sock_set_env_socket returned %d!\n",
                 res);
         return res;
     }
