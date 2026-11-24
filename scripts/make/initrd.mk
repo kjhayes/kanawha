@@ -17,11 +17,11 @@ $(INITRD_BUILD): $(OUTPUT_DIR) user
 initrd: $(OUTPUT_DIR)/initrd
 $(OUTPUT_DIR)/initrd: $(INITRD_BUILD) FORCE
 	$(call qinfo, $(CPIO_MSG), $(call rel-dir, $@, $(OUTPUT_DIR)))
-	ls $< | \
+	$(Q)ls $< | \
 		cpio -o \
         --no-absolute-filenames \
 		-D $< \
 		-H bin \
-		> $@
+		> $@ $(QEPIPE)
 
 endif
