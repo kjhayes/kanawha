@@ -141,7 +141,7 @@ clean: FORCE
 
 all: kanawha user FORCE
 
-DEFAULT_BUILD_RULE ?= kernel
+DEFAULT_BUILD_RULE ?= all
 default: $(DEFAULT_BUILD_RULE)
 
 endif
