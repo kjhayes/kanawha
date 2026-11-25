@@ -1,6 +1,7 @@
 
-#include "lensd.h"
-#include <ilist.h>
+#include "display.h"
+#include "util.h"
+
 #include <kfb/kfb.h>
 #include <semaphore.h>
 #include <unistd.h>
@@ -8,15 +9,27 @@
 #include <string.h>
 #include <errno.h>
 
+struct display
+{
+    char *path;
+
+    struct kfb_framebuffer *fb;
+
+    int mode;
+    struct fb_mode_info *mode_info;
+
+    list_node_t list_node;
+};
+
 sem_t display_lock;
-ilist_t display_list;
+list_t display_list;
 struct display *primary_display = NULL;
 
 int
 display_init(void)
 {
     sem_init(&display_lock, 1, 1);
-    ilist_init(&display_list);
+    list_init(&display_list);
     return 0;
 }
 
@@ -25,9 +38,9 @@ display_deinit(void)
 {
     sem_destroy(&display_lock);
 
-    ilist_node_t *iter;
+    list_node_t *iter;
     while(1) {
-        iter = ilist_pop_head(&display_list);
+        iter = list_pop_head(&display_list);
         struct display *disp;
         disp = container_of(iter, struct display, list_node);
 
@@ -88,31 +101,8 @@ add_display(const char *path, int mode)
     }
 
     int num_layers = disp->mode_info->layer_count;
-
-    size_t info_len = sizeof(*disp->default_gfx_info)
-        + (num_layers * sizeof(disp->default_gfx_info->layer_layout[0]));
-    struct lens_gfx_info *info = malloc(info_len);
-    if(info == NULL) {
-        kfb_unload_mode_info(
-                disp->fb,
-                disp->mode_info);
-        kfb_close_framebuffer(disp->fb);
-        free(disp->path);
-        free(disp);
-        return -ENOMEM;
-    }
-
-    info->frame_size = disp->mode_info->buffer_size;
-    info->num_layers = num_layers;
-    for(int i = 0; i < num_layers; i++) {
-        struct gfx_layout *layer = &info->layer_layout[i];
-        *layer = disp->mode_info->layer_infos[i].layout;
-    }
-
-    disp->default_gfx_info = info;
-
     while(sem_wait(&display_lock)) {}
-    ilist_push_tail(&display_list, &disp->list_node);
+    list_push_tail(&display_list, &disp->list_node);
     if(primary_display == NULL) {
         primary_display = disp;
     }
@@ -125,10 +115,12 @@ int foreach_display(
         void *state)
 {
     while(sem_wait(&display_lock)) {}
-    ilist_node_t *iter;
-    ilist_for_each(iter, &display_list) {
+    list_node_t *iter;
+    iter = list_begin(&display_list);
+    while(iter) {
         struct display *disp = container_of(iter, struct display, list_node);
         (*callback)(disp, state);
+        iter = list_next(&display_list, iter);
     }
     sem_post(&display_lock);
     return 0;
@@ -163,5 +155,18 @@ struct display *
 display_get_primary(void)
 {
     return primary_display;
+}
+
+static int
+add_display_callback(
+        const char *path)
+{
+    add_display(path, 0);
+    return 0;
+}
+
+int
+add_all_displays(const char *dir_path) {
+    foreach_in_dir(dir_path, add_display_callback);
 }
 

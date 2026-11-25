@@ -3,9 +3,7 @@ LDFLAGS += -llens -lkfb -lsock -lpaint
 
 obj-y += \
 	main.o \
-	listener.o \
-	ctx.o \
-	render.o \
+	util.o \
 	display.o \
 	input.o \
 

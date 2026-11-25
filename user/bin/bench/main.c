@@ -5,10 +5,13 @@
 #include <string.h>
 #include <errno.h>
 
+#include "log.h"
+
 static const char *progname = "bench";
 
 #define CMD_XLIST(X, ...)\
-X(fork, "fork", ##__VA_ARGS__)
+X(fork, "fork", ##__VA_ARGS__)\
+X(lens, "lens", ##__VA_ARGS__)\
 
 #define XCASE(__NAME, __STR, ...)\
     int __NAME ## _main(int argc, const char **argv);
@@ -50,7 +53,7 @@ int main(int argc, const char **argv)
     }
     CMD_XLIST(XCASE)
     else {
-        fprintf(stderr, "Unrecognized subcommand %s\n", name);
+        ERROR("Unrecognized subcommand %s\n", name);
         panic_usage();
     }
 #undef XCASE

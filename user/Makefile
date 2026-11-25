@@ -7,6 +7,7 @@ lib-y += \
 	lua \
 	kfb \
 	sock \
+	lens \
 	lassie \
 	paint \
 
@@ -22,4 +23,5 @@ bin-y += \
     rm \
     sh \
 	bench \
+	lensd \
 

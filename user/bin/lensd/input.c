@@ -1,6 +1,5 @@
 
-#include "lensd.h"
-#include <lens/input_buffer.h>
+#include "util.h"
 #include <kanawha/input.h>
 #include <stdio.h>
 #include <errno.h>
@@ -12,7 +11,7 @@
 
 #define MAX_INPUT_EVENTS_PER_ITER (8)
 
-static struct lens_input_buffer *input_buffer = NULL;
+// static struct lens_input_buffer *input_buffer = NULL;
 
 sem_t input_source_lock;
 ilist_t input_source_list;
@@ -43,95 +42,14 @@ handle_input_event(
     int eat_input = 0;
     if(evt->type == INPUT_EVT_KEY) {
         switch(evt->key) {
-            case INPUT_KEY_LSHIFT:
-                src->shift_pressed = evt->motion == INPUT_MOTION_RELEASED ? 0 : 1;
-                break;
-            case INPUT_KEY_LCTRL:
-                src->ctrl_pressed = evt->motion == INPUT_MOTION_RELEASED ? 0 : 1;
-                break;
-            case INPUT_KEY_TAB:
-                if(src->shift_pressed && evt->motion == INPUT_MOTION_PRESSED) {
-                    eat_input = 1;
-                    // Cycle the active window
-                    ctx_order_cycle();
-                }
-                break;
-            case KEY_RIGHT:
-            case KEY_LEFT:
-            case KEY_UP:
-            case KEY_DOWN:
-                if(evt->motion != INPUT_MOTION_RELEASED) {
-                    double x_shift = 0.0;
-                    double y_shift = 0.0;
-                    switch(evt->key) {
-                        case KEY_RIGHT:
-                            x_shift += 1.0;
-                            break;
-                        case KEY_LEFT:
-                            x_shift -= 1.0;
-                            break;
-                        case KEY_DOWN:
-                            y_shift += 1.0;
-                            break;
-                        case KEY_UP:
-                            y_shift -= 1.0;
-                            break;
-                        default:
-                            break;
-                    }
-
-                    x_shift *= 0.05;
-                    y_shift *= 0.05;
-
-                    ctx_lock_order();
-                    struct lens_client_ctx *active = ctx_get_active();
-                    if(active != NULL) {
-                        if(!src->shift_pressed && src->ctrl_pressed) {
-                            active->percent_pos_x += x_shift;
-                            active->percent_pos_y += y_shift;
-                            if(active->percent_pos_x > 1.0) {
-                                active->percent_pos_x = 1.0;
-                            } else if(active->percent_pos_x < 0.0) {
-                                active->percent_pos_x = 0.0;
-                            }
-                            if(active->percent_pos_y > 1.0) {
-                                active->percent_pos_y = 1.0;
-                            } else if(active->percent_pos_y < 0.0) {
-                                active->percent_pos_y = 0.0;
-                            }
-                            eat_input = 1;
-                            active->moved = 1;
-                        }
-                        if(src->ctrl_pressed && src->shift_pressed) {
-                            active->percent_width += x_shift;
-                            active->percent_height += y_shift;
-                            if(active->percent_width < 0.1) {
-                                active->percent_width = 0.1;
-                            } else if(active->percent_width > 1.0) {
-                                active->percent_width = 1.0;
-                            }
-                            if(active->percent_height < 0.1) {
-                                active->percent_height = 0.1;
-                            } else if(active->percent_height > 1.0) {
-                                active->percent_height = 1.0;
-                            }
-                            eat_input = 1;
-                            active->resized = 1;
-                        }
-                    }
-                    ctx_unlock_order();
-                }
-                break;
+            // TODO
             default:
                 break;
         }
     }
 
-    if(!eat_input && input_buffer != NULL) {
-        return lens_input_buffer_push(
-                input_buffer,
-                evt);
-    }
+    // TODO: Actually send the input to a window
+
     return 0;
 }
 
@@ -144,7 +62,7 @@ input_thread(void *_src)
 
     int input_file = open(src->path, O_RDONLY);
     if(input_file < 0) {
-        INFO("lensd: failed to open input device \"%s\"!\n",
+        INFO("failed to open input device \"%s\"!\n",
                 src->path);
         return -EINVAL;
     }
@@ -155,7 +73,7 @@ input_thread(void *_src)
         while(total < sizeof(evt)) {
             ssize_t amt = read(input_file, &evt + total, sizeof(evt)-total);
             if(amt <= 0) {
-                INFO("lensd: input_thread error closing!\n");
+                INFO("input_thread error closing!\n");
                 close(input_file);
                 return amt;
             }
@@ -165,7 +83,7 @@ input_thread(void *_src)
         handle_input_event(src, &evt);
     }
 
-    INFO("lensd: input_thread shutting down!\n");
+    INFO("input_thread shutting down!\n");
     close(input_file);
     return 0;
 }
@@ -173,11 +91,6 @@ input_thread(void *_src)
 int
 input_init(void)
 {
-    input_buffer = lens_create_input_buffer(128);
-    if(input_buffer == NULL) {
-        return -ENOMEM;
-    }
-
     ilist_init(&input_source_list);
     sem_init(&input_source_lock,1,1);
     return 0;
@@ -199,7 +112,7 @@ input_deinit(void)
         free(source);
     }
  
-    lens_destroy_input_buffer(input_buffer);
+//    lens_destroy_input_buffer(input_buffer);
     return 0;
 }
 
@@ -234,54 +147,16 @@ add_input(const char *path)
 }
 
 static int
-input_send_event_to_ctx(
-        struct lens_client_ctx *ctx,
-        void *_evt)
+add_input_callback(
+        const char *path)
 {
-    struct input_event *evt = _evt;
-    //printf("lensd: sending client event!\n");
-    return lens_client_send_input_event(
-            ctx->client,
-            evt);
+    INFO("adding input: %s\n", path);
+    add_input(path);
+    return 0;
 }
 
 int
-input_loop_iter(void)
-{
-    int res;
-    for(size_t i = 0; i < MAX_INPUT_EVENTS_PER_ITER; i++) {
-        struct input_event evt;
-        res = lens_input_buffer_peek(input_buffer);
-        if(res == 0) {
-            break;
-        } else if(res < 0) {
-            return res;
-        }
-        res = lens_input_buffer_pop(
-                input_buffer,
-                &evt);
-        if(res == 0) {
-            break;
-        } else if(res < 0) {
-            return res;
-        }
-
-        ctx_lock_order();
-        {
-            struct lens_client_ctx *active = ctx_get_active();
-            if(active != NULL) {
-                input_send_event_to_ctx(active, &evt);
-            }
-        }
-        ctx_unlock_order();
-
-//      BROADCAST
-//        res = foreach_lens_client(
-//                input_send_event_to_ctx,
-//                &evt);
-//        if(res) {
-//            return res;
-//        }
-    }
+add_all_inputs(const char *dir_path) {
+    foreach_in_dir(dir_path, add_input_callback);
 }
 

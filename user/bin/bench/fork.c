@@ -5,14 +5,12 @@
 #include <sys/wait.h>
 
 #include "timing.h"
+#include "log.h"
 
 #ifdef FORK_TEST_LOUD
-#define PRINT(fmt, ...)\
-    printf(fmt, ##__VA_ARGS__)
-#define CHILD_PRINT(fmt, ...)\
-    printf(fmt, ##__VA_ARGS__)
-#define PARENT_PRINT(fmt, ...)\
-    printf(fmt, ##__VA_ARGS__)
+#define PRINT(...) INFO(__VA_ARGS__)
+#define CHILD_PRINT(...) INFO(__VA_ARGS__)
+#define PARENT_PRINT(...) INFO(__VA_ARGS__)
 #else
 #define PRINT(fmt, ...)
 #define CHILD_PRINT(fmt, ...)
@@ -22,7 +20,7 @@
 int fork_main(int argc, const char **argv)
 {
     int res;
-    int depth_limit = 1000;
+    int depth_limit = 100;
     int fork_depth = 0;
 
     elapse_t total_elapsed;
