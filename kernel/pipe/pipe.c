@@ -676,7 +676,7 @@ pipe_fs_buffer_file_on_close(struct file *file)
 
     if(wake_all_clients && buffer->num_clients > 0)
     {
-        printk("pipe: waking all clients!\n");
+        dprintk("pipe: waking all clients!\n");
         if(buffer->primary_inited)
         {
             wake_all(&buffer->primary_write_wq);
@@ -688,7 +688,7 @@ pipe_fs_buffer_file_on_close(struct file *file)
     }
     if(wake_all_servers && buffer->num_servers > 0)
     {
-        printk("pipe: waking all servers!\n");
+        dprintk("pipe: waking all servers!\n");
         if(buffer->secondary_inited)
         {
             wake_all(&buffer->secondary_write_wq);
